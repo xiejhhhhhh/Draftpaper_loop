@@ -1,6 +1,12 @@
 # DraftPaper CLI
 
-`AI科研工作流` `本地优先` `Python CLI` `LaTeX初稿` `文献证据链` `全文抓取` `Codex Skill Wrapper`
+[![AI Research Workflow](https://img.shields.io/badge/AI-Research%20Workflow-5C4D7D?style=flat-square)](#)
+[![Literature Analysis](https://img.shields.io/badge/Literature-Analysis-1D7874?style=flat-square)](#)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#)
+[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#)
+[![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#)
+[![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
+[![Open Core](https://img.shields.io/badge/Open--core-Public%20Literature%20Layer-8A5A44?style=flat-square)](#)
 
 中文 | [English](README.md)
 

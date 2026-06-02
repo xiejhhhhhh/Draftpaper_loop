@@ -1,6 +1,12 @@
 # DraftPaper Commercial
 
-`Private Commercial Edition` `AI Research Workflow` `Local-first` `Python CLI` `LaTeX Drafting` `Data Analysis` `Results Analysis`
+[![AI Research Workflow](https://img.shields.io/badge/AI-Research%20Workflow-5C4D7D?style=flat-square)](#)
+[![Literature Analysis](https://img.shields.io/badge/Literature-Analysis-1D7874?style=flat-square)](#)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#)
+[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#)
+[![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#)
+[![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
+[![Open Core](https://img.shields.io/badge/Open--core-Public%20Literature%20Layer-8A5A44?style=flat-square)](#)
 
 This repository contains the private commercial implementation of DraftPaper. Do not publish this repository or mirror its implementation details into the public open-source repository.
 
