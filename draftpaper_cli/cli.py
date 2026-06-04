@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
@@ -96,6 +97,10 @@ def build_parser() -> argparse.ArgumentParser:
     method_plan.add_argument("--method-note", action="append", default=[], help="User-provided method note. Can be repeated.")
     method_plan.add_argument("--primary-metric", default="f1", help="Primary metric expected for result validity.")
     method_plan.add_argument("--minimum-primary-metric", type=float, default=None, help="Minimum acceptable primary metric value.")
+
+    codegen = subparsers.add_parser("generate-analysis-code", help="Generate project-local analysis code from literature and method requirements.")
+    codegen.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    codegen.add_argument("--output", action="append", default=[], help="Project-relative output file expected from generated code.")
 
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -315,6 +320,18 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = verify_methods(args.project, command=args.method_command, output_files=args.output, input_data=args.input)
         except MethodsGateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "generate-analysis-code":
+        try:
+            result = generate_analysis_code(args.project, output_files=args.output)
+        except (AnalysisCodeGenerationError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:

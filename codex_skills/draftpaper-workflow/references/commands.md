@@ -40,7 +40,8 @@ python -m draftpaper_cli.cli inventory-data --project C:\DraftPaper_CLI\projects
 python -m draftpaper_cli.cli assess-data-quality --project C:\DraftPaper_CLI\projects\my_project --required-column id --required-column target
 python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI\projects\my_project --min-rows 30
 python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_method.py" --output results/tables/metrics.csv
+python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv
 python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assess-result-validity --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\projects\my_project

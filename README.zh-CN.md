@@ -96,6 +96,7 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 python -m pip install -e .
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
 ```
 
@@ -107,9 +108,9 @@ python -m unittest discover -s tests
 
 ## 当前实现状态
 
-CLI 已经实装项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
+CLI 已经实装项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、基于文献和 methods 描述的 baseline 分析代码生成、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
 
-目前 Methods 和 Results 的硬门槛是“验证与写作门槛”：`verify-methods` 会运行用户提供或外部生成的项目代码，写入 `methods/run_manifest.yaml`，并要求声明的输出文件存在后才能继续写 Methods。当前仓库还没有一个单独的 CLI 命令可以直接根据“已检索文献 + 用户 methods 描述”自动生成新的数据分析/方法分析代码。如果产品要做到端到端自动生成分析代码，应该在 `verify-methods` 前新增一个付费工作流阶段。
+`generate-analysis-code` 会读取已检索文献、`methods/method_requirements.json`、`methods/method_plan.md` 和 `data/data_inventory.json`，在项目 `code/` 目录下生成可审阅、可运行的 Python baseline 分析代码，并写入 `methods/analysis_code_manifest.json`。默认输出为 `results/tables/metrics.csv` 和 `results/tables/analysis_summary.csv`。该阶段不是跳过科研审查的最终模型生成器，而是可复现的代码脚手架；后续仍必须用 `verify-methods` 运行生成命令、记录 `methods/run_manifest.yaml`，并确认所有声明输出都存在后才能继续写 Methods。
 
 ## Paper Fetch 集成
 

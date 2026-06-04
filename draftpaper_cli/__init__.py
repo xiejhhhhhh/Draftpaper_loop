@@ -1,5 +1,6 @@
 """Local-first CLI workflow for staged research paper projects."""
 
+from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
@@ -28,6 +29,7 @@ __all__ = [
     "MissingDiscussionInputsError",
     "DiscussionCitationIntegrityError",
     "DataGateError",
+    "AnalysisCodeGenerationError",
     "LatexAssemblyError",
     "LatexCitationError",
     "MethodsGateError",
@@ -44,6 +46,7 @@ __all__ = [
     "update_stage_status",
     "validate_project",
     "run_quality_check",
+    "generate_analysis_code",
     "write_introduction",
     "inventory_data",
     "assess_data_quality",

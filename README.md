@@ -100,6 +100,7 @@ For a quick local smoke test without live literature search, create and validate
 python -m pip install -e .
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
 ```
 
@@ -111,9 +112,9 @@ python -m unittest discover -s tests
 
 ## Implementation Status
 
-The CLI already includes staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, and final quality checks.
+The CLI already includes staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, and final quality checks.
 
-The current Methods and Results hard gates are implemented as verification and writing gates. `verify-methods` runs project-local code supplied by the user or generated externally, records `methods/run_manifest.yaml`, and blocks Methods writing until declared outputs exist. The repository does not yet include a standalone CLI command that automatically generates new analysis code from literature plus method notes. That code-generation layer should be added as a separate paid workflow stage before `verify-methods` if the product needs end-to-end automatic data/method analysis code creation.
+`generate-analysis-code` reads retrieved literature, `methods/method_requirements.json`, `methods/method_plan.md`, and `data/data_inventory.json`, then writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`. The generated baseline produces `results/tables/metrics.csv` and `results/tables/analysis_summary.csv` by default. It is intentionally a reproducible scaffold rather than a final scientific model; `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output exists.
 
 ## Paper Fetch Integration
 
