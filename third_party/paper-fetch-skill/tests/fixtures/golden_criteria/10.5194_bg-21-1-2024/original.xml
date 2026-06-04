@@ -1,0 +1,1055 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD Journal Publishing with OASIS Tables v3.0 20080202//EN" "https://jats.nlm.nih.gov/nlm-dtd/publishing/3.0/journalpub-oasis3.dtd">
+<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:oasis="http://docs.oasis-open.org/ns/oasis-exchange/table" xml:lang="en" dtd-version="3.0" article-type="research-article"><?xmltex \bartext{Research article}?>
+  <front>
+    <journal-meta><journal-id journal-id-type="publisher">BG</journal-id><journal-title-group>
+    <journal-title>Biogeosciences</journal-title>
+    <abbrev-journal-title abbrev-type="publisher">BG</abbrev-journal-title><abbrev-journal-title abbrev-type="nlm-ta">Biogeosciences</abbrev-journal-title>
+  </journal-title-group><issn pub-type="epub">1726-4189</issn><publisher>
+    <publisher-name>Copernicus Publications</publisher-name>
+    <publisher-loc>Göttingen, Germany</publisher-loc>
+  </publisher></journal-meta>
+    <article-meta>
+      <article-id pub-id-type="doi">10.5194/bg-21-1-2024</article-id><title-group><article-title>Soil priming effects and involved microbial community <?xmltex \hack{\break}?> along salt gradients</article-title><alt-title>Soil priming effects and involved microbial community along salt gradients</alt-title>
+      </title-group><?xmltex \runningtitle{Soil priming effects and involved microbial community along salt gradients}?><?xmltex \runningauthor{H. Zhang et al.}?>
+      <contrib-group>
+        <contrib contrib-type="author" equal-contrib="yes" corresp="no" rid="aff1 aff2">
+          <name><surname>Zhang</surname><given-names>Haoli</given-names></name>
+          
+        </contrib>
+        <contrib contrib-type="author" equal-contrib="yes" corresp="no" rid="aff1">
+          <name><surname>Chang</surname><given-names>Doudou</given-names></name>
+          
+        </contrib>
+        <contrib contrib-type="author" corresp="no" rid="aff3">
+          <name><surname>Zhu</surname><given-names>Zhifeng</given-names></name>
+          
+        </contrib>
+        <contrib contrib-type="author" corresp="no" rid="aff2">
+          <name><surname>Meng</surname><given-names>Chunmei</given-names></name>
+          
+        </contrib>
+        <contrib contrib-type="author" corresp="yes" rid="aff1">
+          <name><surname>Wang</surname><given-names>Kaiyong</given-names></name>
+          <email>wky20@163.com</email>
+        </contrib>
+        <aff id="aff1"><label>1</label><institution>Agricultural College, Shihezi University, Shihezi 832003, China</institution>
+        </aff>
+        <aff id="aff2"><label>2</label><institution>College of Land Science and Technology, China Agriculture University, Yuanmingyuan West Road, Beijing 100193, China</institution>
+        </aff>
+        <aff id="aff3"><label>3</label><institution>China National Seed Group Co., Ltd, Yazhou Bay Science and Technology City, Sanya 572000, China</institution>
+        </aff><author-comment content-type="econtrib"><p>These authors contributed equally to this work.</p></author-comment>
+      </contrib-group>
+      <author-notes><corresp id="corr1">Kaiyong Wang (wky20@163.com)</corresp></author-notes><pub-date><day>2</day><month>January</month><year>2024</year></pub-date>
+      
+      <volume>21</volume>
+      <issue>1</issue>
+      <fpage>1</fpage><lpage>11</lpage>
+      <history>
+        <date date-type="received"><day>19</day><month>July</month><year>2023</year></date>
+           <date date-type="rev-request"><day>7</day><month>August</month><year>2023</year></date>
+           <date date-type="rev-recd"><day>22</day><month>September</month><year>2023</year></date>
+           <date date-type="accepted"><day>22</day><month>September</month><year>2023</year></date>
+      </history>
+      <permissions>
+        <copyright-statement>Copyright: © 2024 Haoli Zhang et al.</copyright-statement>
+        <copyright-year>2024</copyright-year>
+      <license license-type="open-access"><license-p>This work is licensed under the Creative Commons Attribution 4.0 International License. To view a copy of this licence, visit <ext-link ext-link-type="uri" xlink:href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</ext-link></license-p></license></permissions><self-uri xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024.html">This article is available from https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024.html</self-uri><self-uri xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024.pdf">The full text article is available as a PDF file from https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024.pdf</self-uri>
+      <abstract><title>Abstract</title>
+
+      <p id="d1e135">Soil salinity mediates microorganisms and soil processes, like soil organic carbon (SOC) cycling. Yet, how soil salinity affects SOC mineralization via shaping bacterial community diversity and composition remains elusive. Therefore, soils were sampled along a salt gradient (salinity at 0.25 %, 0.58 %, 0.75 %, 1.00 %, and 2.64 %) and incubated for 90 d to investigate (i) SOC mineralization (i.e., soil priming effects induced by cottonseed meal, as substrate) and (ii) the responsible bacteria community by using high-throughput sequencing and natural abundance of <inline-formula><mml:math id="M1" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C isotopes (to partition cottonseed-meal-derived CO<inline-formula><mml:math id="M2" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> and soil-derived CO<inline-formula><mml:math id="M3" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>). We observed a negative priming effect during the first 28 d of incubation that turned to a positive priming effect after day 56. Negative priming at the early stage might be due to the preferential utilization of cottonseed meal. The followed positive priming decreased with the increase in salinity, which might be caused by the decreased <inline-formula><mml:math id="M4" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula>  diversity of microbial communities in soil with high salinity. Specifically, soil pH and electrical conductivity (EC) along the salinity gradient were the dominant variables modulating the structure of the microbial community and consequently SOC priming (estimated by distance-based multivariate analysis and path analysis). By adopting two-way orthogonal projections to latent structures (O2PLS), priming effects were linked with specific microbial taxa; e.g., Proteobacteria (<italic>Luteimonas</italic>, <italic>Hoeflea</italic>, and <italic>Stenotrophomonas</italic>) were the core microbial genera that were attributed to the substrate-induced priming effects. Here, we highlight that the increase in salinity reduced the diversity of the microbial community and shifted dominant microorganisms (Actinobacteria and Proteobacteria: <italic>Luteimonas</italic>, <italic>Hoeflea</italic>, and <italic>Stenotrophomonas</italic>) that determined SOC priming effects, which provides a theoretical basis for understanding SOC dynamics and microbial drivers under the salinity gradient.</p>
+  </abstract>
+    
+<funding-group>
+<award-group id="gs1">
+<funding-source>Science and Technology Department of Xinjiang Uyghur Autonomous Region</funding-source>
+<award-id>No. 2022B02021-3-1</award-id>
+</award-group>
+</funding-group>
+</article-meta>
+  </front>
+<body>
+      
+
+<sec id="Ch1.S1" sec-type="intro">
+  <label>1</label><title>Introduction</title>
+      <p id="d1e200">Soil salinization is an increasing environmental problem caused by natural and human activities in arid and semi-arid areas (Wichern et al., 2006). Salinization is often a major threat to crop productivity in agricultural land. Soil microorganisms suffer from osmotic stress. Soil salinity often causes microbial death or dormancy. It was widely reported that the increased salinity decreases microbial biomass, enzymatic activity, and <inline-formula><mml:math id="M5" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula> diversity of microbial communities (Laura, 1974; Pathak and Rao, 1998; Rietz and Haynes, 2003). Soil salinity is reported to be the major determinant of the composition and activity of microbial communities (Kamble and Bååth, 2014; Ling et al., 2021, 2022). Although salinity is reported to be a vital factor in influencing microorganisms in arid and semi-arid areas, few studies have investigated C processes (e.g., priming effect) driven by microbial communities in saline soils (Sardinha et al., 2003).</p>
+      <?pagebreak page2?><p id="d1e210">Soil organic carbon (SOC) is the largest pool (1500 Pg C) in the terrestrial carbon (C) cycle and contains twice as much C as the atmosphere (Filley and Boutton, 2006; Wiesmeier et al., 2019; Jeewani et al., 2021). The input of substrate C can influence the output (i.e., CO<inline-formula><mml:math id="M6" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> release) through a phenomenon called priming effect, which was first discovered by Löhnis (1926). Substrate additions accelerate or decrease soil organic C mineralization, referred to as positive or negative priming effects (Kuzyakov et al., 2000). The intensity of the priming effect affects the turnover of SOC and thus storage pool (Sullivan and Hart, 2012). Soil priming effects are affected by many biotic and abiotic factors (Lavelle et al., 2006; Martin et al., 2019); investigating abiotic and biotic mechanisms underlying SOC priming enhances  our strong understanding of SOC cycling.</p>
+      <p id="d1e222">Soil priming effects are affected by soil animal fauna (Scheu and Parkinson, 1994) and the  activities, diversity, and composition of microbial communities (Fontaine et al., 2011). The microbial decomposers are the major player in the decomposition process of added C sources. The addition of substrate, such as composts (Xun et al., 2016), animal sludges (Hartmann et al., 2015), sewage sludges (Su et al., 2017; Wagner and Raquel, 2011), and plant residues (Dai et al., 2017), generally increases soil microbial biomass C and stimulates the microbial activities, thus enhancing the loss of SOC (positive priming effects) (Fontaine et al., 2003; Bird et al., 2011; Li et al., 2018; Ali et al., 2019).</p>
+      <p id="d1e225">Concerning abiotic factors, the priming effect can be controlled by climate variables (Hagemann, 2008) and soil properties, like pH, electrical conductivity (EC), and total nitrogen (TN) (Blagodatskaya and Kuzyakov, 2008; Luo et al., 2017). To understand how environmental and edaphic factors affect the processes of SOC mineralization, it is important to estimate the terrestrial C pool (Lehmann and Kleber, 2015). Although many studies have tested the effects of soil pH, SOC content, and other edaphic variables on soil priming effects, few studies have investigated soil priming effects in saline soil (Asghar et al., 2012), especially those linked with soil microbial community structure and their functions in C decomposition (Soina et al., 2018).</p>
+      <p id="d1e229">Thus, we sampled the soils along natural salinity gradients (0.25 %, 0.58 %, 0.75 %, 1.00 %, and 2.64 % total water-soluble salt). Based on these soils, we conducted a 90 d indoor incubation study applying C<inline-formula><mml:math id="M7" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">3</mml:mn></mml:msub></mml:math></inline-formula> substrate of cottonseed meal (<inline-formula><mml:math id="M8" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C <inline-formula><mml:math id="M9" display="inline"><mml:mo>=</mml:mo></mml:math></inline-formula> <inline-formula><mml:math id="M10" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">23.47</mml:mn></mml:mrow></mml:math></inline-formula> ‰) to C<inline-formula><mml:math id="M11" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">4</mml:mn></mml:msub></mml:math></inline-formula> soils with salt gradients (<inline-formula><mml:math id="M12" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C) between <inline-formula><mml:math id="M13" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.21</mml:mn></mml:mrow></mml:math></inline-formula> ‰ and <inline-formula><mml:math id="M14" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">16.01</mml:mn></mml:mrow></mml:math></inline-formula> ‰ to (1) investigate the mineralization rate of cottonseed meal and induced soil priming effects along salt gradients, (2) investigate the diversity of microbial communities in the soils with increased salinity, and (3) identify the bacteria-taxa-associated soil priming. We hypothesized that (i) soil microbial community diversity and composition will be different with the different soil variables, particularly pH and EC along salinity gradients, and (ii) soil C processes like priming effects will be regulated mainly by microbial communities and especially the core microbial species. To clarify the priming effects and involved microbial groups would help us better understanding C sequestration potential and underlying mechanisms in saline soils.</p>
+</sec>
+<sec id="Ch1.S2">
+  <label>2</label><title>Materials and methods</title>
+<sec id="Ch1.S2.SS1">
+  <label>2.1</label><title>Soil sampling and cottonseed meal production</title>
+      <p id="d1e325">The soil type was gray desert soil, which was collected from farmlands (44.96<inline-formula><mml:math id="M15" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula> N, 82.90<inline-formula><mml:math id="M16" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula> E) in the town of Xiao Yinpan, city of Bole, prefecture of Bortala, northern Xinjiang Uygur Autonomous Region, northwest China. The farmland soil is naturally formed original saline-sodic soil with a continuous 30-year planting of maize (C<inline-formula><mml:math id="M17" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">4</mml:mn></mml:msub></mml:math></inline-formula> crop) and maize straw returning to soil for 7–8 years. In September 2021, we determined the sampling area and used the five-point sampling method to collect non-rhizosphere soil. The soil samples were air-dried indoors, hand-picked to remove visible debris and animal and plant residues, sieved at field moisture (<inline-formula><mml:math id="M18" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">2</mml:mn></mml:mrow></mml:math></inline-formula> mm), and subsequently adjusted to 40 % water-holding capacity (WHC). Five salinity gradients at 0.25 %, 0.58 %, 0.75 %, 1.00 %, and 2.64 % were determined through soil salinity measurements. Texture was determined by the pipette method without carbonate in all soil samples. They were then incubated at 25 <inline-formula><mml:math id="M19" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C for 7 d before starting the experiments to allow any early sampling and sieving effects to subside.</p>
+      <p id="d1e374">Cottonseed meal is a kind of reddish or yellow granular material obtained by pressing and leaching other cottonseed. The cottonseed meal was purchased from the market, dried at 105 <inline-formula><mml:math id="M20" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C for 24 h indoor, and then further pulverized by a ball mill and passed through a <inline-formula><mml:math id="M21" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">2</mml:mn></mml:mrow></mml:math></inline-formula> mm sieve.</p>
+</sec>
+<sec id="Ch1.S2.SS2">
+  <label>2.2</label><title>Soil and substrate analyses</title>
+      <?pagebreak page3?><p id="d1e404">The EC and pH of soil and cottonseed meal were measured at a soil : water ratio of 1 : 5 (weight <inline-formula><mml:math id="M22" display="inline"><mml:mo>/</mml:mo></mml:math></inline-formula> weight) (Bao, 2000). Air-dried soil (5 g, <inline-formula><mml:math id="M23" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">2</mml:mn></mml:mrow></mml:math></inline-formula> mm) and 25 mL of deionized water were shaken together for 1 min and left to settle for 30 min, which was repeated once more before pH was determined with a pH electrode. Soil water-soluble salt was analyzed by being weighted at a soil : water ratio of 1 : 5 (weight <inline-formula><mml:math id="M24" display="inline"><mml:mo>/</mml:mo></mml:math></inline-formula> weight). Air-dried soil (5 g, <inline-formula><mml:math id="M25" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:math></inline-formula> mm) and 25 mL of deionized water were shaken together for 30 min and filtered to obtain a clear filtrate using a thermostat water bath to evaporate and weigh the sample (Bao, 2000). Soil total carbon (TC) and TN were collected to be tested, which were dried and ground through a 0.15 mm screen, and a certain amount of treated soil sample (air-dried, milled <inline-formula><mml:math id="M26" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">150</mml:mn></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M27" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>m) was wrapped in tin foil and placed in an element analyzer for determination by dry combustion (LECO CNS-2000, LECO Corporation, Michigan, USA). Soil microbial biomass C was determined by fumigation extraction (Vance et al., 1987; Wu et al., 1990). The K<inline-formula><mml:math id="M28" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>SO<inline-formula><mml:math id="M29" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">4</mml:mn></mml:msub></mml:math></inline-formula> extractable organic C was determined using an organic carbon autoanalyzer (Shimadzu, Analytical Sciences, Kyoto, Japan). Soil microbial biomass C (<inline-formula><mml:math id="M30" display="inline"><mml:mrow><mml:msub><mml:mi>B</mml:mi><mml:mi mathvariant="normal">C</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula>) was calculated from <inline-formula><mml:math id="M31" display="inline"><mml:mrow><mml:msub><mml:mi>B</mml:mi><mml:mi mathvariant="normal">C</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M32" display="inline"><mml:mo>=</mml:mo></mml:math></inline-formula> 2.22 <inline-formula><mml:math id="M33" display="inline"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi mathvariant="normal">C</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula>, where <inline-formula><mml:math id="M34" display="inline"><mml:mrow><mml:msub><mml:mi>E</mml:mi><mml:mi mathvariant="normal">C</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M35" display="inline"><mml:mo>=</mml:mo></mml:math></inline-formula> ((organic C extracted from fumigated soil) minus (organic C extracted from non-fumigated soil)). The natural <inline-formula><mml:math id="M36" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) abundance in the soils (air-dried, milled <inline-formula><mml:math id="M37" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">200</mml:mn></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M38" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>m) was determined using an elemental analyzer isotope ratio mass spectrometer (Sercon Ltd, Crewe, UK). All measurements are given on an oven dry weight basis (105 <inline-formula><mml:math id="M39" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C, 24 h).</p>
+      <p id="d1e576">The <inline-formula><mml:math id="M40" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) abundance of the cottonseed meal (air-dried, milled <inline-formula><mml:math id="M41" display="inline"><mml:mrow><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">200</mml:mn></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M42" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>m) was determined using an elemental analyzer isotope ratio mass spectrometer (Sercon Ltd, Crewe, UK). The main elemental composition of the substrate was determined using elemental analysis (vario EL cube, Hanau, Germany), with the samples combusted at 1200 <inline-formula><mml:math id="M43" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C. Natural <inline-formula><mml:math id="M44" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) abundance, the total carbon, total nitrogen contents, and <inline-formula><mml:math id="M45" display="inline"><mml:mrow class="chem"><mml:mi mathvariant="normal">C</mml:mi><mml:mo>:</mml:mo><mml:mi mathvariant="normal">N</mml:mi></mml:mrow></mml:math></inline-formula> of the cottonseed meal are presented in Table 1.</p>
+
+<?xmltex \floatpos{t}?><?pagebreak page4?><table-wrap id="Ch1.T1" specific-use="star"><?xmltex \currentcnt{1}?><label>Table 1</label><caption><p id="d1e644">Soil samples and cottonseed meal properties.  Different lowercase letters indicate that there were significant differences among treatments at the level of 0.05 (<inline-formula><mml:math id="M46" display="inline"><mml:mrow><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.05</mml:mn></mml:mrow></mml:math></inline-formula>).</p></caption><oasis:table frame="topbot"><oasis:tgroup cols="7">
+     <oasis:colspec colnum="1" colname="col1" align="left"/>
+     <oasis:colspec colnum="2" colname="col2" align="right"/>
+     <oasis:colspec colnum="3" colname="col3" align="right"/>
+     <oasis:colspec colnum="4" colname="col4" align="right"/>
+     <oasis:colspec colnum="5" colname="col5" align="right"/>
+     <oasis:colspec colnum="6" colname="col6" align="right"/>
+     <oasis:colspec colnum="7" colname="col7" align="right"/>
+     <oasis:thead>
+       <oasis:row>
+         <oasis:entry colname="col1"/>
+         <oasis:entry colname="col2">Salinity 1</oasis:entry>
+         <oasis:entry colname="col3">Salinity 2</oasis:entry>
+         <oasis:entry colname="col4">Salinity 3</oasis:entry>
+         <oasis:entry colname="col5">Salinity 4</oasis:entry>
+         <oasis:entry colname="col6">Salinity 5</oasis:entry>
+         <oasis:entry colname="col7">Cottonseed</oasis:entry>
+       </oasis:row>
+       <oasis:row rowsep="1">
+         <oasis:entry colname="col1"/>
+         <oasis:entry colname="col2"/>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5"/>
+         <oasis:entry colname="col6"/>
+         <oasis:entry colname="col7">meal</oasis:entry>
+       </oasis:row>
+     </oasis:thead>
+     <oasis:tbody>
+       <oasis:row>
+         <oasis:entry colname="col1">Total C (%)</oasis:entry>
+         <oasis:entry colname="col2">3.38b</oasis:entry>
+         <oasis:entry colname="col3">3.18c</oasis:entry>
+         <oasis:entry colname="col4">3.16c</oasis:entry>
+         <oasis:entry colname="col5">3.57a</oasis:entry>
+         <oasis:entry colname="col6">3.35b</oasis:entry>
+         <oasis:entry colname="col7">42.98</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Total N (%)</oasis:entry>
+         <oasis:entry colname="col2">0.18d</oasis:entry>
+         <oasis:entry colname="col3">0.19d</oasis:entry>
+         <oasis:entry colname="col4">0.20c</oasis:entry>
+         <oasis:entry colname="col5">0.22b</oasis:entry>
+         <oasis:entry colname="col6">0.26a</oasis:entry>
+         <oasis:entry colname="col7">5.84</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1"><inline-formula><mml:math id="M47" display="inline"><mml:mrow class="chem"><mml:mi mathvariant="normal">C</mml:mi><mml:mo>:</mml:mo><mml:mi mathvariant="normal">N</mml:mi></mml:mrow></mml:math></inline-formula> ratio</oasis:entry>
+         <oasis:entry colname="col2">18.32a</oasis:entry>
+         <oasis:entry colname="col3">16.56b</oasis:entry>
+         <oasis:entry colname="col4">15.71c</oasis:entry>
+         <oasis:entry colname="col5">16.54b</oasis:entry>
+         <oasis:entry colname="col6">12.94d</oasis:entry>
+         <oasis:entry colname="col7">7.38</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1"><inline-formula><mml:math id="M48" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C value (‰)</oasis:entry>
+         <oasis:entry colname="col2"><inline-formula><mml:math id="M49" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.21</mml:mn></mml:mrow></mml:math></inline-formula>a</oasis:entry>
+         <oasis:entry colname="col3"><inline-formula><mml:math id="M50" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.79</mml:mn></mml:mrow></mml:math></inline-formula>c</oasis:entry>
+         <oasis:entry colname="col4"><inline-formula><mml:math id="M51" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.60</mml:mn></mml:mrow></mml:math></inline-formula>b</oasis:entry>
+         <oasis:entry colname="col5"><inline-formula><mml:math id="M52" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.55</mml:mn></mml:mrow></mml:math></inline-formula>b</oasis:entry>
+         <oasis:entry colname="col6"><inline-formula><mml:math id="M53" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">16.01</mml:mn></mml:mrow></mml:math></inline-formula>d</oasis:entry>
+         <oasis:entry colname="col7"><inline-formula><mml:math id="M54" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">23.47</mml:mn></mml:mrow></mml:math></inline-formula></oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">pH (H<inline-formula><mml:math id="M55" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>O)</oasis:entry>
+         <oasis:entry colname="col2">8.85a</oasis:entry>
+         <oasis:entry colname="col3">8.45c</oasis:entry>
+         <oasis:entry colname="col4">8.58b</oasis:entry>
+         <oasis:entry colname="col5">8.59b</oasis:entry>
+         <oasis:entry colname="col6">8.55b</oasis:entry>
+         <oasis:entry colname="col7">7.63</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">EC (dS m<inline-formula><mml:math id="M56" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>)</oasis:entry>
+         <oasis:entry colname="col2">1.06e</oasis:entry>
+         <oasis:entry colname="col3">1.96c</oasis:entry>
+         <oasis:entry colname="col4">1.28d</oasis:entry>
+         <oasis:entry colname="col5">2.64b</oasis:entry>
+         <oasis:entry colname="col6">7.75a</oasis:entry>
+         <oasis:entry colname="col7">2.56</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Salinity (%)</oasis:entry>
+         <oasis:entry colname="col2">0.25e</oasis:entry>
+         <oasis:entry colname="col3">0.58d</oasis:entry>
+         <oasis:entry colname="col4">0.75c</oasis:entry>
+         <oasis:entry colname="col5">1.00b</oasis:entry>
+         <oasis:entry colname="col6">2.64a</oasis:entry>
+         <oasis:entry colname="col7">ND</oasis:entry>
+       </oasis:row>
+     </oasis:tbody>
+   </oasis:tgroup></oasis:table><?xmltex \gdef\@currentlabel{1}?></table-wrap>
+
+</sec>
+<sec id="Ch1.S2.SS3">
+  <label>2.3</label><title>Experiment design</title>
+      <p id="d1e1007">After pre-incubation, five soils with different salinity gradients (salinity at 0.25 %, 0.58 %, 0.75 %, 1.00 %, and 2.64 %) were thoroughly mixed with cottonseed meal at 20 mg C g<inline-formula><mml:math id="M57" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula> soil (dry weight, d.w., basis) and incubated over 90 d following moisture adjustment to 40 % water-holding capacity (WHC) to investigate the substrate mineralization and priming effects. Each soil sample (40 g d.w. basis) was incubated in a 100 mL beaker inside a 1 L brown glass jar. Three jars with only water and NaOH were set as blanks. All the jars were sealed with a rubber bung and incubated in a randomized block design at 25 <inline-formula><mml:math id="M58" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C for the 90 d of incubation. The NaOH vials were changed after 1, 3, 5, 7, 14, 28, 56, and 90 d for the determination of evolved CO<inline-formula><mml:math id="M59" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> and <inline-formula><mml:math id="M60" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C–CO<inline-formula><mml:math id="M61" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> (‰). Meanwhile, soil biomass C, NH<inline-formula><mml:math id="M62" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">4</mml:mn><mml:mo>+</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>, NO<inline-formula><mml:math id="M63" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">3</mml:mn><mml:mo>-</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>, pH, EC, TC, TN, and DNA extraction were measured at day 28.</p>
+</sec>
+<sec id="Ch1.S2.SS4">
+  <label>2.4</label><?xmltex \opttitle{Soil CO${}_{{2}}$--C and its isotopic composition}?><title>Soil CO<inline-formula><mml:math id="M64" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C and its isotopic composition</title>
+      <p id="d1e1101">Soil C evolved as CO<inline-formula><mml:math id="M65" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C in jars was measured by trapping CO<inline-formula><mml:math id="M66" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> in 1 M NaOH (20 mL) during soil incubation. After the NaOH (20 mL) trapped CO<inline-formula><mml:math id="M67" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> at different periods of soil incubation, 5 mL of 1 M NaOH of each sample was mixed with 10 mL deionized water and titrated with 0.05 M standardized HCl by the TIM840 autotitrator (Radiometer Analytical, Villeurbanne Cedex, France). Meanwhile, the <inline-formula><mml:math id="M68" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) of trapped CO<inline-formula><mml:math id="M69" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C was precipitated with 8 mL of 1 M NaOH (20 mL) mixed with 8 mL of 1.5 M BaCl<inline-formula><mml:math id="M70" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> in vials (Aoyama et al., 2000). The BaCO<inline-formula><mml:math id="M71" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">3</mml:mn></mml:msub></mml:math></inline-formula> precipitate was trapped on the glass fiber of the filter, rinsed with deionized water several times, dried overnight (80 <inline-formula><mml:math id="M72" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C), weighed (0.100–0.200 mg) into tin capsules, and analyzed for <inline-formula><mml:math id="M73" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C on an elemental analyzer isotope ratio mass spectrometer (Sercon Ltd, Crewe, UK).</p>
+</sec>
+<sec id="Ch1.S2.SS5">
+  <label>2.5</label><title>DNA exaction and sequencing</title>
+      <p id="d1e1199">The total soil DNA was extracted from 0.50 g of moist soil using a FastDNA Spin Kit (MP Biomedicals, Santa Ana, CA, USA) according to the manufacturer's protocol. The extracted DNA was dissolved in 50 <inline-formula><mml:math id="M74" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>L of TE buffer, quantified using a spectrophotometer, and stored at <inline-formula><mml:math id="M75" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">20</mml:mn></mml:mrow></mml:math></inline-formula> <inline-formula><mml:math id="M76" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C until sequencing.</p>
+      <p id="d1e1229">V3–V4 hypervariable regions of the bacterial 16S rRNA gene were amplified with primers 341F (5<inline-formula><mml:math id="M77" display="inline"><mml:msup><mml:mi/><mml:mo>′</mml:mo></mml:msup></mml:math></inline-formula>-CCTAYGGRBGCASCAG-3<inline-formula><mml:math id="M78" display="inline"><mml:msup><mml:mi/><mml:mo>′</mml:mo></mml:msup></mml:math></inline-formula>) and 806R (5<inline-formula><mml:math id="M79" display="inline"><mml:msup><mml:mi/><mml:mo>′</mml:mo></mml:msup></mml:math></inline-formula>-GGACTACHVGGGTWTCTAAT-3<inline-formula><mml:math id="M80" display="inline"><mml:msup><mml:mi/><mml:mo>′</mml:mo></mml:msup></mml:math></inline-formula>). The PCR reactions were conducted with a thermocycler PCR system (GeneAmp 9700, ABI, USA) by using the following programs: 3 min of denaturation at 95 <inline-formula><mml:math id="M81" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C; followed by 27 cycles of 30 s at 95 <inline-formula><mml:math id="M82" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C, 30 s at 55 <inline-formula><mml:math id="M83" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C, and 45 s at 72 <inline-formula><mml:math id="M84" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C; and a final extension at 72 <inline-formula><mml:math id="M85" display="inline"><mml:msup><mml:mi/><mml:mo>∘</mml:mo></mml:msup></mml:math></inline-formula>C for 10 min with a thermocycler PCR system (GeneAmp 9700, ABI, USA). PCR amplicons pooled from the triplicate reactions were purified using a QIAquick PCR purification kit (Qiagen, Shenzhen, China) and quantified using a NanoDrop ND-1000 spectrophotometer (Thermo Scientific, Waltham, MA, USA). The PCR products were purified, mixed, and sent to Majorbio, Inc. (Shanghai, China) for sequencing based on the Illumina MiSeq platform.</p>
+</sec>
+<sec id="Ch1.S2.SS6">
+  <label>2.6</label><title>Calculations</title>
+      <p id="d1e1322">The mineralization of cottonseed meal was separated from SOC mineralization according to the change in stable isotopic composition (<inline-formula><mml:math id="M86" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C) with time. The standard equation for determining <inline-formula><mml:math id="M87" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) is derived with
+            <disp-formula id="Ch1.E1" content-type="numbered"><label>1</label><mml:math id="M88" display="block"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup><mml:mi mathvariant="normal">C</mml:mi><mml:mspace width="0.25em" linebreak="nobreak"/><mml:mo>(</mml:mo><mml:mi mathvariant="normal">‰</mml:mi><mml:mo>)</mml:mo><mml:mo>=</mml:mo><mml:mo>[</mml:mo><mml:mo>(</mml:mo><mml:msub><mml:mi>R</mml:mi><mml:mi mathvariant="normal">sample</mml:mi></mml:msub><mml:mo>/</mml:mo><mml:msub><mml:mi>R</mml:mi><mml:mi mathvariant="normal">VPDB</mml:mi></mml:msub><mml:mo>)</mml:mo><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn><mml:mo>]</mml:mo><mml:mo>×</mml:mo><mml:mn mathvariant="normal">1000</mml:mn><mml:mo>,</mml:mo></mml:mrow></mml:math></disp-formula>
+          where <inline-formula><mml:math id="M89" display="inline"><mml:mrow><mml:msub><mml:mi>R</mml:mi><mml:mi mathvariant="normal">sample</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula> is the mass ratio of <inline-formula><mml:math id="M90" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C to <inline-formula><mml:math id="M91" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">12</mml:mn></mml:msup></mml:math></inline-formula>C of each sample, and <inline-formula><mml:math id="M92" display="inline"><mml:mrow><mml:msub><mml:mi>R</mml:mi><mml:mi mathvariant="normal">VPDB</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula> is the international PDB (Peedee Belemnite) limestone standard. The labeled <inline-formula><mml:math id="M93" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C (%) of cottonseed meal was then estimated with
+            <disp-formula id="Ch1.E2" content-type="numbered"><label>2</label><mml:math id="M94" display="block"><mml:mrow><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msup><mml:mtext>–</mml:mtext><mml:mn mathvariant="normal">13</mml:mn></mml:msup><mml:mi mathvariant="normal">C</mml:mi><mml:mspace width="0.25em" linebreak="nobreak"/><mml:mo>(</mml:mo><mml:mi mathvariant="italic">%</mml:mi><mml:mo>)</mml:mo><mml:mo>=</mml:mo><mml:mo>(</mml:mo><mml:msub><mml:mi mathvariant="italic">δ</mml:mi><mml:mi mathvariant="normal">treatment</mml:mi></mml:msub><mml:mo>-</mml:mo><mml:mi mathvariant="italic">δ</mml:mi><mml:msub><mml:mi mathvariant="normal">C</mml:mi><mml:mn mathvariant="normal">4</mml:mn></mml:msub><mml:mo>)</mml:mo><mml:mo>/</mml:mo><mml:mo>(</mml:mo><mml:mi mathvariant="italic">δ</mml:mi><mml:msub><mml:mi mathvariant="normal">C</mml:mi><mml:mn mathvariant="normal">3</mml:mn></mml:msub><mml:mo>-</mml:mo><mml:mi mathvariant="italic">δ</mml:mi><mml:msub><mml:mi mathvariant="normal">C</mml:mi><mml:mn mathvariant="normal">4</mml:mn></mml:msub><mml:mo>)</mml:mo><mml:mo>,</mml:mo></mml:mrow></mml:math></disp-formula>
+          where <inline-formula><mml:math id="M95" display="inline"><mml:mrow><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msup><mml:mtext>–</mml:mtext><mml:mn mathvariant="normal">13</mml:mn></mml:msup><mml:mi mathvariant="normal">C</mml:mi></mml:mrow></mml:math></inline-formula> (%) is the proportion of evolved CO<inline-formula><mml:math id="M96" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> from C<inline-formula><mml:math id="M97" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">3</mml:mn></mml:msub></mml:math></inline-formula> (cottonseed meal) matter, <inline-formula><mml:math id="M98" display="inline"><mml:mrow><mml:msub><mml:mi mathvariant="italic">δ</mml:mi><mml:mi mathvariant="normal">treatment</mml:mi></mml:msub></mml:mrow></mml:math></inline-formula> is the <inline-formula><mml:math id="M99" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) in treatments of soil with cottonseed meal, <inline-formula><mml:math id="M100" display="inline"><mml:mi mathvariant="italic">δ</mml:mi></mml:math></inline-formula>C<inline-formula><mml:math id="M101" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">4</mml:mn></mml:msub></mml:math></inline-formula> is the <inline-formula><mml:math id="M102" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) in the control soil, and <inline-formula><mml:math id="M103" display="inline"><mml:mi mathvariant="italic">δ</mml:mi></mml:math></inline-formula>C<inline-formula><mml:math id="M104" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">3</mml:mn></mml:msub></mml:math></inline-formula> is the <inline-formula><mml:math id="M105" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C (‰) from cottonseed meal. Thus, the CO<inline-formula><mml:math id="M106" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C produced from cottonseed meal during the incubation was calculated with
+            <disp-formula id="Ch1.E3" content-type="numbered"><label>3</label><mml:math id="M107" display="block"><mml:mtable rowspacing="0.2ex" class="split" displaystyle="true" columnalign="right left"><mml:mtr><mml:mtd><mml:mrow><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msup><mml:mtext>–</mml:mtext><mml:mn mathvariant="normal">13</mml:mn></mml:msup><mml:mi mathvariant="normal">C</mml:mi><mml:mspace width="0.25em" linebreak="nobreak"/><mml:mo>(</mml:mo><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi><mml:mi mathvariant="normal">g</mml:mi><mml:mspace linebreak="nobreak" width="0.125em"/><mml:msup><mml:mi mathvariant="normal">g</mml:mi><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup><mml:mspace width="0.125em" linebreak="nobreak"/><mml:mi mathvariant="normal">soil</mml:mi></mml:mrow><mml:mo>)</mml:mo></mml:mrow></mml:mtd><mml:mtd><mml:mrow><mml:mo>=</mml:mo><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msup><mml:mtext>–</mml:mtext><mml:mn mathvariant="normal">13</mml:mn></mml:msup><mml:mi mathvariant="normal">C</mml:mi><mml:mspace linebreak="nobreak" width="0.25em"/><mml:mo>(</mml:mo><mml:mi mathvariant="italic">%</mml:mi><mml:mo>)</mml:mo></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd/><mml:mtd><mml:mrow><mml:mo>×</mml:mo><mml:mi mathvariant="normal">total</mml:mi><mml:mspace width="0.125em" linebreak="nobreak"/><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:mtext>–C</mml:mtext><mml:mspace width="0.25em" linebreak="nobreak"/><mml:mo>(</mml:mo><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi><mml:mi mathvariant="normal">g</mml:mi><mml:mspace width="0.125em" linebreak="nobreak"/><mml:msup><mml:mi mathvariant="normal">g</mml:mi><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup><mml:mspace linebreak="nobreak" width="0.125em"/><mml:mi mathvariant="normal">soil</mml:mi></mml:mrow><mml:mo>)</mml:mo><mml:mo>/</mml:mo><mml:mn mathvariant="normal">100</mml:mn><mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></disp-formula>
+          CO<inline-formula><mml:math id="M108" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> from SOC was CO<inline-formula><mml:math id="M109" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–<inline-formula><mml:math id="M110" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C subtracted from total evolved CO<inline-formula><mml:math id="M111" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C. The absolute soil priming effect (or primed soil CO<inline-formula><mml:math id="M112" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C) with the addition of cottonseed meal was calculated from
+            <disp-formula id="Ch1.E4" content-type="numbered"><label>4</label><mml:math id="M113" display="block"><mml:mtable rowspacing="0.2ex" class="split" displaystyle="true" columnalign="right left"><mml:mtr><mml:mtd><mml:mrow><mml:mi mathvariant="normal">primed</mml:mi><mml:mspace linebreak="nobreak" width="0.25em"/><mml:mi mathvariant="normal">soil</mml:mi><mml:mspace width="0.25em" linebreak="nobreak"/><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:mtext>–C</mml:mtext><mml:mspace width="0.25em" linebreak="nobreak"/><mml:mo>(</mml:mo><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi><mml:mi mathvariant="normal">g</mml:mi><mml:mspace width="0.125em" linebreak="nobreak"/><mml:mi mathvariant="normal">C</mml:mi><mml:mspace linebreak="nobreak" width="0.125em"/><mml:msup><mml:mi mathvariant="normal">g</mml:mi><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup><mml:mspace linebreak="nobreak" width="0.125em"/><mml:mi mathvariant="normal">soil</mml:mi></mml:mrow><mml:mo>)</mml:mo></mml:mrow></mml:mtd><mml:mtd><mml:mrow><mml:mo>=</mml:mo><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msub><mml:mtext>–C</mml:mtext><mml:mi mathvariant="normal">treatment</mml:mi></mml:msub></mml:mrow></mml:mtd></mml:mtr><mml:mtr><mml:mtd/><mml:mtd><mml:mrow><mml:mo>-</mml:mo><mml:msub><mml:mi mathvariant="normal">CO</mml:mi><mml:mn mathvariant="normal">2</mml:mn></mml:msub><mml:msub><mml:mtext>–C</mml:mtext><mml:mi mathvariant="normal">control</mml:mi></mml:msub><mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></disp-formula>
+          where CO<inline-formula><mml:math id="M114" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C<inline-formula><mml:math id="M115" display="inline"><mml:msub><mml:mi/><mml:mi mathvariant="normal">treatment</mml:mi></mml:msub></mml:math></inline-formula> is the non-isotopically labeled CO<inline-formula><mml:math id="M116" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C evolved from cottonseed-meal-amended soil, and CO<inline-formula><mml:math id="M117" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C<inline-formula><mml:math id="M118" display="inline"><mml:msub><mml:mi/><mml:mi mathvariant="normal">control</mml:mi></mml:msub></mml:math></inline-formula> is the non-isotopically labeled CO<inline-formula><mml:math id="M119" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C evolved from soil without cottonseed meal.</p><?xmltex \hack{\newpage}?>
+</sec>
+<sec id="Ch1.S2.SS7">
+  <label>2.7</label><title>Statistics</title>
+      <p id="d1e1944">The data of <inline-formula><mml:math id="M120" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">16</mml:mn></mml:msup></mml:math></inline-formula>S gene sequencing were processed using the Quantitative Insights Into Microbial Ecology (QIIME) 1.9.0 pipeline (Caporaso et al., 2010). In brief, reads with a length less than 200 bp and ambiguous bases were discarded. The sequences were then binned into operational taxonomic units (OTUs) by UCLUST (Edgar, 2010) based on 97 % pairwise identity. Chimeric OTUs identified by USEARCH (Edgar et al., 2011) in QIIME were removed. The most abundant sequence from each OTU was selected to represent that OTU. Taxonomy was assigned to 16S OTUs against a subset of the SILVA 104 database. The representative OTU sequences were aligned using PyNAST (Caporaso et al., 2012). We obtained between 64 425 and 89 989 clean_reads per sample for all experimental samples.</p>
+      <p id="d1e1956">To avoid potential bias caused by sequencing depth, all sample datasets were rarefied for the bacteria <inline-formula><mml:math id="M121" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula>-diversity and <inline-formula><mml:math id="M122" display="inline"><mml:mi mathvariant="italic">β</mml:mi></mml:math></inline-formula>-diversity analyses. Faith's phylogenetic diversity was calculated to provide an integrated index of the phylogenetic breadth across taxonomic levels (Faith, 1992). To compare <inline-formula><mml:math id="M123" display="inline"><mml:mi mathvariant="italic">β</mml:mi></mml:math></inline-formula> diversity between samples, principal coordinate analyses based on the unweighted and weighted UniFrac (Lozupone et al., 2007) distances were calculated using the function “pcoa” in the R package “Ape”. Additionally, permutational multivariate analysis of variance (PERMANOVA) was carried out using the function “adonis” in the R package  “vegan” to measure effect size and significance of  <inline-formula><mml:math id="M124" display="inline"><mml:mi mathvariant="italic">β</mml:mi></mml:math></inline-formula> diversity. The variable influence projection (VIP) value was processed using the two-way orthogonal projections to latent structures (O2PLS) analysis by SIMCA P 14 (Version 14.1.0.2047) (Wang et al., 2016). The <inline-formula><mml:math id="M125" display="inline"><mml:mi>y</mml:mi></mml:math></inline-formula> matrix was defined as the dataset of environmental factors, and the <inline-formula><mml:math id="M126" display="inline"><mml:mi>x</mml:mi></mml:math></inline-formula> matrix was defined as the dataset of the microbial community on genus level.</p>
+      <p id="d1e2002">Data were logarithmically transformed and analyzed by ANOVA. All analyses were performed using SPSS software (13th edition). Pearson's correlation analyses were performed to assess the linear correlation among soil physico-chemical properties and the microbial community. Multivariate analysis was operated to investigate the interaction of salinity treatments on bacteria community parameters.</p>
+</sec>
+</sec>
+<sec id="Ch1.S3">
+  <label>3</label><title>Results</title>
+<sec id="Ch1.S3.SS1">
+  <label>3.1</label><title>Soil physicochemical properties along salt gradients</title>
+      <p id="d1e2021">The major soil physicochemical properties along salt gradients are presented (Table 1), and all of soil physicochemical properties have significant differences (<inline-formula><mml:math id="M127" display="inline"><mml:mrow><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.05</mml:mn></mml:mrow></mml:math></inline-formula>). The total soluble salinity content in the soils ranged from 0.25 % to 2.64 %, and soil salt gradients increased gradually from the Salinity 1 samples to the Salinity 5 samples. The pH and EC in soils ranged from 8.45 to 8.85 and from 1.06 to 7.75 dS m<inline-formula><mml:math id="M128" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>. Soil total C and N increased with salinity, ranging from 3.16 % to 3.57 % and from 0.18 % to 0.26 %. The <inline-formula><mml:math id="M129" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C values for soils are between <inline-formula><mml:math id="M130" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">14.21</mml:mn></mml:mrow></mml:math></inline-formula> % and <inline-formula><mml:math id="M131" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">16.01</mml:mn></mml:mrow></mml:math></inline-formula> ‰, which were relatively enriched compared to cottonseed meal (<inline-formula><mml:math id="M132" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">23.47</mml:mn></mml:mrow></mml:math></inline-formula> ‰). This allowed the separation of soil-derived CO<inline-formula><mml:math id="M133" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> from total evolved CO<inline-formula><mml:math id="M134" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>, according to the classic mixed modeling.</p>
+</sec>
+<sec id="Ch1.S3.SS2">
+  <label>3.2</label><?xmltex \opttitle{Total CO${}_{{2}}$ evolution}?><title>Total CO<inline-formula><mml:math id="M135" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> evolution</title>
+      <p id="d1e2126">During the whole 90 d of incubation, the cumulative evolved CO<inline-formula><mml:math id="M136" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> had similar trends, in which the amount of CO<inline-formula><mml:math id="M137" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> increased with the incubation time (Fig. S1 in the Supplement). The cumulative evolved  CO<inline-formula><mml:math id="M138" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> increased more rapidly with the addition of cottonseed meal before 14 d compared to non-amended soils. At 90 d of incubation, the cumulative evolved CO<inline-formula><mml:math id="M139" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> in the soil with the lowest salinity (Salinity 1) gave the lowest CO<inline-formula><mml:math id="M140" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> emission (597 <inline-formula><mml:math id="M141" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>g C g<inline-formula><mml:math id="M142" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>) in the non-amended soils (Fig. S1, <inline-formula><mml:math id="M143" display="inline"><mml:mrow><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.001</mml:mn></mml:mrow></mml:math></inline-formula>).</p>
+</sec>
+<sec id="Ch1.S3.SS3">
+  <label>3.3</label><?xmltex \opttitle{Cottonseed-derived ${}^{{13}}$CO${}_{{2}}$ and soil priming effects}?><title>Cottonseed-derived <inline-formula><mml:math id="M144" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>CO<inline-formula><mml:math id="M145" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> and soil priming effects</title>
+      <p id="d1e2234">The total cumulative CO<inline-formula><mml:math id="M146" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C was divided into three parts based on the <inline-formula><mml:math id="M147" display="inline"><mml:mrow><mml:msup><mml:mi mathvariant="italic">δ</mml:mi><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:mrow></mml:math></inline-formula>C value, including basal-soil-derived CO<inline-formula><mml:math id="M148" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>, cottonseed-meal-derived CO<inline-formula><mml:math id="M149" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>, and primed soil CO<inline-formula><mml:math id="M150" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> (Fig. 1). The cottonseed-meal-derived CO<inline-formula><mml:math id="M151" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> made a significant contribution to the total evolved CO<inline-formula><mml:math id="M152" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> during the early incubation period. The cottonseed-meal-derived CO<inline-formula><mml:math id="M153" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> was significantly higher in Salinity 1, Salinity 2, and Salinity 3 than in Salinity 4 and Salinity 5 before 28 d incubation. Meanwhile, the<?pagebreak page5?> soil priming effects was negative in all amended soil treatments before 28 d incubation, and the direction of priming effects in most of the soil samples turned positive after 28 d. During the whole 90 d incubation, there was a negative correlation between cottonseed-meal-derived CO<inline-formula><mml:math id="M154" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> and primed soil CO<inline-formula><mml:math id="M155" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> (Fig. 2).</p>
+
+      <?xmltex \floatpos{t}?><fig id="Ch1.F1"><?xmltex \currentcnt{1}?><?xmltex \def\figurename{Figure}?><label>Figure 1</label><caption><p id="d1e2332">Partitioning of CO<inline-formula><mml:math id="M156" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> evolution after the addition of cottonseed meal to the five saline soils. Cumulative evolved CO<inline-formula><mml:math id="M157" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> from saline soil of 0.25 % <bold>(a)</bold>, 0.58 % <bold>(b)</bold>, 0.75 % <bold>(c)</bold>, 1.00 % <bold>(d)</bold>, and 2.64 % <bold>(e)</bold>.  Bars represent SD of the mean (<inline-formula><mml:math id="M158" display="inline"><mml:mrow><mml:mi>n</mml:mi><mml:mo>=</mml:mo><mml:mn mathvariant="normal">3</mml:mn></mml:mrow></mml:math></inline-formula>).</p></caption>
+          <?xmltex \igopts{width=236.157874pt}?><graphic xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024-f01.png"/>
+
+        </fig>
+
+</sec>
+<sec id="Ch1.S3.SS4">
+  <label>3.4</label><title>Bacterial diversity and community structure</title>
+      <p id="d1e2395">The number of sequences ranged from 64 425 to 91 261 per sample (average valve of 80 602). About 27 990 OTUs in total were obtained under the five different treatments. Bacterial community diversity was measured by a series of OTU-based analyses of <inline-formula><mml:math id="M159" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula> diversity, including the chao1 estimator and observed_species in the QIIME pipeline (Fig. 3). The chao1 diversity estimator and observed_species were significantly different in treatments, being the highest in Salinity 1 and followed by Salinity 3, Salinity 2, Salinity 4, and Salinity 5 (<inline-formula><mml:math id="M160" display="inline"><mml:mrow><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.01</mml:mn></mml:mrow></mml:math></inline-formula>). In general, bacterial community diversity decreased with increasing salinity (Fig. 3).</p>
+
+      <?xmltex \floatpos{t}?><fig id="Ch1.F2"><?xmltex \currentcnt{2}?><?xmltex \def\figurename{Figure}?><label>Figure 2</label><caption><p id="d1e2419">Correlation between primed soil mineralization and cottonseed meal mineralization in the five saline soils during the 90 d incubation.</p></caption>
+          <?xmltex \igopts{width=190.633465pt}?><graphic xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024-f02.png"/>
+
+        </fig>
+
+      <p id="d1e2428">The most abundant phylum in the soils and their correlation with salinity are shown in Fig. 4. Among them, Actinobacteria was the dominant taxon in all  soils, with the abundance ranging from 50.07 % (Salinity 3) to 68.99 % (Salinity 4). The relative abundance of Bacteroidetes, Firmicutes, and  Deinococcus-Thermus increased with the salinity, while Acidobacteria decreased with salinity degree.</p>
+
+      <?xmltex \floatpos{t}?><?pagebreak page6?><fig id="Ch1.F3" specific-use="star"><?xmltex \currentcnt{3}?><?xmltex \def\figurename{Figure}?><label>Figure 3</label><caption><p id="d1e2434">Microbial community <inline-formula><mml:math id="M161" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula> diversity (chao1), observed_species,  and <inline-formula><mml:math id="M162" display="inline"><mml:mi mathvariant="italic">β</mml:mi></mml:math></inline-formula> diversity. Within each panel, boxplot data refer to maximum date (top line), 99 % (the second line), mean (the third line), 1 % (the fourth line), and minimum date (bottom line) of the different treatments with statistical significance (<inline-formula><mml:math id="M163" display="inline"><mml:mrow><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.05</mml:mn></mml:mrow></mml:math></inline-formula>).</p></caption>
+          <?xmltex \igopts{width=398.338583pt}?><graphic xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024-f03.png"/>
+
+        </fig>
+
+      <p id="d1e2469">Based on OTUs of five salt-gradient treatments, the principal component analysis (PCA) showed that treatments from Salinity 2 and Salinity 4 clustered together. Meanwhile, soil samples of Salinity 1, Salinity 3, and Salinity 5 were distributed in the first, fourth, and third quadrants, which indicated that these treatments had large environmental heterogeneity (Fig. S4).</p>
+      <p id="d1e2472">In order to visualize the relationship between environmental factors and microbial community, canonical correspondence analysis (CCA) was conducted, showing that NO<inline-formula><mml:math id="M164" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">3</mml:mn><mml:mo>-</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>–N, EC, and TC had a more obvious impact than other factors for the microbial community (Fig. 3). Soil EC was positively correlated with pH and NH<inline-formula><mml:math id="M165" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">4</mml:mn><mml:mo>+</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>–N and negatively correlated with TN, TC, and microbial biomass carbon (MBC). The Mantel test and distance-based multivariate analysis showed that the contribution rate of different environmental factors accounts for 78 % of the variability in microbial communities (Table 2). The value of pH (31 %) and EC (12 %) had a strong influence on the microbial community.</p>
+
+<?xmltex \floatpos{t}?><table-wrap id="Ch1.T2" specific-use="star"><?xmltex \currentcnt{2}?><label>Table 2</label><caption><p id="d1e2502">Mantel test and distance-based multivariate analysis relevance and contribution rate between soil properties and bacterial community compositions. Note: <inline-formula><mml:math id="M166" display="inline"><mml:mrow><mml:msup><mml:mi/><mml:mo>∗</mml:mo></mml:msup><mml:mspace linebreak="nobreak" width="0.25em"/><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.05</mml:mn></mml:mrow></mml:math></inline-formula>, <inline-formula><mml:math id="M167" display="inline"><mml:mrow><mml:msup><mml:mi/><mml:mrow><mml:mo>∗</mml:mo><mml:mo>∗</mml:mo></mml:mrow></mml:msup><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.01</mml:mn></mml:mrow></mml:math></inline-formula>.</p></caption><oasis:table frame="topbot"><oasis:tgroup cols="8">
+     <oasis:colspec colnum="1" colname="col1" align="left"/>
+     <oasis:colspec colnum="2" colname="col2" align="right"/>
+     <oasis:colspec colnum="3" colname="col3" align="right"/>
+     <oasis:colspec colnum="4" colname="col4" align="right"/>
+     <oasis:colspec colnum="5" colname="col5" align="right"/>
+     <oasis:colspec colnum="6" colname="col6" align="right"/>
+     <oasis:colspec colnum="7" colname="col7" align="right"/>
+     <oasis:colspec colnum="8" colname="col8" align="right"/>
+     <oasis:thead>
+       <oasis:row rowsep="1">
+         <oasis:entry colname="col1"/>
+         <oasis:entry colname="col2">pH</oasis:entry>
+         <oasis:entry colname="col3">EC</oasis:entry>
+         <oasis:entry colname="col4">NO<inline-formula><mml:math id="M168" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">3</mml:mn><mml:mo>-</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>N</oasis:entry>
+         <oasis:entry colname="col5">NH<inline-formula><mml:math id="M169" display="inline"><mml:mrow><mml:msubsup><mml:mi/><mml:mn mathvariant="normal">4</mml:mn><mml:mo>+</mml:mo></mml:msubsup></mml:mrow></mml:math></inline-formula>N</oasis:entry>
+         <oasis:entry colname="col6">MBC</oasis:entry>
+         <oasis:entry colname="col7">TN</oasis:entry>
+         <oasis:entry colname="col8">TC</oasis:entry>
+       </oasis:row>
+     </oasis:thead>
+     <oasis:tbody>
+       <oasis:row>
+         <oasis:entry colname="col1">Correlation</oasis:entry>
+         <oasis:entry colname="col2">0.74<inline-formula><mml:math id="M170" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col3">0.56<inline-formula><mml:math id="M171" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col4">0.36<inline-formula><mml:math id="M172" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5">0.68<inline-formula><mml:math id="M173" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col6">0.31<inline-formula><mml:math id="M174" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col7">0.11</oasis:entry>
+         <oasis:entry colname="col8">0.27</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Contribution</oasis:entry>
+         <oasis:entry colname="col2">0.31<inline-formula><mml:math id="M175" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col3">0.12<inline-formula><mml:math id="M176" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col4">0.05</oasis:entry>
+         <oasis:entry colname="col5">0.04</oasis:entry>
+         <oasis:entry colname="col6">0.16</oasis:entry>
+         <oasis:entry colname="col7">0.03</oasis:entry>
+         <oasis:entry colname="col8">0.07<inline-formula><mml:math id="M177" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+       </oasis:row>
+     </oasis:tbody>
+   </oasis:tgroup></oasis:table><?xmltex \gdef\@currentlabel{2}?></table-wrap>
+
+</sec>
+<sec id="Ch1.S3.SS5">
+  <label>3.5</label><title>Relation between soil microbial community and C dynamics</title>
+      <p id="d1e2773">Based on the O2PLS analysis, the variable influence projection (VIP) values of bacterial genera of more than 1.00 % show their contributions to C decomposition of cottonseed-meal-derived C, basal-soil-derived C, and primed soil C (Table 3). There were many microbial taxa positively correlating to primed soil CO<inline-formula><mml:math id="M178" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>; for instance, genera of <italic>Actinomarinales</italic>, <italic>Luteimonas</italic>, <italic>Nocardioides</italic>, <italic>Hoeflea</italic>, <italic>Intrasporangium</italic>, <italic>Nitrolancea</italic>, <italic>Pseudarthrobacter</italic>, and <italic>Stenotrophomonas</italic> had a positive correlation with primed CO<inline-formula><mml:math id="M179" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>. The result showed that soil pH and EC made a negative contribution to bacterial diversity, while bacterial diversity had a strong positive influence on the primed soil C (Table 2). For instance, salinity properties of EC had a directly negative influence on the bacterial diversity but positive influence on the primed soil C. Meanwhile, pH was negatively correlated with bacterial diversity and positively correlated with substrate-derived C.</p>
+
+      <?xmltex \floatpos{t}?><fig id="Ch1.F4" specific-use="star"><?xmltex \currentcnt{4}?><?xmltex \def\figurename{Figure}?><label>Figure 4</label><caption><p id="d1e2821">The top 10 phyla and genera  in the bacterial community in the soils with a gradient of salinity.</p></caption>
+          <?xmltex \igopts{width=398.338583pt}?><graphic xlink:href="https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024-f04.png"/>
+
+        </fig>
+
+</sec>
+</sec>
+<sec id="Ch1.S4">
+  <label>4</label><title>Discussion</title>
+<sec id="Ch1.S4.SS1">
+  <label>4.1</label><title>Soil priming effects along salty gradients</title>
+      <p id="d1e2846">Understanding soil C dynamics along salinity gradients is crucial to predict C sequestration in salty soils. In the early stage of the incubation, we observed that the cumulative substrate-derived CO<inline-formula><mml:math id="M180" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula> in the soils with lower salinity was significantly higher than in soils with higher salinity (Fig. 1), which can be possibly explained by that high-salinity-inhibited microbial activity. Many studies have reported the influence of soil salinity on organic matter decomposition; the decomposition of organic matter is mostly decreased by salinity (Wichern et al., 2006; Ghollarata and Raiesi, 2007; Tripathi et al., 2007; Setia et al., 2012; Lu et al., 2019). Yet, the response of microbial communities to the increasing levels of salinity and consequent effects on soil priming effects remains largely unknown.</p>
+      <p id="d1e2858">Here, we found soil priming effects were gradually changed from a negative to a positive priming effect (Fig. 1). The early pattern of the dynamics of the priming effect in this study was similar to other studies showing preferential utilization of labile C substances. The first phase of negative priming effects was likely to be caused by microbial assimilation of substrate. The soil microbes started to use the new added substrate and thus used less of the original SOC. This was attributed to “preferential substrate utilization” (Perelo et al., 2005).</p>
+      <p id="d1e2861">Soil-microbial-biomass-related growth predominating in the first phase was most likely to utilize SOC, leading to a positive priming effect after the substrate largely vanished. The magnitude of priming effects depends on soil microbial biomass size (Schneckenberger et al., 2008). It was found that the amount of easily available organic C added is beyond 50 % of microbial biomass C (Blagodatskaya et al., 2008). Namely, the second phase of positive priming effects (PEs) probably was due to increased biomass size and enhanced demand on SOC. Secondly, C that was assimilated into microbial biomass in the first stage may also be mineralized in the second stage due to the turnover of microbial biomass (Shahbaz et al., 2017; Perelo et al., 2005).</p>
+</sec>
+<sec id="Ch1.S4.SS2">
+  <label>4.2</label><title>Microbial community along salt gradients</title>
+      <p id="d1e2872">Previous studies concerning the impact of salinity on soil microbial communities used different soils with a range of salt levels. In the present study we investigated the influence of soil salinity on microbial communities in soils from the closed area covering a range of salt content. Similarly, Rousk et al. (2011) also used agricultural soils from the same area<?pagebreak page7?> representing a range of soil salinity. Here, we found microbial diversity (<inline-formula><mml:math id="M181" display="inline"><mml:mi mathvariant="italic">α</mml:mi></mml:math></inline-formula> diversity) decreased with increasing salinity (Fig. 3). The negative impact on microbial diversity can be explained by the accumulation of large amounts of salt in the soil raising the extracellular osmotic concentration (Rath and Rousk, 2015; Oren, 2010). The high osmotic pressures made it difficult for many microorganisms to adapt and thus reduce their biological activity. The changes in soil microbial community structure were also explained by salinity  (Herlemann et al., 2011; Campbell and Kirchman, 2012). We found that Bacteroidetes, Firmicutes, Acidobacteria, and Deinococcus-Thermus were dominant in these soils (Fig. 4). These results are supported by previous findings that Firmicutes possess high salinity resistance. Other studies also found that Bacteroidetes is a  dominant taxon in alkaline saline soil because of its resistant to salt (Valenzuela-Encinas et al., 2009; Keshri et al., 2013). Other study shows that the dominant phyla are Bacteroidetes and then Proteobacteria in the haloalkaline soil (Keshri et al., 2012). These results are consistent with the estuarine or marine environments despite some studies suggesting that soil salinity is not found to be a decisive factor for bacterial communities and their growth (Rousk et al., 2011).</p>
+
+<?xmltex \floatpos{t}?><table-wrap id="Ch1.T3" specific-use="star"><?xmltex \currentcnt{3}?><label>Table 3</label><caption><p id="d1e2885">The variable influence projection (VIP) value and Spearman's correlation between the relative abundances of genera and C dynamics.  Note: <inline-formula><mml:math id="M182" display="inline"><mml:mrow><mml:msup><mml:mi/><mml:mo>∗</mml:mo></mml:msup><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.05</mml:mn></mml:mrow></mml:math></inline-formula>, <inline-formula><mml:math id="M183" display="inline"><mml:mrow><mml:msup><mml:mi/><mml:mrow><mml:mo>∗</mml:mo><mml:mo>∗</mml:mo></mml:mrow></mml:msup><mml:mi>p</mml:mi><mml:mo>&lt;</mml:mo><mml:mn mathvariant="normal">0.01</mml:mn></mml:mrow></mml:math></inline-formula>.</p></caption><oasis:table frame="topbot"><oasis:tgroup cols="5">
+     <oasis:colspec colnum="1" colname="col1" align="left"/>
+     <oasis:colspec colnum="2" colname="col2" align="right"/>
+     <oasis:colspec colnum="3" colname="col3" align="right"/>
+     <oasis:colspec colnum="4" colname="col4" align="right"/>
+     <oasis:colspec colnum="5" colname="col5" align="right"/>
+     <oasis:thead>
+       <oasis:row>
+         <oasis:entry colname="col1">Phylum/genus</oasis:entry>
+         <oasis:entry colname="col2">VIP</oasis:entry>
+         <oasis:entry colname="col3">Cottonseed</oasis:entry>
+         <oasis:entry colname="col4">Primed soil</oasis:entry>
+         <oasis:entry colname="col5">Basal soil</oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1"/>
+         <oasis:entry colname="col2"/>
+         <oasis:entry colname="col3">meal CO<inline-formula><mml:math id="M184" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C</oasis:entry>
+         <oasis:entry colname="col4">CO<inline-formula><mml:math id="M185" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C</oasis:entry>
+         <oasis:entry colname="col5">CO<inline-formula><mml:math id="M186" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>–C</oasis:entry>
+       </oasis:row>
+       <oasis:row rowsep="1">
+         <oasis:entry colname="col1"/>
+         <oasis:entry colname="col2"/>
+         <oasis:entry colname="col3">(<inline-formula><mml:math id="M187" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>g g<inline-formula><mml:math id="M188" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>)</oasis:entry>
+         <oasis:entry colname="col4">(<inline-formula><mml:math id="M189" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>g g<inline-formula><mml:math id="M190" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>)</oasis:entry>
+         <oasis:entry colname="col5">(<inline-formula><mml:math id="M191" display="inline"><mml:mrow class="unit"><mml:mi mathvariant="normal">µ</mml:mi></mml:mrow></mml:math></inline-formula>g g<inline-formula><mml:math id="M192" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">1</mml:mn></mml:mrow></mml:msup></mml:math></inline-formula>)</oasis:entry>
+       </oasis:row>
+     </oasis:thead>
+     <oasis:tbody>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Actinomarinales</italic></oasis:entry>
+         <oasis:entry colname="col2">1.36</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.63<inline-formula><mml:math id="M193" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Proteobacteria/<italic>Luteimonas</italic></oasis:entry>
+         <oasis:entry colname="col2">1.31</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.80<inline-formula><mml:math id="M194" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Nocardioides</italic></oasis:entry>
+         <oasis:entry colname="col2">1.30</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.54<inline-formula><mml:math id="M195" display="inline"><mml:msup><mml:mi/><mml:mo>*</mml:mo></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Proteobacteria/<italic>Hoeflea</italic></oasis:entry>
+         <oasis:entry colname="col2">1.29</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.73<inline-formula><mml:math id="M196" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Streptomyces</italic></oasis:entry>
+         <oasis:entry colname="col2">1.27</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4"><inline-formula><mml:math id="M197" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:msup><mml:mn mathvariant="normal">0.84</mml:mn><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:mrow></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Glycomyces</italic></oasis:entry>
+         <oasis:entry colname="col2">1.26</oasis:entry>
+         <oasis:entry colname="col3">0.63<inline-formula><mml:math id="M198" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Marmoricola</italic></oasis:entry>
+         <oasis:entry colname="col2">1.26</oasis:entry>
+         <oasis:entry colname="col3"><inline-formula><mml:math id="M199" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">0.52</mml:mn></mml:mrow></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Proteobacteria/<italic>Nitrosospira</italic></oasis:entry>
+         <oasis:entry colname="col2">1.23</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.59</oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Intrasporangium</italic></oasis:entry>
+         <oasis:entry colname="col2">1.22</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.60<inline-formula><mml:math id="M200" display="inline"><mml:msup><mml:mi/><mml:mo>*</mml:mo></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Agromyces</italic></oasis:entry>
+         <oasis:entry colname="col2">1.19</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5">0.58<inline-formula><mml:math id="M201" display="inline"><mml:msup><mml:mi/><mml:mo>*</mml:mo></mml:msup></mml:math></inline-formula></oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Proteobacteria/<italic>Sphingomonas</italic></oasis:entry>
+         <oasis:entry colname="col2">1.18</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5">0.65<inline-formula><mml:math id="M202" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Myceligenerans</italic></oasis:entry>
+         <oasis:entry colname="col2">1.16</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4"/>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Chloroflexi/<italic>Nitrolancea</italic></oasis:entry>
+         <oasis:entry colname="col2">1.15</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.65<inline-formula><mml:math id="M203" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Actinobacteria/<italic>Pseudarthrobacter</italic></oasis:entry>
+         <oasis:entry colname="col2">1.06</oasis:entry>
+         <oasis:entry colname="col3"/>
+         <oasis:entry colname="col4">0.62<inline-formula><mml:math id="M204" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+       <oasis:row>
+         <oasis:entry colname="col1">Proteobacteria/<italic>Stenotrophomonas</italic></oasis:entry>
+         <oasis:entry colname="col2">1.00</oasis:entry>
+         <oasis:entry colname="col3"><inline-formula><mml:math id="M205" display="inline"><mml:mrow><mml:mo>-</mml:mo><mml:mn mathvariant="normal">0.50</mml:mn></mml:mrow></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col4">0.72<inline-formula><mml:math id="M206" display="inline"><mml:msup><mml:mi/><mml:mrow><mml:mo>*</mml:mo><mml:mo>*</mml:mo></mml:mrow></mml:msup></mml:math></inline-formula></oasis:entry>
+         <oasis:entry colname="col5"/>
+       </oasis:row>
+     </oasis:tbody>
+   </oasis:tgroup></oasis:table><?xmltex \gdef\@currentlabel{3}?></table-wrap>
+
+      <p id="d1e3496">The difference in microbial community structure is affected by many soil variables, and pH and EC were the most important ones (Fig. 3; Table 2). Our results showed that the value of soil pH and EC would significantly affect the microbial community structure, and the combined contribution rate of these two variables to microbial community was 43 % (Table 2). At high levels of salt and under arid alkaline conditions, soil pH has also been shown to have a very powerful influence on soil bacterial community structures (Bååth and Anderson, 2003; Fierer and Jackson, 2006; Rousk et al., 2010). Meanwhile, as a consequence it is unlikely that soil pH differences between the studied soils obscured the influence of salt (Rousk et al., 2011). Salinity has been identified as one of the most potent environmental factors that determine the assembly of microbiomes. Salinity has been regarded as  playing a vital role in shaping microbial communities in different ecosystems. This, despite the clear evidence from aquatic microbial ecology (Lozupone and Knight, 2007), shows a potential for salt to affect soil microbial communities apart from that of pH (Rath and Rousk, 2015).</p>
+</sec>
+<sec id="Ch1.S4.SS3">
+  <label>4.3</label><title>The core microbial taxa regulating C decomposition along salinity gradient</title>
+      <p id="d1e3507">The correlation of microbial taxa and SOC decomposition (priming) was found according to the results of O2PLS and SEM (Table 3; Fig. S4). Here we showed that <italic>Streptomyces</italic> (Actinobacteria), <italic>Glycomyces</italic> (branch of Actinobacteria), <italic>Agromyces</italic> (branch of Actinobacteria), and <italic>Sphingomonas</italic> (branch of Proteobacteria) at the genus level were<?pagebreak page8?> significantly correlated with the C process, particularly primed-soil-derived C. Most of these functional taxa belonged to Actinobacteria and Proteobacteria. In a recent study, Ren et al. (2018) found that Actinobacteria had a negative impact on SOC mineralization across land-use change (Fierer et al., 2007; Goldfarb et al., 2011) and Proteobacteria drove the positive soil respiration (He et al., 2012), indicating that the balance of soil C dynamics was largely regulated by these two phyla. We found a similar result for <italic>Streptomyces</italic> (branch of Actinobacteria) in that it had a negative correlation with primed soil CO<inline-formula><mml:math id="M207" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>. Actinobacteria are able to grow preferentially on the C-rich refractory materials and relatively easily decompose the cellulose and  lignocellulose (Khodadad et al., 2011), indicating these microorganisms preferentially use the C source that is used partially by others.</p>
+      <p id="d1e3535">Although some studies suggest soil salinity may not be a vital factor for C decomposers (Rousk et al., 2010), the composition of a microbial community is considered to play a decisive role in determining dynamic C processes in response to salt stress (Ramsey et al., 2005; Schimel et al., 2007; Nottingham et al., 2009). Here, the  analysis showed that soil pH and EC in salted soils reduced microbial diversity and thus limited the utilization of SOC by microbial communities. It was reported that high pH and salinity are the major determinants of soil microbial activity and community structure (Kamble et al., 2014).</p><?xmltex \hack{\newpage}?>
+</sec>
+</sec>
+<sec id="Ch1.S5" sec-type="conclusions">
+  <label>5</label><title>Conclusion</title>
+      <p id="d1e3549">Cottonseed meal is a kind of organic material with high nitrogen content,  and  adding cottonseed meal to salinized soil can stimulate and promote the release of soil nutrients. The microorganisms mainly use the organic matter in the cottonseed meal in the pre-culture period, so the soil carbon excitation is negative excitation. The soil priming effect turned from negative to positive at the later stage of incubation (day 28) because microorganisms started to decompose SOC from the labile substrate. With the increase in salinity, the diversity of microbial community decreased. The soil microbial community was mainly controlled by soil pH and EC. By O2PLS, we found that Actinobacteria and Proteobacteria (<italic>Luteimonas,</italic> <italic>Hoeflea</italic>, and <italic>Stenotrophomonas</italic>),  dominant in these soils, were the core microbial taxa that affected the process of organic C mineralization, particularly primed soil CO<inline-formula><mml:math id="M208" display="inline"><mml:msub><mml:mi/><mml:mn mathvariant="normal">2</mml:mn></mml:msub></mml:math></inline-formula>.</p>
+</sec>
+
+      
+      </body>
+    <back><notes notes-type="dataavailability"><title>Data availability</title>
+
+      <p id="d1e3574">The datasets used and analyzed during the current study  are  available from the corresponding author upon reasonable request.</p>
+  </notes><app-group>
+        <supplementary-material position="anchor"><?pagebreak page9?><p id="d1e3577">The supplement related to this article is available online at: <inline-supplementary-material xlink:href="https://doi.org/10.5194/bg-21-1-2024-supplement" xlink:title="pdf">https://doi.org/10.5194/bg-21-1-2024-supplement</inline-supplementary-material>.<?xmltex \hack{\newpage}?></p></supplementary-material>
+        </app-group><notes notes-type="authorcontribution"><title>Author contributions</title>
+
+      <p id="d1e3587">KW conceptualized and conducted the experiment. HZ and DC conducted the data analysis, conducted the indoor experiment, and wrote the manuscript. CM and ZZ assisted in conducting the experiment. All authors reviewed the manuscript. All authors contributed to the manuscript and approved the submitted version.</p>
+  </notes><notes notes-type="competinginterests"><title>Competing interests</title>
+
+      <p id="d1e3593">The contact author has declared that none of the authors has any competing interests.</p>
+  </notes><notes notes-type="disclaimer"><title>Disclaimer</title>
+
+      <p id="d1e3599">Publisher's note: Copernicus Publications remains neutral with regard to jurisdictional claims made in the text, published maps, institutional affiliations, or any other geographical representation in this paper. While Copernicus Publications makes every effort to include appropriate place names, the final responsibility lies with the authors.</p>
+  </notes><notes notes-type="financialsupport"><title>Financial support</title>
+
+      <p id="d1e3605">This study was supported by the Special Fund for the Science and Technology Department of Xinjiang Uygur Autonomous Region (grant no. 2022B02021-3-1) and the Ningbo Key Research and Development Program (2021Z101).</p>
+  </notes><notes notes-type="reviewstatement"><title>Review statement</title>
+
+      <p id="d1e3611">This paper was edited by Luo Yu and reviewed by two anonymous referees.</p>
+  </notes><ref-list>
+    <title>References</title>
+
+      <ref id="bib1.bib1"><label>1</label><?label 1?><mixed-citation>Ali, N., Khan, S., Li, Y., Zheng, N., and Yao, H.: Influence of biochars on the accessibility of organochlorine pesticides and microbial community in contaminated soils, Sci. Total. Environ., 647, 551–560, <ext-link xlink:href="https://doi.org/10.1016/j.scitotenv.2018.07.425" ext-link-type="DOI">10.1016/j.scitotenv.2018.07.425</ext-link>, 2018.</mixed-citation></ref>
+      <ref id="bib1.bib2"><label>2</label><?label 1?><mixed-citation>Aoyama, M., Angers, D. A., N'Dayegamiye, A., and Bissonnette, N.: Metabolism of <inline-formula><mml:math id="M209" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C-labeled glucose in aggregates from soils with manure application, Soil Biol. Biochem., 32, 295–300, <ext-link xlink:href="https://doi.org/10.1016/S0038-0717(99)00152-2" ext-link-type="DOI">10.1016/S0038-0717(99)00152-2</ext-link>, 2000.</mixed-citation></ref>
+      <ref id="bib1.bib3"><label>3</label><?label 1?><mixed-citation>Asghar, H. N., Setia, R., and Marschner, P.: Community composition and activity of microbes from saline soils and non-saline soils respond similarly to changes in salinity, Soil Biol. Biochem., 47, 175–178, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2012.01.002" ext-link-type="DOI">10.1016/j.soilbio.2012.01.002</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib4"><label>4</label><?label 1?><mixed-citation>Bååth, E. and Anderson, T. H.: Comparison of soil fungal/bacterial ratios in a pH gradient using physiological and PLFA-based techniques, Soil Biol. Biochem., 35, 955–963, <ext-link xlink:href="https://doi.org/10.1016/s0038-0717(03)00154-8" ext-link-type="DOI">10.1016/s0038-0717(03)00154-8</ext-link>, 2003.</mixed-citation></ref>
+      <ref id="bib1.bib5"><label>5</label><?label 1?><mixed-citation> Bao, S. D.: Soil and Agricultural Chemistry Analysis, 3rd Edn., China Agriculture Press, Beijing, 9787109066441, 2000.</mixed-citation></ref>
+      <ref id="bib1.bib6"><label>6</label><?label 1?><mixed-citation>Blagodatskaya, Å. and Kuzyakov, Y.: Mechanisms of real and apparent priming effects and their dependence on soil microbial biomass and community structure: critical review, Biol. Fert. Soils, 45, 115–131, <ext-link xlink:href="https://doi.org/10.1007/s00374-008-0334-y" ext-link-type="DOI">10.1007/s00374-008-0334-y</ext-link>, 2008.</mixed-citation></ref>
+      <ref id="bib1.bib7"><label>7</label><?label 1?><mixed-citation>Bird, J. A., Herman, D. J., and Firestone, M. K.: Rhizosphere priming of soil organic matter by bacterial groups in a grassland soil, Soil Biol. Biochem., 43, 718–725, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2010.08.010" ext-link-type="DOI">10.1016/j.soilbio.2010.08.010</ext-link>, 2010.</mixed-citation></ref>
+      <ref id="bib1.bib8"><label>8</label><?label 1?><mixed-citation>Campbell, B. J. and Kirchman, D. L.: Bacterial diversity, community structure and potential growth rates along an estuarine salinity gradient, ISME. J., 7, 210–220, <ext-link xlink:href="https://doi.org/10.1038/ismej.2012.93" ext-link-type="DOI">10.1038/ismej.2012.93</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib9"><label>9</label><?label 1?><mixed-citation>Caporaso, J. G., Kuczynski, J., Stombaugh, J., Bittinger, K., Bushman, F. D., Costello, E. K., Fierer, N., Peña, A. G., Goodrich, J. K., Gordon, J. I., Huttley, G. A., Kelley, S. T., Knights, D., Koenig, J. E., Ley, R. E., Lozupone, C. A., McDonald, D., Muegge, B. D., Pirrung, M., Reeder, J., Sevinsky, J. R., Turnbaugh, P. J., Walters, W. A., Widmann, J., Yatsunenko, T., Zaneveld, J., and Knight, R.: QIIME allows analysis of high-throughput community sequencing data, Nat. Methods., 7, 335–336, <ext-link xlink:href="https://doi.org/10.1038/nmeth.f.303" ext-link-type="DOI">10.1038/nmeth.f.303</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib10"><label>10</label><?label 1?><mixed-citation>Dai, H., Chen, Y., Yang, X., Cui, J., and Sui, P.: The effect of different organic materials amendment on soil bacteria communities in barren sandy loam soil, Environ. Sci. Pollut. R., 24, 1–10, <ext-link xlink:href="https://doi.org/10.1007/s11356-017-0031-1" ext-link-type="DOI">10.1007/s11356-017-0031-1</ext-link>, 2017.</mixed-citation></ref>
+      <ref id="bib1.bib11"><label>11</label><?label 1?><mixed-citation>Edgar, R. C.: Search and clustering orders of magnitude faster than BLAST, Bioinformatics, 26, 2460–2461, <ext-link xlink:href="https://doi.org/10.1093/bioinformatics/btq461" ext-link-type="DOI">10.1093/bioinformatics/btq461</ext-link>, 2010.</mixed-citation></ref>
+      <ref id="bib1.bib12"><label>12</label><?label 1?><mixed-citation>Edgar, R. C., Haas, B. J., Clemente, J. C., Quince, C., and Knight, R.: UCHIME improves sensitivity and speed of chimera detection, Bioinformatics, 27, 194–220, <ext-link xlink:href="https://doi.org/10.1093/bioinformatics/btr381" ext-link-type="DOI">10.1093/bioinformatics/btr381</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib13"><label>13</label><?label 1?><mixed-citation>Faith, D. P.: Conservation evaluation and phylogenetic diversity, Biol. Conserv., 61, 1–10, <ext-link xlink:href="https://doi.org/10.1016/0006-3207(92)91201-3" ext-link-type="DOI">10.1016/0006-3207(92)91201-3</ext-link>, 1992.</mixed-citation></ref>
+      <ref id="bib1.bib14"><label>14</label><?label 1?><mixed-citation>Fierer, N. and Jackson, R. B.: The diversity and biogeography of soil bacterial communities, P. Natl. Acad. Sci. USA, 103, 626–631, <ext-link xlink:href="https://doi.org/10.1073/pnas.0507535103" ext-link-type="DOI">10.1073/pnas.0507535103</ext-link>, 2006.</mixed-citation></ref>
+      <ref id="bib1.bib15"><label>15</label><?label 1?><mixed-citation>Fierer, N., Bradford, M., and Jackson, R.: Toward an ecological classification of soil bacteria, Ecology, 88, 1354–1364, <ext-link xlink:href="https://doi.org/10.1890/05-1839" ext-link-type="DOI">10.1890/05-1839</ext-link>, 2007.</mixed-citation></ref>
+      <ref id="bib1.bib16"><label>16</label><?label 1?><mixed-citation>Filley, T. R. and Boutton, T. W.: Ecosystems in flux: molecular and stable isotope assessments of soil organic matter storage and dynamics, Soil Biol. Biochem., 38, 3181–3183, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2006.05.006" ext-link-type="DOI">10.1016/j.soilbio.2006.05.006</ext-link>, 2006.</mixed-citation></ref>
+      <ref id="bib1.bib17"><label>17</label><?label 1?><mixed-citation>Fontaine, S., Henault, C., Aamor, A., Bdioui, N., Bloor, J. M. G., Maire, V., Mary, B., Revaillot, S., and Maron, P. A.: Fungi mediate long term sequestration of carbon and nitrogen in soil through their priming effect, Soil Biol. Biochem., 43, 86–96, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2010.09.017" ext-link-type="DOI">10.1016/j.soilbio.2010.09.017</ext-link>, 2003.</mixed-citation></ref>
+      <ref id="bib1.bib18"><label>18</label><?label 1?><mixed-citation>Fontaine, S., Mariotti, A., and Abbadie, L.: The priming effect of organic matter: A question of microbial competition?, Soil Biol. Biochem., 35, 837–843, <ext-link xlink:href="https://doi.org/10.1016/s0038-0717(03)00123-8" ext-link-type="DOI">10.1016/s0038-0717(03)00123-8</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib19"><label>19</label><?label 1?><mixed-citation>Ghollarata, M. and Raiesi, F.: The adverse effects of soil salinization on the growth of trifolium alexandrinum l. and associated microbial and biochemical properties in a soil from iran, Soil Biol. Biochem., 39, 1699–1702, <ext-link xlink:href="https://doi.org/10.3389/fmicb.2011.00094" ext-link-type="DOI">10.3389/fmicb.2011.00094</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib20"><label>20</label><?label 1?><mixed-citation>Goldfarb, K., Karaoz, U., Hanson, C., Santee, C., Bradford, M., Treseder, K., Wallenstein, M., and Brodie, E.: Differential growth responses of soil bacterial taxa to carbon substrate<?pagebreak page10?>s of varying chemical recalcitrance, Front. Microbiol., 2, 94, <ext-link xlink:href="https://doi.org/10.3389/fmicb.2011.00094" ext-link-type="DOI">10.3389/fmicb.2011.00094</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib21"><label>21</label><?label 1?><mixed-citation>Hartmann, M., Frey, B., Mayer, J., and Widmer, F.: Distinct soil microbial diversity under long-term organic and conventional farming, ISME J., 9, 1177–1194, <ext-link xlink:href="https://doi.org/10.1038/ismej.2014.210" ext-link-type="DOI">10.1038/ismej.2014.210</ext-link>, 2014.</mixed-citation></ref>
+      <ref id="bib1.bib22"><label>22</label><?label 1?><mixed-citation>Hagemann, S.: Vulnerability of permafrost carbon to climate change: Implications for the global carbon cycle, Bioscience, 58, 701–714, <ext-link xlink:href="https://doi.org/10.1641/b580807" ext-link-type="DOI">10.1641/b580807</ext-link>, 2008.</mixed-citation></ref>
+      <ref id="bib1.bib23"><label>23</label><?label 1?><mixed-citation>He, Z., Piceno, Y., Deng, Y., Xu, M., Lu, Z., DeSantis, T., Andersen, G., Hobbie, S. E., Reich, P. B., and Zhou, J.: The phylogenetic composition and structure of soil microbial communities shifts in response to elevated carbon dioxide, ISME J., 6, 259–272, <ext-link xlink:href="https://doi.org/10.1038/ismej.2011.99" ext-link-type="DOI">10.1038/ismej.2011.99</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib24"><label>24</label><?label 1?><mixed-citation>Herlemann, D. P., Labrenz, M., Jürgens, K., Bertilsson, S., Waniek, J. J., and Andersson, A. F.: Transitions in bacterial communities along the 2000 km salinity gradient of the baltic sea, ISME J., 5, 1571–1579, <ext-link xlink:href="https://doi.org/10.1038/ismej.2011.41" ext-link-type="DOI">10.1038/ismej.2011.41</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib25"><label>25</label><?label 1?><mixed-citation> Kamble, P. N., and Bååth, E.: Induced N-limitation of bacterial growth in soil: Effect of carbon loading and N status in soil, Soil Biol. Biochem., 70, 11–20, https://doi.org/10.1016/j.soilbio.2014.02.015, 2014.</mixed-citation></ref>
+      <ref id="bib1.bib26"><label>26</label><?label 1?><mixed-citation>Keshri, J., Mody, K., and Jha, B.: Bacterial community structure in a semi-arid haloalkaline soil using culture independent method, Geomicrobiol. J., 30, 517–529, <ext-link xlink:href="https://doi.org/10.1080/01490451.2012.737092" ext-link-type="DOI">10.1080/01490451.2012.737092</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib27"><label>27</label><?label 1?><mixed-citation>Khodadad, C. L. M., Zimmerman, A. R., Green, S. J., Uthandi, S., and Foster, J. S.: Taxa-specific changes in soil microbial community composition induced by pyrogenic carbon amendments, Soil Biol. Biochem., 43, 385–392, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2010.11.005" ext-link-type="DOI">10.1016/j.soilbio.2010.11.005</ext-link>, 2010.</mixed-citation></ref>
+      <ref id="bib1.bib28"><label>28</label><?label 1?><mixed-citation>Kuzyakov, Y., Friedel, J. K., and Stahr, K.: Review of mechanisms and quantification of priming effects, Soil Biol. Biochem., 32, 1485–1498, <ext-link xlink:href="https://doi.org/10.1016/s0038-0717(00)00084-5" ext-link-type="DOI">10.1016/s0038-0717(00)00084-5</ext-link>, 2000.</mixed-citation></ref>
+      <ref id="bib1.bib29"><label>29</label><?label 1?><mixed-citation>Laura, R. D.: Effects of neutral salts on carbon and nitrogen mineralisation of organic matter in soil, Plant Soil., 41, 113–127, <ext-link xlink:href="https://doi.org/10.1007/bf00017949" ext-link-type="DOI">10.1007/bf00017949</ext-link>, 1974.</mixed-citation></ref>
+      <ref id="bib1.bib30"><label>30</label><?label 1?><mixed-citation>Lavelle, P., Bignell, D., Lepage, M., Wolters, V., Roger, P., Ineson, P., Heal, O. W., and Dhillion, S.: Soil function in a changing world: the role of invertebrate ecoystem engineers, Eur. J. Soil. Biol., 33, 159–193, <ext-link xlink:href="https://doi.org/10.1016/j.ejsobi.2006.10.002" ext-link-type="DOI">10.1016/j.ejsobi.2006.10.002</ext-link>, 2006.</mixed-citation></ref>
+      <ref id="bib1.bib31"><label>31</label><?label 1?><mixed-citation>Lehmann, J. and Kleber, M.: The contentious nature of soil organic matter, Nature, 528, 60–68, <ext-link xlink:href="https://doi.org/10.1038/nature16069" ext-link-type="DOI">10.1038/nature16069</ext-link>, 2015.</mixed-citation></ref>
+      <ref id="bib1.bib32"><label>32</label><?label 1?><mixed-citation>Li, X., Chen, Q. L., He, C., Shi, Q., Chen, S. C., Reid, B. J., Zhu, Y. G., and Sun, G. X.: Organic Carbon Amendments Affect the Chemodiversity of Soil Dissolved Organic Matter and Its Associations with Soil Microbial Communities, Environ. Sci. Technol., 53, 50–59, <ext-link xlink:href="https://doi.org/10.1021/acs.est.8b04673" ext-link-type="DOI">10.1021/acs.est.8b04673</ext-link>, 2018.</mixed-citation></ref>
+      <ref id="bib1.bib33"><label>33</label><?label 1?><mixed-citation>Ling, L., Fu, Y. Y., Jeewani, P. H., Tang, C. X., Pan, S. T., Reid, B. J., Gunina, A., Li, Y. F., Li, Y. C., Cai, Y. J., Kuzyakov, Y., Li, Y., Su, W. Q., Singh, B. P., Luo, Y., and Xu, J. M.: Organic matter chemistry and bacterial community structure regulate decomposition processes in post-fire forest soils, Soil Biol. Biochem., 160, 108311, https://doi.org/10.1016/j.soilbio.2021.108311, 2021.  </mixed-citation></ref><?xmltex \hack{\newpage}?>
+      <ref id="bib1.bib34"><label>34</label><?label 1?><mixed-citation> Ling, L., Luo, Y., Jiang, B., Lv, J. T., Meng, C. M., Liao, Y. H., Reid, B. J., Ding, F., Lu, Z. J., Kuzyakov, Y., and Xu, J. M.: Biochar induces mineralization of soil recalcitrant components by activation of biochar responsive bacteria groups, Soil Biol. Biochem., 172, 108778, https://doi.org/10.1016/j.soilbio.2022.108778, 2022.</mixed-citation></ref>
+      <ref id="bib1.bib35"><label>35</label><?label 1?><mixed-citation> Löhnis, F.: Nitrogen abailability of green manures, Soil Sci., 22, 253–290, 1926.</mixed-citation></ref>
+      <ref id="bib1.bib36"><label>36</label><?label 1?><mixed-citation>Lozupone, C. A. and Knight, R.: Global patterns in bacterial diversity, P. Natl. Acad. Sci. USA, 104, 11436–11440, <ext-link xlink:href="https://doi.org/10.1073/pnas.0611525104" ext-link-type="DOI">10.1073/pnas.0611525104</ext-link>, 2007.</mixed-citation></ref>
+      <ref id="bib1.bib37"><label>37</label><?label 1?><mixed-citation>Lozupone, C. A., Hamady, M., Kelley, S. T., and Knight, R.: Quantitative and qualitative beta diversity measures lead to different insights into factors that structure microbial communities, Appl. Environ. Microb., 73, 1576–1585, <ext-link xlink:href="https://doi.org/10.1128/aem.01996-06" ext-link-type="DOI">10.1128/aem.01996-06</ext-link>, 2007.</mixed-citation></ref>
+      <ref id="bib1.bib38"><label>38</label><?label 1?><mixed-citation> Lu, X. H., Li, Y. F., Wang, H. L., Singh, B. P., Hu, S. D., Luo, Y., Li, J. W., Xiao, Y. H., Cai, X. Q., and Li, Y. C.: Responses of soil greenhouse gas emissions to different application rates of biochar in a subtropical Chinese chestnut plantation, Agr. Forest Meteorol., 271, 168–179, https://doi.org/10.1016/j.agrformet.2019.03.001, 2019.</mixed-citation></ref>
+      <ref id="bib1.bib39"><label>39</label><?label 1?><mixed-citation>Luo, Y., Zang, H., Yu, Z., Chen, Z., Gunina, A., Kuzyakov, Y., Xu, J., Zhang, K., and Brookes, P. C.: Priming effects in biochar enriched soils using a three-source-partitioning approach: <inline-formula><mml:math id="M210" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">14</mml:mn></mml:msup></mml:math></inline-formula>C labelling and <inline-formula><mml:math id="M211" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">13</mml:mn></mml:msup></mml:math></inline-formula>C natural abundance, Soil Biol. Biochem., 106, 28–35, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2016.12.006" ext-link-type="DOI">10.1016/j.soilbio.2016.12.006</ext-link>, 2016.</mixed-citation></ref>
+      <ref id="bib1.bib40"><label>40</label><?label 1?><mixed-citation>Martin, W., Livia, U., Hobley, E., Lang, B., von Ltzow, M., Marin-Spiotta, E., Van Wesemael, B., Rabot, E., Lie, M., Garcia-Franco, N., Wollschlger, U., Vogel, H. J., and Kgel-Knabner, I.: Soil organic carbon storage as a key function of soils – A review of drivers and indicators at various scales, Geoderma, 333, 149–162, <ext-link xlink:href="https://doi.org/10.1016/j.geoderma.2018.07.026" ext-link-type="DOI">10.1016/j.geoderma.2018.07.026</ext-link>, 2018.</mixed-citation></ref>
+      <ref id="bib1.bib41"><label>41</label><?label 1?><mixed-citation>Nottingham, A. T., Griffiths, H., Chamberlain, P. M., Stott, A. W., and Tanner, E. V. J.: Soil priming by sugar and leaf-litter substrates: a link to microbial groups, Appl. Soil Ecol., 42, 183–190, <ext-link xlink:href="https://doi.org/10.1016/j.apsoil.2009.03.003" ext-link-type="DOI">10.1016/j.apsoil.2009.03.003</ext-link>, 2009.</mixed-citation></ref>
+      <ref id="bib1.bib42"><label>42</label><?label 1?><mixed-citation>Oren, A.: Thermodynamic limits to microbial life at high salt concentrations, Environ. Microbiol., 13, 1908–1923, <ext-link xlink:href="https://doi.org/10.1111/j.1462-2920.2010.02365.x" ext-link-type="DOI">10.1111/j.1462-2920.2010.02365.x</ext-link>, 2010.</mixed-citation></ref>
+      <ref id="bib1.bib43"><label>43</label><?label 1?><mixed-citation>Pathak, H. and Rao, D. L. N.: Carbon and nitrogen mineralization from added organic matter in saline and alkaline soils, Soil Biol. Biochem., 30, 695–702, <ext-link xlink:href="https://doi.org/10.1016/S0038-0717(97)00208-3" ext-link-type="DOI">10.1016/S0038-0717(97)00208-3</ext-link>, 1998.</mixed-citation></ref>
+      <ref id="bib1.bib44"><label>44</label><?label 1?><mixed-citation>Perelo, L. W., Jimenez, M., and Munch, J. C.: Microbial immobilisation and turnover of <inline-formula><mml:math id="M212" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">15</mml:mn></mml:msup></mml:math></inline-formula>N labelled substrates in two arable soils under field and laboratory conditions, Soil Biol. Biochem., 38, 912–922, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2005.02.039" ext-link-type="DOI">10.1016/j.soilbio.2005.02.039</ext-link>, 2005.</mixed-citation></ref>
+      <ref id="bib1.bib45"><label>45</label><?label 1?><mixed-citation>Ramsey, P. W., Rillig, M. C., Feris, K. P., Gordon, N. S., Moore, J. N., Holben, W. E., and Gannon, J. E.: Relationship between communities and processes; new insights from a field study of a contaminated ecosystem, Ecol. Lett., 8, 1201–1210, <ext-link xlink:href="https://doi.org/10.1111/j.1461-0248.2005.00821.x" ext-link-type="DOI">10.1111/j.1461-0248.2005.00821.x</ext-link>, 2005.</mixed-citation></ref>
+      <ref id="bib1.bib46"><label>46</label><?label 1?><mixed-citation>Rath, K. M. and Rousk, J.: Salt effects on the soil microbial decomposer community and their role in organic carbon cycling: A review, Soil Biol. Biochem., 81, 108–123, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2014.11.001" ext-link-type="DOI">10.1016/j.soilbio.2014.11.001</ext-link>, 2014. </mixed-citation></ref><?xmltex \hack{\newpage}?>
+      <ref id="bib1.bib47"><label>47</label><?label 1?><mixed-citation>Ren, C., Wang, T., Xu, Y., Deng, J., Zhao, F., Yang, G., Han, X., Feng, Y., and Ren, G.: Differential soil microbial community responses to the linkage of soil organic carbon fractions with respiration across land-use changes, Forest Ecol. Manag., 12, 170–178, <ext-link xlink:href="https://doi.org/10.1016/j.foreco.2017.11.011" ext-link-type="DOI">10.1016/j.foreco.2017.11.011</ext-link>, 2018.</mixed-citation></ref>
+      <ref id="bib1.bib48"><label>48</label><?label 1?><mixed-citation>Rietz, D. N. and Haynes, R. J.: Effects of irrigation-induced salinity and sodicity on soil microbial activity, Soil Biol. Biochem., 35, 845–854, <ext-link xlink:href="https://doi.org/10.1016/s0038-0717(03)00125-1" ext-link-type="DOI">10.1016/s0038-0717(03)00125-1</ext-link>, 2003.</mixed-citation></ref>
+      <ref id="bib1.bib49"><label>49</label><?label 1?><mixed-citation>Rousk, J., Bååth, E., Brookes, P. C., Lauber, C. L., Lozupone, C., Caporaso, J. G., Knight, R., and Fierer, N.: Soil bacterial and fungal communities across a pH gradient in an arable soil, ISME J., 4, 1340–1351, <ext-link xlink:href="https://doi.org/10.1038/ismej.2010.58" ext-link-type="DOI">10.1038/ismej.2010.58</ext-link>, 2010.</mixed-citation></ref>
+      <ref id="bib1.bib50"><label>50</label><?label 1?><mixed-citation>Rousk, J., Elyaagubi, F. K., Jones, D. L., and Godbold, D. L.: Bacterial salt tolerance is unrelated to soil salinity across an arid agroecosystem salinity gradient, Soil Biol. Biochem., 43, 1881–1887, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2011.05.007" ext-link-type="DOI">10.1016/j.soilbio.2011.05.007</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib51"><label>51</label><?label 1?><mixed-citation>Sardinha, M., Müller, T., Schmeisky, H., and Joergensen, R. G.: Microbial performance in soils along a salinity gradient under acidic conditions, Appl. Soil Ecol., 23, 237–244, <ext-link xlink:href="https://doi.org/10.1016/s0929-1393(03)00027-1" ext-link-type="DOI">10.1016/s0929-1393(03)00027-1</ext-link>, 2003.</mixed-citation></ref>
+      <ref id="bib1.bib52"><label>52</label><?label 1?><mixed-citation>Schneckenberger, K., Demin, D., Stahr, K., and Kuzyakov, Y.: Microbial utilization and mineralization of <inline-formula><mml:math id="M213" display="inline"><mml:msup><mml:mi/><mml:mn mathvariant="normal">14</mml:mn></mml:msup></mml:math></inline-formula>C glucose added in six orders of concentration to soil, Soil Biol. Biochem., 40, 1981–1988, <ext-link xlink:href="https://doi.org/10.1016/j.soilbio.2008.02.020" ext-link-type="DOI">10.1016/j.soilbio.2008.02.020</ext-link>, 2008.</mixed-citation></ref>
+      <ref id="bib1.bib53"><label>53</label><?label 1?><mixed-citation>Scheu, S. and Parkinson, D.: Effects of earthworms on nutrient dynamics, carbon turnover and microorganisms in soils from cool temperate forests of the Canadian Rocky Mountains – laboratory studies, Appl. Soil Ecol., 5, 23–27, <ext-link xlink:href="https://doi.org/10.1016/0929-1393(94)90031-0" ext-link-type="DOI">10.1016/0929-1393(94)90031-0</ext-link>, 1994.</mixed-citation></ref>
+      <ref id="bib1.bib54"><label>54</label><?label 1?><mixed-citation>Schimel, J., Balser, T. C., and Wallenstein, M.: Microbial stress-response physiology and its implications for ecosystem function, Ecology, 88, 1386–1394, <ext-link xlink:href="https://doi.org/10.1890/06-0219" ext-link-type="DOI">10.1890/06-0219</ext-link>, 2007.</mixed-citation></ref>
+      <ref id="bib1.bib55"><label>55</label><?label 1?><mixed-citation>Setia, R., Setia, D., and Marschner, P.: Short-term carbon mineralization in saline-sodic soils, Biol. Fert. Soils, 48, 475–479, <ext-link xlink:href="https://doi.org/10.1007/s00374-011-0643-4" ext-link-type="DOI">10.1007/s00374-011-0643-4</ext-link>, 2012.</mixed-citation></ref>
+      <ref id="bib1.bib56"><label>56</label><?label 1?><mixed-citation>Shahbaz, M., Kuzyakov, Y., Sanaullah, M., Heitkamp, F., Zelenev, V., Kumar, A., and Blagodatskaya, E.: Microbial decomposition of soil organic matter is mediated by quality and quantity of crop residues: mechanisms and thresholds, Biol. Fert. Soils, 53, 287–301, <ext-link xlink:href="https://doi.org/10.1007/s00374-016-1174-9" ext-link-type="DOI">10.1007/s00374-016-1174-9</ext-link>, 2017.</mixed-citation></ref>
+      <ref id="bib1.bib57"><label>57</label><?label 1?><mixed-citation>Soina, V. S., Mergelov, N. S., Kudinova, A. G., Lysak, L. V., Demkina, E. V., Vorobyova, E. A., Dolgikh, A. V., and Shorkunov, I. G.: Microbial Communities of Soils and Soil-like Bodies in Extreme Conditions of East Antarctica, Paleontol. J., 52, 1186–1195, <ext-link xlink:href="https://doi.org/10.1134/s0031030118100143" ext-link-type="DOI">10.1134/s0031030118100143</ext-link>, 2018. </mixed-citation></ref><?xmltex \hack{\newpage}?>
+      <ref id="bib1.bib58"><label>58</label><?label 1?><mixed-citation>Stevenson, B. S., Eichorst, S. A., Wertz, J. T., Schmidt, T. M., and Breznak, J. A.: New strategies for cultivation and detection of previously uncultured microbes, Appl. Environ. Microb., 70, 4748–4755, <ext-link xlink:href="https://doi.org/10.1128/aem.70.8.4748-4755.2004" ext-link-type="DOI">10.1128/aem.70.8.4748-4755.2004</ext-link>, 2004.</mixed-citation></ref>
+      <ref id="bib1.bib59"><label>59</label><?label 1?><mixed-citation>Su, J. Q., An, X. L., Li, B., Chen, Q. L., Gillings, M. R., and Chen, H.: Metagenomics of urban sewage identifies an extensively shared antibiotic resistome in china, Microbiome, 5, 84–85, <ext-link xlink:href="https://doi.org/10.1186/s40168-017-0298-y" ext-link-type="DOI">10.1186/s40168-017-0298-y</ext-link>, 2017.</mixed-citation></ref>
+      <ref id="bib1.bib60"><label>60</label><?label 1?><mixed-citation> Sullivan, B. W. and Hart, S. C.: Evaluation of mechanisms controlling the priming of soil carbon along a substrate age gradient, Soil Biol. Biochem., 58, 293–301, https://doi.org/10.1016/j.soilbio.2012.12.007, 2013.</mixed-citation></ref>
+      <ref id="bib1.bib61"><label>61</label><?label 1?><mixed-citation> Tripathi, S., Chakraborty, A., Chakrabarti, K., and Bandyopadhyay, B, K.: Enzyme activities and microbial biomass in coastal soils of India, Soil Biol. Biochem., 39, 2840–2848, https://doi.org/10.1016/j.soilbio.2007.05.027, 2007.</mixed-citation></ref>
+      <ref id="bib1.bib62"><label>62</label><?label 1?><mixed-citation>Valenzuela-Encinas, C., Neria-González, I., Alcántara-Hernández, R. J., Estrada-Alvarado, I., Dendooven, L., and Marsch, R.: Changes in the bacterial populations of the highly alkaline saline soil of the former lake Texcoco (Mexico) following flooding, Extremophiles, 13, 609–621, <ext-link xlink:href="https://doi.org/10.1007/s00792-009-0244-4" ext-link-type="DOI">10.1007/s00792-009-0244-4</ext-link>, 2009.</mixed-citation></ref>
+      <ref id="bib1.bib63"><label>63</label><?label 1?><mixed-citation> Vance, E. D., Brookes, P. C., and Jenkinson, D. S.: An extraction method for measuring soil microbial biomass C, Soil Biol. Biochem., 19, 703–707, https://doi.org/10.1016/0038-0717(87)90052-6, 1987.</mixed-citation></ref>
+      <ref id="bib1.bib64"><label>64</label><?label 1?><mixed-citation>Wagner, B. and Raquel, G.: Impacts of sewage sludge in tropical soil: a case study in brazil, Applied and Environmental Soil Science, 2011, 212807, <ext-link xlink:href="https://doi.org/10.1155/2011/212807" ext-link-type="DOI">10.1155/2011/212807</ext-link>, 2011.</mixed-citation></ref>
+      <ref id="bib1.bib65"><label>65</label><?label 1?><mixed-citation>Wang, Z. M., Lu, Z. M., Shi, J. S., and Xu, Z. H.: Exploring flavour-producing core microbiota in multispecies solid-state fermentation of traditional Chinese vinegar, Sci. Rep.-UK, 31, 26818, <ext-link xlink:href="https://doi.org/10.1038/srep26818" ext-link-type="DOI">10.1038/srep26818</ext-link>, 2016.</mixed-citation></ref>
+      <ref id="bib1.bib66"><label>66</label><?label 1?><mixed-citation>Wichern, J., Wichern, F., and Joergensen, R. G.: Impact of salinity on soil microbial communities and the decomposition of maize in acidic soils, Geoderma, 137, 100–108, <ext-link xlink:href="https://doi.org/10.1016/j.geoderma.2006.08.001" ext-link-type="DOI">10.1016/j.geoderma.2006.08.001</ext-link>, 2006.</mixed-citation></ref>
+      <ref id="bib1.bib67"><label>67</label><?label 1?><mixed-citation> Wu, J., Joergensen, R. G., and Pommerening, B.: Measurement of soil microbial biomass C by fumigation-extraction: an automated procedure, Soil Biol. Biochem., 22, 1167–1169, https://doi.org/10.1016/0038-0717(90)90046-3, 1990.</mixed-citation></ref>
+      <ref id="bib1.bib68"><label>68</label><?label 1?><mixed-citation>Xun, W., Zhao, J., Xue, C., Zhang, G., Ran, W., Wang, B., Shen, Q., and Zhang, R.: Significant alteration of soil bacterialcommunities and organic carbon decomposition by different longterm fertilization management conditions of extremely lowproductivity arable soil in South China, Environ. Microbiol., 18, 1907–1917, <ext-link xlink:href="https://doi.org/10.1111/1462-2920.13098" ext-link-type="DOI">10.1111/1462-2920.13098</ext-link>, 2016.</mixed-citation></ref>
+
+  </ref-list></back>
+    <!--<article-title-html>Soil priming effects and involved microbial community  along salt gradients</article-title-html>
+<abstract-html/>
+<ref-html id="bib1.bib1"><label>1</label><mixed-citation>
+      
+Ali, N., Khan, S., Li, Y., Zheng, N., and Yao, H.: Influence of biochars on
+the accessibility of organochlorine pesticides and microbial community in
+contaminated soils, Sci. Total. Environ., 647, 551–560, <a href="https://doi.org/10.1016/j.scitotenv.2018.07.425" target="_blank">https://doi.org/10.1016/j.scitotenv.2018.07.425</a>, 2018.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib2"><label>2</label><mixed-citation>
+      
+Aoyama, M., Angers, D. A., N'Dayegamiye, A., and Bissonnette, N.: Metabolism of <sup>13</sup>C-labeled glucose in aggregates from soils with manure application, Soil Biol. Biochem., 32, 295–300, <a href="https://doi.org/10.1016/S0038-0717(99)00152-2" target="_blank">https://doi.org/10.1016/S0038-0717(99)00152-2</a>, 2000.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib3"><label>3</label><mixed-citation>
+      
+Asghar, H. N., Setia, R., and Marschner, P.: Community composition and
+activity of microbes from saline soils and non-saline soils respond
+similarly to changes in salinity, Soil Biol. Biochem., 47, 175–178,
+<a href="https://doi.org/10.1016/j.soilbio.2012.01.002" target="_blank">https://doi.org/10.1016/j.soilbio.2012.01.002</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib4"><label>4</label><mixed-citation>
+      
+Bååth, E. and Anderson, T. H.: Comparison of soil fungal/bacterial
+ratios in a pH gradient using physiological and PLFA-based techniques, Soil
+Biol. Biochem., 35, 955–963, <a href="https://doi.org/10.1016/s0038-0717(03)00154-8" target="_blank">https://doi.org/10.1016/s0038-0717(03)00154-8</a>, 2003.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib5"><label>5</label><mixed-citation>
+      
+Bao, S. D.: Soil and Agricultural Chemistry Analysis, 3rd Edn., China
+Agriculture Press, Beijing, 9787109066441, 2000.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib6"><label>6</label><mixed-citation>
+      
+Blagodatskaya, Å. and Kuzyakov, Y.: Mechanisms of real and apparent priming
+effects and their dependence on soil microbial biomass and community
+structure: critical review, Biol. Fert. Soils, 45, 115–131, <a href="https://doi.org/10.1007/s00374-008-0334-y" target="_blank">https://doi.org/10.1007/s00374-008-0334-y</a>, 2008.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib7"><label>7</label><mixed-citation>
+      
+Bird, J. A., Herman, D. J., and Firestone, M. K.: Rhizosphere priming of
+soil organic matter by bacterial groups in a grassland soil, Soil Biol.
+Biochem., 43, 718–725, <a href="https://doi.org/10.1016/j.soilbio.2010.08.010" target="_blank">https://doi.org/10.1016/j.soilbio.2010.08.010</a>, 2010.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib8"><label>8</label><mixed-citation>
+      
+Campbell, B. J. and Kirchman, D. L.: Bacterial diversity, community
+structure and potential growth rates along an estuarine salinity
+gradient, ISME. J., 7, 210–220, <a href="https://doi.org/10.1038/ismej.2012.93" target="_blank">https://doi.org/10.1038/ismej.2012.93</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib9"><label>9</label><mixed-citation>
+      
+Caporaso, J. G., Kuczynski, J., Stombaugh, J., Bittinger, K., Bushman, F.
+D., Costello, E. K., Fierer, N., Peña, A. G., Goodrich, J. K., Gordon,
+J. I., Huttley, G. A., Kelley, S. T., Knights, D., Koenig, J. E., Ley, R.
+E., Lozupone, C. A., McDonald, D., Muegge, B. D., Pirrung, M., Reeder, J.,
+Sevinsky, J. R., Turnbaugh, P. J., Walters, W. A., Widmann, J., Yatsunenko,
+T., Zaneveld, J., and Knight, R.: QIIME allows analysis of high-throughput
+community sequencing data, Nat. Methods., 7, 335–336, <a href="https://doi.org/10.1038/nmeth.f.303" target="_blank">https://doi.org/10.1038/nmeth.f.303</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib10"><label>10</label><mixed-citation>
+      
+Dai, H., Chen, Y., Yang, X., Cui, J., and Sui, P.: The effect of different
+organic materials amendment on soil bacteria communities in barren sandy
+loam soil, Environ. Sci. Pollut. R., 24, 1–10, <a href="https://doi.org/10.1007/s11356-017-0031-1" target="_blank">https://doi.org/10.1007/s11356-017-0031-1</a>, 2017.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib11"><label>11</label><mixed-citation>
+      
+Edgar, R. C.: Search and clustering orders of magnitude faster than BLAST,
+Bioinformatics, 26, 2460–2461, <a href="https://doi.org/10.1093/bioinformatics/btq461" target="_blank">https://doi.org/10.1093/bioinformatics/btq461</a>, 2010.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib12"><label>12</label><mixed-citation>
+      
+Edgar, R. C., Haas, B. J., Clemente, J. C., Quince, C., and Knight, R.:
+UCHIME improves sensitivity and speed of chimera detection, Bioinformatics,
+27, 194–220, <a href="https://doi.org/10.1093/bioinformatics/btr381" target="_blank">https://doi.org/10.1093/bioinformatics/btr381</a>,
+2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib13"><label>13</label><mixed-citation>
+      
+Faith, D. P.: Conservation evaluation and phylogenetic diversity, Biol.
+Conserv., 61, 1–10, <a href="https://doi.org/10.1016/0006-3207(92)91201-3" target="_blank">https://doi.org/10.1016/0006-3207(92)91201-3</a>, 1992.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib14"><label>14</label><mixed-citation>
+      
+Fierer, N. and Jackson, R. B.: The diversity and biogeography of soil
+bacterial communities, P. Natl. Acad. Sci. USA, 103, 626–631,
+<a href="https://doi.org/10.1073/pnas.0507535103" target="_blank">https://doi.org/10.1073/pnas.0507535103</a>, 2006.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib15"><label>15</label><mixed-citation>
+      
+Fierer, N., Bradford, M., and Jackson, R.: Toward an ecological
+classification of soil bacteria, Ecology, 88, 1354–1364, <a href="https://doi.org/10.1890/05-1839" target="_blank">https://doi.org/10.1890/05-1839</a>, 2007.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib16"><label>16</label><mixed-citation>
+      
+Filley, T. R. and Boutton, T. W.: Ecosystems in flux: molecular and stable
+isotope assessments of soil organic matter storage and dynamics, Soil Biol.
+Biochem., 38, 3181–3183, <a href="https://doi.org/10.1016/j.soilbio.2006.05.006" target="_blank">https://doi.org/10.1016/j.soilbio.2006.05.006</a>, 2006.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib17"><label>17</label><mixed-citation>
+      
+Fontaine, S., Henault, C., Aamor, A., Bdioui, N., Bloor, J. M. G., Maire, V.,
+Mary, B., Revaillot, S., and Maron, P. A.: Fungi mediate long term
+sequestration of carbon and nitrogen in soil through their priming effect,
+Soil Biol. Biochem., 43, 86–96, <a href="https://doi.org/10.1016/j.soilbio.2010.09.017" target="_blank">https://doi.org/10.1016/j.soilbio.2010.09.017</a>, 2003.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib18"><label>18</label><mixed-citation>
+      
+Fontaine, S., Mariotti, A., and Abbadie, L.: The priming effect of organic
+matter: A question of microbial competition?, Soil Biol. Biochem., 35,
+837–843, <a href="https://doi.org/10.1016/s0038-0717(03)00123-8" target="_blank">https://doi.org/10.1016/s0038-0717(03)00123-8</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib19"><label>19</label><mixed-citation>
+      
+Ghollarata, M. and Raiesi, F.: The adverse effects of soil salinization on
+the growth of trifolium alexandrinum l. and associated microbial and
+biochemical properties in a soil from iran, Soil Biol. Biochem., 39,
+1699–1702, <a href="https://doi.org/10.3389/fmicb.2011.00094" target="_blank">https://doi.org/10.3389/fmicb.2011.00094</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib20"><label>20</label><mixed-citation>
+      
+Goldfarb, K., Karaoz, U., Hanson, C., Santee, C., Bradford, M., Treseder,
+K., Wallenstein, M., and Brodie, E.: Differential growth responses of soil
+bacterial taxa to carbon substrates of varying chemical recalcitrance,
+Front. Microbiol., 2, 94, <a href="https://doi.org/10.3389/fmicb.2011.00094" target="_blank">https://doi.org/10.3389/fmicb.2011.00094</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib21"><label>21</label><mixed-citation>
+      
+Hartmann, M., Frey, B., Mayer, J., and Widmer, F.: Distinct soil microbial
+diversity under long-term organic and conventional farming, ISME J., 9,
+1177–1194, <a href="https://doi.org/10.1038/ismej.2014.210" target="_blank">https://doi.org/10.1038/ismej.2014.210</a>, 2014.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib22"><label>22</label><mixed-citation>
+      
+Hagemann, S.: Vulnerability of permafrost carbon to climate change:
+Implications for the global carbon cycle, Bioscience, 58, 701–714,
+<a href="https://doi.org/10.1641/b580807" target="_blank">https://doi.org/10.1641/b580807</a>, 2008.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib23"><label>23</label><mixed-citation>
+      
+He, Z., Piceno, Y., Deng, Y., Xu, M., Lu, Z., DeSantis, T., Andersen, G.,
+Hobbie, S. E., Reich, P. B., and Zhou, J.: The phylogenetic composition and
+structure of soil microbial communities shifts in response to elevated
+carbon dioxide, ISME J., 6, 259–272, <a href="https://doi.org/10.1038/ismej.2011.99" target="_blank">https://doi.org/10.1038/ismej.2011.99</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib24"><label>24</label><mixed-citation>
+      
+Herlemann, D. P., Labrenz, M., Jürgens, K., Bertilsson, S., Waniek, J.
+J., and Andersson, A. F.: Transitions in bacterial communities along the
+2000&thinsp;km salinity gradient of the baltic sea, ISME J., 5, 1571–1579,
+<a href="https://doi.org/10.1038/ismej.2011.41" target="_blank">https://doi.org/10.1038/ismej.2011.41</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib25"><label>25</label><mixed-citation>
+      
+Kamble, P. N., and Bååth, E.: Induced N-limitation of bacterial growth in soil: Effect of carbon loading and N status in soil, Soil Biol. Biochem., 70, 11–20, https://doi.org/10.1016/j.soilbio.2014.02.015, 2014.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib26"><label>26</label><mixed-citation>
+      
+Keshri, J., Mody, K., and Jha, B.: Bacterial community structure in a
+semi-arid haloalkaline soil using culture independent
+method, Geomicrobiol. J., 30, 517–529, <a href="https://doi.org/10.1080/01490451.2012.737092" target="_blank">https://doi.org/10.1080/01490451.2012.737092</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib27"><label>27</label><mixed-citation>
+      
+Khodadad, C. L. M., Zimmerman, A. R., Green, S. J., Uthandi, S., and Foster,
+J. S.: Taxa-specific changes in soil microbial community composition induced
+by pyrogenic carbon amendments, Soil Biol. Biochem., 43, 385–392, <a href="https://doi.org/10.1016/j.soilbio.2010.11.005" target="_blank">https://doi.org/10.1016/j.soilbio.2010.11.005</a>, 2010.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib28"><label>28</label><mixed-citation>
+      
+Kuzyakov, Y., Friedel, J. K., and Stahr, K.: Review of mechanisms and
+quantification of priming effects, Soil Biol. Biochem., 32, 1485–1498,
+<a href="https://doi.org/10.1016/s0038-0717(00)00084-5" target="_blank">https://doi.org/10.1016/s0038-0717(00)00084-5</a>, 2000.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib29"><label>29</label><mixed-citation>
+      
+Laura, R. D.: Effects of neutral salts on carbon and nitrogen mineralisation
+of organic matter in soil, Plant Soil., 41, 113–127, <a href="https://doi.org/10.1007/bf00017949" target="_blank">https://doi.org/10.1007/bf00017949</a>, 1974.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib30"><label>30</label><mixed-citation>
+      
+Lavelle, P., Bignell, D., Lepage, M., Wolters, V., Roger, P., Ineson, P.,
+Heal, O. W., and Dhillion, S.: Soil function in a changing world: the role of
+invertebrate ecoystem engineers, Eur. J. Soil. Biol., 33, 159–193,
+<a href="https://doi.org/10.1016/j.ejsobi.2006.10.002" target="_blank">https://doi.org/10.1016/j.ejsobi.2006.10.002</a>, 2006.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib31"><label>31</label><mixed-citation>
+      
+Lehmann, J. and Kleber, M.: The contentious nature of soil organic matter,
+Nature, 528, 60–68, <a href="https://doi.org/10.1038/nature16069" target="_blank">https://doi.org/10.1038/nature16069</a>, 2015.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib32"><label>32</label><mixed-citation>
+      
+Li, X., Chen, Q. L., He, C., Shi, Q., Chen, S. C., Reid, B. J., Zhu, Y. G., and
+Sun, G. X.: Organic Carbon Amendments Affect the Chemodiversity of Soil
+Dissolved Organic Matter and Its Associations with Soil Microbial
+Communities, Environ. Sci. Technol., 53, 50–59, <a href="https://doi.org/10.1021/acs.est.8b04673" target="_blank">https://doi.org/10.1021/acs.est.8b04673</a>, 2018.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib33"><label>33</label><mixed-citation>
+      
+Ling, L., Fu, Y. Y., Jeewani, P. H., Tang, C. X., Pan, S. T., Reid, B. J., Gunina, A., Li, Y. F., Li, Y. C., Cai, Y. J., Kuzyakov, Y., Li, Y., Su, W. Q., Singh, B. P., Luo, Y., and Xu, J. M.: Organic matter chemistry and bacterial community structure regulate decomposition processes in post-fire forest soils, Soil Biol. Biochem., 160, 108311, https://doi.org/10.1016/j.soilbio.2021.108311, 2021.
+
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib34"><label>34</label><mixed-citation>
+      
+Ling, L., Luo, Y., Jiang, B., Lv, J. T., Meng, C. M., Liao, Y. H., Reid, B. J., Ding, F., Lu, Z. J., Kuzyakov, Y., and Xu, J. M.: Biochar induces mineralization of soil recalcitrant components by activation of biochar responsive bacteria groups, Soil Biol. Biochem., 172, 108778, https://doi.org/10.1016/j.soilbio.2022.108778, 2022.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib35"><label>35</label><mixed-citation>
+      
+Löhnis, F.: Nitrogen abailability of green manures, Soil Sci., 22,
+253–290, 1926.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib36"><label>36</label><mixed-citation>
+      
+Lozupone, C. A. and Knight, R.: Global patterns in bacterial
+diversity, P. Natl. Acad. Sci. USA, 104, 11436–11440, <a href="https://doi.org/10.1073/pnas.0611525104" target="_blank">https://doi.org/10.1073/pnas.0611525104</a>, 2007.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib37"><label>37</label><mixed-citation>
+      
+Lozupone, C. A., Hamady, M., Kelley, S. T., and Knight, R.: Quantitative and
+qualitative beta diversity measures lead to different insights into factors
+that structure microbial communities, Appl. Environ. Microb., 73, 1576–1585,
+<a href="https://doi.org/10.1128/aem.01996-06" target="_blank">https://doi.org/10.1128/aem.01996-06</a>, 2007.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib38"><label>38</label><mixed-citation>
+      
+Lu, X. H., Li, Y. F., Wang, H. L., Singh, B. P., Hu, S. D., Luo, Y., Li, J. W., Xiao, Y. H., Cai, X. Q., and Li, Y. C.: Responses of soil greenhouse gas emissions to different application rates of biochar in a subtropical Chinese chestnut plantation, Agr. Forest Meteorol., 271, 168–179, https://doi.org/10.1016/j.agrformet.2019.03.001, 2019.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib39"><label>39</label><mixed-citation>
+      
+Luo, Y., Zang, H., Yu, Z., Chen, Z., Gunina, A., Kuzyakov, Y., Xu, J.,
+Zhang, K., and Brookes, P. C.: Priming effects in biochar enriched soils
+using a three-source-partitioning approach: <sup>14</sup>C labelling and <sup>13</sup>C
+natural abundance, Soil Biol. Biochem., 106, 28–35, <a href="https://doi.org/10.1016/j.soilbio.2016.12.006" target="_blank">https://doi.org/10.1016/j.soilbio.2016.12.006</a>, 2016.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib40"><label>40</label><mixed-citation>
+      
+Martin, W., Livia, U., Hobley, E., Lang, B., von Ltzow, M., Marin-Spiotta,
+E., Van Wesemael, B., Rabot, E., Lie, M., Garcia-Franco, N., Wollschlger,
+U., Vogel, H. J., and Kgel-Knabner, I.: Soil organic carbon storage as a key
+function of soils – A review of drivers and indicators at various scales,
+Geoderma, 333, 149–162, <a href="https://doi.org/10.1016/j.geoderma.2018.07.026" target="_blank">https://doi.org/10.1016/j.geoderma.2018.07.026</a>, 2018.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib41"><label>41</label><mixed-citation>
+      
+Nottingham, A. T., Griffiths, H., Chamberlain, P. M., Stott, A. W., and
+Tanner, E. V. J.: Soil priming by sugar and leaf-litter substrates: a link
+to microbial groups, Appl. Soil Ecol., 42, 183–190, <a href="https://doi.org/10.1016/j.apsoil.2009.03.003" target="_blank">https://doi.org/10.1016/j.apsoil.2009.03.003</a>, 2009.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib42"><label>42</label><mixed-citation>
+      
+Oren, A.: Thermodynamic limits to microbial life at high salt
+concentrations, Environ. Microbiol., 13, 1908–1923, <a href="https://doi.org/10.1111/j.1462-2920.2010.02365.x" target="_blank">https://doi.org/10.1111/j.1462-2920.2010.02365.x</a>, 2010.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib43"><label>43</label><mixed-citation>
+      
+Pathak, H. and Rao, D. L. N.: Carbon and nitrogen mineralization from added
+organic matter in saline and alkaline soils, Soil Biol. Biochem., 30,
+695–702, <a href="https://doi.org/10.1016/S0038-0717(97)00208-3" target="_blank">https://doi.org/10.1016/S0038-0717(97)00208-3</a>, 1998.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib44"><label>44</label><mixed-citation>
+      
+Perelo, L. W., Jimenez, M., and Munch, J. C.: Microbial immobilisation and
+turnover of <sup>15</sup>N labelled substrates in two arable soils under field and
+laboratory conditions, Soil Biol. Biochem., 38, 912–922, <a href="https://doi.org/10.1016/j.soilbio.2005.02.039" target="_blank">https://doi.org/10.1016/j.soilbio.2005.02.039</a>, 2005.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib45"><label>45</label><mixed-citation>
+      
+Ramsey, P. W., Rillig, M. C., Feris, K. P., Gordon, N. S., Moore, J. N., Holben,
+W. E., and Gannon, J. E.: Relationship between communities and processes; new
+insights from a field study of a contaminated ecosystem, Ecol. Lett., 8,
+1201–1210, <a href="https://doi.org/10.1111/j.1461-0248.2005.00821.x" target="_blank">https://doi.org/10.1111/j.1461-0248.2005.00821.x</a>,
+2005.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib46"><label>46</label><mixed-citation>
+      
+Rath, K. M. and Rousk, J.: Salt effects on the soil microbial decomposer
+community and their role in organic carbon cycling: A review, Soil Biol.
+Biochem., 81, 108–123, <a href="https://doi.org/10.1016/j.soilbio.2014.11.001" target="_blank">https://doi.org/10.1016/j.soilbio.2014.11.001</a>, 2014.
+
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib47"><label>47</label><mixed-citation>
+      
+Ren, C., Wang, T., Xu, Y., Deng, J., Zhao, F., Yang, G., Han, X., Feng, Y.,
+and Ren, G.: Differential soil microbial community responses to the linkage
+of soil organic carbon fractions with respiration across land-use changes,
+Forest Ecol. Manag., 12, 170–178, <a href="https://doi.org/10.1016/j.foreco.2017.11.011" target="_blank">https://doi.org/10.1016/j.foreco.2017.11.011</a>, 2018.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib48"><label>48</label><mixed-citation>
+      
+Rietz, D. N. and Haynes, R. J.: Effects of irrigation-induced salinity and
+sodicity on soil microbial activity, Soil Biol. Biochem., 35, 845–854,
+<a href="https://doi.org/10.1016/s0038-0717(03)00125-1" target="_blank">https://doi.org/10.1016/s0038-0717(03)00125-1</a>, 2003.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib49"><label>49</label><mixed-citation>
+      
+Rousk, J., Bååth, E., Brookes, P. C., Lauber, C. L., Lozupone, C.,
+Caporaso, J. G., Knight, R., and Fierer, N.: Soil bacterial and fungal
+communities across a pH gradient in an arable soil, ISME J., 4, 1340–1351,
+<a href="https://doi.org/10.1038/ismej.2010.58" target="_blank">https://doi.org/10.1038/ismej.2010.58</a>, 2010.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib50"><label>50</label><mixed-citation>
+      
+Rousk, J., Elyaagubi, F. K., Jones, D. L., and Godbold, D. L.: Bacterial
+salt tolerance is unrelated to soil salinity across an arid agroecosystem
+salinity gradient, Soil Biol. Biochem., 43, 1881–1887, <a href="https://doi.org/10.1016/j.soilbio.2011.05.007" target="_blank">https://doi.org/10.1016/j.soilbio.2011.05.007</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib51"><label>51</label><mixed-citation>
+      
+Sardinha, M., Müller, T., Schmeisky, H., and Joergensen, R. G.: Microbial
+performance in soils along a salinity gradient under acidic conditions,
+Appl. Soil Ecol., 23, 237–244, <a href="https://doi.org/10.1016/s0929-1393(03)00027-1" target="_blank">https://doi.org/10.1016/s0929-1393(03)00027-1</a>, 2003.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib52"><label>52</label><mixed-citation>
+      
+Schneckenberger, K., Demin, D., Stahr, K., and Kuzyakov, Y.: Microbial
+utilization and mineralization of <sup>14</sup>C glucose added in six orders of
+concentration to soil, Soil Biol. Biochem., 40, 1981–1988, <a href="https://doi.org/10.1016/j.soilbio.2008.02.020" target="_blank">https://doi.org/10.1016/j.soilbio.2008.02.020</a>, 2008.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib53"><label>53</label><mixed-citation>
+      
+Scheu, S. and Parkinson, D.: Effects of earthworms on nutrient dynamics,
+carbon turnover and microorganisms in soils from cool temperate forests of
+the Canadian Rocky Mountains – laboratory studies, Appl. Soil Ecol., 5,
+23–27, <a href="https://doi.org/10.1016/0929-1393(94)90031-0" target="_blank">https://doi.org/10.1016/0929-1393(94)90031-0</a>, 1994.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib54"><label>54</label><mixed-citation>
+      
+Schimel, J., Balser, T. C., and Wallenstein, M.: Microbial stress-response
+physiology and its implications for ecosystem function, Ecology, 88,
+1386–1394, <a href="https://doi.org/10.1890/06-0219" target="_blank">https://doi.org/10.1890/06-0219</a>, 2007.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib55"><label>55</label><mixed-citation>
+      
+Setia, R., Setia, D., and Marschner, P.: Short-term carbon mineralization
+in saline-sodic soils, Biol. Fert. Soils, 48, 475–479, <a href="https://doi.org/10.1007/s00374-011-0643-4" target="_blank">https://doi.org/10.1007/s00374-011-0643-4</a>, 2012.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib56"><label>56</label><mixed-citation>
+      
+Shahbaz, M., Kuzyakov, Y., Sanaullah, M., Heitkamp, F., Zelenev, V., Kumar,
+A., and Blagodatskaya, E.: Microbial decomposition of soil organic matter is
+mediated by quality and quantity of crop residues: mechanisms and
+thresholds, Biol. Fert. Soils, 53, 287–301, <a href="https://doi.org/10.1007/s00374-016-1174-9" target="_blank">https://doi.org/10.1007/s00374-016-1174-9</a>, 2017.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib57"><label>57</label><mixed-citation>
+      
+Soina, V. S., Mergelov, N. S., Kudinova, A. G., Lysak, L. V., Demkina, E. V.,
+Vorobyova, E. A., Dolgikh, A. V., and Shorkunov, I. G.: Microbial Communities of
+Soils and Soil-like Bodies in Extreme Conditions of East Antarctica,
+Paleontol. J., 52, 1186–1195, <a href="https://doi.org/10.1134/s0031030118100143" target="_blank">https://doi.org/10.1134/s0031030118100143</a>, 2018.
+
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib58"><label>58</label><mixed-citation>
+      
+Stevenson, B. S., Eichorst, S. A., Wertz, J. T., Schmidt, T. M., and Breznak,
+J. A.: New strategies for cultivation and detection of previously uncultured
+microbes, Appl. Environ. Microb., 70, 4748–4755, <a href="https://doi.org/10.1128/aem.70.8.4748-4755.2004" target="_blank">https://doi.org/10.1128/aem.70.8.4748-4755.2004</a>, 2004.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib59"><label>59</label><mixed-citation>
+      
+Su, J. Q., An, X. L., Li, B., Chen, Q. L., Gillings, M. R., and Chen, H.:
+Metagenomics of urban sewage identifies an extensively shared antibiotic
+resistome in china, Microbiome, 5, 84–85, <a href="https://doi.org/10.1186/s40168-017-0298-y" target="_blank">https://doi.org/10.1186/s40168-017-0298-y</a>, 2017.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib60"><label>60</label><mixed-citation>
+      
+Sullivan, B. W. and Hart, S. C.: Evaluation of mechanisms controlling the priming of soil carbon along a substrate age gradient, Soil Biol. Biochem., 58, 293–301, https://doi.org/10.1016/j.soilbio.2012.12.007, 2013.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib61"><label>61</label><mixed-citation>
+      
+Tripathi, S., Chakraborty, A., Chakrabarti, K., and Bandyopadhyay, B, K.: Enzyme activities and microbial biomass in coastal soils of India, Soil Biol. Biochem., 39, 2840–2848, https://doi.org/10.1016/j.soilbio.2007.05.027, 2007.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib62"><label>62</label><mixed-citation>
+      
+Valenzuela-Encinas, C., Neria-González, I., Alcántara-Hernández,
+R. J., Estrada-Alvarado, I., Dendooven, L., and Marsch, R.: Changes in the
+bacterial populations of the highly alkaline saline soil of the former lake
+Texcoco (Mexico) following flooding, Extremophiles, 13, 609–621, <a href="https://doi.org/10.1007/s00792-009-0244-4" target="_blank">https://doi.org/10.1007/s00792-009-0244-4</a>, 2009.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib63"><label>63</label><mixed-citation>
+      
+Vance, E. D., Brookes, P. C., and Jenkinson, D. S.: An extraction method for measuring soil microbial biomass C, Soil Biol. Biochem., 19, 703–707, https://doi.org/10.1016/0038-0717(87)90052-6, 1987.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib64"><label>64</label><mixed-citation>
+      
+Wagner, B. and Raquel, G.: Impacts of sewage sludge in tropical soil: a
+case study in brazil, Applied and Environmental Soil Science, 2011, 212807,
+<a href="https://doi.org/10.1155/2011/212807" target="_blank">https://doi.org/10.1155/2011/212807</a>, 2011.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib65"><label>65</label><mixed-citation>
+      
+Wang, Z. M., Lu, Z. M., Shi, J. S., and Xu, Z. H.: Exploring
+flavour-producing core microbiota in multispecies solid-state fermentation
+of traditional Chinese vinegar, Sci. Rep.-UK, 31, 26818, <a href="https://doi.org/10.1038/srep26818" target="_blank">https://doi.org/10.1038/srep26818</a>, 2016.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib66"><label>66</label><mixed-citation>
+      
+Wichern, J., Wichern, F., and Joergensen, R. G.: Impact of salinity on soil
+microbial communities and the decomposition of maize in acidic soils,
+Geoderma, 137, 100–108, <a href="https://doi.org/10.1016/j.geoderma.2006.08.001" target="_blank">https://doi.org/10.1016/j.geoderma.2006.08.001</a>, 2006.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib67"><label>67</label><mixed-citation>
+      
+Wu, J., Joergensen, R. G., and Pommerening, B.: Measurement of soil microbial biomass C by fumigation-extraction: an automated procedure, Soil Biol. Biochem., 22, 1167–1169, https://doi.org/10.1016/0038-0717(90)90046-3, 1990.
+
+    </mixed-citation></ref-html>
+<ref-html id="bib1.bib68"><label>68</label><mixed-citation>
+      
+Xun, W., Zhao, J., Xue, C., Zhang, G., Ran, W., Wang, B., Shen, Q., and
+Zhang, R.: Significant alteration of soil bacterialcommunities and organic
+carbon decomposition by different longterm fertilization management
+conditions of extremely lowproductivity arable soil in South China, Environ.
+Microbiol., 18, 1907–1917, <a href="https://doi.org/10.1111/1462-2920.13098" target="_blank">https://doi.org/10.1111/1462-2920.13098</a>, 2016.
+
+    </mixed-citation></ref-html>--></article>

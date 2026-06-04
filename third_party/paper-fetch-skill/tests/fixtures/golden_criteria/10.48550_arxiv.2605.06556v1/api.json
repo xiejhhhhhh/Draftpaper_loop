@@ -1,0 +1,73 @@
+{
+  "captured_at": "2026-05-09T03:49:42.755646+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2605.06556v1"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2605.06556v1",
+    "updated": "2026-05-07T16:49:50+00:00",
+    "published": "2026-05-07T16:49:50+00:00",
+    "title": "Probability of Quota Violations in Divisor Apportionment Methods with Nonzero Allocations",
+    "authors": [
+      "Tyler C. Wunder",
+      "Joseph Cutrone"
+    ],
+    "summary": "Apportionment assigns indivisible items among groups. By the Balinski-Young theorem, no method can satisfy both house monotonicity and the quota rule. This paper investigates quota violations caused by nonzero allocation constraints, and derives exact probability formulas for their frequency. Such violations occur in systems like the U.S. House of Representatives, where each state is guaranteed at least one seat. We analyze the three-state case, introduce the $τ$ statistic to parametrize population distributions, and prove an Asymptotic Quota Stabilization theorem: for fixed $τ$, quota behavior stabilizes as populations grow, yielding probability results for quota violations determined by the set of ultimately violatory $τ$ values.\n  Applying this framework to the five classical divisor methods, we derive exact probability formulas. Additionally, we show that as the number of seats $M \\to \\infty$, these probabilities converge to method-specific constants. These results provide a precise, quantitative foundation for evaluating the fairness and frequency of quota violations in constrained apportionment systems.",
+    "comment": null,
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "math.PR",
+    "categories": [
+      "math.PR"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2605.06556v1",
+    "short_id": "2605.06556v1"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2605.06556v1",
+    "external_doi": null,
+    "title": "Probability of Quota Violations in Divisor Apportionment Methods with Nonzero Allocations",
+    "authors": [
+      "Tyler C. Wunder",
+      "Joseph Cutrone"
+    ],
+    "abstract": "Apportionment assigns indivisible items among groups. By the Balinski-Young theorem, no method can satisfy both house monotonicity and the quota rule. This paper investigates quota violations caused by nonzero allocation constraints, and derives exact probability formulas for their frequency. Such violations occur in systems like the U.S. House of Representatives, where each state is guaranteed at least one seat. We analyze the three-state case, introduce the $τ$ statistic to parametrize population distributions, and prove an Asymptotic Quota Stabilization theorem: for fixed $τ$, quota behavior stabilizes as populations grow, yielding probability results for quota violations determined by the set of ultimately violatory $τ$ values.\nApplying this framework to the five classical divisor methods, we derive exact probability formulas. Additionally, we show that as the number of seats $M \\to \\infty$, these probabilities converge to method-specific constants. These results provide a precise, quantitative foundation for evaluating the fairness and frequency of quota violations in constrained apportionment systems.",
+    "published": "2026-05-07",
+    "updated": "2026-05-07",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2605.06556v1",
+    "arxiv_id": "2605.06556v1",
+    "primary_category": "math.PR",
+    "categories": [
+      "math.PR"
+    ],
+    "keywords": [
+      "math.PR"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.06556v1",
+    "html_url": "https://arxiv.org/html/2605.06556v1",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2605.06556v1",
+        "content_type": "text/html",
+        "content_version": "2605.06556v1",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2605.06556v1",
+        "content_type": "application/pdf",
+        "content_version": "2605.06556v1",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}

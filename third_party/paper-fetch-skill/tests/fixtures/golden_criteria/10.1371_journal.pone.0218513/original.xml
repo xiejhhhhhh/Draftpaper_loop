@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1d3 20150301//EN" "http://jats.nlm.nih.gov/publishing/1.1d3/JATS-journalpublishing1.dtd">
+<article article-type="research-article" dtd-version="1.1d3" xml:lang="en" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+<front>
+<journal-meta>
+<journal-id journal-id-type="nlm-ta">PLoS ONE</journal-id>
+<journal-id journal-id-type="publisher-id">plos</journal-id>
+<journal-id journal-id-type="pmc">plosone</journal-id>
+<journal-title-group>
+<journal-title>PLOS ONE</journal-title>
+</journal-title-group>
+<issn pub-type="epub">1932-6203</issn>
+<publisher>
+<publisher-name>Public Library of Science</publisher-name>
+<publisher-loc>San Francisco, CA USA</publisher-loc>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.1371/journal.pone.0218513</article-id>
+<article-id pub-id-type="publisher-id">PONE-D-18-28879</article-id>
+<article-categories>
+<subj-group subj-group-type="heading">
+<subject>Research Article</subject>
+</subj-group>
+<subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Plant science</subject><subj-group><subject>Plant anatomy</subject><subj-group><subject>Fruit and seed anatomy</subject><subj-group><subject>Plant embryo anatomy</subject><subj-group><subject>Hypocotyl</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Plant science</subject><subj-group><subject>Plant anatomy</subject><subj-group><subject>Plant embryo anatomy</subject><subj-group><subject>Hypocotyl</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Developmental biology</subject><subj-group><subject>Embryogenesis</subject><subj-group><subject>Plant embryogenesis</subject><subj-group><subject>Plant embryo anatomy</subject><subj-group><subject>Hypocotyl</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Developmental biology</subject><subj-group><subject>Plant growth and development</subject><subj-group><subject>Plant development</subject><subj-group><subject>Plant embryogenesis</subject><subj-group><subject>Plant embryo anatomy</subject><subj-group><subject>Hypocotyl</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Plant science</subject><subj-group><subject>Plant growth and development</subject><subj-group><subject>Plant development</subject><subj-group><subject>Plant embryogenesis</subject><subj-group><subject>Plant embryo anatomy</subject><subj-group><subject>Hypocotyl</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Medicine and health sciences</subject><subj-group><subject>Diagnostic medicine</subject><subj-group><subject>Signs and symptoms</subject><subj-group><subject>Dehydration (medicine)</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Medicine and health sciences</subject><subj-group><subject>Pathology and laboratory medicine</subject><subj-group><subject>Signs and symptoms</subject><subj-group><subject>Dehydration (medicine)</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Biochemistry</subject><subj-group><subject>Bioenergetics</subject><subj-group><subject>Energy-producing organelles</subject><subj-group><subject>Mitochondria</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Cell biology</subject><subj-group><subject>Cellular structures and organelles</subject><subj-group><subject>Energy-producing organelles</subject><subj-group><subject>Mitochondria</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Research and analysis methods</subject><subj-group><subject>Specimen preparation and treatment</subject><subj-group><subject>Tissue dehydration</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Cell biology</subject><subj-group><subject>Cell processes</subject><subj-group><subject>Cell death</subject><subj-group><subject>Apoptosis</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Research and analysis methods</subject><subj-group><subject>Specimen preparation and treatment</subject><subj-group><subject>Staining</subject><subj-group><subject>Cell staining</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Organisms</subject><subj-group><subject>Eukaryota</subject><subj-group><subject>Plants</subject><subj-group><subject>Legumes</subject><subj-group><subject>Beans</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Biology and life sciences</subject><subj-group><subject>Physiology</subject><subj-group><subject>Electrophysiology</subject><subj-group><subject>Membrane potential</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3"><subject>Medicine and health sciences</subject><subj-group><subject>Physiology</subject><subj-group><subject>Electrophysiology</subject><subj-group><subject>Membrane potential</subject></subj-group></subj-group></subj-group></subj-group></article-categories>
+<title-group>
+<article-title>Relationship between loss of desiccation tolerance and programmed cell death (PCD) in mung bean (<italic>Vigna radiata</italic>) seeds</article-title>
+<alt-title alt-title-type="running-head">Loss of desiccation tolerance and programmed cell death (PCD) in mungbean</alt-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author" corresp="yes" xlink:type="simple">
+<contrib-id authenticated="true" contrib-id-type="orcid">http://orcid.org/0000-0002-0046-7415</contrib-id>
+<name name-style="western">
+<surname>Tian</surname>
+<given-names>Xiangrong</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Conceptualization</role>
+<role content-type="http://credit.casrai.org/">Investigation</role>
+<role content-type="http://credit.casrai.org/">Writing – original draft</role>
+<role content-type="http://credit.casrai.org/">Writing – review &amp; editing</role>
+<xref ref-type="aff" rid="aff001"><sup>1</sup></xref>
+<xref ref-type="aff" rid="aff002"><sup>2</sup></xref>
+<xref ref-type="aff" rid="aff003"><sup>3</sup></xref>
+<xref ref-type="corresp" rid="cor001">*</xref>
+</contrib>
+<contrib contrib-type="author" xlink:type="simple">
+<name name-style="western">
+<surname>Li</surname>
+<given-names>Sidi</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Data curation</role>
+<xref ref-type="aff" rid="aff001"><sup>1</sup></xref>
+</contrib>
+<contrib contrib-type="author" xlink:type="simple">
+<name name-style="western">
+<surname>Zeng</surname>
+<given-names>Qing</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Investigation</role>
+<role content-type="http://credit.casrai.org/">Writing – original draft</role>
+<xref ref-type="aff" rid="aff004"><sup>4</sup></xref>
+</contrib>
+<contrib contrib-type="author" xlink:type="simple">
+<name name-style="western">
+<surname>Huang</surname>
+<given-names>Wei</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Investigation</role>
+<role content-type="http://credit.casrai.org/">Writing – original draft</role>
+<xref ref-type="aff" rid="aff001"><sup>1</sup></xref>
+</contrib>
+<contrib contrib-type="author" corresp="yes" xlink:type="simple">
+<name name-style="western">
+<surname>Liu</surname>
+<given-names>Xuanming</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Conceptualization</role>
+<role content-type="http://credit.casrai.org/">Investigation</role>
+<role content-type="http://credit.casrai.org/">Writing – review &amp; editing</role>
+<xref ref-type="aff" rid="aff003"><sup>3</sup></xref>
+<xref ref-type="corresp" rid="cor001">*</xref>
+</contrib>
+<contrib contrib-type="author" corresp="yes" xlink:type="simple">
+<name name-style="western">
+<surname>Song</surname>
+<given-names>Songquan</given-names>
+</name>
+<role content-type="http://credit.casrai.org/">Formal analysis</role>
+<role content-type="http://credit.casrai.org/">Investigation</role>
+<role content-type="http://credit.casrai.org/">Writing – review &amp; editing</role>
+<xref ref-type="aff" rid="aff002"><sup>2</sup></xref>
+<xref ref-type="aff" rid="aff005"><sup>5</sup></xref>
+<xref ref-type="corresp" rid="cor001">*</xref>
+</contrib>
+</contrib-group>
+<aff id="aff001"><label>1</label> <addr-line>Hunan Provincial University Key Laboratory of Plant Resources Protection and Utilization of Wuling Mountain Area, Jishou University, Jishou, Hunan, China</addr-line></aff>
+<aff id="aff002"><label>2</label> <addr-line>Hunan Provincial Key Laboratory of Medicinal Plants and Plant Medicine, Huaihua University, Huaihua, Hunan, China</addr-line></aff>
+<aff id="aff003"><label>3</label> <addr-line>College of Biology, Hunan University, Changsha, Hunan, China</addr-line></aff>
+<aff id="aff004"><label>4</label> <addr-line>Southern China Botanical Garden, Chinese Academy of Sciences, Guangzhou, Guangdong, China</addr-line></aff>
+<aff id="aff005"><label>5</label> <addr-line>Institute of Plant Research, Chinese Academy of Sciences, Beijing, China</addr-line></aff>
+<contrib-group>
+<contrib contrib-type="editor" xlink:type="simple">
+<name name-style="western">
+<surname>Bhutia</surname>
+<given-names>Sujit Kumar</given-names>
+</name>
+<role>Editor</role>
+<xref ref-type="aff" rid="edit1"/>
+</contrib>
+</contrib-group>
+<aff id="edit1"><addr-line>National Institute of Technology, Rourkela, INDIA</addr-line></aff>
+<author-notes>
+<fn fn-type="conflict" id="coi001">
+<p>The authors have declared that no competing interests exist.</p>
+</fn>
+<corresp id="cor001">* E-mail: <email xlink:type="simple">dan_ran_pro@126.com</email> (XT); <email xlink:type="simple">xmliu105@sina.com</email> (XL); <email xlink:type="simple">sqsong105@sina.com</email> (SS)</corresp>
+</author-notes>
+<pub-date pub-type="epub">
+<day>2</day>
+<month>7</month>
+<year>2019</year>
+</pub-date>
+<pub-date pub-type="collection">
+<year>2019</year>
+</pub-date>
+<volume>14</volume>
+<issue>7</issue>
+<elocation-id>e0218513</elocation-id>
+<history>
+<date date-type="received">
+<day>4</day>
+<month>10</month>
+<year>2018</year>
+</date>
+<date date-type="accepted">
+<day>4</day>
+<month>6</month>
+<year>2019</year>
+</date>
+</history>
+<permissions>
+<copyright-year>2019</copyright-year>
+<copyright-holder>Tian et al</copyright-holder>
+<license xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">
+<license-p>This is an open access article distributed under the terms of the <ext-link ext-link-type="uri" xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">Creative Commons Attribution License</ext-link>, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited.</license-p>
+</license>
+</permissions>
+<self-uri content-type="pdf" xlink:href="info:doi/10.1371/journal.pone.0218513"/>
+<abstract>
+<p>Mung bean (<italic>Vigna radiata</italic>), an important legume crop, has the property of desiccation tolerance (DT), which is lost in the final stage of germination (preimbibition, 18 h-24 h). We compared parameters related to the programmed cell death (PCD) of mung bean seeds before and after dehydration at different imbibition stages through various detection methods. The results of Evans blue and TTC staining methods showed that the dehydration process could lead to cell death. The results of optical and subcellular morphology showed that PCD occurred after dehydration. The destruction of DNA integrity and the activity changes in caspase and total nuclease in mung bean seeds after dehydration treatment indicated that the loss of desiccation tolerance was related to PCD. Dehydration resulted in the destruction of the mitochondrial structure, reversal of the membrane potential, and the entrance of cytochrome C into the cytoplasm. These processes all indicate that the mitochondrial apoptosis pathway was the main form of dehydration-induced PCD. The results of cytoplasmic Ca<sup>2+</sup> concentration showed that Ca<sup>2+</sup> signaling also played a role in inducing PCD, with the upstream signal being dehydration-induced changes in water potential and the downstream signal being the ROS and mitochondrial PT channel, according to the order in which these signals happened. The mitochondrial apoptosis pathway can be considered the main mechanism of dehydration-induced PCD based on our analysis of the sequence of major events in PCD. The main processes include dehydration induction, changes in Ca<sup>2+</sup> and mitochondrial respiratory electron transport, the reversal of mitochondrial membrane potential induced by ROS and Ca<sup>2+</sup>, and the transmission and execution of PCD downstream signals induced by cytochrome C release.</p>
+</abstract>
+<funding-group>
+<funding-statement>This work was supported by the Natural Science Foundation of China (Grant No. 31360062, 31660119).</funding-statement>
+</funding-group>
+<counts>
+<fig-count count="13"/>
+<table-count count="0"/>
+<page-count count="19"/>
+</counts>
+<custom-meta-group>
+<custom-meta id="data-availability">
+<meta-name>Data Availability</meta-name>
+<meta-value>All relevant data are within the manuscript and its Supporting Information files.</meta-value>
+</custom-meta>
+</custom-meta-group>
+</article-meta>
+</front>
+<body>
+<sec id="sec001" sec-type="intro">
+<title>Introduction</title>
+<p>Desiccation tolerance (DT) refers to the ability of plant tissues to survive at very low water levels (below 5%) [<xref ref-type="bibr" rid="pone.0218513.ref001">1</xref>]. DT is widespread in microorganisms, animals and plants for coping with stress environments and protecting their own tissues from dehydration damage. Mung bean (<italic>Vigna radiata</italic>) is a fast-growing leguminous plant that also has desiccation tolerance. However, we found that the desiccation tolerance of mung bean seeds was lost at the telophase of germination (preimbibition, 18 h-24 h).</p>
+<p>Programmed cell death (PCD) in plants is a spontaneous and programmed cell death process regulated by certain gene and protein pathways that has been a hot topic in plant physiology and molecular biology research in recent years. At present, it can be divided into three types, as follows: a) apoptosis; b) autophagy or cytoplasmic degenerative PCD; and c) lysosomal degenerative PCD. Among these, apoptosis is the most common form. In apoptosis, DNA is marginalized on the nuclear membrane (condensation) and is divided into lengths of the nucleosome size, the nucleus and cytoplasm are decomposed into vesicles, and macrophages take away bodies in vivo [<xref ref-type="bibr" rid="pone.0218513.ref002">2</xref>]. Apoptotic signals are divided into endogenous and exogenous signals according to their source [<xref ref-type="bibr" rid="pone.0218513.ref003">3</xref>]. The endogenous pathway begins in mitochondria, which bind cytochrome C released by mitochondria to the activator of apoptosis, protease 1, thereby initiating apoptosis. Based on the study of cell death during seed development by Golovina <italic>et al</italic>. [<xref ref-type="bibr" rid="pone.0218513.ref004">4</xref>], it is suggested that the loss of seed desiccation tolerance may be related to PCD, but there is no direct evidence of PCD or the pathway of its occurrence. We speculate that desiccation-sensitive seeds (or hypocotyls) may damage the structure and function of mitochondria under water stress. Apoptogenic factors such as cytochrome C are released from mitochondria into cytosols, and cysteine proteases are activated, leading to PCD. In this study, mung bean seeds (hypocotyls) with different levels of desiccation tolerance/sensitivity during preimbibition were used as materials to establish an experimental model of desiccation tolerance loss/desiccation sensitivity. By analyzing the morphological changes and physiological and biochemical indexes of PCD events, it was confirmed that the loss of desiccation tolerance might be caused by the death of hypocotyl cells by PCD via the mitochondrial pathway.</p>
+</sec>
+<sec id="sec002" sec-type="materials|methods">
+<title>Materials and methods</title>
+<sec id="sec003">
+<title>Plant materials and treatment</title>
+<p><italic>Vigna radiata</italic> (Linn.) Wilczek. Cv. Zhonglv No. 1 as the test material was purchased at the Chinese Academy of Agricultural Sciences. The seeds ripened in the same year, and the time of purchase was approximately 60 days after harvest. The purchased seeds, with full grains and of similar sizes, were stored in an environment at 15°C and 50% RH for further use. The mung bean seeds wrapped in filter paper were placed in a culture dish (Φ = 12 cm) after being sterilized with 1% (W/V) NaC1O and adding 25 ml deionized water. In a dark environment at 20°C, the preimbibition process occurred for 0, 3, 6, 18 and 24 h, and dehydration was conducted in dry air (silica gel) for 25 h. The hypocotyls of the mung beans were removed before and after dehydration.</p>
+</sec>
+<sec id="sec004">
+<title>Viability stain</title>
+<p>The mung bean hypocotyls in different preimbibition and dehydration states were used to make transverse sections near the root end and median longitudinal sections between the two cotyledons. Evans blue staining and TTC staining were used to stain the hypocotyls, and the staining results were recorded under a stereomicroscope.</p>
+</sec>
+<sec id="sec005">
+<title>Observation of optical microscopy</title>
+<p>Mung bean hypocotyls in different preimbibition and dehydration states were cut, and 3–5 mm sections were taken at the root end. The hypocotyls were then fixed with FAA solution for 72 h, dehydrated in gradient alcohol, embedded in paraffin, sliced, dewaxed with xylene solution, stained with 0.5% (W/V) toluidine blue O, and recorded by optical microscopy.</p>
+</sec>
+<sec id="sec006">
+<title>Observations of the ultrastructure of histiocytic cells</title>
+<p>Mung bean hypocotyls in different preimbibition and dehydration conditions were cut, and 2–4 mm parts were taken at the root end and then fixed with 5% (V/V) glutaraldehyde solution at 4°C for 120 h. After being rinsed with sodium phosphate buffer solution (0.1 mol ▪ L<sup>-1</sup>, pH 7.2), the sections were fixed with 1% (W/V) osmium acid for 4 h, dehydrated with gradient alcohol, embedded in Spurr resin, and sliced, and the subcellular structure was observed by electron microscopy.</p>
+</sec>
+<sec id="sec007">
+<title>DNA Integrity checking</title>
+<sec id="sec008">
+<title>Electrophoresis of total DNA</title>
+<p>The total DNA was extracted according to Kang et al., Young and Qiao Aimin’s methods [<xref ref-type="bibr" rid="pone.0218513.ref005">5</xref>, <xref ref-type="bibr" rid="pone.0218513.ref006">6</xref>]. Gel electrophoresis was used based on Young’s and other methods [<xref ref-type="bibr" rid="pone.0218513.ref007">7</xref>, <xref ref-type="bibr" rid="pone.0218513.ref005">5</xref>], and the gel imaging system recorded the results.</p>
+</sec>
+<sec id="sec009">
+<title>TdT-mediated dUTP-biotin nick end labeling (TUNEL)</title>
+<p>The terminal deoxynucleotidyl transferase (TdT)-mediated dUTP-biotin nick end labeling (TUNEL) method has been employed widely to demonstrate the occurrence of PCD in cells in routinely prepared paraffin sections. Cells undergoing PCD have large numbers of DNA fragments with free 3’-OH terminals. Biotin-labeled dUTP can be incorporated into the 3'-OH terminal of DNA fragments in a reaction catalyzed by the TdT enzyme and specifically binds to streptavidin-linked peroxidase. Then, this antigen-antibody complex can be detected by peroxidase reaction with H<sub>2</sub>O<sub>2</sub> and 3,3’-diaminobenzidine (DAB) as a chromogen. In our experiment, mung bean hypocotyls in different preimbibition and dehydration states were taken, and paraffin sections were made according to the method of observation on the ultrastructure of histiocytic cells. The results were recorded according to the TdT-FragEL DNA fragmentation detection kit (No. QIA33) specifications of Merck Company (formerly Oncogene) [<xref ref-type="bibr" rid="pone.0218513.ref008">8</xref>].</p>
+</sec>
+<sec id="sec010">
+<title>Nucleosome ELISA</title>
+<p>Mung bean hypocotyls with different preimbibition and dehydration conditions were obtained. The CalBiochem kit Nucleosome ELISA (No. QIA25) [<xref ref-type="bibr" rid="pone.0218513.ref009">9</xref>], as provided by Boubriak, was used to calculate the number of nucleosomes per unit U/mg protein.</p>
+</sec>
+<sec id="sec011">
+<title>Detection of total nuclease activity</title>
+<p>The activity of total nuclease was determined in accordance with the method of He and Kermode [<xref ref-type="bibr" rid="pone.0218513.ref010">10</xref>]. Mung bean hypocotyls were ground into a uniform powder in liquid nitrogen and homogenized on ice in the extract buffer solution (0.15 mol ▪ L<sup>-1</sup> Tris-HCl buffer solution, pH 6.8; 1 mmol ▪ L<sup>-1</sup> DTT; 0.5 mmol ▪ L<sup>-1</sup> benzyl sulfonyl fluoride; 20 μmol ▪ L<sup>-1</sup> leucine inhibitory peptide). After centrifugation at 15 000 g for 10 min, the supernatant was removed for determination of the total nuclease activit<italic>y</italic>.</p>
+</sec>
+</sec>
+<sec id="sec012">
+<title>Detection of caspase activity</title>
+<p>Mung bean hypocotyls at different preimbibition and dehydration states were ground into homogeneous powders in liquid nitrogen. The activities of caspase-3 and caspase-9 were determined based on the specifications of the caspase-3 activity assay kit (C1116) and the caspase-9 activity assay kit (C1158).</p>
+</sec>
+<sec id="sec013">
+<title>Detection of key events in the mitochondrial apoptotic pathway</title>
+<sec id="sec014">
+<title>Mitochondrial membrane potential detection</title>
+<p>The protoplast was prepared according to Feng Haitao’s method [<xref ref-type="bibr" rid="pone.0218513.ref011">11</xref>] and stained according to the instructions of Beyotime Biotechnology Company’s mitochondrial membrane potential (Δ ψm) JC-1 Detection Kit (No. C2006). The results were observed by fluorescence microscopy and analyzed by flow cytometry.</p>
+</sec>
+<sec id="sec015">
+<title>In situ histochemical localization of cytochrome C</title>
+<p>The paraffin sections made for morphological observations were used for fluorescence immunohistochemical detection with reference to the methods [<xref ref-type="bibr" rid="pone.0218513.ref012">12</xref>] in the guidelines for molecular biology experiments.</p>
+</sec>
+<sec id="sec016">
+<title>Determination of cytoplasmic Ca<sup>2+</sup> concentration</title>
+<p>The cytoplasmic Ca<sup>2+</sup> concentration of mung bean hypocotyl protoplasts was determined by the method of Zhang Juntian et al. [<xref ref-type="bibr" rid="pone.0218513.ref013">13</xref>] and Wang Zejun et al. [<xref ref-type="bibr" rid="pone.0218513.ref014">14</xref>].</p>
+</sec>
+</sec>
+<sec id="sec017">
+<title>Statistical analysis</title>
+<p>Data were expressed as the means ± SDs. Statistical analysis of the data for the different preimbibition phases with/without dehydration treatment was performed through paired <italic>t</italic>-test, in which <italic>P</italic> &lt; 0.05 was considered significant.</p>
+</sec>
+</sec>
+<sec id="sec018" sec-type="results">
+<title>Results</title>
+<sec id="sec019">
+<title>Dehydration causes cell death of meristem cells</title>
+<p>Evans blue staining is a method for the rapid identification of cell death in which the dead cells are dyed blue. A clear increase in cell death in the mung bean hypocotyl due to dehydration was observed in a timely manner. The upper cortex of dehydrated mung bean hypocotyl was markedly colored after 3 h of preimbibition, the cortex and pith of hypocotyl were obviously stained after 6 h of preimbibition, and the meristem of hypocotyl showed obvious coloration after preimbibition for 18 h and 24 h (<xref ref-type="fig" rid="pone.0218513.g001">Fig 1</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s005">S1 Supporting Information</xref>). The results of TTC staining (surviving cells are dyed red) indicated that with the increase in imbibition time, the base color of meristem gradually deepened, and the darkest color in the meristem was found at 18–24 h imbibition (<xref ref-type="fig" rid="pone.0218513.g002">Fig 2</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s006">S2 Supporting Information</xref>).</p>
+<fig id="pone.0218513.g001" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g001</object-id>
+<label>Fig 1</label>
+<caption>
+<title>Evans blue staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I represent the longitudinal section of the hypocotyl at 0, 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J represent the longitudinal section of the hypocotyl at 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g001" xlink:type="simple"/>
+</fig>
+<fig id="pone.0218513.g002" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g002</object-id>
+<label>Fig 2</label>
+<caption>
+<title>TTC staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I represent the longitudinal section of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J represent the longitudinal section of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g002" xlink:type="simple"/>
+</fig>
+<p>The above staining results (Figs <xref ref-type="fig" rid="pone.0218513.g001">1</xref> and <xref ref-type="fig" rid="pone.0218513.g002">2</xref>) clearly suggest that the late stage of preimbibition is the stage of loss of desiccation tolerance, which leads to cell death in meristem cells and may be the main cause of the decline in vitality due to dehydration in the later stage of preimbibition.</p>
+</sec>
+<sec id="sec020">
+<title>Dehydration induces morphological changes in hypocotyl tissue cells</title>
+<p>The tissue cell morphology of mung bean hypocotyl stained with toluidine blue O at different preimbibition periods with/without dehydration treatment is presented in <xref ref-type="fig" rid="pone.0218513.g003">Fig 3</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s007">S3 Supporting Information</xref>. For various periods (except at 3 h) without dehydration treatment, the cell morphology was full and intact, the nucleus and cytoplasm were clear, and the cell staining in all components except the nucleus was light. After 24 h of dehydration, morphological changes in cells, such as cell shrinkage and nucleus elongation, appeared in accordance with the increasing time of preimbibition, indicating that the morphological changes to cells in the late stage of imbibition are consistent with the morphological characteristics of cell death.</p>
+<fig id="pone.0218513.g003" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g003</object-id>
+<label>Fig 3</label>
+<caption>
+<title>Toluidine blue staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E and G show the transverse sections of the hypocotyl with 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F and H show the transverse sections of the hypocotyl with 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g003" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec021">
+<title>Dehydration induces subcellular structural changes in the mung bean hypocotyl</title>
+<p>The ultrastructures of the cell morphology of mung bean hypocotyls at different preimbibition periods with/without dehydration treatment are shown in Figs <xref ref-type="fig" rid="pone.0218513.g004">4</xref>–<xref ref-type="fig" rid="pone.0218513.g006">6</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s008">S4</xref>–<xref ref-type="supplementary-material" rid="pone.0218513.s010">S6</xref> Supporting Information. During normal imbibition, the cell morphology of the hypocotyl tissue was plump, the cytoplasm and nucleus were distinct, the cell size and the ratio of nucleus to cytoplasm were stable, and the number of vacuoles increased with time. However, after 24 h of dehydration, the cell morphology, nucleus morphology and mitochondrial morphology of the meristem changed gradually with the time of imbibition. The cytoplasmic membrane boundary of hypocotyl meristem cells with 24 h of preimbibition is absent while the nuclear membrane disappeared, the nucleus became indistinct, and the outer mold of the mitochondria was destroyed, which conformed to the basic characteristics of PCD. The mitochondrial morphological changes occurred earlier than the nuclear morphological changes. Therefore, the results suggest that apoptosis in the mitochondria may induce PCD.</p>
+<fig id="pone.0218513.g004" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g004</object-id>
+<label>Fig 4</label>
+<caption>
+<title>Subcellular structure of meristematic cells from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I show meristematic cells of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J show meristematic cells of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g004" xlink:type="simple"/>
+</fig>
+<fig id="pone.0218513.g005" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g005</object-id>
+<label>Fig 5</label>
+<caption>
+<title>Ultrastructure of meristematic cell nuclei in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I show meristematic cell nuclei of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J show meristematic cell nuclei of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g005" xlink:type="simple"/>
+</fig>
+<fig id="pone.0218513.g006" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g006</object-id>
+<label>Fig 6</label>
+<caption>
+<title>Ultrastructure of meristematic cell mitochondria in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I show meristematic cell mitochondria of the hypocotyl at 0, 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J show meristematic cell mitochondria of the hypocotyl with 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g006" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec022">
+<title>Dehydration causes DNA damage in mung bean hypocotyls</title>
+<sec id="sec023">
+<title>Degradation of total DNA</title>
+<p>The DNA bands of mung bean hypocotyls with normal imbibition were not tailed, which indicates that the DNA of the hypocotyl was intact and did not degrade significantly. However, after dehydration, the tail of DNA bands increased significantly with prolonged preimbibition duration, indicating significant DNA degradation (<xref ref-type="supplementary-material" rid="pone.0218513.s005">S1 Fig</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s011">S7 Supporting Information</xref>).</p>
+</sec>
+<sec id="sec024">
+<title>Appearance of TUNEL labeling cells</title>
+<p>TUNEL-labeled cells can be stained yellow, yellow-green and brown-yellow. During normal imbibition, there were no TUNEL-labeled cells in the hypocotyl tissue, showing a light gray background. After dehydration, the onset time of TUNEL labeling in preimbibed mung bean hypocotyls was 18 h, accompanied by an increase in the number of TUNEL-labeled cells with the prolongation of preimbibition time, which proved that PCD occurred after 18 h of preimbibition (<xref ref-type="supplementary-material" rid="pone.0218513.s006">S2 Fig</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s012">S8 Supporting Information</xref>).</p>
+</sec>
+<sec id="sec025">
+<title>Increase in the number of nucleosomes</title>
+<p>In normal imbibition, the number of nucleosomes in unit cell numbers is 0.033–0.037 U/g DW with no significant change. When the preimbibition duration reached 18–24 h, with the prolongation of imbibition time after dehydration, the number of nucleosomes increased gradually. The number of nucleosomes imbibed for 18–24 h reached 0.077–0.080 U/g DW, which was approximately 2 times the amount in nonimbibition conditions (<xref ref-type="fig" rid="pone.0218513.g007">Fig 7</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s013">S9 Supporting Information</xref>).</p>
+<fig id="pone.0218513.g007" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g007</object-id>
+<label>Fig 7</label>
+<caption>
+<title>ELISA quantity of nucleosomes from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>* <italic>P</italic> &lt; 0.05; ** <italic>P</italic> &lt; 0.01.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g007" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec026">
+<title>Increase in total nuclease activity</title>
+<p>Compared with normal imbibition, dehydration at the middle and late stages of preimbibition (6–24 h) significantly increased the total nuclease activity, which showed that the total nuclease activity at 24 h (4.313±0.074 U/g DW) was approximately 2.7 times higher than that at 6 h (1.568±0.007 U/g DW). In terms of comparisons of total nuclease activity and nucleosome content changes, the obvious magnitude of the change indicated that the site of total nuclease cleavage was not confined to the junction of nucleosomes, which also confirmed the results of DNA electrophoresis (<xref ref-type="fig" rid="pone.0218513.g008">Fig 8</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s013">S9 Supporting Information</xref>).</p>
+<fig id="pone.0218513.g008" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g008</object-id>
+<label>Fig 8</label>
+<caption>
+<title>Activity of total nuclease from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>* <italic>P</italic> &lt; 0.05; ** <italic>P</italic> &lt; 0.01.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g008" xlink:type="simple"/>
+</fig>
+</sec>
+</sec>
+<sec id="sec027">
+<title>Dehydration increases caspase-like activity</title>
+<p>After dehydration, the activity of caspase-3 and caspase-9 increased significantly with the prolongation of imbibition time, especially during the middle and late preimbibition period (6–24 h) (Figs <xref ref-type="fig" rid="pone.0218513.g009">9</xref> and <xref ref-type="fig" rid="pone.0218513.g010">10</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s014">S10 Supporting Information</xref>).</p>
+<fig id="pone.0218513.g009" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g009</object-id>
+<label>Fig 9</label>
+<caption>
+<title>Activity of caspase-3 in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>** <italic>P</italic> &lt; 0.01.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g009" xlink:type="simple"/>
+</fig>
+<fig id="pone.0218513.g010" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g010</object-id>
+<label>Fig 10</label>
+<caption>
+<title>Activity of caspase-9 in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>* <italic>P</italic> &lt; 0.05; ** <italic>P</italic> &lt; 0.01.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g010" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec028">
+<title>Dehydration reverses mitochondrial membrane potential</title>
+<p>The protoplast staining of normal imbibed hypocotyls was red, indicating low mitochondrial potential. After dehydration, the protoplast staining of preimbibition (6–24 h), especially at 18–24 h, was similar to that of CCCP positive, indicating that mitochondrial membrane potential reversed (<xref ref-type="fig" rid="pone.0218513.g011">Fig 11</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s015">S11 Supporting Information</xref>). To prove the quantitative accuracy of the results, flow cytometry was used to analyze the protoplasts stained with JC-1 in different preimbibition and dehydration states. The results showed, consistent with the protoplast staining, no obvious change in mitochondrial membrane potential in the undehydrated protoplasts (<xref ref-type="supplementary-material" rid="pone.0218513.s007">S3 Fig</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s016">S12 Supporting Information</xref>).</p>
+<list list-type="order">
+<list-item><p>Regardless of the degree of imbibition and water content, the protoplast particles migrated from the upper quadrant to the lower quadrant in flow cytometry analysis; that is, dehydration could lead to a change in mitochondrial membrane potential.</p></list-item>
+<list-item><p>With the increase in hydration, the proportions and degree of downward migration of protoplast particles increased significantly. After 18 h of preimbibition, there were almost no protoplast particles in situ in the upper quadrant.</p></list-item>
+</list>
+<fig id="pone.0218513.g011" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g011</object-id>
+<label>Fig 11</label>
+<caption>
+<title>JC-1 staining of protoplasts from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, D, G, J and M show the positive control of preimbibed protoplasts 3, 6, 18 and 24 h after the CCCP treatment, respectively. B, E, H, K and N show the staining of preimbibed protoplasts at 0, 3, 6, 18 and 24 h, respectively. C, F, I, L and O show the preimbibed protoplasts with 0, 3, 6, 18 and 24 h after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g011" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec029">
+<title>Dehydration leads to the release of cytochrome C into the cytoplasm</title>
+<p>During normal imbibition, cytochrome C distributes steadily in mitochondria and does not leak into the cytoplasm. The effect of dehydration on the distribution of cytochrome C was obvious, especially the increase of cytoplasmic staining in the hypocotyl tissue after 18 h and 24 h preimbibition, which indicates that dehydration would lead to the release of cytochrome C into the cytoplasm (<xref ref-type="fig" rid="pone.0218513.g012">Fig 12</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s017">S13 Supporting Information</xref>). This is consistent with the timing of mitochondrial membrane potential reversal.</p>
+<fig id="pone.0218513.g012" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g012</object-id>
+<label>Fig 12</label>
+<caption>
+<title>Fluorescent in situ localization of cytochrome C from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E and G show hypocotyl tissue at 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F and H show hypocotyl tissue with 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g012" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec030">
+<title>Dehydration increases the cytoplasmic Ca<sup>2+</sup> concentration of protoplasts</title>
+<p>In the normal imbibition process, the cytoplasmic Ca<sup>2+</sup> concentration increased slightly first and then decreased. In the early and middle stages of preimbibition (3–6 h), dehydration significantly increased the cytoplasmic Ca<sup>2+</sup> concentration of protoplasts to 1.25–1.5 μmol/L, which was 5–7 times higher than that of resting cytoplasmic Ca<sup>2+</sup> in animal cells, but there was no significant difference between the middle and late stages of preimbibition. The change in cytoplasmic Ca<sup>2+</sup> concentration preceded PCD events, such as mitochondrial membrane potential reversal and cytochrome C release (<xref ref-type="fig" rid="pone.0218513.g013">Fig 13</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s018">S14 Supporting Information</xref>).</p>
+<fig id="pone.0218513.g013" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0218513.g013</object-id>
+<label>Fig 13</label>
+<caption>
+<title>Concentration of cytoplasmic Ca<sup>2+</sup> in mung bean hypocotyl tissue in different preimbibition and dehydration states.</title>
+<p>** <italic>P</italic> &lt; 0.01.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.g013" xlink:type="simple"/>
+</fig>
+</sec>
+</sec>
+<sec id="sec031" sec-type="conclusions">
+<title>Discussion</title>
+<p>Evans blue staining and TTC staining are important methods for identifying dead/surviving cells. Our results show that dehydration leads to cell death and that the degree of cell death increases with the prolongation of preimbibition time. It can be inferred that the damage of dehydration stress causes a decrease in seed viability, mainly due to the death of the meristem (Figs <xref ref-type="fig" rid="pone.0218513.g001">1</xref> and <xref ref-type="fig" rid="pone.0218513.g002">2</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s005">S1</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s006">S2</xref> Supporting Information). PCD or apoptotic cells have unique morphological characteristics [<xref ref-type="bibr" rid="pone.0218513.ref015">15</xref>], showing cytoskeletal destruction, cell volume shrinkage and increased density. Microstructural changes, especially subcellular changes, have always been the gold standard for determining the existence of PCD events. Therefore, this experiment is aimed at the microscopic results in cells and the changes in subcellular structure. During the experiment, it was observed that dehydration after preimbibition could induce the optical morphology of mung bean hypocotyl cells to show obvious PCD characteristics, such as abnormal nucleus morphology and increased vacuolation (<xref ref-type="fig" rid="pone.0218513.g003">Fig 3</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s007">S3 Supporting Information</xref>). Nucleolus and nucleolus deformities, nuclear condensation, nuclear margination, nuclear envelope rupture, nuclear degradation and other PCD characteristics were also observed by electron microscopy (Figs <xref ref-type="fig" rid="pone.0218513.g004">4</xref> and <xref ref-type="fig" rid="pone.0218513.g005">5</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s008">S4</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s009">S5</xref> Supporting Information). The changes in mitochondrial morphology indicated that the number of ridges decreased at the middle stage of 6 h preimbibition, and the mitochondria ruptured and the outer membrane boundary disappeared in preimbibition after 24 h (<xref ref-type="fig" rid="pone.0218513.g006">Fig 6</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s010">S6 Supporting Information</xref>).</p>
+<p>DNA degradation occurs in the process of PCD, especially in the breakage of autokaryosomes [<xref ref-type="bibr" rid="pone.0218513.ref016">16</xref>]. DNA degradation characteristics of plant PCD are not as typical as those of animal cells [<xref ref-type="bibr" rid="pone.0218513.ref017">17</xref>]. DNA electrophoresis, nucleosome ELISA and TUNEL were employed to detect the integrity of cell DNA. The results showed that after dehydration, with the extension of imbibition time, the degree of DNA degradation increased (<xref ref-type="supplementary-material" rid="pone.0218513.s005">S1 Fig</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s011">S7 Supporting Information</xref>), the number of nucleosomes increased significantly (<xref ref-type="fig" rid="pone.0218513.g007">Fig 7</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s013">S9 Supporting Information</xref>), the activity of total nuclease increased (<xref ref-type="fig" rid="pone.0218513.g008">Fig 8</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s013">S9 Supporting Information</xref>), and the integrity of DNA was seriously damaged.</p>
+<p>Modern studies have shown that during animal PCD, cells are characterized by DNA marginalization (condensation) on the nuclear membrane and are divided into nucleosome-sized lengths. The nucleus and cytoplasm are broken down into vesicles, and macrophages clear the body in vivo. PCD in plants is similar to that of animals. In view of the changes in cell morphology, caspase activity and DNA integrity, it is suggested that PCD should exist as part of the dehydration response and in the hypocotyl tissue cells after dehydration in the late preimbibition stage.</p>
+<p>In the process of apoptosis of animal cells, caspase is the core executor; caspase-9 is the main inducing factor, and caspase-3 is the executor. Caspase-related or similar enzymes can be used as important markers of the occurrence of PCD in plants. The results show that dehydration significantly increased the activity of caspase-9 and caspase-3. At the late stage of preimbibition, caspase activities changed dramatically (Figs <xref ref-type="fig" rid="pone.0218513.g009">9</xref> and <xref ref-type="fig" rid="pone.0218513.g010">10</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s014">S10 Supporting Information</xref>), indicating that dehydration at the late stage of preimbibition could lead to PCD in hypocotyl cells.</p>
+<p>Balk et al. [<xref ref-type="bibr" rid="pone.0218513.ref018">18</xref>] confirmed the relationship between cytochrome C release and PCD in mitochondrial mutants of PET1-CMS in sunflower. In this study, cytochrome C was distributed in the cytoplasm from 18 h to 24 h after imbibition (<xref ref-type="fig" rid="pone.0218513.g012">Fig 12</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s017">S13 Supporting Information</xref>) and then combined with the reversal of mitochondrial membrane potential (<xref ref-type="fig" rid="pone.0218513.g011">Fig 11</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s015">S11 Supporting Information</xref>) and the morphological changes of mitochondria (<xref ref-type="fig" rid="pone.0218513.g006">Fig 6</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s010">S6 Supporting Information</xref>). Thus, it can be inferred that the mitochondrial apoptosis pathway may be the main form of dehydration-induced PCD. PCD-related factors released by mitochondria enter the cytoplasm in two ways: one is the loss of mitochondrial membrane integrity, and the other is the release through the mitochondrial permeability transition (PT) pore [<xref ref-type="bibr" rid="pone.0218513.ref002">2</xref>]. The results show that changes in the mitochondrial ridge caused an imbalance in respiratory electron transport from the middle stage of preimbibition, which could induce changes in the mitochondrial membrane potential, initiate PT channels and release apoptosis-inducing factors into the cytoplasm. The results of this experiment show that the mitochondrial membrane potential inversion, mitochondrial morphological changes, and cytochrome C distribution changes proved the above inference.</p>
+<p>The increase in cytoplasmic Ca<sup>2+</sup> concentration is a precursor signal event of PCD. For example, Pennel and Lamb [<xref ref-type="bibr" rid="pone.0218513.ref019">19</xref>] considered that the elevation of Ca<sup>2+</sup> concentration induced by ethylene is an important component of PCD signal transduction in plants. We observed that the increase in cytoplasmic Ca<sup>2+</sup> concentration occurred after dehydration in the early and middle stages of preimbibition, but there was no significant change in the late stage of preimbibition when PCD occurred (<xref ref-type="fig" rid="pone.0218513.g013">Fig 13</xref> and <xref ref-type="supplementary-material" rid="pone.0218513.s018">S14 Supporting Information</xref>). The PT channel is the receptor with which plant mitochondria obtain the upstream signals of PCD and sense ATP, reactive oxygen species, Ca<sup>2+</sup> concentration and receptor signals [<xref ref-type="bibr" rid="pone.0218513.ref020">20</xref>]. The important target downstream of the Ca<sup>2+</sup> enhancement signal is the opening of the mitochondrial PT pore and the release of cytochrome C.</p>
+</sec>
+<sec id="sec032" sec-type="conclusions">
+<title>Conclusions</title>
+<p>The results of mitochondrial membrane potential and fluorescent in situ localization of cytochrome C, combined with the results of morphological changes in mitochondria, suggested that mitochondria are an important inducer and transmitter involved in PCD in the dehydration response process. That is, the mitochondrial apoptosis pathway can be considered the main form of dehydration-induced PCD. The whole process can be divided into dehydration induction, transfer changes in Ca<sup>2+</sup> and mitochondrial respiratory electron, ROS and Ca<sup>2+</sup>-induced mitochondrial membrane potential reversal, and cytochrome C release. The hypothesis of mitochondrial pathway PCD as the reason for loss of desiccation tolerance can be confirmed by classical morphological observation and by physiological and biochemical analysis (<xref ref-type="supplementary-material" rid="pone.0218513.s004">S4 Fig</xref>).</p>
+</sec>
+<sec id="sec033">
+<title>Supporting information</title>
+<supplementary-material id="pone.0218513.s001" mimetype="image/tiff" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s001" xlink:type="simple">
+<label>S1 Fig</label>
+<caption>
+<title>Electrophoresis of total DNA from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A shows electrophoresis of total DNA at 0, 3, 6, 18 and 24 h of preimbibition, while B shows electrophoresis of total DNA at 0, 3, 6, 18 and 24 h preimbibition after 24 h of dehydration.</p>
+<p>(TIF)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s002" mimetype="image/tiff" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s002" xlink:type="simple">
+<label>S2 Fig</label>
+<caption>
+<title>TUNEL in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E and G show mung bean hypocotyl tissue at 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F and H show the transverse section of the hypocotyl at 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+<p>(TIF)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s003" mimetype="image/tiff" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s003" xlink:type="simple">
+<label>S3 Fig</label>
+<caption>
+<title>Flow cytometer quantity of JC-1 staining in protoplasts from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>A, C, E, G and I represent the measurement of protoplasts at 3, 6, 18 and 24 h of preimbibition, respectively. B, D, F, H and J represent the measurement of protoplasts at 0, 3, 6, 18 and 24 h of preimbibition after 24 h of dehydration, respectively.</p>
+<p>(TIF)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s004" mimetype="image/tiff" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s004" xlink:type="simple">
+<label>S4 Fig</label>
+<caption>
+<title>Illustration of the mechanism of PCD induced by dehydration in mung bean hypocotyls.</title>
+<p>(TIF)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s005" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s005" xlink:type="simple">
+<label>S1 Supporting Information</label>
+<caption>
+<title>Raw images of Evans blue staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s006" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s006" xlink:type="simple">
+<label>S2 Supporting Information</label>
+<caption>
+<title>Raw images of TTC staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s007" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s007" xlink:type="simple">
+<label>S3 Supporting Information</label>
+<caption>
+<title>Raw images of Toluidine blue staining of mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s008" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s008" xlink:type="simple">
+<label>S4 Supporting Information</label>
+<caption>
+<title>Raw images of subcellular structure of meristematic cells from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s009" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s009" xlink:type="simple">
+<label>S5 Supporting Information</label>
+<caption>
+<title>Raw images of ultrastructure of meristematic cell nuclei in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s010" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s010" xlink:type="simple">
+<label>S6 Supporting Information</label>
+<caption>
+<title>Raw images of ultrastructure of meristematic cell mitochondria in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s011" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s011" xlink:type="simple">
+<label>S7 Supporting Information</label>
+<caption>
+<title>Raw images of electrophoresis of total DNA from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s012" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s012" xlink:type="simple">
+<label>S8 Supporting Information</label>
+<caption>
+<title>Raw images of TUNEL in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s013" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s013" xlink:type="simple">
+<label>S9 Supporting Information</label>
+<caption>
+<title>Individual data points for analysis of nuclease activity and nucleosome content in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(OPJ)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s014" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s014" xlink:type="simple">
+<label>S10 Supporting Information</label>
+<caption>
+<title>Individual data points for analysis of activities of caspase-3 and caspase-9 in mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(OPJ)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s015" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s015" xlink:type="simple">
+<label>S11 Supporting Information</label>
+<caption>
+<title>Raw images of JC-1 staining of protoplasts from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s016" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s016" xlink:type="simple">
+<label>S12 Supporting Information</label>
+<caption>
+<title>Raw images of flow cytometer quantity of JC-1 staining in protoplasts from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s017" mimetype="application/zip" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s017" xlink:type="simple">
+<label>S13 Supporting Information</label>
+<caption>
+<title>Raw images of fluorescent in situ localization of cytochrome C from mung bean hypocotyls in different preimbibition and dehydration states.</title>
+<p>(ZIP)</p>
+</caption>
+</supplementary-material>
+<supplementary-material id="pone.0218513.s018" mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" position="float" xlink:href="info:doi/10.1371/journal.pone.0218513.s018" xlink:type="simple">
+<label>S14 Supporting Information</label>
+<caption>
+<title>Individual data points for concentration of cytoplasmic Ca<sup>2+</sup> in mung bean hypocotyl tissue in different preimbibition and dehydration states.</title>
+<p>(XLSX)</p>
+</caption>
+</supplementary-material>
+</sec>
+</body>
+<back>
+<ack>
+<p>The authors thank the technical staff from the participating labs for their contributions to this research.</p>
+</ack>
+<ref-list>
+<title>References</title>
+<ref id="pone.0218513.ref001"><label>1</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Li</surname> <given-names>X</given-names></name>, <name name-style="western"><surname>Zhuo</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Jing</surname> <given-names>Y</given-names></name>, <name name-style="western"><surname>Liu</surname> <given-names>X</given-names></name>, <name name-style="western"><surname>Wang</surname> <given-names>X</given-names></name>. <article-title>Expression of a GALACTINOL SYNTHASE gene is positively associated with desiccation tolerance of Brassica napus seeds during development</article-title>. <source>J Plant Physiol</source>. <year>2011</year>; <volume>168</volume>(<issue>15</issue>): <fpage>1761</fpage>–<lpage>1770</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1016/j.jplph.2011.04.006" xlink:type="simple">https://doi.org/10.1016/j.jplph.2011.04.006</ext-link> <object-id pub-id-type="pmid">21680054</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref002"><label>2</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Jones</surname> <given-names>A</given-names></name>. <article-title>Does the plant mitochondrion integrate cellular stress and regulate programmed cell death?</article-title>. <source>Trends Plant Sci</source>. <year>2000</year>; <volume>5</volume>(<issue>5</issue>): <fpage>225</fpage>–<lpage>230</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1016/S1360-1385(00)01605-8" xlink:type="simple">https://doi.org/10.1016/S1360-1385(00)01605-8</ext-link> <object-id pub-id-type="pmid">10785669</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref003"><label>3</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Nagata</surname> <given-names>S</given-names></name>. <article-title>Apoptotic DNA fragmentation</article-title>. <source>Exp Cell Res</source>. <year>2000</year>; <volume>256</volume>(<issue>1</issue>): <fpage>12</fpage>–<lpage>18</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1006/excr.2000.4834" xlink:type="simple">https://doi.org/10.1006/excr.2000.4834</ext-link> <object-id pub-id-type="pmid">10739646</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref004"><label>4</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Golovina</surname> <given-names>EA</given-names></name>, <name name-style="western"><surname>Hoekstra</surname> <given-names>FA</given-names></name>, <name name-style="western"><surname>van Aelst</surname> <given-names>AC</given-names></name>. <article-title>Programmed cell death or desiccation tolerance: two possible routes for wheat endosperm cells</article-title>. <source>Seed Sci Res</source>. <year>2000</year>; <volume>10</volume>(<issue>3</issue>): <fpage>365</fpage>–<lpage>379</lpage>. <ext-link ext-link-type="uri" xlink:href="http://library.wur.nl" xlink:type="simple">http://library.wur.nl</ext-link></mixed-citation></ref>
+<ref id="pone.0218513.ref005"><label>5</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Young</surname> <given-names>TE</given-names></name>, <name name-style="western"><surname>Gallie</surname> <given-names>DR</given-names></name>. <article-title>Regulation of programmed cell death in maize endosperm by abscisic acid</article-title>. <source>Plant Mol Biol</source>. <year>2000</year>; <volume>42</volume>(<issue>2</issue>): <fpage>397</fpage>–<lpage>414</lpage>. <object-id pub-id-type="pmid">10794539</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref006"><label>6</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Qiao</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Fu</surname> <given-names>J</given-names></name>. <article-title>Direct extraction of genomic DNA from dry artificially-aged seeds of flowering Chinese cabbage and its application in RAPD analysis</article-title>. <source>Chin B Bot</source>. <year>1999</year>; <volume>16</volume>(<issue>6</issue>): <fpage>701</fpage>–<lpage>704</lpage>.</mixed-citation></ref>
+<ref id="pone.0218513.ref007"><label>7</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Young</surname> <given-names>TE</given-names></name>, <name name-style="western"><surname>Gallie</surname> <given-names>DR</given-names></name>, <name name-style="western"><surname>Demason</surname> <given-names>DA</given-names></name>. <article-title>Ethylene-Mediated Programmed Cell Death during Maize Endosperm Development of Wild-Type and shrunken 2 Genotypes</article-title>. <source>Plant Physiol</source>. <year>1997</year>; <volume>115</volume>(<issue>2</issue>):<fpage>737</fpage>–<lpage>751</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1104/pp.115.2.737" xlink:type="simple">https://doi.org/10.1104/pp.115.2.737</ext-link> <object-id pub-id-type="pmid">12223841</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref008"><label>8</label><mixed-citation publication-type="other" xlink:type="simple">Merk Co. Protocol of TdT-FragEL DNA fragmentation detection kit (QIA33).2002</mixed-citation></ref>
+<ref id="pone.0218513.ref009"><label>9</label><mixed-citation publication-type="other" xlink:type="simple">Merk Co. Protocol of Nucleosome ELISA (QIA25). 2002.</mixed-citation></ref>
+<ref id="pone.0218513.ref010"><label>10</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>He</surname> <given-names>X</given-names></name>, <name name-style="western"><surname>Kermode</surname> <given-names>AR</given-names></name>. <article-title>Nuclease activities and DNA fragmentation during programmed cell death of megagametophyte cells of white spruce (Picea glauca) seeds</article-title>. <source>Plant Mol Biol</source>. <year>2003</year>; <volume>51</volume>(<issue>4</issue>):<fpage>509</fpage>–<lpage>521</lpage>. <object-id pub-id-type="pmid">12650617</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref011"><label>11</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Feng</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Sun</surname> <given-names>Z</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Qin</surname> <given-names>P</given-names></name>, <name name-style="western"><surname>Tang</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Fu</surname> <given-names>R</given-names></name>, <etal>et al</etal>. <article-title>Preparation, purification and regeneration optimizing research of protoplasts from Rhizoctonia solani</article-title>. <source>Afr J Microbiol Res</source>. <year>2012</year>; <volume>6</volume>(<issue>13</issue>): <fpage>3222</fpage>–<lpage>3230</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.5897/AJMR11.1592" xlink:type="simple">https://doi.org/10.5897/AJMR11.1592</ext-link></mixed-citation></ref>
+<ref id="pone.0218513.ref012"><label>12</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Wacker</surname> <given-names>R</given-names></name>. <article-title>A new and simple method for polychromatic staining of paraffin sections of plant tissues by transmitted light and fluorescence microscopy</article-title>. <source>Mikrokosmos</source>. <year>2006</year>; <volume>95</volume>(<issue>4</issue>), <fpage>210</fpage>–<lpage>212</lpage>.</mixed-citation></ref>
+<ref id="pone.0218513.ref013"><label>13</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Zhang</surname> <given-names>JT</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>XM</given-names></name>, <name name-style="western"><surname>Shi</surname> <given-names>CZ</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>Ming</given-names></name>, <name name-style="western"><surname>Liu</surname> <given-names>Y</given-names></name>. <article-title>Fura-2/am in the measurement of intracellular calcium concentration</article-title>. <source>Chin Pharmaceutical J</source>. <year>1991</year>; <volume>26</volume>(<issue>11</issue>):<fpage>655</fpage>–<lpage>658</lpage>.</mixed-citation></ref>
+<ref id="pone.0218513.ref014"><label>14</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Wang</surname> <given-names>Z</given-names></name>, <name name-style="western"><surname>Deng</surname> <given-names>Y</given-names></name>, <name name-style="western"><surname>Yu</surname> <given-names>D</given-names></name>, <name name-style="western"><surname>Bao</surname> <given-names>G</given-names></name>. <article-title>Inhibition of SNP on 5-HT induced intracellular free calcium concentration rise and calcium release from calcium store</article-title>. <source>Shengwu Wuli Xuebao</source>.<year>1999</year>; <volume>15</volume>(<issue>4</issue>):<fpage>655</fpage>–<lpage>660</lpage>.</mixed-citation></ref>
+<ref id="pone.0218513.ref015"><label>15</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Leprince</surname> <given-names>O</given-names></name>, <name name-style="western"><surname>Buitink</surname> <given-names>J</given-names></name>. <article-title>Introduction to desiccation biology: from old borders to new frontiers</article-title>. <source>Planta</source>, <year>2015</year>, <volume>242</volume>(<issue>2</issue>):<fpage>369</fpage>–<lpage>378</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s00425-015-2357-6" xlink:type="simple">10.1007/s00425-015-2357-6</ext-link></comment> <object-id pub-id-type="pmid">26142353</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref016"><label>16</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Yamada</surname> <given-names>T</given-names></name>, <name name-style="western"><surname>Takatsu</surname> <given-names>Y</given-names></name>, <name name-style="western"><surname>Kasumi</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Ichimura</surname> <given-names>K</given-names></name>, <name name-style="western"><surname>Doorn</surname> <given-names>WGV</given-names></name>. <article-title>Nuclear fragmentation and dna degradation during programmed cell death in petals of morning glory (ipomoea nil)</article-title>. <source>Planta</source>. <year>2006</year>; <volume>224</volume>(<issue>6</issue>), <fpage>1279</fpage>–<lpage>1290</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s00425-006-0307-z" xlink:type="simple">10.1007/s00425-006-0307-z</ext-link></comment> <object-id pub-id-type="pmid">16738861</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref017"><label>17</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Van Doorn</surname> <given-names>WG</given-names></name>. <article-title>Classes of programmed cell death in plants, compared to those in animals</article-title>. <source>J Exp Bot</source>. <year>2011</year>; <volume>62</volume>(<issue>14</issue>): <fpage>4749</fpage>–<lpage>4761</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1093/jxb/err196" xlink:type="simple">https://doi.org/10.1093/jxb/err196</ext-link> <object-id pub-id-type="pmid">21778180</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref018"><label>18</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Balk</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Leaver</surname> <given-names>CJ</given-names></name>. <article-title>The PET1-CMS mitochondrial mutation in sunflower is associated with premature programmed cell death and cytochrome c release</article-title>. <source>Plant Cell</source>. <year>2001</year>; <volume>13</volume>(<issue>8</issue>):<fpage>1803</fpage>–<lpage>1818</lpage>. <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1105/TPC.010116" xlink:type="simple">https://doi.org/10.1105/TPC.010116</ext-link> <object-id pub-id-type="pmid">11487694</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref019"><label>19</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Pennell</surname> <given-names>RI</given-names></name>, <name name-style="western"><surname>Lamb</surname> <given-names>C</given-names></name>. <article-title>Programmed Cell Death in Plants</article-title>. <source>Plant Cell</source>, <year>1997</year>, <volume>9</volume>(<issue>7</issue>):<fpage>1157</fpage>–<lpage>1168</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1105/tpc.9.7.1157" xlink:type="simple">10.1105/tpc.9.7.1157</ext-link></comment> <object-id pub-id-type="pmid">12237381</object-id></mixed-citation></ref>
+<ref id="pone.0218513.ref020"><label>20</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Perveen</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Yang</surname> <given-names>JS</given-names></name>, <name name-style="western"><surname>Ha</surname> <given-names>TJ</given-names></name>, <name name-style="western"><surname>Yoon</surname> <given-names>SH</given-names></name>. <article-title>Cyanidin-3-glucoside inhibits ATP-induced intracellular free Ca<sup>2+</sup> concentration, ROS formation and mitochondrial depolarization in PC12 cells</article-title>. <source>Korean J Physiol Pharmacol</source>. <year>2014</year>; <volume>18</volume>(<issue>4</issue>): <fpage>297</fpage>. <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.4196/kjpp.2014.18.4.297" xlink:type="simple">http://dx.doi.org/10.4196/kjpp.2014.18.4.297</ext-link> <object-id pub-id-type="pmid">25177161</object-id></mixed-citation></ref>
+</ref-list>
+</back>
+</article>

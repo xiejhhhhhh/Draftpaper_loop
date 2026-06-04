@@ -1,0 +1,71 @@
+{
+  "captured_at": "2026-05-09T03:49:43.370389+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2605.06653v1"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2605.06653v1",
+    "updated": "2026-05-07T17:56:48+00:00",
+    "published": "2026-05-07T17:56:48+00:00",
+    "title": "From Baby Universes to Narain Moduli: Topological Boundary Averaging in SymTFTs",
+    "authors": [
+      "Xingyang Yu"
+    ],
+    "summary": "We propose a SymTFT interpretation of ensemble averaging in low-dimensional holography. The central operation is to keep fixed both the SymTFT and the physical boundary condition, while averaging over topological boundary conditions at the other end of the SymTFT slab. Each such boundary condition gives an absolute completion of the same relative theory, so the ensemble is interpreted as an average over topological completions rather than over arbitrary local dynamics. We formulate this construction in terms of cap functionals and their natural groupoid or Haar-type measures, and illustrate it in two examples. In the closed-string sector of the Marolf--Maxfield model, topological boundary conditions are labelled by finite sets, and the groupoid sum reproduces the Poisson/Bell-polynomial moments. In the Narain case, compact topological boundary conditions of an $\\mathbb{R}$-valued BF SymTFT are identified with maximal isotropic subgroups, so that topological-boundary averaging becomes the usual Narain moduli average with Zamolodchikov measure. We also discuss possible extensions to JT gravity, random matrix theory, Virasoro T(Q)FT, and 3D gravity.",
+    "comment": "53 pages",
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "hep-th",
+    "categories": [
+      "hep-th"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2605.06653v1",
+    "short_id": "2605.06653v1"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2605.06653v1",
+    "external_doi": null,
+    "title": "From Baby Universes to Narain Moduli: Topological Boundary Averaging in SymTFTs",
+    "authors": [
+      "Xingyang Yu"
+    ],
+    "abstract": "We propose a SymTFT interpretation of ensemble averaging in low-dimensional holography. The central operation is to keep fixed both the SymTFT and the physical boundary condition, while averaging over topological boundary conditions at the other end of the SymTFT slab. Each such boundary condition gives an absolute completion of the same relative theory, so the ensemble is interpreted as an average over topological completions rather than over arbitrary local dynamics. We formulate this construction in terms of cap functionals and their natural groupoid or Haar-type measures, and illustrate it in two examples. In the closed-string sector of the Marolf--Maxfield model, topological boundary conditions are labelled by finite sets, and the groupoid sum reproduces the Poisson/Bell-polynomial moments. In the Narain case, compact topological boundary conditions of an $\\mathbb{R}$-valued BF SymTFT are identified with maximal isotropic subgroups, so that topological-boundary averaging becomes the usual Narain moduli average with Zamolodchikov measure. We also discuss possible extensions to JT gravity, random matrix theory, Virasoro T(Q)FT, and 3D gravity.",
+    "published": "2026-05-07",
+    "updated": "2026-05-07",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2605.06653v1",
+    "arxiv_id": "2605.06653v1",
+    "primary_category": "hep-th",
+    "categories": [
+      "hep-th"
+    ],
+    "keywords": [
+      "hep-th"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.06653v1",
+    "html_url": "https://arxiv.org/html/2605.06653v1",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2605.06653v1",
+        "content_type": "text/html",
+        "content_version": "2605.06653v1",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2605.06653v1",
+        "content_type": "application/pdf",
+        "content_version": "2605.06653v1",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}

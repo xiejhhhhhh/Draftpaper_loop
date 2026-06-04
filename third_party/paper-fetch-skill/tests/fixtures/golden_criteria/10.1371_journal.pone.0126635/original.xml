@@ -1,0 +1,1532 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article
+  PUBLIC "-//NLM//DTD Journal Publishing DTD v3.0 20080202//EN" "http://dtd.nlm.nih.gov/publishing/3.0/journalpublishing3.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" dtd-version="3.0" xml:lang="en" article-type="research-article">
+<front>
+<journal-meta>
+<journal-id journal-id-type="nlm-ta">PLoS ONE</journal-id>
+<journal-id journal-id-type="publisher-id">plos</journal-id>
+<journal-id journal-id-type="pmc">plosone</journal-id>
+<journal-title-group>
+<journal-title>PLOS ONE</journal-title>
+</journal-title-group>
+<issn pub-type="epub">1932-6203</issn>
+<publisher>
+<publisher-name>Public Library of Science</publisher-name>
+<publisher-loc>San Francisco, CA USA</publisher-loc>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="publisher-id">PONE-D-14-45988</article-id>
+<article-id pub-id-type="doi">10.1371/journal.pone.0126635</article-id>
+<article-categories>
+<subj-group subj-group-type="heading">
+<subject>Research Article</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>A Generalized Simplest Equation Method and Its Application to the Boussinesq-Burgers Equation</article-title>
+<alt-title alt-title-type="running-head">A Generalized Simplest Equation Method</alt-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author" corresp="yes" xlink:type="simple">
+<name name-style="western">
+<surname>Sudao</surname> <given-names>Bilige</given-names></name>
+<xref ref-type="corresp" rid="cor001">*</xref>
+<xref ref-type="aff" rid="aff001"/>
+</contrib>
+<contrib contrib-type="author" xlink:type="simple">
+<name name-style="western">
+<surname>Wang</surname> <given-names>Xiaomin</given-names></name>
+<xref ref-type="aff" rid="aff001"/>
+</contrib>
+</contrib-group>
+<aff id="aff001">
+<addr-line>College of Sciences, Inner Mongolia University of Technology, Hohhot, Inner Mongolia, PR China</addr-line>
+</aff>
+<contrib-group>
+<contrib contrib-type="editor" xlink:type="simple">
+<name name-style="western">
+<surname>Magar</surname> <given-names>Vanesa</given-names></name>
+<role>Academic Editor</role>
+<xref ref-type="aff" rid="edit1"/>
+</contrib>
+</contrib-group>
+<aff id="edit1">
+<addr-line>Centro de Investigacion Cientifica y Educacion Superior de Ensenada, MEXICO</addr-line>
+</aff>
+<author-notes>
+<fn fn-type="conflict" id="coi001">
+<p>The authors have declared that no competing interests exist.</p>
+</fn>
+<fn fn-type="con" id="contrib001">
+<p>Conceived and designed the experiments: BS. Performed the experiments: BS XW. Analyzed the data: BS XW. Contributed reagents/materials/analysis tools: XW. Wrote the paper: BS. Designed the software used in analysis: BS.</p>
+</fn>
+<corresp id="cor001">* E-mail: <email xlink:type="simple">inmathematica@126.com</email></corresp>
+</author-notes>
+<pub-date pub-type="collection">
+<year>2015</year>
+</pub-date>
+<pub-date pub-type="epub">
+<day>14</day>
+<month>5</month>
+<year>2015</year>
+</pub-date>
+<volume>10</volume>
+<issue>5</issue>
+<elocation-id>e0126635</elocation-id>
+<history>
+<date date-type="received">
+<day>27</day>
+<month>11</month>
+<year>2014</year>
+</date>
+<date date-type="accepted">
+<day>5</day>
+<month>4</month>
+<year>2015</year>
+</date>
+</history>
+<permissions>
+<copyright-year>2015</copyright-year>
+<copyright-holder>Sudao, Wang</copyright-holder>
+<license xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">
+<license-p>This is an open access article distributed under the terms of the <ext-link ext-link-type="uri" xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">Creative Commons Attribution License</ext-link>, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited</license-p>
+</license>
+</permissions>
+<self-uri content-type="pdf" xlink:href="info:doi/10.1371/journal.pone.0126635" xlink:type="simple"/>
+<abstract>
+<p>In this paper, a generalized simplest equation method is proposed to seek exact solutions of nonlinear evolution equations (NLEEs). In the method, we chose a solution expression with a variable coefficient and a variable coefficient ordinary differential auxiliary equation. This method can yield a B<italic>ä</italic>cklund transformation between NLEEs and a related constraint equation. By dealing with the constraint equation, we can derive infinite number of exact solutions for NLEEs. These solutions include the traveling wave solutions, non-traveling wave solutions, multi-soliton solutions, rational solutions, and other types of solutions. As applications, we obtained wide classes of exact solutions for the Boussinesq-Burgers equation by using the generalized simplest equation method.</p>
+</abstract>
+<funding-group>
+<funding-statement>This work is supported by Natural Science Foundation of Inner Mongolia Autonomous Region of China (2014MS0114, 2014BS0105) and High Education Science Research Program of Inner Mongolia of China (NJZY12056). The funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript.</funding-statement>
+</funding-group>
+<counts>
+<fig-count count="0"/>
+<table-count count="0"/>
+<page-count count="12"/>
+</counts>
+<custom-meta-group>
+<custom-meta id="data-availability" xlink:type="simple">
+<meta-name>Data Availability</meta-name>
+<meta-value>All relevant data are within the paper.</meta-value>
+</custom-meta>
+</custom-meta-group>
+</article-meta>
+</front>
+<body>
+<sec id="sec001" sec-type="intro">
+<title>1 Introduction</title>
+<p>It is important to seek more exact solutions of nonlinear evolution equations (NLEEs) in mathematical physics. In past decades, many powerful methods have been presented such as the inverse scattering method [<xref ref-type="bibr" rid="pone.0126635.ref001">1</xref>], the Darboux transformation [<xref ref-type="bibr" rid="pone.0126635.ref002">2</xref>], the Hirota bilinear method [<xref ref-type="bibr" rid="pone.0126635.ref003">3</xref>], the Painlevé expansion method [<xref ref-type="bibr" rid="pone.0126635.ref004">4</xref>], the Bäcklund transformation method [<xref ref-type="bibr" rid="pone.0126635.ref005">5</xref>, <xref ref-type="bibr" rid="pone.0126635.ref006">6</xref>], the multilinear variable separation method [<xref ref-type="bibr" rid="pone.0126635.ref007">7</xref>], the homogeneous balance method [<xref ref-type="bibr" rid="pone.0126635.ref008">8</xref>], the Jacobi elliptic function expansion method [<xref ref-type="bibr" rid="pone.0126635.ref009">9</xref>], the tanh-function method [<xref ref-type="bibr" rid="pone.0126635.ref010">10</xref>, <xref ref-type="bibr" rid="pone.0126635.ref011">11</xref>], the F-expansion method [<xref ref-type="bibr" rid="pone.0126635.ref012">12</xref>], the auxiliary equation method [<xref ref-type="bibr" rid="pone.0126635.ref013">13</xref>], the sub-ODE method [<xref ref-type="bibr" rid="pone.0126635.ref014">14</xref>], the Exp-function method [<xref ref-type="bibr" rid="pone.0126635.ref015">15</xref>], the (<italic>G</italic>′/<italic>G</italic>)-expansion method [<xref ref-type="bibr" rid="pone.0126635.ref016">16</xref>, <xref ref-type="bibr" rid="pone.0126635.ref017">17</xref>], the simplest equation method [<xref ref-type="bibr" rid="pone.0126635.ref018">18</xref>, <xref ref-type="bibr" rid="pone.0126635.ref019">19</xref>]. Thousands of examples have shown that these methods are powerful for obtaining exact solutions of NLEEs, especially, for traveling wave solutions. Up to now, a unified method that can be used to deal with all types of NLEEs has not been discovered. Hence, developing new method and finding more general exact solutions of NLEEs have drawn a lot of interests of a diverse group of scientists.</p>
+<p>Particularly, N.A. Kudryashov first proposed the simplest equation method and showed that it is powerful for finding analytic solutions of NLEEs [<xref ref-type="bibr" rid="pone.0126635.ref018">18</xref>, <xref ref-type="bibr" rid="pone.0126635.ref019">19</xref>]. Two basic ideas are at the heart of the approach. The first idea is to apply the simplest nonlinear differential equations (the Riccati equation, the equation for the Jacobi elliptic faction, the equation for the Weierstrass ellipic function and so on) that have lesser order than the equation studied. The second idea is to use possible singularities of general solution for the equation studied. Recently, there are many applications and generalizations of the method [<xref ref-type="bibr" rid="pone.0126635.ref020">20</xref>–<xref ref-type="bibr" rid="pone.0126635.ref025">25</xref>].</p>
+<p>In the present paper, based on a solution expression with a variable coefficient and variable coefficient auxiliary equation (a special simplest nonlinear differential equation), we proposed a generalized simplest equation method to seek exact solutions of NLEEs. This method can yield infinite number of exact solutions of NLEEs. For illustration, we apply this method to the Boussinesq-Burgers equation and successfully find many different types of exact solutions. These solutions include traveling wave solutions, non-traveling wave solutions, multi-soliton solutions, rational solutions and other types of solutions.</p>
+<p>The rest of the paper is organized as follows. In Section 2, we describe the generalized simplest equation method to look for exact solutions of NLEEs. In Section 3, we firstly construct the most general form exact solutions and the exact traveling wave solutions of the Boussinesq-Burgers equation by using our method. Secondly, we obtain the Bäcklund transformation between the Boussinesq-Burgers equation and the constraint equation. Thirdly, we give some concrete new exact solutions of the Boussinesq-Burgers equation. In Section 4, we give some discussions and conclusion remarks.</p>
+</sec>
+<sec id="sec002">
+<title>2 Description of the generalized simplest equation method</title>
+<p>We consider a nonlinear evolution equation (NLEE)
+<disp-formula id="pone.0126635.e001"><alternatives><graphic id="pone.0126635.e001g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e001"/><mml:math id="M1" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>P</mml:mi> <mml:mo>(</mml:mo> <mml:mi>u</mml:mi> <mml:mo>,</mml:mo> <mml:msub><mml:mi>u</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>,</mml:mo> <mml:msub><mml:mi>u</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>,</mml:mo> <mml:msub><mml:mi>u</mml:mi> <mml:mrow><mml:mi>t</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>,</mml:mo> <mml:msub><mml:mi>u</mml:mi> <mml:mrow><mml:mi>t</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msub> <mml:mo>,</mml:mo> <mml:msub><mml:mi>u</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>,</mml:mo> <mml:mo>⋯</mml:mo> <mml:mo>)</mml:mo> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(1)</label></disp-formula>
+where <italic>u</italic> = <italic>u</italic>(<italic>t</italic>, <italic>x</italic>) is an unknown function, <italic>t</italic>, <italic>x</italic> are two independent variables, <italic>P</italic> is a polynomial in <italic>u</italic> and its various partial derivatives.</p>
+<p>We consider a generalized simplest equation method for obtaining exact solutions to the given NLEE <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref>, which is described in the following five steps.</p>
+<p><bold>Step 1</bold>. Suppose that the solutions for <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref> can be expressed in the following general form
+<disp-formula id="pone.0126635.e002"><alternatives><graphic id="pone.0126635.e002g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e002"/><mml:math id="M2" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>u</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:munderover><mml:mo>∑</mml:mo> <mml:mrow><mml:mi>i</mml:mi> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn></mml:mrow> <mml:mi>M</mml:mi></mml:munderover> <mml:msub><mml:mi>α</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(2)</label></disp-formula>
+where <italic>α</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>)(<italic>i</italic> = 0, 1, ⋯, <italic>M</italic>) and <italic>ξ</italic> = <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) are all functions of <italic>t</italic>, <italic>x</italic> to be determined later, <italic>ϕ</italic> = <italic>ϕ</italic>(<italic>ξ</italic>) satisfies our auxiliary equation (a first order ordinary differential equation (ODE) with variable coefficients):
+<disp-formula id="pone.0126635.e003"><alternatives><graphic id="pone.0126635.e003g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e003"/><mml:math id="M3" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:msup><mml:mi>ϕ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:mo>+</mml:mo> <mml:msup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>δ</mml:mi> <mml:mi>ξ</mml:mi> <mml:mi>ϕ</mml:mi> <mml:mo>+</mml:mo> <mml:mi>ν</mml:mi> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(3)</label></disp-formula>
+It has three types of general solution as follows
+<disp-formula id="pone.0126635.e004"><alternatives><graphic id="pone.0126635.e004g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e004"/><mml:math id="M4" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ε</mml:mi> <mml:mo>·</mml:mo> <mml:mfrac><mml:mrow><mml:mo>[</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>η</mml:mi> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>]</mml:mo> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>η</mml:mi> <mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mo>[</mml:mo> <mml:mn>2</mml:mn> <mml:mi>η</mml:mi> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>]</mml:mo> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>η</mml:mi> <mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>ξ</mml:mi> <mml:mo>[</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo form="prefix">sin</mml:mo> <mml:mo>(</mml:mo> <mml:mi>η</mml:mi> <mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>η</mml:mi> <mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mfrac> <mml:mo>;</mml:mo> <mml:mspace width="19.34766pt"/><mml:mi>if</mml:mi><mml:mspace width="4pt"/><mml:mi>s</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>1</mml:mn></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(4)</label></disp-formula>
+<disp-formula id="pone.0126635.e005"><alternatives><graphic id="pone.0126635.e005g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e005"/><mml:math id="M5" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ε</mml:mi> <mml:mo>·</mml:mo> <mml:mfrac><mml:mrow><mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:mi>η</mml:mi> <mml:mo>-</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>η</mml:mi></mml:mrow></mml:msup> <mml:mo>-</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:mi>η</mml:mi> <mml:mo>+</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mrow><mml:mn>2</mml:mn> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>(</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msup><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>η</mml:mi></mml:mrow></mml:msup> <mml:mo>+</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>;</mml:mo> <mml:mspace width="127.75302pt"/><mml:mi>if</mml:mi><mml:mspace width="4pt"/> <mml:mi>s</mml:mi> <mml:mo>&lt;</mml:mo> <mml:mn>1</mml:mn></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(5)</label></disp-formula>
+<disp-formula id="pone.0126635.e006"><alternatives><graphic id="pone.0126635.e006g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e006"/><mml:math id="M6" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ε</mml:mi> <mml:mo>·</mml:mo> <mml:mfrac><mml:mrow><mml:mrow><mml:mrow><mml:mo>(</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>(</mml:mo></mml:mrow> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo form="prefix">ln</mml:mo> <mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>,</mml:mo> <mml:mspace width="166.44879pt"/><mml:mi>if</mml:mi><mml:mspace width="4pt"/><mml:mi>s</mml:mi> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(6)</label></disp-formula>
+and
+<disp-formula id="pone.0126635.e007"><alternatives><graphic id="pone.0126635.e007g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e007"/><mml:math id="M7" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ε</mml:mi> <mml:mo>=</mml:mo> <mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mn>1</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>ξ</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>ξ</mml:mi> <mml:mo>&lt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(7)</label></disp-formula>
+where <italic>c</italic><sub>1</sub>, <italic>c</italic><sub>2</sub>, <italic>δ</italic>, <italic>ν</italic> are constants and
+<disp-formula id="pone.0126635.e008"><alternatives><graphic id="pone.0126635.e008g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e008"/><mml:math id="M8" display="block" overflow="scroll"><mml:mrow><mml:mi>s</mml:mi> <mml:mo>=</mml:mo> <mml:mn>2</mml:mn> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:msup><mml:mi>δ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:mn>4</mml:mn> <mml:mi>ν</mml:mi> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mi>η</mml:mi> <mml:mo>=</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msup><mml:mrow><mml:mo>|</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>s</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mrow><mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup> <mml:mo>.</mml:mo></mml:mrow></mml:math></alternatives></disp-formula></p>
+<p><bold>Step 2</bold>. The positive number <italic>M</italic> can be determined by considering the homogeneous balance between the highest order derivatives and nonlinear terms appearing in <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref>.</p>
+<p><bold>Step 3</bold>. By substituting <xref ref-type="disp-formula" rid="pone.0126635.e002">Eq (2)</xref> into <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref> and using <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref>, collecting all terms with the same order of <italic>ϕ</italic> together, the left-hand side of <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref> is converted into another polynomial in <italic>ϕ</italic>. Equating each coefficient of powers of <italic>ϕ</italic> to zero, yields a set of over-determined partial differential equations for <italic>α</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>)(<italic>i</italic> = 0, 1, ⋯, <italic>M</italic>) and <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>).</p>
+<p><bold>Step 4</bold>. By solving the system of over-determined partial differential equations in Step 3, we obtain <italic>α</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>)(<italic>i</italic> = 0, 1, ⋯, <italic>M</italic>) and <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>).</p>
+<p><bold>Step 5</bold>. By substituting <italic>α</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>)(<italic>i</italic> = 0, 1, ⋯, <italic>M</italic>), <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) and the general solutions Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e004">4</xref>), (<xref ref-type="disp-formula" rid="pone.0126635.e005">5</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e006">6</xref>) of <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref> into <xref ref-type="disp-formula" rid="pone.0126635.e002">Eq (2)</xref>, we can obtain more exact solutions of the <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref>.</p>
+<p><bold>Remark 1</bold>: The solution expression <xref ref-type="disp-formula" rid="pone.0126635.e002">Eq (2)</xref> with functions <italic>α</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>)(<italic>i</italic> = 0, 1, ⋯, <italic>M</italic>) and <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) can yield more general form exact solutions rather than just traveling wave solutions.</p>
+<p><bold>Remark 2</bold>: It is the first time that <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref> is used as an auxiliary equation for obtaining exact solutions of NLEEs.</p>
+<p><bold>Remark 3</bold>: It is emphasized that in our designs Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e002">2</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e003">3</xref>), the parameters <italic>δ</italic>, <italic>ν</italic> will play the role of adjusters in solving the constraint equation and in obtaining a transformation between <xref ref-type="disp-formula" rid="pone.0126635.e001">Eq (1)</xref> and linear heat equation (see Section 3).</p>
+</sec>
+<sec id="sec003">
+<title>3 Application of the Method</title>
+<sec id="sec004">
+<title>The exact solutions to the Boussinesq-Burgers equation</title>
+<p>In this section, we are aimed to first give the most general form exact solutions, then we will determine the exact traveling wave and non-traveling wave solutions for the Boussinesq-Burgers equation [<xref ref-type="bibr" rid="pone.0126635.ref026">26</xref>–<xref ref-type="bibr" rid="pone.0126635.ref032">32</xref>]
+<disp-formula id="pone.0126635.e009"><alternatives><graphic id="pone.0126635.e009g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e009"/><mml:math id="M9" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>u</mml:mi> <mml:msub><mml:mi>u</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>-</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msub><mml:mi>v</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(8)</label></disp-formula>
+<disp-formula id="pone.0126635.e010"><alternatives><graphic id="pone.0126635.e010g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e010"/><mml:math id="M10" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mrow><mml:mo>(</mml:mo> <mml:mi>u</mml:mi> <mml:mi>v</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>x</mml:mi></mml:msub> <mml:mo>-</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msub><mml:mi>u</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(9)</label></disp-formula></p>
+<sec id="sec005">
+<title>The general form exact solutions</title>
+<p>In the subsection, we solve the most general form exact solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>).</p>
+<p><bold>Step 1</bold>. The solution expressions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) are taken as <xref ref-type="disp-formula" rid="pone.0126635.e002">Eq (2)</xref>.</p>
+<p><bold>Step 2</bold>. Considering the homogeneous balance between the highest order derivatives <italic>v</italic><sub><italic>x</italic></sub>(<italic>u</italic><sub><italic>xxx</italic></sub>) and nonlinear terms <italic>uu</italic><sub><italic>x</italic></sub>(<italic>uv</italic><sub><italic>x</italic></sub>) in Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>), we get balance numbers <italic>M</italic> = 1 for <italic>u</italic> and <italic>N</italic> = 2 for <italic>v</italic>. Thus, we can denote the solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) in the form
+<disp-formula id="pone.0126635.e011"><alternatives><graphic id="pone.0126635.e011g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e011"/><mml:math id="M11" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>u</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>a</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>a</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>ϕ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(10)</label></disp-formula>
+<disp-formula id="pone.0126635.e012"><alternatives><graphic id="pone.0126635.e012g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e012"/><mml:math id="M12" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>v</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>ϕ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(11)</label></disp-formula>
+where functions <italic>a</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>a</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>2</sub>(<italic>t</italic>, <italic>x</italic>) and <italic>ξ</italic> = <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) are to be determined later and <italic>ϕ</italic> = <italic>ϕ</italic>(<italic>ξ</italic>) satisfies <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref>.</p>
+<p><bold>Step 3</bold>. We substitute Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e011">10</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e012">11</xref>) along with the auxiliary <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref> into Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) and collect all terms with the same order of <italic>ϕ</italic>. As a result, the left-hand sides of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) are converted into another polynomials in <italic>ϕ</italic>. Equating each coefficient of powers of <italic>ϕ</italic> to zero, we obtain a set of over-determined partial differential equations for <italic>a</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>a</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>2</sub>(<italic>t</italic>, <italic>x</italic>) and <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>).</p>
+<p><bold>Remark 4</bold>: Unlike <italic>pure</italic> algebraic equations used in the standard auxiliary method, here we obtain differential equations for <italic>a</italic><sub><italic>i</italic></sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub><italic>j</italic></sub>(<italic>t</italic>, <italic>x</italic>) and <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>). This provides us with more general types of exact solutions to Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>).</p>
+<p><bold>Step 4</bold>. Solving the differential system obtained in Step 3 by Mathematica, we obtain <italic>a</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>a</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>0</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>), <italic>b</italic><sub>2</sub>(<italic>t</italic>, <italic>x</italic>) expressed by <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) and <italic>δ</italic>, <italic>ν</italic> as follows:
+<disp-formula id="pone.0126635.e013"><alternatives><graphic id="pone.0126635.e013g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e013"/><mml:math id="M13" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>a</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>∓</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>±</mml:mo> <mml:mi>δ</mml:mi> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>ξ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub></mml:mrow></mml:mfrac> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:msub><mml:mi>a</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mo>±</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>b</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>-</mml:mo> <mml:mi>δ</mml:mi> <mml:mi>ξ</mml:mi> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>±</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>±</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup></mml:mrow></mml:mfrac> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>b</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mi>δ</mml:mi> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>-</mml:mo> <mml:mi>ξ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>ξ</mml:mi></mml:mrow></mml:mfrac> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:msub><mml:mi>b</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(12)</label></disp-formula>
+where <italic>ξ</italic> = <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) satisfies the equation
+<disp-formula id="pone.0126635.e014"><alternatives><graphic id="pone.0126635.e014g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e014"/><mml:math id="M14" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mi>s</mml:mi> <mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>)</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>3</mml:mn></mml:msup> <mml:mrow><mml:mo>[</mml:mo></mml:mrow> <mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>±</mml:mo> <mml:mn>4</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>t</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>+</mml:mo> <mml:mn>4</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>t</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mn>4</mml:mn> <mml:mo>(</mml:mo> <mml:mo>∓</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>)</mml:mo> <mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>t</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>±</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mspace width="1.em"/><mml:mo>+</mml:mo> <mml:mo>(</mml:mo> <mml:mn>4</mml:mn> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mn>3</mml:mn> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>±</mml:mo> <mml:mn>8</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mrow><mml:mo>]</mml:mo> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>.</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(13)</label></disp-formula> <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> is called <bold>the constraint equation</bold> of <italic>ξ</italic>.</p>
+<p>Here for obtaining more general types of solutions, we consider the case of <italic>ξ</italic><sub><italic>x</italic></sub> ≠ 0. Any solution of the constraint <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> leads to a group of coefficients <xref ref-type="disp-formula" rid="pone.0126635.e013">Eq (12)</xref> which together with Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e004">4</xref>)–(<xref ref-type="disp-formula" rid="pone.0126635.e006">6</xref>) result in three classes of exact solutions Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e011">10</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e012">11</xref>) of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) as follows:
+<disp-formula id="pone.0126635.e015"><alternatives><graphic id="pone.0126635.e015g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e015"/><mml:math id="M15" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>a</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>a</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>b</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(14)</label></disp-formula>
+in which <italic>i</italic> = 1 for <italic>s</italic> &gt; 1, <italic>i</italic> = 2 for <italic>s</italic> &lt; 1 and <italic>i</italic> = 3 for <italic>s</italic> = 1.</p>
+<p>Therefore, the solution expressions <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref> have established a Bäcklund transformation between Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) and constraint <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref>. Because of the Bäcklund transformation, the method can give infinite number of exact solutions for the considering NLEEs immediately.</p>
+<p>Seen from the formulae <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref>, if <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) is a solution of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> with the form <italic>ξ</italic> = <italic>ξ</italic>(<italic>x</italic>−<italic>Vt</italic>), then it yields exact traveling wave solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). While if <italic>ξ</italic> ≠ <italic>ξ</italic>(<italic>x</italic>−<italic>Vt</italic>), then it yields exact non-traveling wave solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). Hence the formulae <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref> provide us with abundance of general form exact solutions to Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) once the solutions of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> are given.</p>
+<p><bold>Step 5</bold>. In the following, we determine the exact traveling wave and non-traveling wave solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) through exactly solving <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref>.</p>
+</sec>
+<sec id="sec006">
+<title>The exact traveling wave solutions</title>
+<p>In this subsection, we find the exact traveling wave solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) through obtaining specific solutions of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> formed by <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) = <italic>ξ</italic>(<italic>x</italic>−<italic>Vt</italic>). In this case, <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> becomes
+<disp-formula id="pone.0126635.e016"><alternatives><graphic id="pone.0126635.e016g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e016"/><mml:math id="M16" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mi>s</mml:mi> <mml:mrow><mml:mo>[</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mo>-</mml:mo> <mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>′</mml:mo> <mml:mo>′</mml:mo></mml:mrow></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow> <mml:msup><mml:mi>ξ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>4</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>4</mml:mn> <mml:msup><mml:mi>ξ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>′</mml:mo> <mml:mo>′</mml:mo></mml:mrow></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>3</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>-</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>4</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>-</mml:mo> <mml:mn>3</mml:mn> <mml:msup><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>′</mml:mo> <mml:mo>′</mml:mo></mml:mrow></mml:msup> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>3</mml:mn></mml:msup> <mml:mo>]</mml:mo></mml:mrow> <mml:mi>ξ</mml:mi> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>3</mml:mn></mml:msup> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(15)</label></disp-formula>
+where <italic>z</italic> = <italic>x</italic>−<italic>Vt</italic>.</p>
+<p>With the transformation
+<disp-formula id="pone.0126635.e017"><alternatives><graphic id="pone.0126635.e017g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e017"/><mml:math id="M17" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>Y</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(16)</label></disp-formula>
+<xref ref-type="disp-formula" rid="pone.0126635.e016">Eq (15)</xref> becomes the third order linear ODE with variable coefficients
+<disp-formula id="pone.0126635.e018"><alternatives><graphic id="pone.0126635.e018g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e018"/><mml:math id="M18" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msup><mml:mi>ξ</mml:mi> <mml:mn>3</mml:mn></mml:msup> <mml:msup><mml:mi>Y</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>3</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>s</mml:mi> <mml:mo>[</mml:mo> <mml:mi>ξ</mml:mi> <mml:msup><mml:mi>Y</mml:mi> <mml:mo>′</mml:mo></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>-</mml:mo> <mml:mi>Y</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+which has general solutions as follows:
+<disp-formula id="pone.0126635.e019"><alternatives><graphic id="pone.0126635.e019g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e019"/><mml:math id="M19" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>Y</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>[</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo form="prefix">cos</mml:mo> <mml:mo>(</mml:mo> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo form="prefix">ln</mml:mo> <mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>)</mml:mo> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mo form="prefix">sin</mml:mo> <mml:mo>(</mml:mo> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo form="prefix">ln</mml:mo> <mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>)</mml:mo> <mml:mo>]</mml:mo> <mml:mo>,</mml:mo> <mml:mspace width="39.26494pt"/><mml:mi>if</mml:mi> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msubsup><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>=</mml:mo> <mml:mi>s</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msup><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mrow><mml:mo>-</mml:mo> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:mrow></mml:msup> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msup><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:msup> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mo>)</mml:mo> <mml:mo>,</mml:mo> <mml:mspace width="102.43008pt"/><mml:mi>if</mml:mi> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msubsup><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>s</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo form="prefix">ln</mml:mo> <mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:msup><mml:mo form="prefix">ln</mml:mo> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>|</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>|</mml:mo></mml:mrow> <mml:mo>)</mml:mo> <mml:mo>,</mml:mo> <mml:mspace width="0.166667em"/><mml:mspace width="94.17854pt"/><mml:mi>if</mml:mi> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msubsup><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>s</mml:mi> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(17)</label></disp-formula>
+where <italic>d</italic><sub>1</sub>, <italic>d</italic><sub>2</sub> and <italic>d</italic><sub>3</sub> are arbitrary constants. For a nontrivial solution, these constants should not be equal to zero simultaneously. Correspondingly, from Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e017">16</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e003">3</xref>), we have twelve kinds of exact solutions for <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> respectively, which are summarized in the following three cases and their subcases.</p>
+<p><bold>Case 1</bold>: <italic>s</italic> &gt; 1. In this case, there are three kinds of exact solutions of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> shown in the following subcases.
+<list list-type="simple">
+<list-item>
+<p><bold>Subcase 1.1</bold>: <inline-formula id="pone.0126635.e020">
+<mml:math id="M20" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>+</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&gt;</mml:mo>
+<mml:mn>0</mml:mn>
+</mml:mrow>
+</mml:math>
+</inline-formula>, <inline-formula id="pone.0126635.e021"><mml:math id="M21" display="inline" overflow="scroll"><mml:mrow><mml:mi>A</mml:mi> <mml:mo>=</mml:mo> <mml:msqrt><mml:mrow><mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>−</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup></mml:mrow></mml:msqrt> <mml:mo>,</mml:mo> <mml:msub><mml:mi>A</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>=</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>exp</mml:mi> <mml:mo stretchy="false">[</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mo stretchy="false">(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo stretchy="false">)</mml:mo> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo stretchy="false">]</mml:mo></mml:mrow></mml:math></inline-formula>,
+<disp-formula id="pone.0126635.e022"><alternatives><graphic id="pone.0126635.e022g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e022"/><mml:math id="M22" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mi>ε</mml:mi><mml:mspace width="1pt"/><mml:mo form="prefix">exp</mml:mo> <mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mfrac><mml:mrow><mml:mn>2</mml:mn> <mml:mi>ε</mml:mi></mml:mrow> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:mfrac> <mml:mo form="prefix">arctan</mml:mo> <mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:mo form="prefix">tanh</mml:mo> <mml:mo>(</mml:mo> <mml:mfrac><mml:mi>A</mml:mi> <mml:mn>2</mml:mn></mml:mfrac> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mi>ε</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mi>ε</mml:mi></mml:mrow> <mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>-</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo> <mml:mo>]</mml:mo> <mml:mo>,</mml:mo> <mml:mspace width="57.75905pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>≠</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mi>ε</mml:mi><mml:mspace width="1pt"/><mml:mo form="prefix">exp</mml:mo> <mml:mo>[</mml:mo> <mml:mfrac><mml:mn>2</mml:mn> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:mfrac> <mml:mo form="prefix">arccos</mml:mo> <mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mo>±</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub></mml:mrow> <mml:msqrt><mml:mrow><mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>A</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:msqrt></mml:mfrac> <mml:mo>)</mml:mo> <mml:mo>]</mml:mo> <mml:mo>,</mml:mo> <mml:mspace width="34.14322pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>=</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(18)</label></disp-formula></p></list-item>
+<list-item><p><bold>Subcase 1.2</bold>: <inline-formula id="pone.0126635.e023">
+<mml:math id="M23" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>+</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+</mml:mrow>
+</mml:math>
+</inline-formula>,<inline-formula id="pone.0126635.e024"><mml:math id="M24" display="inline" overflow="scroll"><mml:mrow><mml:msup><mml:mi>A</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>=</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>−</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>−</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>,</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>≠</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub></mml:mrow></mml:math></inline-formula>,
+<disp-formula id="pone.0126635.e025"><alternatives><graphic id="pone.0126635.e025g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e025"/><mml:math id="M25" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ε</mml:mi> <mml:mo form="prefix">exp</mml:mo> <mml:mo>[</mml:mo> <mml:mfrac><mml:mn>2</mml:mn> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:mfrac> <mml:mo form="prefix">arctan</mml:mo> <mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:mo form="prefix">tan</mml:mo> <mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mfrac><mml:mi>A</mml:mi> <mml:mn>2</mml:mn></mml:mfrac> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mi>ε</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub></mml:mrow> <mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mo>-</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo> <mml:mo>]</mml:mo> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(19)</label></disp-formula></p></list-item>
+<list-item><p><bold>Subcase 1.3</bold>: <inline-formula id="pone.0126635.e026">
+<mml:math id="M26" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>+</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+</mml:mrow>
+</mml:math>
+</inline-formula>,
+<disp-formula id="pone.0126635.e027"><alternatives><graphic id="pone.0126635.e027g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e027"/><mml:math id="M27" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mo form="prefix">exp</mml:mo> <mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mi>ε</mml:mi><mml:mspace width="2pt"/> <mml:mo form="prefix">arccos</mml:mo> <mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mo>±</mml:mo> <mml:msub><mml:mi>K</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>ε</mml:mi> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msub><mml:mi>K</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ε</mml:mi> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msub><mml:mi>K</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>3</mml:mn></mml:msubsup></mml:mrow> <mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:msub><mml:mi>K</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>1</mml:mn> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mrow><mml:mo>(</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo> <mml:mo>]</mml:mo> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(20)</label></disp-formula>
+where
+<disp-formula id="pone.0126635.e028"><alternatives><graphic id="pone.0126635.e028g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e028"/><mml:math id="M28" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>K</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>K</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>[</mml:mo></mml:mrow> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>6</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>θ</mml:mi> <mml:mi>ε</mml:mi> <mml:msup><mml:mrow><mml:mrow><mml:mo>|</mml:mo></mml:mrow> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>|</mml:mo></mml:mrow></mml:mrow> <mml:mn>3</mml:mn></mml:msup> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>5</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mn>4</mml:mn> <mml:mi>ε</mml:mi> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>3</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>3</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ε</mml:mi> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msub><mml:mi>K</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mspace width="0.166667em"/><mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>-</mml:mo> <mml:mn>4</mml:mn> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>K</mml:mi> <mml:mn>1</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>3</mml:mn> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>]</mml:mo> <mml:mo>.</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+and
+<disp-formula id="pone.0126635.e029"><alternatives><graphic id="pone.0126635.e029g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e029"/><mml:math id="M29" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>θ</mml:mi> <mml:mo>=</mml:mo> <mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mn>1</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>&lt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula></p></list-item></list></p>
+<p><bold>Case 2</bold>: <italic>s</italic> &lt; 1. In this case, there are five kinds of exact solutions of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> shown in the following subcases.
+<list list-type="simple">
+<list-item><p><bold>Subcase 2.1</bold>: <inline-formula id="pone.0126635.e030">
+<mml:math id="M30" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&gt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:mi>A</mml:mi>
+<mml:mo>=</mml:mo>
+<mml:msqrt>
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+</mml:mrow>
+</mml:msqrt>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e031">
+<alternatives>
+<graphic id="pone.0126635.e031g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e031"/>
+<mml:math id="M31" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:msup>
+<mml:mrow>
+<mml:mo>[</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:mn>2</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:mrow>
+<mml:mi>ε</mml:mi>
+<mml:mi>A</mml:mi>
+<mml:mo form="prefix">tan</mml:mo>
+<mml:mo>(</mml:mo>
+<mml:mfrac>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+<mml:mn>2</mml:mn>
+</mml:mfrac>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mi>A</mml:mi>
+<mml:mo>)</mml:mo>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mrow>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+</mml:mrow>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+</mml:mfrac>
+</mml:msup>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(21)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 2.2</bold>: <inline-formula id="pone.0126635.e032">
+<mml:math id="M32" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msup>
+<mml:mi>A</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msup>
+<mml:mo>=</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>−</mml:mo>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e033">
+<alternatives>
+<graphic id="pone.0126635.e033g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e033"/>
+<mml:math id="M33" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:msup>
+<mml:mrow>
+<mml:mo>[</mml:mo>
+<mml:mo>-</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mi>ε</mml:mi>
+<mml:mi>A</mml:mi>
+<mml:mo form="prefix">tanh</mml:mo>
+<mml:mo>(</mml:mo>
+<mml:mfrac>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+<mml:mn>2</mml:mn>
+</mml:mfrac>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mi>A</mml:mi>
+<mml:mo>)</mml:mo>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:mrow>
+<mml:mn>2</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+</mml:mrow>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+</mml:mrow>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+</mml:mfrac>
+</mml:msup>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(22)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 2.3</bold>: <inline-formula id="pone.0126635.e034">
+<mml:math id="M34" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e035">
+<alternatives>
+<graphic id="pone.0126635.e035g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e035"/>
+<mml:math id="M35" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:mrow>
+<mml:msup>
+<mml:mrow>
+<mml:mo>[</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+</mml:mrow>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+</mml:mfrac>
+</mml:msup>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(23)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 2.4</bold>: <inline-formula id="pone.0126635.e036">
+<mml:math id="M36" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e037">
+<alternatives>
+<graphic id="pone.0126635.e037g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e037"/>
+<mml:math id="M37" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:msup>
+<mml:mrow>
+<mml:mo>[</mml:mo>
+<mml:mo>-</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mn>2</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mfrac>
+<mml:mo>-</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:mi>ε</mml:mi>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:mrow>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+</mml:mrow>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+</mml:mrow>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:msub>
+<mml:mi>δ</mml:mi>
+<mml:mn>0</mml:mn>
+</mml:msub>
+</mml:mfrac>
+</mml:msup>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(24)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 2.5</bold>: <inline-formula id="pone.0126635.e038">
+<mml:math id="M38" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula> i.e., <italic>d</italic><sub>1</sub> = <italic>d</italic><sub>3</sub> = 0,
+<disp-formula id="pone.0126635.e039"><alternatives><graphic id="pone.0126635.e039g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e039"/><mml:math id="M39" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mi>ε</mml:mi> <mml:msup><mml:mrow><mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mfrac><mml:mi>ε</mml:mi> <mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mo>]</mml:mo></mml:mrow> <mml:mfrac><mml:mn>1</mml:mn> <mml:msub><mml:mi>δ</mml:mi> <mml:mn>0</mml:mn></mml:msub></mml:mfrac></mml:msup> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(25)</label></disp-formula></p></list-item></list></p>
+<p><bold>Case 3</bold>: <italic>s</italic> = 1. In this case, there are four kinds of solutions of <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> shown in the following subcases.
+<list list-type="simple">
+<list-item>
+<p><bold>Subcase 3.1</bold>: <inline-formula id="pone.0126635.e040">
+<mml:math id="M40" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&gt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e041">
+<alternatives>
+<graphic id="pone.0126635.e041g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e041"/>
+<mml:math id="M41" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mo>[</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mi>ε</mml:mi>
+<mml:msqrt>
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>-</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+</mml:mrow>
+</mml:msqrt>
+<mml:mo form="prefix">tan</mml:mo>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:mfrac>
+<mml:msqrt>
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>-</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+</mml:mrow>
+</mml:msqrt>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:mrow>
+<mml:mn>2</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mrow>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(26)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 3.2</bold>: <inline-formula id="pone.0126635.e042">
+<mml:math id="M42" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msup>
+<mml:mi>A</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msup>
+<mml:mo>=</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>−</mml:mo>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e043">
+<alternatives>
+<graphic id="pone.0126635.e043g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e043"/>
+<mml:math id="M43" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mi>ε</mml:mi>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mo>[</mml:mo>
+<mml:mo>-</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mi>ε</mml:mi>
+<mml:mi>A</mml:mi>
+<mml:mo form="prefix">tanh</mml:mo>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mfrac>
+<mml:mn>1</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:mfrac>
+<mml:mi>A</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:mrow>
+<mml:mn>2</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+</mml:mrow>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(27)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 3.3</bold>: <inline-formula id="pone.0126635.e044">
+<mml:math id="M44" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mo>≠</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula>
+<disp-formula id="pone.0126635.e045">
+<alternatives>
+<graphic id="pone.0126635.e045g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e045"/>
+<mml:math id="M45" display="block" overflow="scroll">
+<mml:mtable displaystyle="true">
+<mml:mtr>
+<mml:mtd columnalign="right">
+<mml:mrow>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>=</mml:mo>
+<mml:mo>{</mml:mo>
+<mml:mtable>
+<mml:mtr>
+<mml:mtd columnalign="left">
+<mml:mrow>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mo>[</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+<mml:mo>,</mml:mo>
+<mml:mspace width="48.36958pt"/>
+<mml:mtext>if</mml:mtext>
+<mml:mspace width="4pt"/>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>&gt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+<mml:mtr>
+<mml:mtd columnalign="left">
+<mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mo>[</mml:mo>
+<mml:mfrac>
+<mml:mrow>
+<mml:mi>i</mml:mi>
+<mml:mo form="prefix">exp</mml:mo>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mo>-</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>4</mml:mn>
+</mml:msub>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>-</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+</mml:mrow>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msub>
+</mml:mfrac>
+<mml:mo>]</mml:mo>
+<mml:mo>,</mml:mo>
+<mml:mspace width="28.45274pt"/>
+<mml:mtext>if</mml:mtext>
+<mml:mspace width="4pt"/>
+<mml:mi>ξ</mml:mi>
+<mml:mrow>
+<mml:mo>(</mml:mo>
+<mml:mi>z</mml:mi>
+<mml:mo>)</mml:mo>
+</mml:mrow>
+<mml:mo>&lt;</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:mspace width="4pt"/>
+<mml:msup>
+<mml:mi>i</mml:mi>
+<mml:mn>2</mml:mn>
+</mml:msup>
+<mml:mo>=</mml:mo>
+<mml:mo>-</mml:mo>
+<mml:mn>1</mml:mn>
+<mml:mo>.</mml:mo>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+<mml:mo/>
+</mml:mrow>
+</mml:mtd>
+</mml:mtr>
+</mml:mtable>
+</mml:math>
+</alternatives>
+<label>(28)</label>
+</disp-formula>
+</p></list-item>
+<list-item><p><bold>Subcase 3.4</bold>: <inline-formula id="pone.0126635.e046">
+<mml:math id="M46" display="inline" overflow="scroll">
+<mml:mrow>
+<mml:mn>4</mml:mn>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>1</mml:mn>
+</mml:msub>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>−</mml:mo>
+<mml:msubsup>
+<mml:mi>d</mml:mi>
+<mml:mn>2</mml:mn>
+<mml:mn>2</mml:mn>
+</mml:msubsup>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+<mml:msub>
+<mml:mi>d</mml:mi>
+<mml:mn>3</mml:mn>
+</mml:msub>
+<mml:mo>=</mml:mo>
+<mml:mn>0</mml:mn>
+<mml:mo>,</mml:mo>
+</mml:mrow>
+</mml:math>
+</inline-formula> i.e., <italic>d</italic><sub>2</sub> = <italic>d</italic><sub>3</sub> = 0,
+<disp-formula id="pone.0126635.e047"><alternatives><graphic id="pone.0126635.e047g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e047"/><mml:math id="M47" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mo form="prefix">exp</mml:mo> <mml:mo>(</mml:mo> <mml:mi>ε</mml:mi> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mi>z</mml:mi> <mml:mo>)</mml:mo> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(29)</label></disp-formula></p></list-item></list></p>
+<p>In all of above cases, <italic>d</italic><sub>4</sub> is an additional arbitrary constant of integration and <italic>ɛ</italic> is given in <xref ref-type="disp-formula" rid="pone.0126635.e007">Eq (7)</xref>.</p>
+<p>Substituting the obtained solutions <italic>ξ</italic> = <italic>ξ</italic>(<italic>x</italic>−<italic>Vt</italic>) in all of above cases Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e022">18</xref>)–(<xref ref-type="disp-formula" rid="pone.0126635.e047">29</xref>) into Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e004">4</xref>)–(<xref ref-type="disp-formula" rid="pone.0126635.e006">6</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e013">12</xref>) and assembling them in <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref>, we obtain twelve kinds of exact traveling wave solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). Here we omit the duplicate and long expressions of these solutions.</p>
+<p><bold>Remark 5</bold>: A feature of these solutions is that they are multi-composite solutions, i.e., they are constructed by compounding several elementary functions. For example, in the case <italic>s</italic> &gt; 1, the solutions Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e022">18</xref>)–(<xref ref-type="disp-formula" rid="pone.0126635.e027">20</xref>) are the compounding of five elementary functions exp, arctan, tanh, tan, arccos etc. These solutions can not be obtained by tanh-function method, the (<italic>G</italic>′/<italic>G</italic>)-expansion method and other method given [<xref ref-type="bibr" rid="pone.0126635.ref006">6</xref>] etc. The solution Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e031">21</xref>), (<xref ref-type="disp-formula" rid="pone.0126635.e033">22</xref>), (<xref ref-type="disp-formula" rid="pone.0126635.e041">26</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e043">27</xref>) have included soliton solutions when the parameters are taken properly. The solutions Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e037">24</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e039">25</xref>) are rational or irrational solutions at some values of these parameters appeared in these solutions. These already significantly expand the set of exact solutions for Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>).</p>
+</sec>
+</sec>
+<sec id="sec007">
+<title>A transformation between Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) and a linear heat equation</title>
+<p>It is observed that if the <italic>t</italic>-derivative is equal to second order <italic>x</italic>-derivative, then each monomial term in <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> has the same sum of <italic>x</italic>-derivative orders. This hints a relationship between <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> and a kind of heat equation. In fact, <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> can be written as
+<disp-formula id="pone.0126635.e048"><alternatives><graphic id="pone.0126635.e048g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e048"/><mml:math id="M48" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>s</mml:mi> <mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>)</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>4</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>3</mml:mn></mml:msup> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>4</mml:mn> <mml:mi>P</mml:mi> <mml:mo>(</mml:mo> <mml:mi>P</mml:mi> <mml:mo>±</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>-</mml:mo> <mml:mn>4</mml:mn> <mml:msub><mml:mi>P</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>±</mml:mo> <mml:mn>2</mml:mn> <mml:mi>P</mml:mi> <mml:mo>)</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>P</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:msub><mml:mi>P</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>±</mml:mo> <mml:msub><mml:mi>P</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>)</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>]</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(30)</label></disp-formula>
+where <italic>P</italic> = <italic>ξ</italic><sub><italic>t</italic></sub>−<italic>τξ</italic><sub><italic>xx</italic></sub>−<italic>aξ</italic><sub><italic>x</italic></sub> for arbitrary constant <italic>a</italic>, and
+<disp-formula id="pone.0126635.e049"><alternatives><graphic id="pone.0126635.e049g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e049"/><mml:math id="M49" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>τ</mml:mi> <mml:mo>=</mml:mo> <mml:mo>{</mml:mo> <mml:mtable><mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msub><mml:mi>a</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="left"><mml:mrow><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mspace width="4.pt"/><mml:mtext>if</mml:mtext> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:msub><mml:mi>a</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:mo>-</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>.</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable> <mml:mo/></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(31)</label></disp-formula></p>
+<p>In order to get most general form exact solutions, we consider the following two cases.</p>
+<p><bold>Case I</bold>. For <inline-formula id="pone.0126635.e050"><mml:math id="M50" display="inline" overflow="scroll"><mml:mrow><mml:mi>ξ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>−</mml:mo> <mml:msubsup><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn></mml:mrow></mml:math></inline-formula> and <italic>s</italic> = 2<italic>δ</italic>−<italic>δ</italic><sup>2</sup>+4<italic>ν</italic>.</p>
+<p>In this case, by solving <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> we have <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) = <italic>d</italic><sub>4</sub>exp[(<italic>d</italic><sub>2</sub> <italic>x</italic>+<italic>d</italic><sub>3</sub>)/(<italic>t</italic>+<italic>d</italic><sub>1</sub>)], which results in exact solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) given by <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref> with <xref ref-type="disp-formula" rid="pone.0126635.e013">Eq (12)</xref> as follows
+<disp-formula id="pone.0126635.e051"><alternatives><graphic id="pone.0126635.e051g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e051"/><mml:math id="M51" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mn>2</mml:mn> <mml:msub><mml:mi>d</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>2</mml:mn> <mml:mi>x</mml:mi> <mml:mo>±</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mo>±</mml:mo> <mml:mfrac><mml:msub><mml:mi>d</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mn>2</mml:mn> <mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>·</mml:mo> <mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mo>∓</mml:mo> <mml:mfrac><mml:mrow><mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>-</mml:mo> <mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mi>ν</mml:mi></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup></mml:mrow></mml:mfrac> <mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup></mml:mrow></mml:mfrac> <mml:mo>·</mml:mo> <mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:msubsup><mml:mi>d</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mn>2</mml:mn> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>d</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup></mml:mrow></mml:mfrac> <mml:mo>·</mml:mo> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mi>i</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(32)</label></disp-formula>
+in which <italic>i</italic> = 1 for <italic>s</italic> &gt; 1, <italic>i</italic> = 2 for <italic>s</italic> &lt; 1 and <italic>i</italic> = 3 for <italic>s</italic> = 1. <italic>ϕ</italic><sub>1</sub>(<italic>ξ</italic>), <italic>ϕ</italic><sub>2</sub>(<italic>ξ</italic>) and <italic>ϕ</italic><sub>3</sub>(<italic>ξ</italic>) are given in Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e004">4</xref>)–(<xref ref-type="disp-formula" rid="pone.0126635.e006">6</xref>). <italic>d</italic><sub>1</sub>, <italic>d</italic><sub>2</sub>, <italic>d</italic><sub>3</sub>, <italic>d</italic><sub>4</sub> are arbitrary constants.</p>
+<p><bold>Case II</bold>. For <italic>s</italic> = 2<italic>δ</italic>−<italic>δ</italic><sup>2</sup>+4<italic>ν</italic> = 0.</p>
+<p>In this case, <xref ref-type="disp-formula" rid="pone.0126635.e014">Eq (13)</xref> or <xref ref-type="disp-formula" rid="pone.0126635.e048">Eq (30)</xref> admits the solutions <italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) of the linear heat equation
+<disp-formula id="pone.0126635.e052"><alternatives><graphic id="pone.0126635.e052g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e052"/><mml:math id="M52" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>ξ</mml:mi> <mml:mi>t</mml:mi></mml:msub> <mml:mo>=</mml:mo> <mml:mi>τ</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mrow><mml:mi>x</mml:mi> <mml:mi>x</mml:mi></mml:mrow></mml:msub> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:msub><mml:mi>ξ</mml:mi> <mml:mi>x</mml:mi></mml:msub> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(33)</label></disp-formula>
+with a conductive term <italic>aξ</italic><sub><italic>x</italic></sub> for arbitrary constant <italic>a</italic>.</p>
+<p>It is interesting that a transformation in the form of <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref> between Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) and the linear heat <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> has been found. Using the transformation, we will obtain infinite number of exact solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). That means each solution of the heat <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> (such as those given in the following <xref ref-type="disp-formula" rid="pone.0126635.e053">Eq (34)</xref>) yields a set of exact solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). Moreover, the connection provides us with an insight into integrability of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). For example, using the transformation, we can investigate the multi-soliton solutions, rational solutions and other types of solutions to the Boussinesq-Burgers equation.</p>
+<p>As we know, the heat <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> has infinite number of specific known exact solutions. Some representatives of them are listed as follows:
+<disp-formula id="pone.0126635.e053"><alternatives><graphic id="pone.0126635.e053g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e053"/><mml:math id="M53" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mi>A</mml:mi> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt></mml:mfrac> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mfrac><mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>∈</mml:mo> <mml:msup><mml:mi>R</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mi>A</mml:mi> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mi>τ</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>k</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>C</mml:mi> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>∈</mml:mo> <mml:msup><mml:mi>R</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mi>A</mml:mi> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mi>k</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>k</mml:mi> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>k</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>a</mml:mi> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>τ</mml:mi> <mml:mi>k</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>C</mml:mi> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>∈</mml:mo> <mml:msup><mml:mi>R</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:msub><mml:mi>c</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mi>erfc</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mrow><mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mi>τ</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:munderover><mml:mo>∑</mml:mo> <mml:mrow><mml:mi>n</mml:mi> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn></mml:mrow> <mml:mrow><mml:mo>+</mml:mo> <mml:mi>∞</mml:mi></mml:mrow></mml:munderover> <mml:msub><mml:mi>c</mml:mi> <mml:mi>n</mml:mi></mml:msub> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>n</mml:mi> <mml:mi>π</mml:mi> <mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>L</mml:mi></mml:mfrac> <mml:mo>)</mml:mo></mml:mrow> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mi>τ</mml:mi> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>n</mml:mi> <mml:mi>π</mml:mi></mml:mrow> <mml:mi>L</mml:mi></mml:mfrac> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mn>0</mml:mn> <mml:mo>≤</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>≤</mml:mo> <mml:mi>L</mml:mi> <mml:mo>,</mml:mo> <mml:mi>L</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mn>1</mml:mn> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mrow><mml:mi>π</mml:mi> <mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt></mml:mrow></mml:mfrac> <mml:msubsup><mml:mo>∫</mml:mo> <mml:mrow><mml:mo>-</mml:mo> <mml:mi>∞</mml:mi></mml:mrow> <mml:mrow><mml:mo>+</mml:mo> <mml:mi>∞</mml:mi></mml:mrow></mml:msubsup> <mml:mi>ω</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>θ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mfrac><mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>-</mml:mo> <mml:mi>θ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:mfrac> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>d</mml:mi> <mml:mi>θ</mml:mi> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>∈</mml:mo> <mml:mi>R</mml:mi> <mml:mo>,</mml:mo> <mml:mi>τ</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(34)</label></disp-formula>
+where <italic>A</italic>, <italic>B</italic>, <italic>C</italic>, <italic>c</italic><sub>0</sub> and <italic>k</italic> are arbitrary constants, <italic>ω</italic>(<italic>θ</italic>) is any integrable function, erfc(<italic>y</italic>) is error function and <italic>c</italic><sub><italic>n</italic></sub>, <italic>n</italic> = 1, 2, ⋯ are constants given by the initial or boundary conditions of <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref>. <italic>τ</italic> = ±1/2 is given in <xref ref-type="disp-formula" rid="pone.0126635.e049">Eq (31)</xref>. It is noticed that the last solution in <xref ref-type="disp-formula" rid="pone.0126635.e053">Eq (34)</xref> yields an exact solution to the Boussinesq- Burgers equation with containing an arbitrary function, which may give more freedom to solve related problems of the equations [<xref ref-type="bibr" rid="pone.0126635.ref007">7</xref>].</p>
+</sec>
+<sec id="sec008">
+<title>Some examples of new exact solutions</title>
+<sec id="sec009">
+<title>General form exact solutions</title>
+<p>In Case II, substituting any solution of heat <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> into <xref ref-type="disp-formula" rid="pone.0126635.e013">Eq (12)</xref> and assembling them in <xref ref-type="disp-formula" rid="pone.0126635.e015">Eq (14)</xref> with <italic>i</italic> = 2, we obtain exact solutions to Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). As examples, we present four exact solutions (<italic>u</italic><sub><italic>j</italic></sub>, <italic>v</italic><sub><italic>j</italic></sub>)(<italic>j</italic> = 1,2,3,4) of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) corresponding to the first four solutions in <xref ref-type="disp-formula" rid="pone.0126635.e053">Eq (34)</xref>. Here we have
+<list list-type="order">
+<list-item>
+<p><inline-formula id="pone.0126635.e054"><mml:math id="M54" display="inline" overflow="scroll"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo stretchy="false">(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo stretchy="false">)</mml:mo> <mml:mo>=</mml:mo> <mml:mi>A</mml:mi> <mml:mi>exp</mml:mi> <mml:mo stretchy="false">(</mml:mo> <mml:mo>−</mml:mo> <mml:msup><mml:mrow><mml:mo stretchy="false">(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo stretchy="false">)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mo>/</mml:mo> <mml:mn>4</mml:mn> <mml:mi>τ</mml:mi> <mml:mi>t</mml:mi> <mml:mo stretchy="false">)</mml:mo> <mml:mo>/</mml:mo> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:mo>,</mml:mo> <mml:mo/><mml:mo/><mml:mo stretchy="false">(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo stretchy="false">)</mml:mo> <mml:mo>∈</mml:mo> <mml:msup><mml:mi>R</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>,</mml:mo> <mml:mo/><mml:mi>τ</mml:mi> <mml:mo>=</mml:mo> <mml:mo>±</mml:mo> <mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:math></inline-formula>:
+<disp-formula id="pone.0126635.e055"><alternatives><graphic id="pone.0126635.e055g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e055"/><mml:math id="M55" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mn>1</mml:mn> <mml:mrow><mml:mn>4</mml:mn> <mml:mo>[</mml:mo> <mml:mi>A</mml:mi> <mml:mi>t</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>3</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup> <mml:mo>]</mml:mo></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>B</mml:mi> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mi>δ</mml:mi> <mml:mi>x</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:mo>(</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>3</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup></mml:mrow></mml:mfrac> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:msup><mml:mrow><mml:mo>[</mml:mo> <mml:mi>A</mml:mi> <mml:mi>t</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>3</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup> <mml:mo>]</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mi>B</mml:mi> <mml:mi>δ</mml:mi></mml:mrow> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>±</mml:mo> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:msup><mml:mi>a</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>t</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:msup><mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>∓</mml:mo> <mml:mi>δ</mml:mi> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:msup><mml:mi>a</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>t</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:mn>4</mml:mn> <mml:mi>a</mml:mi> <mml:mi>ν</mml:mi> <mml:mi>t</mml:mi> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:msup><mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>]</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>±</mml:mo> <mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mrow><mml:mo>[</mml:mo> <mml:mi>A</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>B</mml:mi> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mo>]</mml:mo></mml:mrow> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>5</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mo>∓</mml:mo> <mml:mi>B</mml:mi> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mrow><mml:mo>(</mml:mo> <mml:mo>±</mml:mo> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:msup><mml:mi>a</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>t</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:msup><mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>±</mml:mo> <mml:mi>A</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>(</mml:mo></mml:mrow> <mml:mi>t</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>x</mml:mi> <mml:mo>∓</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:msup><mml:mi>a</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>t</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>+</mml:mo> <mml:msup><mml:mi>x</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>]</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:msup><mml:mi>A</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mrow><mml:mo>(</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mn>2</mml:mn></mml:msup> <mml:mn>2</mml:mn></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msup><mml:mi>t</mml:mi> <mml:mn>3</mml:mn></mml:msup></mml:mrow></mml:mfrac> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+where <italic>A</italic>, <italic>B</italic> are arbitrary constants, and <italic>h</italic><sub>1</sub>(<italic>t</italic>, <italic>x</italic>) = exp[−(<italic>x</italic>+<italic>at</italic>)<sup>2</sup>/4<italic>τt</italic>].</p>
+</list-item>
+<list-item>
+<p><italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) = <italic>A</italic>exp(−<italic>τk</italic><sup>2</sup> <italic>t</italic>)cos(<italic>k</italic>(<italic>x</italic>+<italic>at</italic>)+<italic>B</italic>)+<italic>C</italic>, (<italic>t</italic>, <italic>x</italic>) ∈ <italic>R</italic><sup>2</sup>, <italic>τ</italic> = ±1/2:
+<disp-formula id="pone.0126635.e056"><alternatives><graphic id="pone.0126635.e056g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e056"/><mml:math id="M56" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mo>-</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mi>C</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mi>A</mml:mi> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>±</mml:mo> <mml:mi>A</mml:mi> <mml:mi>k</mml:mi> <mml:mi>δ</mml:mi> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow> <mml:mo>∓</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:mi>A</mml:mi> <mml:mi>k</mml:mi> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mn>1</mml:mn> <mml:mrow><mml:mn>4</mml:mn> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mi>A</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>(</mml:mo></mml:mrow> <mml:mi>C</mml:mi> <mml:mi>δ</mml:mi> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mi>ν</mml:mi> <mml:mo>-</mml:mo> <mml:mi>ν</mml:mi> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:mi>A</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>[</mml:mo> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:mi>δ</mml:mi> <mml:msup><mml:mo form="prefix">sin</mml:mo> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>]</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:mi>A</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mo form="prefix">sin</mml:mo> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+where <italic>A</italic>, <italic>B</italic>, <italic>C</italic> are arbitrary constants, and <italic>ξ</italic><sub>0</sub> = <italic>B</italic>+<italic>k</italic>(<italic>x</italic>+<italic>at</italic>), <italic>h</italic><sub>2</sub>(<italic>t</italic>, <italic>x</italic>) = exp(−<italic>τk</italic><sup>2</sup> <italic>t</italic>).</p></list-item>
+<list-item><p><italic>ξ</italic>(<italic>t</italic>, <italic>x</italic>) = <italic>A</italic>exp(−<italic>k</italic>(<italic>x</italic>+<italic>at</italic>))cos(<italic>kx</italic>+<italic>k</italic>(<italic>a</italic>−2<italic>τk</italic>)<italic>t</italic>+<italic>B</italic>)+<italic>C</italic>, (<italic>t</italic>, <italic>x</italic>) ∈ <italic>R</italic><sup>2</sup>, <italic>τ</italic> = ±1/2:
+<disp-formula id="pone.0126635.e057"><alternatives><graphic id="pone.0126635.e057g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e057"/><mml:math id="M57" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>a</mml:mi> <mml:mrow><mml:mo>[</mml:mo> <mml:mi>C</mml:mi> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mo form="prefix">cos</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow> <mml:mo>∓</mml:mo> <mml:mi>A</mml:mi> <mml:mi>k</mml:mi> <mml:mi>δ</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>∓</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:mi>A</mml:mi> <mml:mi>k</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:msup><mml:mi>ξ</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>C</mml:mi> <mml:mi>δ</mml:mi> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mspace width="0.166667em"/><mml:mfrac><mml:mrow><mml:mi>A</mml:mi> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mi>ξ</mml:mi> <mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mo>-</mml:mo> <mml:mn>2</mml:mn> <mml:mi>C</mml:mi> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mi>A</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>-</mml:mo> <mml:mn>1</mml:mn> <mml:mo>)</mml:mo></mml:mrow> <mml:mo form="prefix">sin</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mn>2</mml:mn> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>3</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:mfrac> <mml:msup><mml:mi>A</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msup><mml:mi>k</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>3</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>4</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+where <italic>A</italic>, <italic>B</italic>, <italic>C</italic> are arbitrary constants, and <italic>ξ</italic><sub>0</sub> = <italic>B</italic>+<italic>kx</italic>+<italic>kt</italic>(<italic>a</italic>−2<italic>kτ</italic>), <italic>h</italic><sub>3</sub>(<italic>t</italic>, <italic>x</italic>) = exp[−<italic>k</italic>(<italic>x</italic>+<italic>at</italic>)], <italic>h</italic><sub>4</sub>(<italic>t</italic>, <italic>x</italic>) = cos<italic>ξ</italic><sub>0</sub>+sin<italic>ξ</italic><sub>0</sub>.</p></list-item>
+<list-item><p><inline-formula id="pone.0126635.e058"><mml:math id="M58" display="inline" overflow="scroll"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mo stretchy="false">(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo stretchy="false">)</mml:mo> <mml:mo>=</mml:mo> <mml:msub><mml:mi>c</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mtext mathvariant="normal">erfc</mml:mtext> <mml:mo stretchy="false">(</mml:mo> <mml:mfrac><mml:mrow><mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mrow><mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt></mml:mrow></mml:mfrac> <mml:mo stretchy="false">)</mml:mo> <mml:mo>,</mml:mo> <mml:mo/><mml:mo/><mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>&gt;</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mi>τ</mml:mi> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>:</mml:mo></mml:mrow></mml:math></inline-formula> <disp-formula id="pone.0126635.e059"><alternatives><graphic id="pone.0126635.e059g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e059"/><mml:math id="M59" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>u</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mo>-</mml:mo> <mml:mfrac><mml:mi>a</mml:mi> <mml:mn>2</mml:mn></mml:mfrac> <mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:mi>δ</mml:mi> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mrow><mml:mn>2</mml:mn> <mml:mi>π</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt> <mml:mi>erfc</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mo>+</mml:mo> <mml:mfrac><mml:msub><mml:mi>c</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:msqrt><mml:mrow><mml:mn>2</mml:mn> <mml:mi>π</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt></mml:mfrac> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>v</mml:mi> <mml:mn>4</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mtd> <mml:mtd><mml:mo>=</mml:mo></mml:mtd> <mml:mtd columnalign="left"><mml:mrow><mml:mfrac><mml:mrow><mml:msubsup><mml:mi>h</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>4</mml:mn> <mml:mi>π</mml:mi> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>3</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup> <mml:msup><mml:mi>erfc</mml:mi> <mml:mn>2</mml:mn></mml:msup> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mrow></mml:mfrac> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>2</mml:mn> <mml:msqrt><mml:mi>t</mml:mi></mml:msqrt> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>δ</mml:mi> <mml:mo>+</mml:mo> <mml:mn>2</mml:mn> <mml:mi>ν</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>-</mml:mo> <mml:msqrt><mml:mrow><mml:mn>2</mml:mn> <mml:mi>π</mml:mi></mml:mrow></mml:msqrt> <mml:mi>δ</mml:mi> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>1</mml:mn> <mml:mrow><mml:mo>-</mml:mo> <mml:mn>1</mml:mn></mml:mrow></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>erfc</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>]</mml:mo></mml:mrow></mml:mrow></mml:mtd></mml:mtr> <mml:mtr><mml:mtd/><mml:mtd/><mml:mtd columnalign="left"><mml:mrow><mml:mo>+</mml:mo> <mml:mspace width="0.166667em"/><mml:mrow><mml:mo>[</mml:mo> <mml:mfrac><mml:mrow><mml:msub><mml:mi>c</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mi>δ</mml:mi> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mi>π</mml:mi> <mml:mi>t</mml:mi> <mml:mi>erfc</mml:mi> <mml:mo>(</mml:mo> <mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>)</mml:mo></mml:mrow></mml:mfrac> <mml:mo>-</mml:mo> <mml:mfrac><mml:mrow><mml:msub><mml:mi>c</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:msqrt><mml:mn>2</mml:mn></mml:msqrt> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msub><mml:mi>h</mml:mi> <mml:mn>1</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mi>π</mml:mi></mml:msqrt> <mml:msup><mml:mi>t</mml:mi> <mml:mrow><mml:mn>3</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn></mml:mrow></mml:msup></mml:mrow></mml:mfrac> <mml:mo>]</mml:mo></mml:mrow> <mml:msub><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>+</mml:mo> <mml:mfrac><mml:mrow><mml:msubsup><mml:mi>c</mml:mi> <mml:mn>0</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:msubsup><mml:mi>h</mml:mi> <mml:mn>1</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:mrow> <mml:mrow><mml:mi>π</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:mfrac> <mml:msubsup><mml:mi>ϕ</mml:mi> <mml:mn>2</mml:mn> <mml:mn>2</mml:mn></mml:msubsup> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>ξ</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+where <italic>c</italic><sub>0</sub> is an arbitrary constant, and <inline-formula id="pone.0126635.e060"><mml:math id="M60" display="inline" overflow="scroll"><mml:mrow><mml:msub><mml:mi>ξ</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>=</mml:mo> <mml:mfrac><mml:mrow><mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:msqrt><mml:mrow><mml:mi>τ</mml:mi> <mml:mi>t</mml:mi></mml:mrow></mml:msqrt></mml:mrow></mml:mfrac> <mml:mo>.</mml:mo></mml:mrow></mml:math></inline-formula></p></list-item></list></p>
+<p>In all of above cases, <italic>ϕ</italic><sub>2</sub>(<italic>ξ</italic>) is given in <xref ref-type="disp-formula" rid="pone.0126635.e005">Eq (5)</xref>.</p>
+<p>By the same manner, from the rest two solutions in <xref ref-type="disp-formula" rid="pone.0126635.e053">Eq (34)</xref>, we should obtain additional exact solutions in different styles to the Boussinesq-Burgers. Due to the lack of space, we omit the reasoning and the solution expressions.</p>
+<p><bold>Remark 6</bold>: In author’s knowledge, this is the first time showing these kinds of exact solutions to Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). These solutions can not be obtained by other simplest equation methods [<xref ref-type="bibr" rid="pone.0126635.ref018">18</xref>–<xref ref-type="bibr" rid="pone.0126635.ref025">25</xref>].</p>
+</sec>
+<sec id="sec010">
+<title>The multi-soliton solutions</title>
+<p>Using the connection between solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>), (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e062">35</xref>), we can get the multi-soliton solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>). It is easy to check that <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> admits solutions
+<disp-formula id="pone.0126635.e061"><alternatives><graphic id="pone.0126635.e061g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e061"/><mml:math id="M61" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:msub><mml:mi>A</mml:mi> <mml:mn>0</mml:mn></mml:msub> <mml:mo>+</mml:mo> <mml:munderover><mml:mo>∑</mml:mo> <mml:mrow><mml:mi>i</mml:mi> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn></mml:mrow> <mml:mi>n</mml:mi></mml:munderover> <mml:msub><mml:mi>A</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mo form="prefix">exp</mml:mo> <mml:mrow><mml:mo>[</mml:mo> <mml:msub><mml:mi>k</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>τ</mml:mi> <mml:msubsup><mml:mi>k</mml:mi> <mml:mi>i</mml:mi> <mml:mn>2</mml:mn></mml:msubsup> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:msub><mml:mi>k</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mo>)</mml:mo></mml:mrow> <mml:mi>t</mml:mi> <mml:mo>+</mml:mo> <mml:msub><mml:mi>B</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mo>]</mml:mo></mml:mrow> <mml:mo>,</mml:mo> <mml:mspace width="4pt"/><mml:mspace width="4pt"/><mml:mi>τ</mml:mi> <mml:mo>=</mml:mo> <mml:mo>±</mml:mo> <mml:mn>1</mml:mn> <mml:mo>/</mml:mo> <mml:mn>2</mml:mn> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+for arbitrary constants <italic>k</italic><sub><italic>i</italic></sub>, <italic>A</italic><sub><italic>i</italic></sub>, <italic>B</italic><sub><italic>i</italic></sub>(<italic>i</italic> = 0, 1, ⋯, <italic>n</italic>) and positive integer <italic>n</italic>, which yield multi-soliton solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) given by Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e013">12</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e015">14</xref>) with <italic>i</italic> = 2.</p>
+</sec>
+<sec id="sec011">
+<title>The rational solutions</title>
+<p>Suppose that <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> has a solution in the form
+<disp-formula id="pone.0126635.e062"><alternatives><graphic id="pone.0126635.e062g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e062"/><mml:math id="M62" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:mi>ξ</mml:mi> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo> <mml:mi>x</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:munderover><mml:mo>∑</mml:mo> <mml:mrow><mml:mi>i</mml:mi> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn></mml:mrow> <mml:mi>n</mml:mi></mml:munderover> <mml:msub><mml:mi>k</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>X</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:msup><mml:mi>t</mml:mi> <mml:mi>i</mml:mi></mml:msup> <mml:mo>,</mml:mo> <mml:mi>X</mml:mi> <mml:mo>=</mml:mo> <mml:mi>x</mml:mi> <mml:mo>+</mml:mo> <mml:mi>a</mml:mi> <mml:mi>t</mml:mi> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives> <label>(35)</label></disp-formula>
+for arbitrary positive integer <italic>n</italic>. Substituting <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> into <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref> and setting the coefficients of <italic>t</italic><sup><italic>i</italic></sup>(<italic>i</italic> = 0, 1, ⋯, <italic>n</italic>) to be zero, we obtain the ODEs for <italic>k</italic><sub><italic>i</italic></sub>(<italic>X</italic>) as <inline-formula id="pone.0126635.e063"><mml:math id="M63" display="inline" overflow="scroll"><mml:mrow><mml:msubsup><mml:mi>k</mml:mi> <mml:mi>n</mml:mi> <mml:mrow><mml:mo>′</mml:mo> <mml:mo>′</mml:mo></mml:mrow></mml:msubsup> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn></mml:mrow></mml:math></inline-formula> and <inline-formula id="pone.0126635.e064"><mml:math id="M64" display="inline" overflow="scroll"><mml:mrow><mml:mi>α</mml:mi> <mml:msubsup><mml:mi>k</mml:mi> <mml:mrow><mml:mi>j</mml:mi> <mml:mo>−</mml:mo> <mml:mn>1</mml:mn></mml:mrow> <mml:mrow><mml:mo>′</mml:mo> <mml:mo>′</mml:mo></mml:mrow></mml:msubsup> <mml:mo>=</mml:mo> <mml:msub><mml:mi>k</mml:mi> <mml:mi>j</mml:mi></mml:msub> <mml:mo>,</mml:mo> <mml:mi>j</mml:mi> <mml:mo>=</mml:mo> <mml:mi>n</mml:mi> <mml:mo>,</mml:mo> <mml:mo>⋯</mml:mo> <mml:mo>,</mml:mo> <mml:mn>1</mml:mn></mml:mrow></mml:math></inline-formula>, which yield the solutions
+<disp-formula id="pone.0126635.e065"><alternatives><graphic id="pone.0126635.e065g" mimetype="image" xlink:type="simple" position="anchor" xlink:href="info:doi/10.1371/journal.pone.0126635.e065"/><mml:math id="M65" display="block" overflow="scroll"><mml:mtable displaystyle="true"><mml:mtr><mml:mtd columnalign="right"><mml:mrow><mml:msub><mml:mi>k</mml:mi> <mml:mi>i</mml:mi></mml:msub> <mml:mrow><mml:mo>(</mml:mo> <mml:mi>X</mml:mi> <mml:mo>)</mml:mo></mml:mrow> <mml:mo>=</mml:mo> <mml:munderover><mml:mo>∑</mml:mo> <mml:mrow><mml:mi>j</mml:mi> <mml:mo>=</mml:mo> <mml:mn>1</mml:mn></mml:mrow> <mml:mrow><mml:mn>2</mml:mn> <mml:mo>(</mml:mo> <mml:mi>n</mml:mi> <mml:mo>+</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>i</mml:mi> <mml:mo>)</mml:mo></mml:mrow></mml:munderover> <mml:msub><mml:mi>α</mml:mi> <mml:mi>j</mml:mi></mml:msub> <mml:mfrac><mml:msup><mml:mi>X</mml:mi> <mml:mrow><mml:mn>2</mml:mn> <mml:mo>(</mml:mo> <mml:mi>n</mml:mi> <mml:mo>+</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>i</mml:mi> <mml:mo>)</mml:mo> <mml:mo>-</mml:mo> <mml:mi>j</mml:mi></mml:mrow></mml:msup> <mml:mrow><mml:mo>[</mml:mo> <mml:mn>2</mml:mn> <mml:mo>(</mml:mo> <mml:mi>n</mml:mi> <mml:mo>+</mml:mo> <mml:mn>1</mml:mn> <mml:mo>-</mml:mo> <mml:mi>i</mml:mi> <mml:mo>)</mml:mo> <mml:mo>-</mml:mo> <mml:mi>j</mml:mi> <mml:mo>]</mml:mo> <mml:mo>!</mml:mo></mml:mrow></mml:mfrac> <mml:mo>,</mml:mo> <mml:mi>i</mml:mi> <mml:mo>=</mml:mo> <mml:mn>0</mml:mn> <mml:mo>,</mml:mo> <mml:mn>1</mml:mn> <mml:mo>,</mml:mo> <mml:mn>2</mml:mn> <mml:mo>,</mml:mo> <mml:mo>⋯</mml:mo> <mml:mo>,</mml:mo> <mml:mi>n</mml:mi> <mml:mo>,</mml:mo></mml:mrow></mml:mtd></mml:mtr></mml:mtable></mml:math></alternatives></disp-formula>
+for arbitrary constants <italic>α</italic><sub><italic>j</italic></sub>. Substituting the solutions into <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref>, we obtain the polynomial solutions of <xref ref-type="disp-formula" rid="pone.0126635.e062">Eq (35)</xref>, which yield rational solutions of Eqs (<xref ref-type="disp-formula" rid="pone.0126635.e009">8</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e010">9</xref>) given by Eq (<xref ref-type="disp-formula" rid="pone.0126635.e013">12</xref>) and (<xref ref-type="disp-formula" rid="pone.0126635.e015">14</xref>) with <italic>i</italic> = 2.</p>
+</sec>
+</sec>
+</sec>
+<sec id="sec012" sec-type="conclusions">
+<title>4 Conclusions</title>
+<p>In this paper, we proposed a new auxiliary equation method to look for exact solutions of NLEEs. There are two features of the discussed method which are different from other simplest equation methods [<xref ref-type="bibr" rid="pone.0126635.ref018">18</xref>]–[<xref ref-type="bibr" rid="pone.0126635.ref025">25</xref>]. Firstly, a solution expression with a variable coefficient is chosen and a special simplest nonlinear differential equations (a special ODE with variable coefficients) is taken as auxiliary equation. Secondly, the method can yield a Bäcklund transformation between the given NLEEs and the related constraint equation. By dealing with the constraint equation, we can derive infinite number of exact solutions for NLEEs. These solutions include the traveling wave solutions, non-traveling wave solutions, multi-soliton solutions, rational solutions and other types of solutions for NLEEs. According to the auxiliary equation and above two features of our method, we call the method as the generalized simplest equation method.</p>
+<p>As application of our method, a great number of new exact solutions of the Boussinesq-Burgers equation are obtained. Essentially, the constraint equation is related to linear heat equation which result in new exact solutions of the Boussinesq-Burgers equation. These solutions are different from those solutins given in literatures [<xref ref-type="bibr" rid="pone.0126635.ref026">26</xref>–<xref ref-type="bibr" rid="pone.0126635.ref032">32</xref>]. It shows that our method is more flexible in finding more general form exact solutions and the method can be used for many other NLEEs in mathematical physics. As a result, our method effectively enhances the existing auxiliary equation methods, such as those given in [<xref ref-type="bibr" rid="pone.0126635.ref010">10</xref>, <xref ref-type="bibr" rid="pone.0126635.ref016">16</xref>], which demonstrates that the proposed method is effective and prospective.</p>
+<p>We have also tested other several commonly used auxiliary equations, such as Riccati equation [<xref ref-type="bibr" rid="pone.0126635.ref010">10</xref>, <xref ref-type="bibr" rid="pone.0126635.ref011">11</xref>], the auxiliary equation of F-expansion method [<xref ref-type="bibr" rid="pone.0126635.ref012">12</xref>], to get exact solutions of the Boussinesq-Burgers equation in the frame of our method. Unfortunately, we can not get the results presented in the paper. What’s more, the relationship between the Boussinesq-Burgers equation and the linear heat equation can not be found. Hence the auxiliary <xref ref-type="disp-formula" rid="pone.0126635.e003">Eq (3)</xref> has its own advantages which are not admitted by other auxiliary equations.</p>
+<p>In addition, the true idea of our method makes one further consider finding more general exact solutions of other NLEEs by developing the existing methods, such as Tanh-method, the simplest equation method, etc, or designing new method, in which a connection between the constraint equation and other easily solved equation may be set up. It is an excellent topic for further research.</p>
+</sec>
+</body>
+<back>
+<ack>
+<p>This work is supported by Natural Science Foundation of Inner Mongolia Autonomous Region of China (2014MS0114, 2014BS0105), High Education Science Research Program of Inner Mongolia of China (NJZY12056).</p>
+</ack>
+<ref-list>
+<title>References</title>
+<ref id="pone.0126635.ref001">
+<label>1</label>
+<mixed-citation xlink:type="simple" publication-type="book">
+<name name-style="western"><surname>Ablowitz</surname> <given-names>MJ</given-names></name>, <name name-style="western"><surname>Clarkson</surname> <given-names>PA</given-names></name>. <source>Solitons, nonlinear evolution equations and inverse scattering</source>. <publisher-loc>Cambridge</publisher-loc>: <publisher-name>Cambridge University Press</publisher-name>; <year>1991</year>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref002">
+<label>2</label>
+<mixed-citation xlink:type="simple" publication-type="book">
+<name name-style="western"><surname>Matveev</surname> <given-names>VB</given-names></name>, <name name-style="western"><surname>Salle</surname> <given-names>MA</given-names></name>. <source>Darboux transformation and solitons</source>. <publisher-loc>Berlin</publisher-loc>: <publisher-name>Springer Press</publisher-name>; <year>1991</year>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref003">
+<label>3</label>
+<mixed-citation xlink:type="simple" publication-type="book">
+<name name-style="western"><surname>Hirota</surname> <given-names>R</given-names></name>. <source>The Direct Method in Soliton Theory</source>. <publisher-loc>Cambridge</publisher-loc>: <publisher-name>Cambridge University Press</publisher-name>; <year>2004</year>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref004">
+<label>4</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Weiss</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Tabor</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Carnevale</surname> <given-names>G</given-names></name>. <article-title>The Painleve property for partial differential equations</article-title>. <source>J. Math. Phys</source>. <year>1983</year>; <volume>24</volume>: <fpage>522</fpage>–<lpage>526</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1063/1.525875" xlink:type="simple">10.1063/1.525875</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref005">
+<label>5</label>
+<mixed-citation xlink:type="simple" publication-type="book">
+<name name-style="western"><surname>Miura</surname> <given-names>RM</given-names></name>. <source>Bäcklund Transformation</source>. <publisher-loc>Berlin</publisher-loc>: <publisher-name>Springer Press</publisher-name>; <year>1978</year>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref006">
+<label>6</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Weiss</surname> <given-names>J</given-names></name>. <article-title>Bäcklund Tradsformation and Linearizations of the Henon-Heiles System</article-title>. <source>Phys. Lett. A</source>. <year>1984</year>; <volume>102</volume>(<issue>8</issue>): <fpage>329</fpage>–<lpage>331</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/0375-9601(84)90289-5" xlink:type="simple">10.1016/0375-9601(84)90289-5</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref007">
+<label>7</label>
+<mixed-citation xlink:type="simple" publication-type="book">
+<name name-style="western"><surname>Lou</surname> <given-names>SY</given-names></name>, <name name-style="western"><surname>Tang</surname> <given-names>XY</given-names></name>. <source>Nonlinear mathematical physics methods</source>. <publisher-loc>Beijing</publisher-loc>: <publisher-name>Science Press</publisher-name>; <year>2006</year>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref008">
+<label>8</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Wang</surname> <given-names>ML</given-names></name>, <name name-style="western"><surname>Zhou</surname> <given-names>YB</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>ZB</given-names></name>. <article-title>Applications of a homogeneous balance method to exact solutions of nonlinear equations in mathematical physics</article-title>. <source>Phys. Lett. A</source>. <year>1996</year>; <volume>216</volume>: <fpage>67</fpage>–<lpage>75</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/0375-9601(96)00283-6" xlink:type="simple">10.1016/0375-9601(96)00283-6</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref009">
+<label>9</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Liu</surname> <given-names>SK</given-names></name>, <name name-style="western"><surname>Fu</surname> <given-names>ZT</given-names></name>, <name name-style="western"><surname>Liu</surname> <given-names>SD</given-names></name>, <name name-style="western"><surname>Zhao</surname> <given-names>Q</given-names></name>. <article-title>Jacobi elliptic function expansion method and periodic wave solutions of nonlinear wave equations</article-title>. <source>Phys. Lett. A</source>. <year>2001</year>; <volume>289</volume>: <fpage>69</fpage>–<lpage>74</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/S0375-9601(01)00580-1" xlink:type="simple">10.1016/S0375-9601(01)00580-1</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref010">
+<label>10</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Fan</surname> <given-names>EG</given-names></name>. <article-title>Extended tanh-function method and its applications to nonlinear equations</article-title>. <source>Phys. Lett. A</source>. <year>2000</year>; <volume>277</volume>: <fpage>212</fpage>–<lpage>218</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/S0375-9601(00)00725-8" xlink:type="simple">10.1016/S0375-9601(00)00725-8</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref011">
+<label>11</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Fan</surname> <given-names>EG</given-names></name>, <name name-style="western"><surname>Hon</surname> <given-names>YC</given-names></name>. <article-title>Applications of extended tanh method to special types of nonlinear equations</article-title>. <source>Appl. Math. Comput</source>. <year>2003</year>; <volume>141</volume>: <fpage>351</fpage>–<lpage>358</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/S0096-3003(02)00260-6" xlink:type="simple">10.1016/S0096-3003(02)00260-6</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref012">
+<label>12</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Zhou</surname> <given-names>YB</given-names></name>, <name name-style="western"><surname>Wang</surname> <given-names>ML</given-names></name>, <name name-style="western"><surname>Wang</surname> <given-names>YM</given-names></name>. <article-title>Periodic Wave Solutions to a Coupled KdV Equations with Variable Coefficients</article-title>. <source>Phys. Lett. A</source>. <year>2003</year>; <volume>308</volume>: <fpage>31</fpage>–<lpage>36</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/S0375-9601(02)01775-9" xlink:type="simple">10.1016/S0375-9601(02)01775-9</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref013">
+<label>13</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Sirendaoreji</surname></name>, <name name-style="western"><surname>Sun</surname> <given-names>J</given-names></name>. <article-title>Auxiliary equation method for solving nonlinear partial differential equations</article-title>. <source>Phys. Lett. A</source>. <year>2003</year>; <volume>309</volume>: <fpage>387</fpage>–<lpage>396</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/S0375-9601(03)00196-8" xlink:type="simple">10.1016/S0375-9601(03)00196-8</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref014">
+<label>14</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Li</surname> <given-names>XZ</given-names></name>, <name name-style="western"><surname>Wang</surname> <given-names>ML</given-names></name>. <article-title>A sub-ODE method for finding exact solutions of a generalized KdV-mKdV equation with higher order nonlinear terms</article-title>. <source>Phys. Lett. A</source>. <year>2007</year>; <volume>361</volume>: <fpage>115</fpage>–<lpage>118</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.physleta.2006.09.022" xlink:type="simple">10.1016/j.physleta.2006.09.022</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref015">
+<label>15</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>He</surname> <given-names>JH</given-names></name>, <name name-style="western"><surname>Wu</surname> <given-names>XH</given-names></name>. <article-title>Exp-function method for nonlinear wave equations</article-title>. <source>Chaos, Soliton. Fract</source>. <year>2006</year>; <volume>34</volume>: <fpage>700</fpage>–<lpage>708</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.chaos.2006.03.020" xlink:type="simple">10.1016/j.chaos.2006.03.020</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref016">
+<label>16</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Wang</surname> <given-names>ML</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>XZ</given-names></name>, <name name-style="western"><surname>Zhang</surname> <given-names>JL</given-names></name>. <article-title>The (<italic>G</italic>′/<italic>G</italic>)-expansion method and travelling wave solutions of nonlinear evolution equations in mathematical physics</article-title>. <source>Phys. Lett. A</source>. <year>2008</year>; <volume>372</volume>: <fpage>417</fpage>–<lpage>423</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.physleta.2007.07.051" xlink:type="simple">10.1016/j.physleta.2007.07.051</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref017">
+<label>17</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Naher</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Abdullah</surname> <given-names>FA</given-names></name>, <name name-style="western"><surname>Akbar</surname> <given-names>MA</given-names></name>. <article-title>Generalized and improved (<italic>G</italic>′/<italic>G</italic>)-expansion method for (3+1)-dimensional modified KdV-Zakharov-Kuznetsev equation</article-title>. <source>PLoS ONE</source>. <year>2013</year>; <volume>8</volume>(<issue>5</issue>): <fpage>e64618</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1371/journal.pone.0064618" xlink:type="simple">10.1371/journal.pone.0064618</ext-link></comment> <object-id pub-id-type="pmid">23741355</object-id></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref018">
+<label>18</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Kudryashov</surname> <given-names>NA</given-names></name>. <article-title>Simplest equation method to look for exact solutions of nonlinear differential equations</article-title>. <source>Chaos, Solitons Fract</source>. <year>2005</year>; <volume>24</volume>: <fpage>1217</fpage>–<lpage>1231</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.chaos.2004.09.109" xlink:type="simple">10.1016/j.chaos.2004.09.109</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref019">
+<label>19</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Kudryashov</surname> <given-names>NA</given-names></name>. <article-title>Exact solitary waves of the fisher equation</article-title>. <source>Phys. Lett. A</source>. <year>2005</year>; <volume>342</volume>: <fpage>99</fpage>–<lpage>106</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.physleta.2005.05.025" xlink:type="simple">10.1016/j.physleta.2005.05.025</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref020">
+<label>20</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Kudryashov</surname> <given-names>NA</given-names></name>. <article-title>One method for finding exact solutions of nonlinear differential equations</article-title>. <source>Commun. Nonlinear Sci. Numer. Simulat</source>. <year>2012</year>; <volume>17</volume>: <fpage>2248</fpage>–<lpage>2253</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.cnsns.2011.10.016" xlink:type="simple">10.1016/j.cnsns.2011.10.016</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref021">
+<label>21</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Jafari</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Kadkhoda</surname> <given-names>N</given-names></name>, <name name-style="western"><surname>Khalique</surname> <given-names>CM</given-names></name>. <article-title>Travelling wave solutions of nonlinear evolution equations using the simplest equation method</article-title>. <source>Comput. Math. Appl</source>. <year>2012</year>; <volume>64</volume>: <fpage>2084</fpage>–<lpage>2088</lpage>.</mixed-citation>
+</ref>
+<ref id="pone.0126635.ref022">
+<label>22</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Vitanov</surname> <given-names>NK</given-names></name>, <name name-style="western"><surname>Dimitrova</surname> <given-names>ZI</given-names></name>, <name name-style="western"><surname>Kantz</surname> <given-names>H</given-names></name>. <article-title>Application of the method of simplest equation for obtaining exact traveling-wave solutions for the extended Korteweg-de Vries equation and generalized Camassa-Holm equation</article-title>. <source>Appl. Math. Comput</source>. <year>2013</year>; <volume>219</volume>: <fpage>7480</fpage>–<lpage>7492</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.amc.2013.01.035" xlink:type="simple">10.1016/j.amc.2013.01.035</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref023">
+<label>23</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Sudao</surname> <given-names>B</given-names></name>, <name name-style="western"><surname>Temuer</surname> <given-names>C</given-names></name>. <article-title>An extended simplest equation method and its application to several forms of the fifth-order KdV equation</article-title>. <source>Appl. Math. Comput</source>. <year>2010</year>; <volume>216</volume>: <fpage>3146</fpage>–<lpage>3153</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.amc.2010.04.029" xlink:type="simple">10.1016/j.amc.2010.04.029</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref024">
+<label>24</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Sudao</surname> <given-names>B</given-names></name>, <name name-style="western"><surname>Temuer</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Wang</surname> <given-names>XM</given-names></name>. <article-title>Application of the extended simplest equation method to the coupled Schrödinger-Boussinesq equation</article-title>. <source>Appl. Math. Comput</source>. <year>2013</year>; <volume>224</volume>: <fpage>517</fpage>–<lpage>523</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.amc.2013.08.083" xlink:type="simple">10.1016/j.amc.2013.08.083</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref025">
+<label>25</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Antonova</surname> <given-names>AO</given-names></name>, <name name-style="western"><surname>Kudryashov</surname> <given-names>NA</given-names></name>. <article-title>Generalization of the simplest equation method for nonlinear non-autonomous different eqations</article-title>. <source>Commun. Nonlinear Sci. Numer. Simulat</source>. <year>2014</year>; <volume>19</volume>: <fpage>4037</fpage>–<lpage>4041</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.cnsns.2014.03.035" xlink:type="simple">10.1016/j.cnsns.2014.03.035</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref026">
+<label>26</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Abdel Rady</surname> <given-names>AS</given-names></name>, <name name-style="western"><surname>Khalfallah</surname> <given-names>M</given-names></name>. <article-title>On soliton solutions for Boussinesq-Burgers equations</article-title>. <source>Commun. Nonlinear Sci. Numer. Simulat</source>. <year>2010</year>; <volume>15</volume>: <fpage>886</fpage>–<lpage>894</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.cnsns.2009.05.053" xlink:type="simple">10.1016/j.cnsns.2009.05.053</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref027">
+<label>27</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Zhang</surname> <given-names>L</given-names></name>, <name name-style="western"><surname>Zhang</surname> <given-names>LF</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>CY</given-names></name>. <article-title>Some new exact solutions of Jacobian elliptic function about the generalized Boussinesq equation and Boussinesq-Burgers equation</article-title>. <source>Chinese Phys. B</source>. <year>2008</year>; <volume>17</volume>: <fpage>403</fpage>–<lpage>410</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1088/1674-1056/17/2/009" xlink:type="simple">10.1088/1674-1056/17/2/009</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref028">
+<label>28</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Gao</surname> <given-names>L</given-names></name>, <name name-style="western"><surname>Xu</surname> <given-names>W</given-names></name>, <name name-style="western"><surname>Tang</surname> <given-names>YN</given-names></name>, <name name-style="western"><surname>Meng</surname> <given-names>GF</given-names></name>. <article-title>New families of travelling wave solutions for Boussinesq-Burgers equation and (3+1)-dimensional Kadomtsev-Petviashvili equation</article-title>. <source>Phys. Lett. A</source>. <year>2007</year>; <volume>366</volume>: <fpage>411</fpage>–<lpage>421</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.physleta.2007.02.040" xlink:type="simple">10.1016/j.physleta.2007.02.040</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref029">
+<label>29</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Wang</surname> <given-names>ZY</given-names></name>, <name name-style="western"><surname>Chen</surname> <given-names>AH</given-names></name>. <article-title>Explicit solutions of Boussinesq-Burgers equation</article-title>. <source>Chinese Phys</source>. <year>2007</year>; <volume>16</volume>: <fpage>1233</fpage>–<lpage>1238</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1088/1009-1963/16/5/011" xlink:type="simple">10.1088/1009-1963/16/5/011</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref030">
+<label>30</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Khalfallah</surname> <given-names>M</given-names></name>. <article-title>Exact traveling wave solutions of the Boussinesq-Burgers equation</article-title>. <source>Math. Comput. Model</source>. <year>2009</year>; <volume>49</volume>: <fpage>666</fpage>–<lpage>671</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.mcm.2008.08.004" xlink:type="simple">10.1016/j.mcm.2008.08.004</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref031">
+<label>31</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Li</surname> <given-names>XM</given-names></name>, <name name-style="western"><surname>Chen</surname> <given-names>AH</given-names></name>. <article-title>Darboux transformation and multi-soliton solutions of Boussinesq-Burgers equation</article-title>. <source>Phys. Lett. A</source>. <year>2005</year>; <volume>342</volume>: <fpage>413</fpage>–<lpage>420</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.physleta.2005.02.056" xlink:type="simple">10.1016/j.physleta.2005.02.056</ext-link></comment></mixed-citation>
+</ref>
+<ref id="pone.0126635.ref032">
+<label>32</label>
+<mixed-citation xlink:type="simple" publication-type="journal">
+<name name-style="western"><surname>Chen</surname> <given-names>AH</given-names></name>, <name name-style="western"><surname>Li</surname> <given-names>XM</given-names></name>. <article-title>Darboux transformation and soliton solutions for Boussinesq-Burgers equation</article-title>. <source>Chaos, Soliton. Fract</source>. <year>2006</year>; <volume>27</volume>: <fpage>43</fpage>–<lpage>49</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="http://dx.doi.org/10.1016/j.chaos.2004.09.116" xlink:type="simple">10.1016/j.chaos.2004.09.116</ext-link></comment></mixed-citation>
+</ref>
+</ref-list>
+</back>
+</article>

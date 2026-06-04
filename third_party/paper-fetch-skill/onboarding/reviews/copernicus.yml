@@ -1,0 +1,66 @@
+schema_version: 2
+provider: copernicus
+reviewed_at: '2026-05-20T00:00:00Z'
+reviewed_by: operator
+fixtures:
+- fixture: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024
+  purpose: structure
+  doi: 10.5194/acp-24-1-2024
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## Abstract'
+  - must not include Download PDF
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/extracted.md
+  baseline_markdown_sha256: 0068b75dddc8b64f3d1f38da4f2799998fa5ae4b481128b679971bc62ddeba60
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/markdown-quality.json
+  markdown_quality_sha256: 94d79022d536a727ee85f6214cc64f8bf2fa30dbfce4bc77754221badd2350ae
+- fixture: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024
+  purpose: figure
+  doi: 10.5194/acp-24-1-2024
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Figure
+  - must not include Article Metrics
+  - must match (?:!\[Figure|\*\*Figure)
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/extracted.md
+  baseline_markdown_sha256: 0068b75dddc8b64f3d1f38da4f2799998fa5ae4b481128b679971bc62ddeba60
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/markdown-quality.json
+  markdown_quality_sha256: 94d79022d536a727ee85f6214cc64f8bf2fa30dbfce4bc77754221badd2350ae
+- fixture: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024
+  purpose: references
+  doi: 10.5194/acp-24-1-2024
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Reference
+  - must not include Google Scholar
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/extracted.md
+  baseline_markdown_sha256: 0068b75dddc8b64f3d1f38da4f2799998fa5ae4b481128b679971bc62ddeba60
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/markdown-quality.json
+  markdown_quality_sha256: 94d79022d536a727ee85f6214cc64f8bf2fa30dbfce4bc77754221badd2350ae
+- fixture: tests/fixtures/golden_criteria/10.5194_acp-1-1-2001
+  purpose: pdf_fallback
+  doi: 10.5194/acp-1-1-2001
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include #'
+  - must not include Access Denied
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/extracted.md
+  baseline_markdown_sha256: 5afd650bb830a066f470665d669517a2c966652511ed41830a0782dafb672348
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/markdown-quality.json
+  markdown_quality_sha256: 5d894dc103ddfa03804747af5be5cf1014c6e6fd38f014e0d4fbbe3289f016c1

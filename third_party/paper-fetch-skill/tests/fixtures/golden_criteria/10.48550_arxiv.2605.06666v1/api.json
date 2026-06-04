@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-05-09T03:49:43.625185+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2605.06666v1"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2605.06666v1",
+    "updated": "2026-05-07T17:59:55+00:00",
+    "published": "2026-05-07T17:59:55+00:00",
+    "title": "The Kubo-Thermalization Correspondence",
+    "authors": [
+      "Songtao Huang",
+      "Xingyu Li",
+      "Jianyi Chen",
+      "Alan Tsidilkovski",
+      "Gabriel G. T. Assumpção",
+      "Pengfei Zhang",
+      "Hui Zhai",
+      "Nir Navon"
+    ],
+    "summary": "Quantum thermalization describes how interacting quantum systems relax toward thermal equilibrium, a central problem in modern physics. Yet most experimental information on many-body systems comes from short-time transition spectroscopy, typically interpreted within Kubo's linear-response framework. These perspectives - long-time equilibration versus short-time response - seem fundamentally disconnected. Here we establish an exact link between them: the Kubo-Thermalization correspondence, which connects long-time thermalized magnetization under weak driving to short-time linear-response spectra for a spin coupled to a thermal bath. The correspondence holds even when the steady state differs substantially from the initial state and when each regime is individually difficult to describe theoretically. We experimentally confirm the correspondence using effective spin-1/2 impurities realized with ultracold fermions in two internal states coupled to a Fermi sea. Our results provide a rare exact statement about quantum thermalization and offer a novel route to infer thermalization dynamics from equilibrium response measurements in strongly interacting quantum systems, independent of microscopic details of the system-bath coupling.",
+    "comment": null,
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "cond-mat.quant-gas",
+    "categories": [
+      "cond-mat.quant-gas",
+      "cond-mat.stat-mech",
+      "physics.atom-ph",
+      "quant-ph"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2605.06666v1",
+    "short_id": "2605.06666v1"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2605.06666v1",
+    "external_doi": null,
+    "title": "The Kubo-Thermalization Correspondence",
+    "authors": [
+      "Songtao Huang",
+      "Xingyu Li",
+      "Jianyi Chen",
+      "Alan Tsidilkovski",
+      "Gabriel G. T. Assumpção",
+      "Pengfei Zhang",
+      "Hui Zhai",
+      "Nir Navon"
+    ],
+    "abstract": "Quantum thermalization describes how interacting quantum systems relax toward thermal equilibrium, a central problem in modern physics. Yet most experimental information on many-body systems comes from short-time transition spectroscopy, typically interpreted within Kubo's linear-response framework. These perspectives - long-time equilibration versus short-time response - seem fundamentally disconnected. Here we establish an exact link between them: the Kubo-Thermalization correspondence, which connects long-time thermalized magnetization under weak driving to short-time linear-response spectra for a spin coupled to a thermal bath. The correspondence holds even when the steady state differs substantially from the initial state and when each regime is individually difficult to describe theoretically. We experimentally confirm the correspondence using effective spin-1/2 impurities realized with ultracold fermions in two internal states coupled to a Fermi sea. Our results provide a rare exact statement about quantum thermalization and offer a novel route to infer thermalization dynamics from equilibrium response measurements in strongly interacting quantum systems, independent of microscopic details of the system-bath coupling.",
+    "published": "2026-05-07",
+    "updated": "2026-05-07",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2605.06666v1",
+    "arxiv_id": "2605.06666v1",
+    "primary_category": "cond-mat.quant-gas",
+    "categories": [
+      "cond-mat.quant-gas",
+      "cond-mat.stat-mech",
+      "physics.atom-ph",
+      "quant-ph"
+    ],
+    "keywords": [
+      "cond-mat.quant-gas",
+      "cond-mat.stat-mech",
+      "physics.atom-ph",
+      "quant-ph"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.06666v1",
+    "html_url": "https://arxiv.org/html/2605.06666v1",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2605.06666v1",
+        "content_type": "text/html",
+        "content_version": "2605.06666v1",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2605.06666v1",
+        "content_type": "application/pdf",
+        "content_version": "2605.06666v1",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}

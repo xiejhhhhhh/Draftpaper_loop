@@ -1,0 +1,143 @@
+schema_version: 2
+provider: mdpi
+reviewed_at: '2026-05-20T00:00:00Z'
+reviewed_by: operator
+fixtures:
+- fixture: tests/fixtures/golden_criteria/10.3390_membranes15030093
+  purpose: structure
+  doi: 10.3390/membranes15030093
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## Abstract'
+  - must not include Download PDF
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_membranes15030093/extracted.md
+  baseline_markdown_sha256: db832f9e187793b74cde8a39b12f3bcace4ae29921666129c464c283890485b7
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_membranes15030093/markdown-quality.json
+  markdown_quality_sha256: 6e39b0e75ef8c954ada150e24dc3de291ea5b48c923f6d38e4b17a5e6b4f7acb
+- fixture: tests/fixtures/golden_criteria/10.3390_su12072826
+  purpose: table
+  doi: 10.3390/su12072826
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Table
+  - must not include Google Scholar
+  - must match (?m)^\|.+\|$
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_su12072826/extracted.md
+  baseline_markdown_sha256: efecdfa58e97c474b122111f0480f742439229dc5520cba305c837c74ab7cdc4
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_su12072826/markdown-quality.json
+  markdown_quality_sha256: 6b02aa59b027a5fb4466294ff37e3ebc593943bc2a8255a5b3c4615b1d808df1
+- fixture: tests/fixtures/golden_criteria/10.3390_math11030657
+  purpose: formula
+  doi: 10.3390/math11030657
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Equation
+  - must not include [Formula unavailable]
+  - must match (?:\$\$|!\[Formula\]|Equation)
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_math11030657/extracted.md
+  baseline_markdown_sha256: 388cf9a34e5106f4f369ec6598e2b83727d46af2d5cd68255f0bd4211b958d40
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_math11030657/markdown-quality.json
+  markdown_quality_sha256: 113642105e632d50e2f5e21aa61810587d5a385c6378aa275abe8ee6f6eea984
+- fixture: tests/fixtures/golden_criteria/10.3390_rs16010010
+  purpose: figure
+  doi: 10.3390/rs16010010
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Figure
+  - must not include Article Metrics
+  - must match (?:!\[Figure|\*\*Figure)
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_rs16010010/extracted.md
+  baseline_markdown_sha256: 83ce4e0945ed3924c1fe705302a2f09a6ebe11f1be51b9904b896a3fa805e44a
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_rs16010010/markdown-quality.json
+  markdown_quality_sha256: f1dbb4dca2abef217f03fb8c7a7833e49fa259404d334920af3246e543c5b23d
+- fixture: tests/fixtures/golden_criteria/10.3390_s23010001
+  purpose: supplementary
+  doi: 10.3390/s23010001
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Supplementary
+  - must not include Download Citation
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_s23010001/extracted.md
+  baseline_markdown_sha256: 691e30dcb60c1da15c8ee70ce32bb168a9615e9d6581dda9660a4e4a1e10f6c6
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_s23010001/markdown-quality.json
+  markdown_quality_sha256: 24d88e476ec34f72bbdbc7bcb9dc899c5c0e07114e95e97c249116eb6f6ccd8f
+- fixture: tests/fixtures/golden_criteria/10.3390_w15040758
+  purpose: references
+  doi: 10.3390/w15040758
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Reference
+  - must not include Google Scholar
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_w15040758/extracted.md
+  baseline_markdown_sha256: 1e0ff3804b59b618db25665ffd079bca98994ef4db05e30201b1242e9f001aa8
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_w15040758/markdown-quality.json
+  markdown_quality_sha256: d7036f243d198cc6f2084d71a995bfe0d6edf08649fb607787bd39b13a7ce50f
+- fixture: tests/fixtures/golden_criteria/10.3390_en16186655
+  purpose: pdf_fallback
+  doi: 10.3390/en16186655
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include #'
+  - must not include Access Denied
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_en16186655/extracted.md
+  baseline_markdown_sha256: e56843907f0c3c57078db992c78ef826f0e01de046b16b223d5bf8d057267c89
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_en16186655/markdown-quality.json
+  markdown_quality_sha256: 4c4f9f91f978c8c0c57e4c489563df8dadf4757d6e72b33cea669e8b582b6066
+- fixture: tests/fixtures/golden_criteria/10.3390_foods10081757
+  purpose: structure
+  doi: 10.3390/foods10081757
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## Abstract'
+  - must not include Download PDF
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_foods10081757/extracted.md
+  baseline_markdown_sha256: f9afda5e61e69a03575c3adec1ee29b912c4cd18ab1b6283de31f87bbb6145e8
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_foods10081757/markdown-quality.json
+  markdown_quality_sha256: 56fa57793be83333cd3237219dd49dbd8f694ccfe27f66cf9db40a0f856de029
+- fixture: tests/fixtures/golden_criteria/10.3390_ijerph18094484
+  purpose: structure
+  doi: 10.3390/ijerph18094484
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## Abstract'
+  - must not include Download PDF
+  fixes: []
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.3390_ijerph18094484/extracted.md
+  baseline_markdown_sha256: 3dc0b87a75b914fffabc436fbd36852072306feafc9ae65ceb50c08cade3beec
+  review_notes: Semantic review completed against committed fixture evidence.
+  markdown_quality_path: tests/fixtures/golden_criteria/10.3390_ijerph18094484/markdown-quality.json
+  markdown_quality_sha256: ca887a5e8286d4383e0ad510792467569528b19ee48f559e196ba08afc0c578c

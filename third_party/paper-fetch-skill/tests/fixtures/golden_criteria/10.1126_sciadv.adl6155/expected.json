@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "abstract_sections": 1,
+    "body_sections": 21,
+    "figures": 0,
+    "references": 89,
+    "sections": 22,
+    "tables": 0
+  },
+  "expected_content_kind": "fulltext",
+  "has": {
+    "abstract": true,
+    "authors": true,
+    "body": true,
+    "code_availability": false,
+    "data_availability": false,
+    "figures": false,
+    "references": true,
+    "title": true
+  }
+}

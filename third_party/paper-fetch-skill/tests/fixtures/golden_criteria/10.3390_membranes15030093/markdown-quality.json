@@ -1,0 +1,14 @@
+{
+  "blocking_issue_count": 0,
+  "doi": "10.3390/membranes15030093",
+  "issues": [],
+  "markdown_path": "tests/fixtures/golden_criteria/10.3390_membranes15030093/extracted.md",
+  "prompt_path": "tests/fixtures/golden_criteria/10.3390_membranes15030093/markdown-quality-prompt.md",
+  "provider": "mdpi",
+  "review_method": "agent_prompt",
+  "reviewed_at": "2026-05-23T00:00:00Z",
+  "reviewed_by": "codex-agent",
+  "sample_id": "10.3390_membranes15030093",
+  "schema_version": 2,
+  "status": "pass"
+}

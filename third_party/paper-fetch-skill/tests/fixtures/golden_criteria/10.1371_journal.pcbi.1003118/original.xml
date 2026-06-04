@@ -1,0 +1,753 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article
+  PUBLIC "-//NLM//DTD Journal Publishing DTD v3.0 20080202//EN" "http://dtd.nlm.nih.gov/publishing/3.0/journalpublishing3.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" article-type="research-article" dtd-version="3.0" xml:lang="en">
+<front>
+<journal-meta>
+<journal-id journal-id-type="publisher-id">plos</journal-id>
+<journal-id journal-id-type="nlm-ta">PLoS Comput Biol</journal-id>
+<journal-id journal-id-type="pmc">ploscomp</journal-id><journal-title-group>
+<journal-title>PLoS Computational Biology</journal-title></journal-title-group>
+<issn pub-type="ppub">1553-734X</issn>
+<issn pub-type="epub">1553-7358</issn>
+<publisher>
+<publisher-name>Public Library of Science</publisher-name>
+<publisher-loc>San Francisco, USA</publisher-loc></publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="publisher-id">PCOMPBIOL-D-13-00147</article-id>
+<article-id pub-id-type="doi">10.1371/journal.pcbi.1003118</article-id>
+<article-categories><subj-group subj-group-type="heading"><subject>Research Article</subject></subj-group><subj-group subj-group-type="Discipline-v2"><subject>Biology</subject><subj-group><subject>Computational biology</subject><subj-group><subject>Genomics</subject><subj-group><subject>Functional genomics</subject><subject>Genome analysis tools</subject><subject>Genome expression analysis</subject><subject>Genome sequencing</subject></subj-group></subj-group><subj-group><subject>Sequence analysis</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v2"><subject>Computer science</subject><subj-group><subject>Algorithms</subject></subj-group></subj-group></article-categories>
+<title-group>
+<article-title>Software for Computing and Annotating Genomic Ranges</article-title>
+<alt-title alt-title-type="running-head">Software for Analyzing Annotations and Alignments</alt-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Lawrence</surname><given-names>Michael</given-names></name><xref ref-type="aff" rid="aff1"><sup>1</sup></xref><xref ref-type="corresp" rid="cor1"><sup>*</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Huber</surname><given-names>Wolfgang</given-names></name><xref ref-type="aff" rid="aff2"><sup>2</sup></xref><xref ref-type="aff" rid="aff3"><sup>3</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Pagès</surname><given-names>Hervé</given-names></name><xref ref-type="aff" rid="aff4"><sup>4</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Aboyoun</surname><given-names>Patrick</given-names></name><xref ref-type="aff" rid="aff4"><sup>4</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Carlson</surname><given-names>Marc</given-names></name><xref ref-type="aff" rid="aff4"><sup>4</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Gentleman</surname><given-names>Robert</given-names></name><xref ref-type="aff" rid="aff1"><sup>1</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Morgan</surname><given-names>Martin T.</given-names></name><xref ref-type="aff" rid="aff4"><sup>4</sup></xref></contrib>
+<contrib contrib-type="author" xlink:type="simple"><name name-style="western"><surname>Carey</surname><given-names>Vincent J.</given-names></name><xref ref-type="aff" rid="aff5"><sup>5</sup></xref></contrib>
+</contrib-group>
+<aff id="aff1"><label>1</label><addr-line>Bioinformatics and Computational Biology, Genentech, Inc., South San Francisco, California, United States of America</addr-line></aff>
+<aff id="aff2"><label>2</label><addr-line>European Molecular Biology Laboratory Genome Biology Unit, Heidelberg, Germany</addr-line></aff>
+<aff id="aff3"><label>3</label><addr-line>The European Bioinformatics Institute, Cambridge, United Kingdom</addr-line></aff>
+<aff id="aff4"><label>4</label><addr-line>Computational Biology, Fred Hutchinson Cancer Research Center, Seattle, Washington, United States of America</addr-line></aff>
+<aff id="aff5"><label>5</label><addr-line>Channing Division of Network Medicine, Brigham and Women's Hospital, Harvard Medical School, Boston, Massachusetts, United States of America</addr-line></aff>
+<contrib-group>
+<contrib contrib-type="editor" xlink:type="simple"><name name-style="western"><surname>Prlic</surname><given-names>Andreas</given-names></name>
+<role>Editor</role>
+<xref ref-type="aff" rid="edit1"/></contrib>
+</contrib-group>
+<aff id="edit1"><addr-line>University of California, San Diego, United States of America</addr-line></aff>
+<author-notes>
+<corresp id="cor1">* E-mail: <email xlink:type="simple">michafla@gene.com</email></corresp>
+<fn fn-type="conflict"><p>The authors have declared that no competing interests exist.</p></fn>
+<fn fn-type="con"><p>Analyzed the data: ML VJC. Contributed reagents/materials/analysis tools: ML HP PA MC MTM. Wrote the paper: ML WH RG MTM VJC.</p></fn>
+</author-notes>
+<pub-date pub-type="collection"><month>8</month><year>2013</year></pub-date>
+<pub-date pub-type="epub"><day>8</day><month>8</month><year>2013</year></pub-date>
+<volume>9</volume>
+<issue>8</issue>
+<elocation-id>e1003118</elocation-id>
+<history>
+<date date-type="received"><day>28</day><month>1</month><year>2013</year></date>
+<date date-type="accepted"><day>7</day><month>5</month><year>2013</year></date>
+</history>
+<permissions>
+<copyright-year>2013</copyright-year>
+<copyright-holder>Lawrence et al</copyright-holder><license xlink:type="simple"><license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited.</license-p></license></permissions>
+<abstract>
+<p>We describe Bioconductor infrastructure for representing and computing on annotated genomic ranges and integrating genomic data with the statistical computing features of R and its extensions. At the core of the infrastructure are three packages: <italic>IRanges</italic>, <italic>GenomicRanges</italic>, and <italic>GenomicFeatures</italic>. These packages provide scalable data structures for representing annotated ranges on the genome, with special support for transcript structures, read alignments and coverage vectors. Computational facilities include efficient algorithms for overlap and nearest neighbor detection, coverage calculation and other range operations. This infrastructure directly supports more than 80 other Bioconductor packages, including those for sequence analysis, differential expression analysis and visualization.</p>
+</abstract>
+<funding-group><funding-statement>This work was funded by the National Institutes of Health, National Human Genome Research Group through grants P41 HG004059 and U41 HG004059 and (for VJC) by National Heart, Lung and Blood Institute grants R01 HL086601, R01 HL093076 and R01 HL094635. The funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript.</funding-statement></funding-group><counts><page-count count="10"/></counts></article-meta>
+</front>
+<body><sec id="s1">
+<title/>
+<disp-quote>
+<p>This is a <italic>PLOS Computational Biology</italic> Software Article.</p>
+</disp-quote></sec><sec id="s2">
+<title>Introduction</title>
+<p>The genome is typically represented as a linear sequence, split over multiple chromosomes, and data are linked to the genome by occupying a range of positions on the sequence. These data fall into two broad categories. First, there are the annotations, such as gene models, transcription factor binding site predictions, GC percentage, polymorphisms, and conservation scores. Such annotations are highly processed and are often served by public databases such as NCBI or EBI. Second, there are primary experimental measurements, such as read alignments from high-throughput sequencing. Data integration, within and between those two categories, is made possible by treating the data as ranges on the genome, which acts as a common scaffold. Thus, ranges play a central role in genomic data analysis, and statistical tools should consider ranges to be as fundamental as quantitative and categorical data types.</p>
+<p>For example, ranges are integral to the manipulation of gene model annotations. Examples include deriving candidate promoter regions, finding introns, calculating the total exonic length of a transcript or finding the exonic regions that are unique to a particular transcript in an alternatively spliced gene. Ranges also play a central role in the analysis of experimental data, where they are used to represent read alignments. In the analysis of ChIP-seq data, it is typical to calculate the depth of alignment coverage, which then serves as input to calling algorithms which output peaks as ranges. These ranges are then annotated according to their overlap with and proximity to other ranges, such as gene structures. Similarly, for RNA-seq data, analysts measure gene expression based on counting the alignments overlapping exons.</p>
+<p>All these analyses depend on specialized, range-based algorithms and data structures. For example, computations on gene models involve set operations on ranges, including intersection, union and complement. Coverage calculation is important for detecting regions of enrichment and for producing visual summaries. Overlap and nearest neighbor detection is fundamental to the annotation of ChIP-seq peaks, estimating expression from RNA-seq data and many other integrative analyses.</p>
+<p>The primary argument for storing ranges in specialized, formal data structures is efficiency, in terms of both implementation and language. The notion of ranges can be made explicit in the application programming interface (API), permitting the expression of algorithms in a succinct and readable language that illustrates concepts instead of exposing implementation details. Another goal is interoperability: by using the same data structures, multiple routines, spread across different packages, can operate on the data without cumbersome conversions. Also, a data structure can be accessed through an abstraction that hides the details of the optimized implementation, and this results in looser coupling between components. Together, these benefits lead to more robust, maintainable software.</p>
+<p>Data structures should support the storage of per-range metadata, because genomic data is multivariate and consists of much more than the ranges alone. This enables the storage of gene identifiers and other symbols with the gene ranges, and the peak heights or confidence scores with the peak ranges. Some metadata merit special treatment, such as the chromosome name and the strand. Also necessary is a data structure for storing summaries and processing results for a common set of ranges across multiple samples. Such a structure would hold, for example, the RNA-seq per-exon counts or a set of variant calls. Finally, there should be support for storing hierarchies of ranges, at least for one level of nesting, to represent, for example, the nesting of exons into transcripts. Whether it is appropriate to treat the exons as individual ranges or the transcript as a compound range depends on the use case; both should be supported.</p>
+<p>These data structures are represented as classes, through which we communicate the formal definition of each data structure to the programming language. One benefit is that we can defer the regulation of data access and the tracking of data integrity to the language. In the case of functional object-oriented languages, there is another benefit: we can implement behaviors as methods on generic functions. A generic function is one that dispatches to a particular implementation, termed a method, based on the classes of passed arguments. This means that the same API will exhibit specialized behavior depending on the input. For example calling <monospace>start</monospace> on a range data structure would return the starting positions for the ranges, while calling the same function on a base R time-series object would behave differently.</p>
+<p>This paper describes the infrastructure in Bioconductor <xref ref-type="bibr" rid="pcbi.1003118-Gentleman1">[1]</xref> for the integrative statistical analysis of range-based genomic data. Main features include scalable data structures for annotated genomic ranges and genome-length vectors, and efficient algorithms for overlap detection and other range operations. The packages that form the core of the infrastructure include <italic>IRanges</italic>, <italic>GenomicRanges</italic> and <italic>GenomicFeatures</italic>. Source code for the packages is included in the supplement, under <xref ref-type="supplementary-material" rid="pcbi.1003118.s001">Software S1</xref>, <xref ref-type="supplementary-material" rid="pcbi.1003118.s002">S2</xref>, and <xref ref-type="supplementary-material" rid="pcbi.1003118.s003">S3</xref>, respectively. The <italic>IRanges</italic> package provides the fundamental range data structures and operations, while <italic>GenomicRanges</italic> builds upon it to add biological semantics to the metadata, including explicit treatment of sequence name and strand. Finally, <italic>GenomicFeatures</italic> enables access to and manipulation of gene models and other annotations. Together, these packages support more than 80 other packages in Bioconductor.</p>
+<p>Other software tools provide facilities for working with genomic ranges, e.g., <italic>bedtools</italic> <xref ref-type="bibr" rid="pcbi.1003118-Quinlan1">[2]</xref> and <italic>cisGenome</italic> <xref ref-type="bibr" rid="pcbi.1003118-Ji1">[3]</xref>. Those provide UNIX command-line interfaces and rely on common file formats (which are often incompletely specified) to interoperate with other tools, leading to workflows embodied as: collections of heterogeneous scripts, system dependencies and data files. Such workflows can be difficult to maintain and challenging to reproduce. In contrast, the Bioconductor infrastructure is tightly integrated with other R packages through in-memory data structures, while still supporting interaction with external tools. The Bioconductor package <italic>genomeIntervals</italic> provides data structures for representing genomic ranges and utilities, such as overlap detection, that have much in common with the tools described here, but our tools are more extensive and have been more widely adopted.</p>
+</sec><sec id="s3">
+<title>Design and Implementation</title>
+<sec id="s3a">
+<title>Working with Simple Ranges</title>
+<p>We use the term “range” to denote an ordered set of consecutive integers. A range is represented by a pair of integers <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e001" xlink:type="simple"/></inline-formula> satisfying <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e002" xlink:type="simple"/></inline-formula>. In <xref ref-type="fig" rid="pcbi-1003118-g001">Figure 1</xref>, <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e003" xlink:type="simple"/></inline-formula> and <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e004" xlink:type="simple"/></inline-formula> correspond to the <italic>start</italic> and <italic>end</italic> columns, respectively. The “width” of a range is given by <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e005" xlink:type="simple"/></inline-formula>, so a range for a single integer (modeling, for example, a single nucleotide position) has <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e006" xlink:type="simple"/></inline-formula>.</p>
+<fig id="pcbi-1003118-g001" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g001</object-id><label>Figure 1</label><caption>
+<title>Tabular (top) and visual (bottom) representation of the exons for the human <italic>KRAS</italic> gene, derived from the UCSC known gene annotation.</title>
+<p>In the table, the columns <italic>seqnames</italic>, <italic>start</italic> and <italic>end</italic> locate the exons in the genome. The <italic>strand</italic> column indicates the direction of transcription. The exons are grouped into transcripts by <italic>tx_id</italic>, and the exon IDs are given by <italic>exon_id</italic>. Virtually all genomic data sets fit this pattern: genomic location, followed by a series of columns, often including strand and/or score, that annotate that location. In the plot, the rectangles represent exonic regions, and the arrows represent the introns, as well as the strand.</p>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g001" position="float" xlink:type="simple"/></fig>
+<p>The <italic>IRanges</italic> package, which is designed to be general and thus avoids biology-specific considerations, introduces the <italic>IRanges</italic> class to represent a vector of ranges. The <italic>GenomicRanges</italic> package builds on <italic>IRanges</italic> to include biologically relevant features such as strand and sequence (e.g., chromosome) name.</p>
+<p>In <xref ref-type="fig" rid="pcbi-1003118-g001">Figure 1</xref>, we show a table of the exons of the human gene <italic>KRAS</italic>. The <italic>tx_id</italic> column indicates the transcripts to which each exon belongs. A single <italic>IRanges</italic> object can store those exon ranges, and this model is appropriate for per-exon analyses.</p>
+<p>The <italic>IRanges</italic> class supports the basic R vector API, including the length accessor, extraction and subsetting functions like [[ and [ , concatenation with c, etc. This will hold true for all vector-like objects in the range infrastructure.</p>
+<p>The available range operations are listed in <xref ref-type="table" rid="pcbi-1003118-t001">Table 1</xref>. The <italic>IRanges</italic> object supports direct manipulation of the start, end and width of the contained ranges. In applications, many of these operations follow recurrent patterns, and manipulating start and end directly can be needlessly tedious and error-prone. For this reason, <italic>shift</italic>, <italic>resize</italic> and similar frequently useful range operations are provided. Ranges can be simplified and summarized with several functions, including <monospace>range</monospace>, <monospace>reduce</monospace> and <monospace>disjoin</monospace>. <xref ref-type="fig" rid="pcbi-1003118-g002">Figure 2</xref> illustrates the latter two. It is often appropriate to conceive of an <italic>IRanges</italic> object as a mathematical set of integers, or, in the biological context, a set of nucleotide positions. <monospace>gaps</monospace> (complement), <monospace>union</monospace>, <monospace>intersect</monospace> and <monospace>setdiff</monospace> support this notion. For example, taking the <monospace>union</monospace> of two transcripts would yield the ranges covered by any <italic>KRAS</italic> exon. The <monospace>flank</monospace> function could be used to demarcate putative promoter regions of transcripts.</p>
+<fig id="pcbi-1003118-g002" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g002</object-id><label>Figure 2</label><caption>
+<title>Illustration of the <monospace>reduce</monospace> and <monospace>disjoin</monospace> operations on the last exon from each of the <italic>KRAS</italic> transcripts.</title>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g002" position="float" xlink:type="simple"/></fig><table-wrap id="pcbi-1003118-t001" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.t001</object-id><label>Table 1</label><caption>
+<title>Summary of the Ranges API.</title>
+</caption><alternatives><graphic id="pcbi-1003118-t001-1" position="float" mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.t001" xlink:type="simple"/>
+<table><colgroup span="1"><col align="left" span="1"/><col align="center" span="1"/><col align="center" span="1"/></colgroup>
+<thead>
+<tr>
+<td align="left" rowspan="1" colspan="1">Category</td>
+<td align="left" rowspan="1" colspan="1">Function</td>
+<td align="left" rowspan="1" colspan="1">Description</td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="1" colspan="1">Accessors</td>
+<td align="left" rowspan="1" colspan="1"><monospace>start, end, width</monospace></td>
+<td align="left" rowspan="1" colspan="1">Get or set the starts, ends and widths</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>names</monospace></td>
+<td align="left" rowspan="1" colspan="1">Get or set the names</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>elementMetadata, metadata</monospace></td>
+<td align="left" rowspan="1" colspan="1">Get or set metadata on elements or object</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>length</monospace></td>
+<td align="left" rowspan="1" colspan="1">Number of ranges in the vector</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>range</monospace></td>
+<td align="left" rowspan="1" colspan="1">Range formed from min(start) and max(end)</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Ordering</td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;, &lt; = , &gt;, &gt; = ,  =  = , ! = </monospace></td>
+<td align="left" rowspan="1" colspan="1">Compare ranges, ordering by start then width</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>sort, order, rank</monospace></td>
+<td align="left" rowspan="1" colspan="1">Sort by the ordering defined above</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>duplicated</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find ranges with multiple instances</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>unique</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find unique instances, removing duplicates</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Arithmetic</td>
+<td align="left" rowspan="1" colspan="1"><monospace>r+x, r−x, r * x</monospace></td>
+<td align="left" rowspan="1" colspan="1">Shrink or expand ranges <monospace>r</monospace> by number <monospace>x</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>shift</monospace></td>
+<td align="left" rowspan="1" colspan="1">Move the ranges by specified amount</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>resize</monospace></td>
+<td align="left" rowspan="1" colspan="1">Change width, anchoring on start, end or mid</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>distance</monospace></td>
+<td align="left" rowspan="1" colspan="1">Separation between ranges (closest endpoints)</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>restrict</monospace></td>
+<td align="left" rowspan="1" colspan="1">Clamp ranges to within some start and end</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>flank</monospace></td>
+<td align="left" rowspan="1" colspan="1">Generate adjacent regions on start or end</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Set operations</td>
+<td align="left" rowspan="1" colspan="1"><monospace>reduce</monospace></td>
+<td align="left" rowspan="1" colspan="1">Merge overlapping and adjacent ranges</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>intersect, union, setdiff</monospace></td>
+<td align="left" rowspan="1" colspan="1">Set operations on reduced ranges</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>pintersect, punion, psetdiff</monospace></td>
+<td align="left" rowspan="1" colspan="1">Parallel set operations, on each <monospace>x[i], y[i]</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>gaps, pgap</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find regions not covered by reduced ranges</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>disjoin</monospace></td>
+<td align="left" rowspan="1" colspan="1">Ranges formed from union of endpoints</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Overlaps</td>
+<td align="left" rowspan="1" colspan="1"><monospace>findOverlaps</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find all overlaps for each <monospace>x</monospace> in <monospace>y</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>countOverlaps</monospace></td>
+<td align="left" rowspan="1" colspan="1">Count overlaps of each <monospace>x</monospace> range in <monospace>y</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>nearest</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find nearest neighbors (closest endpoints)</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>precede, follow</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find nearest <monospace>y</monospace> that <monospace>x</monospace> precedes or follows</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>x %in% y</monospace></td>
+<td align="left" rowspan="1" colspan="1">Find ranges in <monospace>x</monospace> that overlap range in <monospace>y</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Coverage</td>
+<td align="left" rowspan="1" colspan="1"><monospace>coverage</monospace></td>
+<td align="left" rowspan="1" colspan="1">Count ranges covering each position</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Extraction</td>
+<td align="left" rowspan="1" colspan="1"><monospace>r[i]</monospace></td>
+<td align="left" rowspan="1" colspan="1">Get or set by logical or numeric index</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>r[[i]]</monospace></td>
+<td align="left" rowspan="1" colspan="1">Get integer sequence from <monospace>start[i]</monospace> to <monospace>end[i]</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>subsetByOverlaps</monospace></td>
+<td align="left" rowspan="1" colspan="1">Subset <monospace>x</monospace> for those that overlap in <monospace>y</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>head, tail, rev, rep</monospace></td>
+<td align="left" rowspan="1" colspan="1">Conventional R semantics</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Split, combine</td>
+<td align="left" rowspan="1" colspan="1"><monospace>split</monospace></td>
+<td align="left" rowspan="1" colspan="1">Split ranges by a factor into a <italic>RangesList</italic></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>c</monospace></td>
+<td align="left" rowspan="1" colspan="1">Concatenate two or more range objects</td>
+</tr>
+</tbody>
+</table>
+</alternatives><table-wrap-foot><fn id="nt101"><label/><p>Categorized listing and description of the API for range-based objects, such as <italic>IRanges</italic>, <italic>RangesList</italic>, <italic>GRanges</italic> and <italic>GRangesList</italic>.</p></fn></table-wrap-foot></table-wrap>
+<p>A recurrent operation is overlap detection; various instances are illustrated in <xref ref-type="fig" rid="pcbi-1003118-g003">Figure 3</xref>. In later sections, we apply overlap counting for finding the percentage of ChIP-seq peaks that overlap a promoter, counting the number of RNA-seq reads for each transcript, and other tasks. The <monospace>findOverlaps</monospace> function uses an efficient interval tree algorithm <xref ref-type="bibr" rid="pcbi.1003118-Cormen1">[4]</xref> to detect overlaps between two <italic>IRanges</italic> objects, as well as the more complex range-based data structures introduced later. The algorithm supports several types of overlap, including those defined by Allen's Interval Algebra <xref ref-type="bibr" rid="pcbi.1003118-Allen1">[5]</xref>. The one-time cost of constructing the interval tree is <inline-formula><inline-graphic xlink:href="info:doi/10.1371/journal.pcbi.1003118.e007" xlink:type="simple"/></inline-formula>, and queries are performed in logarithmic time. In accordance with the vectorized semantics of R, if multiple queries are submitted, they are efficiently processed in batch, without restarting at the root of the tree for each query. The language of implementation is C, which avoids the potentially expensive iteration over the tree in R.</p>
+<fig id="pcbi-1003118-g003" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g003</object-id><label>Figure 3</label><caption>
+<title>Illustration of overlap (top) and adjacency (bottom) relationships.</title>
+<p>The <italic>any</italic> mode detects hits with partial or complete overlap, while <italic>within</italic> requires that the query range represents a subregion of the subject range.</p>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g003" position="float" xlink:type="simple"/></fig></sec><sec id="s3b">
+<title>Working with Genomic Ranges</title>
+<p>The <italic>IRanges</italic> class encodes only the start and end of ranges but not the chromosome, strand nor other information that is important in genomic applications. The <italic>GenomicRanges</italic> package adds biological semantics on top of <italic>IRanges</italic>. At its core is the <italic>GRanges</italic> class. Each element of a <italic>GRanges</italic> instance includes a chromosome identifier and strand designation. Each data set is associated with a particular, versioned reference genome sequence consisting of a discrete set of chromosomes or contigs, along with their lengths, if known. The <italic>GRanges</italic> class thus fully represents the data in <xref ref-type="fig" rid="pcbi-1003118-g001">Figure 1</xref>, and encourages best-practices (e.g., tracking genome build) to minimize book-keeping errors.</p>
+<p>The <italic>GRanges</italic> class supports many of the same range operations as <italic>IRanges</italic> and specializes them for genomic data. We achieved API specialization by implementing methods for both classes on the same generic functions. In general, we believe method specialization is an effective practice for providing the same interface on top of different data structures. Abstracting implementation details leads to user code that is more robust and easier to write and maintain.</p>
+<p>The <italic>GRanges</italic> methods give special consideration to the chromosome and, when appropriate, the strand. For instance, the <monospace>findOverlaps</monospace> generic has methods for both <italic>IRanges</italic> and <italic>GRanges</italic>, and the <italic>GRanges</italic> method is specifically able to take advantage of the chromosome information when detecting overlaps. Operations that depend on a notion of direction optionally consider strand. For example, the <monospace>resize</monospace> function will resize from the start or end of the ranges in a <italic>IRanges</italic> object. For a <italic>GRanges</italic> object, <monospace>resize</monospace> will take the start to be the leftmost position for positive strand features and the rightmost position for negative strand features.</p>
+<p>Some types of genomic data, for example gene models or aligned paired-end reads, have a hierarchical structure. To represent this, multiple <italic>GRanges</italic> objects may be combined into a <italic>GRangesList</italic>, where each <italic>GRanges</italic> is considered a compound feature. <italic>GRangesList</italic> groups transcripts by gene, groups exons by transcript, and represents read alignments, where each alignment consists of multiple segments separated by gaps. For example, we group the <italic>KRAS</italic> exons by transcript using a <italic>GRangesList</italic>. A note on performance: although the user interface presents each element of a <italic>GRangesList</italic> as a <italic>GRanges</italic> , internally there is only a single <italic>GRanges</italic>, along with an assoicated partitioning that forms the list elements.</p>
+<p>For a <italic>GRangesList</italic>, overlap detection reports a hit at the element level, i.e., when any range within an element overlaps a query range. See <xref ref-type="fig" rid="pcbi-1003118-g004">Figure 4</xref> for an illustration. This semantic is convenient, for example, when counting the total number of RNA-seq read pairs overlapping the exonic regions of each transcript. In that case, both the reads and the transcripts are <italic>GRangesList</italic> objects.</p>
+<fig id="pcbi-1003118-g004" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g004</object-id><label>Figure 4</label><caption>
+<title>Illustration of overlap computations between two <italic>GRangesList</italic> objects.</title>
+<p>Each set of rectangles linked by solid lines represents a compound range, i.e., an element of the list. Ranges in the query (top) are being matched against ranges in the subject (bottom). The labels between them indicate the type of overlap (any, within, none).</p>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g004" position="float" xlink:type="simple"/></fig></sec><sec id="s3c">
+<title>Accessing Gene Models</title>
+<p>Recalling our <italic>KRAS</italic> gene model example, there are multiple models for representing transcript structures, and the applicability of each depends on the use case. To support the analyst in asking a broad range of questions, there is a need for a mechanism that draws from a data source of gene annotations and returns them in a variety of different data models. The <italic>GenomicFeatures</italic> package fills that role by distilling multiple data sources into a single database schema and wrapping that database in an API that returns, for example, the exons grouped by gene, or the bounds for every transcript. The databases are implemented in SQLite and are thus accessible from environments outside of R. For reproducibility, a database may be encapsulated in a redistributable R package.</p>
+<p>The database is represented by the <italic>TranscriptDb</italic> class and stores the range of each exon, the coding range, the transcript ID, the gene ID, and metadata about the source of the transcript information. The <italic>GenomicFeatures</italic> package provides an automated mechanism for constructing a <italic>TranscriptDb</italic> object from tracks defined in the UCSC genome browser, Biomart, or GTF/GFF files. Bioconductor provides pre-built packages for the most widely adopted gene models, like the UCSC <italic>known gene</italic> annotations on hg19. These packages follow a standard naming convention, e.g., <italic>TxDb.Hsapiens.UCSC.hg19.knownGene</italic>.</p>
+<p>There are functions for performing common queries that return the exons, coding regions, and transcript boundaries as a <italic>GRanges</italic> object. Transcript and gene-level groupings are preserved by <italic>GRangesList</italic> objects. The ranges in <xref ref-type="fig" rid="pcbi-1003118-g001">Figure 1</xref> were derived from the <italic>TxDb.Hsapiens.UCSC.hg19.knownGene</italic> package using the following call to the function <monospace>exons:</monospace></p>
+<p><monospace>&gt; library(“TxDb.Hsapiens.UCSC.hg19.knownGene”)</monospace></p>
+<p><monospace>&gt; library(“org.Hs.eg.db”)</monospace></p>
+<p><monospace>&gt; kras_gene &lt;- org.Hs.egSYMBOL2EG$KRAS</monospace></p>
+<p><monospace>&gt; kras_exons &lt;- exons(TxDb.Hsapiens.UCSC.hg19.knownGene,</monospace></p>
+<p><monospace>+ vals  =  list(gene_id  =  kras_gene),</monospace></p>
+<p><monospace>+ columns  =  c(“tx_id”, “exon_id”))</monospace></p>
+<p>To retrieve the exons corresponding to a particular transcript, such as transcript 48666 of KRAS, we call <monospace>exonsBy</monospace>, which returns a <italic>GRangesList</italic> of exons grouped by transcript, and extract the element corresponding to the desired transcript identifier:</p>
+<p><monospace>&gt; exonsByTx &lt;- exonsBy(TxDb.Hsapiens.UCSC.hg19.knownGene)</monospace></p>
+<p><monospace>&gt; krasA &lt;- exonsByTx[[“48666”]]</monospace></p>
+<p>The contents of krasA are shown in <xref ref-type="table" rid="pcbi-1003118-t002">Table 2</xref>.</p>
+<table-wrap id="pcbi-1003118-t002" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.t002</object-id><label>Table 2</label><caption>
+<title>Contents of the <monospace>krasA</monospace> object, representing the exons in isoform A of KRAS.</title>
+</caption><alternatives><graphic id="pcbi-1003118-t002-2" position="float" mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.t002" xlink:type="simple"/>
+<table><colgroup span="1"><col align="left" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/></colgroup>
+<thead>
+<tr>
+<td colspan="8" align="left" rowspan="1"><monospace>GRanges with 5 ranges and 3 metadata columns:</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>seqnames</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>ranges</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>strand</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>exon_id</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>exon_name</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>exon_rank</monospace></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[1]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr13</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[106118565, 106118681]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>174810</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;NA&gt;</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>1</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[2]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr13</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[106119356, 106119490]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>174811</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;NA&gt;</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>2</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[3]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr13</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[106124887, 106125034]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>174814</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;NA&gt;</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>3</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[4]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr13</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[106142141, 106142541]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>174818</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;NA&gt;</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[5]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr13</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[106143261, 106143383]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>174820</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>&lt;NA&gt;</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+</tr>
+</tbody>
+</table>
+</alternatives></table-wrap></sec><sec id="s3d">
+<title>Associating Annotations with Ranges</title>
+<p><xref ref-type="fig" rid="pcbi-1003118-g001">Figure 1</xref> demonstrates how genomic data consist of both ranges and uni- or multivariate annotations on those ranges. In that table, the annotations are the exon ID and a variable grouping the exons into transcripts. If we had read alignments from an RNA-seq experiment, we might use <monospace>countOverlaps</monospace> to generate a read count for each exon. Other examples of annotation would include the reference and alternate bases for a single nucleotide variant (SNV) or the position weight matrix (PWM) score for a putative transcription factor binding site.</p>
+<p>Every multi-element data structure in the <italic>IRanges</italic> suite supports the storage of per-element metadata: data about data. In this case, the metadata are the annotations, and the primary data are the ranges being annotated. This includes all of the data structures for storing ranges, such as <italic>IRanges, GRanges</italic> and <italic>GRangesList</italic>. The metadata are stored in a <italic>DataFrame</italic> with as many rows as there are elements in the object. We introduce a <italic>DataFrame</italic> class that behaves similarly to the base R <italic>data.frame</italic>, but supports storage of complex vector-like objects (e.g., a <italic>DNAStringSet</italic>, representing DNA sequences, or a <italic>GRanges</italic>) in columns.</p>
+</sec><sec id="s3e">
+<title>Working with Coverage and Similar Vectors</title>
+<p>A common method of summarizing a genomic data set is to calculate the coverage, i.e., the number of features in the data set overlapping each position in the genome. This is useful in ChIP-seq analysis, where many peak detection methods operate on the coverage.</p>
+<p>For this example, mouse genomic DNA was cross-linked with DNA-binding proteins, fragmented and precipitated with an antibody for CTCF. An antibody for GFP was used for the control. The CTCF and GFP samples were each sequenced in a single lane on an Illumina sequencer, which generated reads 35 nt in length <xref ref-type="bibr" rid="pcbi.1003118-Li1">[6]</xref>. We excluded the last 11 nt of each read due to insufficient quality, so the effective read length was 24 nt. The reads were aligned to the mm9 build of the mouse genome using MAQ. We parsed the MAQ output using the <italic>ShortRead</italic> package <xref ref-type="bibr" rid="pcbi.1003118-Morgan1">[7]</xref>, and the alignments for three chromosomes (chr10, chr11 and chr12) were extracted for use as a demonstration data set in the <italic>chipseq</italic> package <xref ref-type="bibr" rid="pcbi.1003118-Sarkar1">[8]</xref>.</p>
+<p><monospace>&gt; library(“chipseq”)</monospace></p>
+<p><monospace>&gt; data(“cstest”)</monospace></p>
+<p><monospace>&gt; ctcfReads &lt;- cstest$ctcf</monospace></p>
+<p>The <monospace>ctcfReads</monospace> object, listed in <xref ref-type="table" rid="pcbi-1003118-t003">Table 3</xref>, is a <italic>GRanges</italic> holding the read alignments from the CTCF sample. The <italic>GRanges</italic> stores the chromosome names, ranges, and strand for each alignment, as well as a list of chromosome names and lengths for the mm9 genome. Tracking the chromosome information guards against errors that could arise, for example, from mixing data across genome assemblies.</p>
+<table-wrap id="pcbi-1003118-t003" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.t003</object-id><label>Table 3</label><caption>
+<title>Ranges for the first three reads in the <monospace>ctcfReads</monospace> object, storing the read alignments for the CTCF sample.</title>
+</caption><alternatives><graphic id="pcbi-1003118-t003-3" position="float" mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.t003" xlink:type="simple"/>
+<table><colgroup span="1"><col align="left" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/></colgroup>
+<thead>
+<tr>
+<td colspan="4" align="left" rowspan="1"><monospace>GRanges with 3 ranges and 0 metadata columns:</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"/>
+<td align="left" rowspan="1" colspan="1"><monospace>seqnames</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>ranges</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>strand</monospace></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[1]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr10</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[3012936, 3012959]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[2]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr10</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[3012941, 3012964]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>[3]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr10</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[3012944, 3012967]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+</tr>
+</tbody>
+</table>
+</alternatives></table-wrap>
+<p>Each read represents only 24 nt from one end of a fragment of DNA. Since it was the fragment, but not necessarily the sequenced region, that was cross-linked to CTCF, we need to consider the entire fragment when predicting binding sites. We assume that the fragment length was approximately 120 nt and call <monospace>resize</monospace> to extend our read ranges to fragment-sized ranges:</p>
+<p><monospace>&gt; ctcfFragments &lt;- resize(ctcfReads, 120)</monospace></p>
+<p>Note that the strand of the alignment was automatically taken into account.</p>
+<p>The <monospace>coverage</monospace> function calculates the coverage for a set of ranges. We calculate the coverage on the CTCF fragments from our ChIP-seq data set as follows:</p>
+<p><monospace>&gt; ctcfCoverage &lt;- coverage(ctcfFragments)</monospace></p>
+<p><monospace>&gt; ctcfCoverage10 &lt;- ctcfCoverage$chr10</monospace></p>
+<p>The <monospace>ctcfCoverage</monospace> object is a list, with one coverage vector per chromosome. For simplicity, we extract the element corresponding to “chr10”. The <monospace>ctcfCoverage10</monospace> object is of class <italic>Rle</italic>.</p>
+<p>Vectors along the genome tend to have many repeated values. For the sake of compactness, we compress the data using a run-length encoding compression scheme. Through the R class system, we abstract this efficient implementation behind an API that supports the features of ordinary R vectors; the complexity is hidden from the user. The <italic>Rle</italic> class represents a run-length encoded vector and provides features beyond those of ordinary vectors. For example, one can use ranges to extract values from an <italic>Rle</italic>. This integrates range-based datasets with data in chromosome-length vectors. To demonstrate, we find the position of the maximum coverage on chr10, and, in order to display the coverage in context, we extract a 5000 nt region centered around that position:</p>
+<p><monospace>&gt; maxPos &lt;- which.max(ctcfCoverage10)</monospace></p>
+<p><monospace>&gt; roi &lt;- resize(IRanges(maxPos, width = 1), 5000, “center”)</monospace></p>
+<p><monospace>&gt; roiCoverage &lt;- ctcfCoverage$chr10[roi]</monospace></p>
+<p>The <monospace>roiCoverage</monospace> vector is plotted in <xref ref-type="fig" rid="pcbi-1003118-g005">Figure 5</xref> and shows how the coverage relates to the gene context.</p>
+<fig id="pcbi-1003118-g005" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g005</object-id><label>Figure 5</label><caption>
+<title>Visualization of the coverage of bases by GFP- and CTCF-bound fragments (top) in the context of part of the gene model for Rrp1, Entrez gene 18114 (bottom).</title>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g005" position="float" xlink:type="simple"/></fig>
+<p>Next, we wish to find peaks in the coverage vector by slicing it at a fixed threshold. We call the <monospace>slice</monospace> function and pass it a cutoff of 8:</p>
+<p><monospace>&gt; ctcfPeaks &lt;- slice(ctcfCoverage10, lower  =  8)</monospace></p>
+<p>The resulting coverage slices are ranges and and we rely on our data structures for managing and manipulating them. In particular, the <monospace>ctcfPeaks</monospace> object is a <italic>Views</italic> object, which combines the peak ranges with the original <italic>Rle</italic> coverage vector (another example of integrating ranges with vectors). <italic>Views</italic> has several utilities for summarizing the vector values within each range. We use these to summarize the coverage values within each peak:</p>
+<p><monospace>&gt; ctcfMaxs &lt;- viewMaxs(ctcfPeaks)</monospace></p>
+<p><monospace>&gt; ctcfSums &lt;- viewSums(ctcfPeaks)</monospace></p>
+</sec><sec id="s3f">
+<title>Accessing Read Alignments</title>
+<p>Read alignments may be loaded from a BAM file as a <italic>GappedAlignments</italic> or <italic>GappedAlignmentPairs</italic> object, depending on whether the reads should be treated as paired. Both data structures store short read alignment results in terms of the position, chromosome, strand, CIGAR string (a compact representation of the gaps) and other information. Both also support some of the range operations and can be coerced to <italic>GRanges</italic> and <italic>GRangesList</italic>. The <italic>GRanges</italic> representation holds the ungapped extents of the read alignments, whereas the <italic>GRangesList</italic> represents the alignments as ranges with gaps, including the inter-read gap of a pair and the skipped regions in the reference (e.g., introns). The choice of data structure depends on, for example, whether one wants to count the overlapping pairs, reads, or aligned segments separated by gaps.</p>
+<p>A frequent goal of RNA-seq experiments is to estimate the levels of gene expression. For this demonstration, we will simply count the number of read alignments overlapping the exonic regions of each transcript. We begin by loading a BAM file of read alignments from an RNA-seq experiment in yeast <xref ref-type="bibr" rid="pcbi.1003118-Lee1">[9]</xref>. There are four samples, two of which are wildtype and two of which are RLP mutants. The <italic>leeBamViews</italic> package provides the alignments on chromosome XIII from positions 800000 to 900000.</p>
+<p><monospace>&gt; bams &lt;- getBamsFromLeeBamViews()</monospace></p>
+<p><monospace>&gt; ga &lt;- readGappedAlignments(bams</monospace><xref ref-type="bibr" rid="pcbi.1003118-Gentleman1">[<monospace>1</monospace>]</xref><monospace>)</monospace></p>
+<p><monospace>&gt; reads &lt;- grglist(ga)</monospace></p>
+<p>The <monospace>readGappedAlignments</monospace> function loads the BAM file as a <italic>GappedAlignments</italic> object, which is then coerced to a <italic>GRangesList</italic> , where each read consists of one or more ranges, separated by intronic gaps.</p>
+<p>In the next step, we obtain the transcript annotations for yeast. Bioconductor provides a <italic>TranscriptDb</italic> object for the UCSC sacCer2 assembly, and we extract from it a <italic>GRangesList</italic> representing the transcripts, by calling <monospace>exonsBy</monospace>. In order to detect overlaps, the alignments and gene annotations need to have the same chromosome names; we correct for that with the calls to <monospace>keepSeqlevels</monospace> and <monospace>renameSeqlevels</monospace>.</p>
+<p><monospace>&gt; library(“TxDb.Scerevisiae.UCSC.sacCer2.sgdGene”)</monospace></p>
+<p><monospace>&gt; tx &lt;- exonsBy(TxDb.Scerevisiae.UCSC.sacCer2.sgdGene)</monospace></p>
+<p><monospace>&gt; tx &lt;- renameSeqlevels(keepSeqlevels(tx, “chrXIII”),</monospace></p>
+<p><monospace>+ c(chrXIII  =  “Scchr13”))</monospace></p>
+<p>Now that the data and annotations have been loaded, we count the number of read alignments in each genomic feature:</p>
+<p><monospace>&gt; counts &lt;- countOverlaps(tx, reads, ignore.strand  =  TRUE)</monospace></p>
+<p>More complex counting algorithms are available via the summarizeOverlaps function, which counts over multiple samples and returns the results as a <italic>SummarizedExperiment</italic> object. Unlike the call to <monospace>countOverlaps</monospace> above, reads that map to multiple features are discarded.</p>
+</sec><sec id="s3g">
+<title>Summarized Experiments</title>
+<p>The typical workflow in a genomic data analysis is to reduce a complex raw data set, such as a set of RNA-seq read alignments, to a set of summaries, such as the number of reads aligned over each transcript or exon. Analogously, an exome-seq experiment yields variant calls at particular genomic ranges. It is often appropriate and convenient to store these summaries as a matrix, where the rows correspond to genes or some other genomic feature and the columns to samples. The <italic>SummarizedExperiment</italic> class is designed to hold such values, along with annotations on the genomic regions, the samples and the experiment as a whole. Its design follows the same pattern as the <italic>ExpressionSet</italic> in the Bioconductor microarray infrastructure; the primary difference is that <italic>SummarizedExperiment</italic> is based on <italic>IRanges</italic> data structures. A <italic>SummarizedExperiment</italic> may be constructed directly or generated by a function that executes a high-level workflow. For example, for a list of BAM files, the <monospace>summarizeOverlaps</monospace> function counts the overlaps between the read alignments and a database of transcripts.</p>
+</sec></sec><sec id="s4">
+<title>Results</title>
+<p>In this section we describe range-based integrative computations related to the genetics of protein-DNA binding, and conclude with a topically organized list of Bioconductor packages that make essential use of the ranges infrastructure.</p>
+<sec id="s4a">
+<title>Exploring Genetics of CTCF Binding</title>
+<p>In the murine ChIP-seq example discussed previously, the ranges infrastructure was used to compute and display variation in read coverage over the mouse genome. In this example, we use tools based on the ranges infrastructure to examine both coverage and content of reads from a larger ChIP-seq experiment on human cell lines. Our basic intent is to show how the infrastructure can be used to evaluate the roles of genotype and genetic diversity in the genomic sequences where CTCF is reported to bind, with an understanding that ultimate inferences on protein binding locations and on base-call distributions over heterozygous loci will need to directly incorporate risks of base calling and read mapping errors, and will need to be followed up with wet-lab validation.</p>
+<p>For an investigation of the prevalence of allele-specific protein-DNA binding <xref ref-type="bibr" rid="pcbi.1003118-McDaniell1">[10]</xref>, BAM files on 22 ChIP-seq experiments addressing CTCF binding to DNA from immortalized B-cells were collected from the ENCODE project portal. Exclusion of files with aberrant quality score distributions left 16 BAM files corresponding to 12 distinct individuals; two technical replicates were available for each of four individuals. Furthermore, different base-call quality score scales were used for two batches of samples; by subtracting 31 from the reported mean quality scores for one set of samples, approximately identical medians and interquartile ranges were established for mean quality scores for all retained samples. Base calls for reads bound at all genomic locations with positive coverage were tabulated using the <italic>VariantTools</italic> <monospace>tallyVariants</monospace> function, and reduced to locations exhibiting statistical evidence of allele-dependent CTCF binding using the <monospace>callVariants</monospace> function. Each of these variant assessment tools makes use of infrastructure derived from GSNAP <xref ref-type="bibr" rid="pcbi.1003118-Wu1">[11]</xref> with key results materialized as <italic>GRanges</italic> instances. <xref ref-type="table" rid="pcbi-1003118-t004">Table 4</xref> depicts an excerpt from a <italic>callVariants</italic> output.</p>
+<table-wrap id="pcbi-1003118-t004" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.t004</object-id><label>Table 4</label><caption>
+<title>Partial output of <monospace>countVariants</monospace> applied to a BAM file from an ENCODE CTCF ChIP-seq experiment.</title>
+</caption><alternatives><graphic id="pcbi-1003118-t004-4" position="float" mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.t004" xlink:type="simple"/>
+<table><colgroup span="1"><col align="left" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/><col align="center" span="1"/></colgroup>
+<thead>
+<tr>
+<td colspan="10" align="left" rowspan="1"><monospace>GRanges with 8 ranges and 5 metadata columns:</monospace></td>
+</tr>
+<tr>
+<td colspan="2" align="left" rowspan="1"><monospace>seqnames</monospace></td>
+<td colspan="2" align="left" rowspan="1"><monospace>ranges strand</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>ref</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>alt</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>ncycles</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>count</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>count.ref</monospace></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[11391, 11391]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>T</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>7</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>19</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[793522, 793522]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>T</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>10</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[825860, 825860]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>G</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[968600, 968600]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>C</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>6</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[1057713, 1057713]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>C</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>3</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>19</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[1376423, 1376423]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>G</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>C</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>5</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>53</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[1376430, 1376430]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>T</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>C</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>51</monospace></td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1"><monospace>NA06990_2</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>chr1</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>[1610542, 1610542]</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>+</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>|</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>A</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>C</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>4</monospace></td>
+<td align="left" rowspan="1" colspan="1"><monospace>28</monospace></td>
+</tr>
+</tbody>
+</table>
+</alternatives><table-wrap-foot><fn id="nt102"><label/><p>The <monospace>GRanges</monospace> instance includes location-specific information on 24 attributes of each call, including information on sequencer cycle, base call quality distribution, and other features of BAM-based variant calling as performed by GSNAP <xref ref-type="bibr" rid="pcbi.1003118-Wu1">[11]</xref>.</p></fn></table-wrap-foot></table-wrap>
+<p>The genome-wide searches for allele-dependent CTCF binding events employed default settings for variant calling by <italic>VariantTools</italic> <monospace>callVariants</monospace>, which include criteria on minimum coverage, minimum diversity of read cycles at which base is found, and limitation of risk of strand bias. This process yielded a total of 19655 locations with evidence of allele-dependent CTCF binding, corresponding to 50750 events over the 12 individuals. We obtained <monospace>GRanges</monospace> representations of dbSNP build 137 with the <monospace>scanVcf</monospace> function of the <italic>VariantAnnotation</italic>. This facilitated distributed computation for partitioning allele-dependent CTCF binding events into 12691 coincident with known polymorphisms and 6964 at locations where no SNP has been reported in dbSNP.</p>
+<p>Allelic imbalance in CTCF binding corresponds to departure of the alternate nucleotide proportion (ANP) at a CTCF binding site from 50%. The upper panels of <xref ref-type="fig" rid="pcbi-1003118-g006">Figure 6</xref> show the distributions of ANP stratified by coincidence of allele-dependent CTCF binding locations with locations of known SNP. The lower panels show identically stratified associations between ANP and mean base-call qualities for pileups over the allele-dependent binding locations. While the off-SNP locations show a proponderance of ANP below 20%, there is also an indication that base-call quality for such binding events is relatively low, implying that these findings would be unlikely to replicate. For example, among on-SNP allele-dependent binding calls with ANP below 20%, 5% had mean quality less than 5; the corresponding frequency for low-quality on-SNP allele-dependent binding locations calls was 41%.</p>
+<fig id="pcbi-1003118-g006" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.g006</object-id><label>Figure 6</label><caption>
+<p>Top panels: distributions of alternate nucleotide proportions for on- and off-SNP allele-dependent CTCF binding events. Bottom panels: relationships between average call quality values and alternate nucleotide proportions are depicted using a 2D density estimate (darker regions correspond to higher density.).</p>
+</caption><graphic mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.g006" position="float" xlink:type="simple"/></fig>
+<p><xref ref-type="fig" rid="pcbi-1003118-g006">Figure 6</xref> was constructed using the packages and features described above with very little programming effort needed to specialize the computations to this example. Most computational biologists and other interested investigators could easily carry out these steps. We can conclude that allelic imbalance in CTCF binding events is frequently detectable but, for the data considered, the apparent imbalances observed are likely a mix of real biology and technical artifacts originating from, e.g., sequencing and read mapping errors. Careful analysis of metadata collected in the variant-calling process may help to disentangle the key factors contributing to allele-dependent CTCF binding.</p>
+</sec><sec id="s4b">
+<title>Software Based on the Infrastructure</title>
+<p>There is a growing ecosystem of packages based on this infrastructure. By current count, more than 80 packages depend directly on the packages presented here. This includes packages for input and output of ranges ( <italic>rtracklayer</italic> , <italic>Rsamtools</italic> ) <xref ref-type="bibr" rid="pcbi.1003118-Lawrence1">[12]</xref>, <xref ref-type="bibr" rid="pcbi.1003118-Morgan2">[13]</xref>, quality assessment ( <italic>ShortRead</italic> ) <xref ref-type="bibr" rid="pcbi.1003118-Morgan1">[7]</xref>, sequence analysis ( <italic>Biostrings</italic> ) <xref ref-type="bibr" rid="pcbi.1003118-Pags1">[14]</xref>, variant calling ( <italic>VariantTools</italic> ) <xref ref-type="bibr" rid="pcbi.1003118-Lawrence2">[15]</xref>, and other tasks. To summarize the different use cases addressed by dependent packages, <xref ref-type="table" rid="pcbi-1003118-t005">Table 5</xref> tabulates the descriptive labels chosen from a controlled vocabulary by the package authors.</p>
+<table-wrap id="pcbi-1003118-t005" position="float"><object-id pub-id-type="doi">10.1371/journal.pcbi.1003118.t005</object-id><label>Table 5</label><caption>
+<title>Selected packages based on the Ranges infrastructure.</title>
+</caption><alternatives><graphic id="pcbi-1003118-t005-5" position="float" mimetype="image" xlink:href="info:doi/10.1371/journal.pcbi.1003118.t005" xlink:type="simple"/>
+<table><colgroup span="1"><col align="left" span="1"/><col align="center" span="1"/><col align="center" span="1"/></colgroup>
+<thead>
+<tr>
+<td align="left" rowspan="1" colspan="1">Term</td>
+<td align="left" rowspan="1" colspan="1">Count</td>
+<td align="left" rowspan="1" colspan="1">Example packages</td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="1" colspan="1">Genetics</td>
+<td align="left" rowspan="1" colspan="1">16</td>
+<td align="left" rowspan="1" colspan="1">NarrowPeaks, nucleR, GenomicFeatures, mosaics</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Preprocessing</td>
+<td align="left" rowspan="1" colspan="1">11</td>
+<td align="left" rowspan="1" colspan="1">MEDIPS, biovizBase, TSSi, HMMcopy</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Infrastructure</td>
+<td align="left" rowspan="1" colspan="1">9</td>
+<td align="left" rowspan="1" colspan="1">Genominator, nnotationDbi, ggbio, dInfoBuilder</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">GeneExpression</td>
+<td align="left" rowspan="1" colspan="1">8</td>
+<td align="left" rowspan="1" colspan="1">GGtools, easyRNASeq, Repitools, TransView</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Sequencing</td>
+<td align="left" rowspan="1" colspan="1">5</td>
+<td align="left" rowspan="1" colspan="1">girafe, triform, seqbias, rSFFreader</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Microarray</td>
+<td align="left" rowspan="1" colspan="1">4</td>
+<td align="left" rowspan="1" colspan="1">methyAnalysis, Gviz, MinimumDistance, charm</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Clustering</td>
+<td align="left" rowspan="1" colspan="1">4</td>
+<td align="left" rowspan="1" colspan="1">chroGPS, methVisual, DirichletMultinomial, PICS</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">GenomicSequence</td>
+<td align="left" rowspan="1" colspan="1">3</td>
+<td align="left" rowspan="1" colspan="1">rGADEM, MotifDb, MotIV</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">QualityControl</td>
+<td align="left" rowspan="1" colspan="1">3</td>
+<td align="left" rowspan="1" colspan="1">ShortRead, R453Plus1Toolbox, htSeqTools</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Statistics</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">oneChannelGUI, PING</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">OneChannel</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">xmapcore, annmap</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">DataRepresentation</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">genoset, FunciSNP</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">GeneticVariability</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">VanillaICE, SNPchip</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Bioinformatics</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">DiffBind, segmentSeq</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">ChIPseq</td>
+<td align="left" rowspan="1" colspan="1">2</td>
+<td align="left" rowspan="1" colspan="1">chipseq, BayesPeak</td>
+</tr>
+<tr>
+<td align="left" rowspan="1" colspan="1">Other</td>
+<td align="left" rowspan="1" colspan="1">10</td>
+<td align="left" rowspan="1" colspan="1">ChromHeatMap, gwascat, ChIPpeakAnno, OTUbase</td>
+</tr>
+</tbody>
+</table>
+</alternatives><table-wrap-foot><fn id="nt103"><label/><p>Categories are biocViews terms. Up to 4 packages were randomly sampled from Bioconductor packages that explicitly declare a dependence on <italic>IRanges</italic>, <italic>GenomicRanges</italic>, or <italic>GenomicFeatures</italic> packages.</p></fn></table-wrap-foot></table-wrap></sec></sec><sec id="s5">
+<title>Availability and Future Directions</title>
+<p>All of the packages described, including <italic>IRanges</italic>, <italic>GenomicRanges</italic> and <italic>GenomicFeatures</italic>, form the core infrastructure for sequence analysis in Bioconductor and are available from the project website: <ext-link ext-link-type="uri" xlink:href="http://bioconductor.org" xlink:type="simple">http://bioconductor.org</ext-link> (see also <xref ref-type="supplementary-material" rid="pcbi.1003118.s001">Software S1</xref>-<xref ref-type="supplementary-material" rid="pcbi.1003118.s003">S3</xref>). We aim to continue to support scientists in their drive to further science by asking increasingly complex and integrative questions about increasingly complex and heterogeneous data. For example, we are working towards better support for detecting alternative and novel splicing, measuring isoform-specific expression, annotating sequence variants, mapping between genome, transcript and protein coordinate spaces, and integrating transcript annotations with gene-level metadata. There is also an unmet need in the visualization of genomic ranges. In particular, we need better visualizations for relating RNA-seq coverage and junction counts to transcript structures, and for diagnosing read alignments in the context of variant calling. Finally, as datasets continue to expand in size, we continue to seek more efficient algorithms and data structures, and we are vigilant for opportunities to leverage parallel computing.</p>
+</sec><sec id="s6">
+<title>Supporting Information</title>
+<supplementary-material id="pcbi.1003118.s001" mimetype="application/x-gzip" xlink:href="info:doi/10.1371/journal.pcbi.1003118.s001" position="float" xlink:type="simple"><label>Software S1</label><caption>
+<p><bold>The IRanges package.</bold> The <italic>IRanges</italic> package provides efficient low-level and reusable S4 classes for storing and manipulating ranges of integers and compressed, genome-length vectors.</p>
+<p>(GZ)</p>
+</caption></supplementary-material><supplementary-material id="pcbi.1003118.s002" mimetype="application/x-gzip" xlink:href="info:doi/10.1371/journal.pcbi.1003118.s002" position="float" xlink:type="simple"><label>Software S2</label><caption>
+<p><bold>The GenomicRanges package.</bold> The <italic>GenomicRanges</italic> package defines general purpose containers for storing genomic ranges as well as more specialized containers for storing alignments against a reference genome.</p>
+<p>(GZ)</p>
+</caption></supplementary-material><supplementary-material id="pcbi.1003118.s003" mimetype="application/x-gzip" xlink:href="info:doi/10.1371/journal.pcbi.1003118.s003" position="float" xlink:type="simple"><label>Software S3</label><caption>
+<p><bold>The GenomicFeatures package.</bold> The <italic>GenomicFeatures</italic> package is a set of tools and methods for making and manipulating transcript-centric annotations.</p>
+<p>(GZ)</p>
+</caption></supplementary-material></sec></body>
+<back><ref-list>
+<title>References</title>
+<ref id="pcbi.1003118-Gentleman1"><label>1</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Gentleman</surname><given-names>RC</given-names></name>, <name name-style="western"><surname>Carey</surname><given-names>VJ</given-names></name>, <name name-style="western"><surname>Bates</surname><given-names>DM</given-names></name>, <etal>et al</etal>. (<year>2004</year>) <article-title>Bioconductor: Open software development for computational biology and bioinformatics</article-title>. <source>Genome Biology</source> <volume>5</volume>: <fpage>R80</fpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Quinlan1"><label>2</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Quinlan</surname><given-names>AR</given-names></name>, <name name-style="western"><surname>Hall</surname><given-names>IM</given-names></name> (<year>2010</year>) <article-title>BEDTools: a exible suite of utilities for comparing genomic features</article-title>. <source>Bioinformatics</source> <volume>26</volume>: <fpage>841</fpage>–<lpage>842</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Ji1"><label>3</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Ji</surname><given-names>H</given-names></name>, <name name-style="western"><surname>Jiang</surname><given-names>H</given-names></name>, <name name-style="western"><surname>Ma</surname><given-names>W</given-names></name>, <name name-style="western"><surname>Johnson</surname><given-names>DS</given-names></name>, <name name-style="western"><surname>Myers</surname><given-names>RM</given-names></name>, <etal>et al</etal>. (<year>2008</year>) <article-title>An integrated software system for analyzing ChIP-chip and ChIP-seq data</article-title>. <source>Nature Biotechnology</source> <volume>26</volume>: <fpage>1293</fpage>–<lpage>1300</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Cormen1"><label>4</label>
+<mixed-citation publication-type="other" xlink:type="simple">Cormen TH, Leiserson CE, Rivest RL, Stein C (2001) Introduction to algorithms. Cambridge, Mass: MIT Press.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Allen1"><label>5</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Allen</surname><given-names>JF</given-names></name> (<year>1983</year>) <article-title>Maintaining knowledge about temporal intervals</article-title>. <source>Communications of the ACM</source> <volume>26</volume>: <fpage>832</fpage>–<lpage>843</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Li1"><label>6</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Li</surname><given-names>H</given-names></name>, <name name-style="western"><surname>Ruan</surname><given-names>J</given-names></name>, <name name-style="western"><surname>Durbin</surname><given-names>R</given-names></name> (<year>2008</year>) <article-title>Mapping short DNA sequencing reads and calling variants using mapping quality scores</article-title>. <source>Genome Research</source> <volume>18</volume>: <fpage>1851</fpage>–<lpage>8</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Morgan1"><label>7</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Morgan</surname><given-names>M</given-names></name>, <name name-style="western"><surname>Anders</surname><given-names>S</given-names></name>, <name name-style="western"><surname>Lawrence</surname><given-names>M</given-names></name>, <name name-style="western"><surname>Aboyoun</surname><given-names>P</given-names></name>, <name name-style="western"><surname>Pagues</surname><given-names>H</given-names></name>, <etal>et al</etal>. (<year>2009</year>) <article-title>ShortRead: a Bioconductor package for input, quality assessment and exploration of high-throughput sequence data</article-title>. <source>Bioinformatics</source> <volume>25</volume>: <fpage>2607</fpage>–<lpage>2608</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Sarkar1"><label>8</label>
+<mixed-citation publication-type="other" xlink:type="simple">Sarkar D, Gentleman R, Lawrence M, Yao Z (2013) chipseq: A package for analyzing ChIP-seq data. R package version 1.10.1. Available: <ext-link ext-link-type="uri" xlink:href="http://www.bioconductor.org/packages/2.12/bioc/html/chipseq.html" xlink:type="simple">http://www.bioconductor.org/packages/2.12/bioc/html/chipseq.html</ext-link>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Lee1"><label>9</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Lee</surname><given-names>A</given-names></name>, <name name-style="western"><surname>Hansen</surname><given-names>KD</given-names></name>, <name name-style="western"><surname>Bullard</surname><given-names>J</given-names></name>, <name name-style="western"><surname>Dudoit</surname><given-names>S</given-names></name>, <name name-style="western"><surname>Sherlock</surname><given-names>G</given-names></name> (<year>2008</year>) <article-title>Novel low abundance and transient RNAs in yeast revealed by tiling microarrays and ultra high-throughput sequencing are not con-served across closely related yeast species</article-title>. <source>PLoS Genet</source> <volume>4</volume>: <fpage>e1000299</fpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-McDaniell1"><label>10</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>McDaniell</surname><given-names>R</given-names></name>, <name name-style="western"><surname>Lee</surname><given-names>BK</given-names></name>, <name name-style="western"><surname>Song</surname><given-names>L</given-names></name>, <name name-style="western"><surname>Liu</surname><given-names>Z</given-names></name>, <name name-style="western"><surname>Boyle</surname><given-names>AP</given-names></name>, <etal>et al</etal>. (<year>2010</year>) <article-title>Heritable individual-specific and allele-specific chromatin signatures in humans</article-title>. <source>Science</source> <volume>328</volume>: <fpage>235</fpage>–<lpage>9</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Wu1"><label>11</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Wu</surname><given-names>TD</given-names></name>, <name name-style="western"><surname>Nacu</surname><given-names>S</given-names></name> (<year>2010</year>) <article-title>Fast and SNP-tolerant detection of complex variants and splicing in short reads</article-title>. <source>Bioinformatics (Oxford, England)</source> <volume>26</volume>: <fpage>873</fpage>–<lpage>81</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Lawrence1"><label>12</label>
+<mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Lawrence</surname><given-names>M</given-names></name>, <name name-style="western"><surname>Gentleman</surname><given-names>R</given-names></name>, <name name-style="western"><surname>Carey</surname><given-names>V</given-names></name> (<year>2009</year>) <article-title>rtracklayer: an R package for interfacing with genome browsers</article-title>. <source>Bioinformatics</source> <volume>25</volume>: <fpage>1841</fpage>–<lpage>1842</lpage>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Morgan2"><label>13</label>
+<mixed-citation publication-type="other" xlink:type="simple">Morgan M, Pages H (2013) Rsamtools: Binary alignment (BAM), variant call (BCF), or tabix file import. R package version 1.12.3. Available: <ext-link ext-link-type="uri" xlink:href="http://www.bioconductor.org/packages/2.12/bioc/html/Rsamtools.html" xlink:type="simple">http://www.bioconductor.org/packages/2.12/bioc/html/Rsamtools.html</ext-link>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Pags1"><label>14</label>
+<mixed-citation publication-type="other" xlink:type="simple">Pagès H, Aboyoun P, Gentleman R, DebRoy S (2013) Biostrings: String objects representing biological sequences, and matching algorithms. R package version 2.28.0. Available: <ext-link ext-link-type="uri" xlink:href="http://www.bioconductor.org/packages/2.12/bioc/html/Biostrings.html" xlink:type="simple">http://www.bioconductor.org/packages/2.12/bioc/html/Biostrings.html</ext-link>.</mixed-citation>
+</ref>
+<ref id="pcbi.1003118-Lawrence2"><label>15</label>
+<mixed-citation publication-type="other" xlink:type="simple">Lawrence M, Degenhardt J, Gentleman R (2013) Variant-Tools: Tools for Working with Genetic Variants. R package version 1.2.2. Available: <ext-link ext-link-type="uri" xlink:href="http://www.bioconductor.org/packages/2.12/bioc/html/VariantTools.html" xlink:type="simple">http://www.bioconductor.org/packages/2.12/bioc/html/VariantTools.html</ext-link>.</mixed-citation>
+</ref>
+</ref-list></back>
+</article>

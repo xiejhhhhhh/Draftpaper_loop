@@ -1,0 +1,332 @@
+from __future__ import annotations
+
+import sys
+import threading
+import types
+from unittest import mock
+
+from paper_fetch.providers import browser_workflow
+from paper_fetch.providers.browser_workflow.fetchers import context as fetcher_context
+from paper_fetch.runtime import RuntimeContext
+
+
+class _FakePage:
+    def __init__(self) -> None:
+        self.closed = False
+        self.closed_by: str | None = None
+
+    def close(self) -> None:
+        self.closed = True
+        self.closed_by = threading.current_thread().name
+
+    def goto(self, *_args, **_kwargs) -> None:
+        return None
+
+
+class _FakeRequestClient:
+    def get(self, *_args, **_kwargs):  # pragma: no cover - request path is stubbed in tests
+        raise AssertionError("unexpected request.get() call")
+
+
+class _FakeContext:
+    def __init__(self) -> None:
+        self.closed = False
+        self.closed_by: str | None = None
+        self.cookies: list[dict[str, str]] = []
+        self.pages: list[_FakePage] = []
+        self.request = _FakeRequestClient()
+
+    def add_cookies(self, cookies) -> None:
+        self.cookies.extend(list(cookies))
+
+    def new_page(self) -> _FakePage:
+        page = _FakePage()
+        self.pages.append(page)
+        return page
+
+    def close(self) -> None:
+        self.closed = True
+        self.closed_by = threading.current_thread().name
+
+
+class _FakeBrowser:
+    def __init__(self) -> None:
+        self.closed = False
+        self.closed_by: str | None = None
+        self.contexts: list[_FakeContext] = []
+
+    def new_context(self, **_kwargs) -> _FakeContext:
+        context = _FakeContext()
+        self.contexts.append(context)
+        return context
+
+    def close(self) -> None:
+        self.closed = True
+        self.closed_by = threading.current_thread().name
+
+
+def _fake_cloakbrowser_modules(browsers: list[_FakeBrowser]) -> dict[str, types.ModuleType]:
+    cloakbrowser_module = types.ModuleType("cloakbrowser")
+
+    def launch(**_kwargs) -> _FakeBrowser:
+        browser = _FakeBrowser()
+        browsers.append(browser)
+        return browser
+
+    cloakbrowser_module.launch = launch
+    return {"cloakbrowser": cloakbrowser_module}
+
+
+def _runtime_context_with_forbidden_shared_browser() -> RuntimeContext:
+    context = RuntimeContext(env={})
+    context.new_browser_context = mock.Mock(side_effect=AssertionError("shared runtime browser should not be used"))
+    return context
+
+
+def test_threaded_image_fetcher_uses_thread_private_browser_when_runtime_context_exists() -> None:
+    runtime_context = _runtime_context_with_forbidden_shared_browser()
+    browsers: list[_FakeBrowser] = []
+    fetcher = browser_workflow._build_shared_browser_image_fetcher(
+        browser_context_seed_getter=lambda: {
+            "browser_cookies": [{"name": "cf_clearance", "value": "seed", "domain": ".example.test", "path": "/"}],
+            "browser_user_agent": "UnitTestAgent/1.0",
+        },
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        runtime_context=runtime_context,
+        use_runtime_shared_browser=False,
+    )
+    inner_fetcher = fetcher._get_fetcher()
+    inner_fetcher._fetch_with_page = mock.Mock(
+        return_value={
+            "status_code": 200,
+            "headers": {"content-type": "image/png"},
+            "body": b"\x89PNG\r\n\x1a\nthread-private-image",
+            "url": "https://example.test/figure.png",
+            "dimensions": {"width": 640, "height": 480},
+        }
+    )
+
+    try:
+        with mock.patch.dict(sys.modules, _fake_cloakbrowser_modules(browsers)):
+            result = fetcher("https://example.test/figure.png", {"kind": "figure"})
+    finally:
+        fetcher.close()
+        fetcher.close()
+
+    assert result is not None
+    runtime_context.new_browser_context.assert_not_called()
+    assert len(browsers) == 1
+    browser = browsers[0]
+    assert browser.closed is True
+    assert len(browser.contexts) == 1
+    assert browser.contexts[0].closed is True
+    assert len(browser.contexts[0].pages) == 1
+    assert browser.contexts[0].pages[0].closed is True
+
+
+def test_threaded_image_fetcher_records_browser_context_exception_diagnostic() -> None:
+    image_url = "https://example.test/figure.png"
+    fetcher = browser_workflow._build_shared_browser_image_fetcher(
+        browser_context_seed_getter=lambda: {"browser_user_agent": "UnitTestAgent/1.0"},
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        use_runtime_shared_browser=False,
+    )
+
+    try:
+        with mock.patch.object(
+            fetcher_context,
+            "_new_browser_context",
+            side_effect=RuntimeError("browser context already active"),
+        ):
+            result = fetcher(image_url, {"kind": "figure"})
+    finally:
+        fetcher.close()
+
+    failure = fetcher.failure_for(image_url)
+    assert result is None
+    assert failure is not None
+    assert failure["reason"] == "browser_context_error"
+    assert failure["error_type"] == "RuntimeError"
+    assert failure["error_message"] == "browser context already active"
+
+
+def test_threaded_file_fetcher_uses_thread_private_browser_when_runtime_context_exists() -> None:
+    runtime_context = _runtime_context_with_forbidden_shared_browser()
+    browsers: list[_FakeBrowser] = []
+    fetcher = browser_workflow._build_shared_browser_file_fetcher(
+        browser_context_seed_getter=lambda: {
+            "browser_cookies": [{"name": "cf_clearance", "value": "seed", "domain": ".example.test", "path": "/"}],
+            "browser_user_agent": "UnitTestAgent/1.0",
+        },
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        runtime_context=runtime_context,
+        use_runtime_shared_browser=False,
+        thread_local=True,
+    )
+    inner_fetcher = fetcher._get_fetcher()
+    inner_fetcher._fetch_with_context_request = mock.Mock(
+        return_value={
+            "status_code": 200,
+            "headers": {"content-type": "application/pdf"},
+            "body": b"%PDF-1.7 thread-private-file",
+            "url": "https://example.test/supplement.pdf",
+        }
+    )
+
+    try:
+        with mock.patch.dict(sys.modules, _fake_cloakbrowser_modules(browsers)):
+            result = fetcher("https://example.test/supplement.pdf", {"kind": "supplementary"})
+    finally:
+        fetcher.close()
+        fetcher.close()
+
+    assert result is not None
+    runtime_context.new_browser_context.assert_not_called()
+    assert len(browsers) == 1
+    browser = browsers[0]
+    assert browser.closed is True
+    assert len(browser.contexts) == 1
+    assert browser.contexts[0].closed is True
+    assert len(browser.contexts[0].pages) == 1
+    assert browser.contexts[0].pages[0].closed is True
+
+
+def test_threaded_image_fetcher_closes_thread_private_browser_on_worker_thread() -> None:
+    runtime_context = _runtime_context_with_forbidden_shared_browser()
+    browsers: list[_FakeBrowser] = []
+    fetcher = browser_workflow._build_shared_browser_image_fetcher(
+        browser_context_seed_getter=lambda: {"browser_user_agent": "UnitTestAgent/1.0"},
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        runtime_context=runtime_context,
+        use_runtime_shared_browser=False,
+    )
+    errors: list[BaseException] = []
+    result_holder: dict[str, object] = {}
+
+    def run_fetch() -> None:
+        try:
+            result_holder["result"] = fetcher("https://example.test/figure.png", {"kind": "figure"})
+        except BaseException as exc:  # pragma: no cover - assertion reports the captured exception
+            errors.append(exc)
+
+    with (
+        mock.patch.dict(sys.modules, _fake_cloakbrowser_modules(browsers)),
+        mock.patch.object(
+            browser_workflow._SharedBrowserImageDocumentFetcher,
+            "_fetch_with_page",
+            return_value={
+                "status_code": 200,
+                "headers": {"content-type": "image/png"},
+                "body": b"\x89PNG\r\n\x1a\nthread-private-image",
+                "url": "https://example.test/figure.png",
+                "dimensions": {"width": 640, "height": 480},
+            },
+        ),
+    ):
+        worker = threading.Thread(target=run_fetch, name="asset-worker")
+        worker.start()
+        worker.join()
+        fetcher.close()
+
+    assert errors == []
+    assert result_holder["result"] is not None
+    runtime_context.new_browser_context.assert_not_called()
+    assert len(browsers) == 1
+    browser = browsers[0]
+    assert browser.closed is True
+    assert browser.closed_by == "asset-worker"
+    assert browser.contexts[0].closed_by == "asset-worker"
+    assert browser.contexts[0].pages[0].closed_by == "asset-worker"
+
+
+def test_threaded_file_fetcher_closes_thread_private_browser_on_worker_thread() -> None:
+    runtime_context = _runtime_context_with_forbidden_shared_browser()
+    browsers: list[_FakeBrowser] = []
+    fetcher = browser_workflow._build_shared_browser_file_fetcher(
+        browser_context_seed_getter=lambda: {"browser_user_agent": "UnitTestAgent/1.0"},
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        runtime_context=runtime_context,
+        use_runtime_shared_browser=False,
+        thread_local=True,
+    )
+    errors: list[BaseException] = []
+    result_holder: dict[str, object] = {}
+
+    def run_fetch() -> None:
+        try:
+            result_holder["result"] = fetcher("https://example.test/supplement.pdf", {"kind": "supplementary"})
+        except BaseException as exc:  # pragma: no cover - assertion reports the captured exception
+            errors.append(exc)
+
+    with (
+        mock.patch.dict(sys.modules, _fake_cloakbrowser_modules(browsers)),
+        mock.patch.object(
+            browser_workflow._SharedBrowserFileDocumentFetcher,
+            "_fetch_with_context_request",
+            return_value={
+                "status_code": 200,
+                "headers": {"content-type": "application/pdf"},
+                "body": b"%PDF-1.7 thread-private-file",
+                "url": "https://example.test/supplement.pdf",
+            },
+        ),
+    ):
+        worker = threading.Thread(target=run_fetch, name="asset-worker")
+        worker.start()
+        worker.join()
+        fetcher.close()
+
+    assert errors == []
+    assert result_holder["result"] is not None
+    runtime_context.new_browser_context.assert_not_called()
+    assert len(browsers) == 1
+    browser = browsers[0]
+    assert browser.closed is True
+    assert browser.closed_by == "asset-worker"
+    assert browser.contexts[0].closed_by == "asset-worker"
+    assert browser.contexts[0].pages[0].closed_by == "asset-worker"
+
+
+def test_threaded_file_fetcher_close_releases_all_thread_private_browser_resources() -> None:
+    runtime_context = _runtime_context_with_forbidden_shared_browser()
+    browsers: list[_FakeBrowser] = []
+    fetcher = browser_workflow._build_shared_browser_file_fetcher(
+        browser_context_seed_getter=lambda: {"browser_user_agent": "UnitTestAgent/1.0"},
+        seed_urls_getter=lambda: [],
+        browser_user_agent="UnitTestAgent/1.0",
+        runtime_context=runtime_context,
+        use_runtime_shared_browser=False,
+        thread_local=True,
+    )
+
+    created_fetchers = []
+
+    def build_fetcher() -> None:
+        inner_fetcher = fetcher._get_fetcher()
+        created_fetchers.append(inner_fetcher)
+        inner_fetcher._ensure_context()
+
+    try:
+        with mock.patch.dict(sys.modules, _fake_cloakbrowser_modules(browsers)):
+            build_fetcher()
+            worker = threading.Thread(target=build_fetcher, name="asset-worker")
+            worker.start()
+            worker.join()
+    finally:
+        fetcher.close()
+        fetcher.close()
+
+    runtime_context.new_browser_context.assert_not_called()
+    assert len(created_fetchers) == 2
+    assert len(browsers) == 2
+    for browser in browsers:
+        assert browser.closed is True
+        assert len(browser.contexts) == 1
+        assert browser.contexts[0].closed is True
+        assert len(browser.contexts[0].pages) == 1
+        assert browser.contexts[0].pages[0].closed is True

@@ -1,0 +1,4019 @@
+{
+  "samples": {
+    "10.48550_arxiv.1406.2661v1": {
+      "doi": "10.48550/arxiv.1406.2661v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/pdf/1406.2661v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/api.json",
+        "original.pdf": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.48550_arxiv.1406.2661v1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Generative Adversarial Networks",
+      "landing_url": "https://arxiv.org/abs/1406.2661v1",
+      "route_kind": "pdf_fallback",
+      "content_type": "application/pdf",
+      "expected_outcome": "fulltext"
+    },
+    "10.48550_arxiv.2006.11239v2": {
+      "doi": "10.48550/arxiv.2006.11239v2",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/pdf/2006.11239v2",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2006.11239v2/api.json",
+        "original.pdf": "tests/fixtures/golden_criteria/10.48550_arxiv.2006.11239v2/original.pdf"
+      },
+      "fixture_family": "golden",
+      "title": "Denoising Diffusion Probabilistic Models",
+      "landing_url": "https://arxiv.org/abs/2006.11239v2",
+      "route_kind": "pdf_fallback",
+      "content_type": "application/pdf"
+    },
+    "10.48550_arxiv.2605.06556v1": {
+      "doi": "10.48550/arxiv.2605.06556v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06556v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06556v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06556v1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Probability of Quota Violations in Divisor Apportionment Methods with Nonzero Allocations",
+      "landing_url": "https://arxiv.org/abs/2605.06556v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "10.48550_arxiv.2605.06598v1": {
+      "doi": "10.48550/arxiv.2605.06598v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06598v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06598v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06598v1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Mathematical Modeling of Early Embryonic Cell Cycles of Drosophila melanogaster",
+      "landing_url": "https://arxiv.org/abs/2605.06598v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "10.48550_arxiv.2605.06653v1": {
+      "doi": "10.48550/arxiv.2605.06653v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06653v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06653v1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "From Baby Universes to Narain Moduli: Topological Boundary Averaging in SymTFTs",
+      "landing_url": "https://arxiv.org/abs/2605.06653v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8",
+      "expected_outcome": "fulltext"
+    },
+    "10.48550_arxiv.2605.06659v1": {
+      "doi": "10.48550/arxiv.2605.06659v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06659v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06659v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06659v1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "The Pulsar Radial Acceleration Relation",
+      "landing_url": "https://arxiv.org/abs/2605.06659v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "10.48550_arxiv.2605.06663v1": {
+      "doi": "10.48550/arxiv.2605.06663v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06663v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06663v1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "EMO: Pretraining Mixture of Experts for Emergent Modularity",
+      "landing_url": "https://arxiv.org/abs/2605.06663v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8",
+      "expected_outcome": "fulltext"
+    },
+    "10.48550_arxiv.2605.06665v1": {
+      "doi": "10.48550/arxiv.2605.06665v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06665v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06665v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06665v1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "UniPool: A Globally Shared Expert Pool for Mixture-of-Experts",
+      "landing_url": "https://arxiv.org/abs/2605.06665v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "10.48550_arxiv.2605.06666v1": {
+      "doi": "10.48550/arxiv.2605.06666v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06666v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06666v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06666v1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "The Kubo-Thermalization Correspondence",
+      "landing_url": "https://arxiv.org/abs/2605.06666v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "10.48550_arxiv.2605.06667v1": {
+      "doi": "10.48550/arxiv.2605.06667v1",
+      "publisher": "arxiv",
+      "source_url": "https://arxiv.org/html/2605.06667v1",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "api.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/api.json",
+        "original.html": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.48550_arxiv.2605.06667v1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "ActCam: Zero-Shot Joint Camera and 3D Motion Control for Video Generation",
+      "landing_url": "https://arxiv.org/abs/2605.06667v1",
+      "route_kind": "html",
+      "content_type": "text/html; charset=utf-8",
+      "expected_outcome": "fulltext"
+    },
+    "10.1007_s10584-011-0143-4": {
+      "doi": "10.1007/s10584-011-0143-4",
+      "publisher": "springer",
+      "source_url": "https://link.springer.com/article/10.1007/s10584-011-0143-4",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "article.html": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/article.html",
+        "table1.html": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/table1.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1007_s10584-011-0143-4/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1007_s13158-025-00473-x": {
+      "doi": "10.1007/s13158-025-00473-x",
+      "publisher": "springer",
+      "source_url": "https://link.springer.com/article/10.1007/s13158-025-00473-x",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "bilingual.html": "tests/fixtures/golden_criteria/10.1007_s13158-025-00473-x/bilingual.html"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1016_S1575-1813(18)30261-4": {
+      "doi": "10.1016/S1575-1813(18)30261-4",
+      "publisher": "elsevier",
+      "source_url": "https://www.sciencedirect.com/science/article/pii/S1575181318302614",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "bilingual.xml": "tests/fixtures/golden_criteria/10.1016_S1575-1813(18)30261-4/bilingual.xml"
+      },
+      "fixture_family": "golden",
+      "expected_live_status": "metadata_only",
+      "expected_review_status": "skipped",
+      "out_of_scope_reason": "Intentional invalid DOI used to verify blocked/metadata-only handling."
+    },
+    "10.1016_j.agrformet.2024.109975": {
+      "doi": "10.1016/j.agrformet.2024.109975",
+      "publisher": "elsevier",
+      "source_url": "/content/article/doi/10.1016%2Fj.agrformet.2024.109975?view=FULL",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.109975/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.109975/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.109975/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.109975/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.109975/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Optimal representation of spring phenology on photosynthetic productivity across the northern hemisphere forests",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S016819232400090X",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "expected_outcome": "fulltext"
+    },
+    "10.1016_j.jhydrol.2021.126210": {
+      "doi": "10.1016/j.jhydrol.2021.126210",
+      "publisher": "elsevier",
+      "source_url": "/content/article/doi/10.1016%2Fj.jhydrol.2021.126210?view=FULL",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2021.126210/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2021.126210/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2021.126210/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2021.126210/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2021.126210/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "The interactions between hydrological drought evolution and precipitation-streamflow relationship",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S0022169421002572",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "expected_outcome": "fulltext"
+    },
+    "10.1016_j.rse.2026.115369": {
+      "doi": "10.1016/j.rse.2026.115369",
+      "publisher": "elsevier",
+      "source_url": "https://doi.org/10.1016/j.rse.2026.115369",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.rse.2026.115369/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.rse.2026.115369/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1016_j.rse.2026.115369/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1016_j.rse.2026.115369/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1016_j.rse.2026.115369/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "official",
+      "content_type": "text/xml"
+    },
+    "10.1029_2004gb002273": {
+      "doi": "10.1029/2004GB002273",
+      "publisher": "wiley",
+      "source_url": "https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2004GB002273",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "article.json": "tests/fixtures/golden_criteria/10.1029_2004gb002273/article.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1029_2004gb002273/original.html",
+        "body_assets/gbc1137-fig-0001.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0001.png",
+        "body_assets/gbc1137-fig-0002.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0002.png",
+        "body_assets/gbc1137-fig-0003.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0003.png",
+        "body_assets/gbc1137-fig-0004.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0004.png",
+        "body_assets/gbc1137-fig-0005.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0005.png",
+        "body_assets/gbc1137-fig-0006.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0006.png",
+        "body_assets/gbc1137-fig-0007.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0007.png",
+        "body_assets/gbc1137-fig-0008.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0008.png",
+        "body_assets/gbc1137-fig-0009.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0009.png",
+        "body_assets/gbc1137-fig-0010.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0010.png",
+        "body_assets/gbc1137-fig-0011.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0011.png",
+        "body_assets/gbc1137-fig-0012.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0012.png",
+        "body_assets/gbc1137-fig-0013.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0013.png",
+        "body_assets/gbc1137-fig-0014.png": "tests/fixtures/golden_criteria/10.1029_2004gb002273/body_assets/gbc1137-fig-0014.png"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1038_d41586-022-01795-9": {
+      "doi": "10.1038/d41586-022-01795-9",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/d41586-022-01795-9",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1038_d41586-022-01795-9/original.html"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1038_d41586-023-01829-w": {
+      "doi": "10.1038/d41586-023-01829-w",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/d41586-023-01829-w",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1038_d41586-023-01829-w/original.html"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1038_nature12915": {
+      "doi": "10.1038/nature12915",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/nature12915",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1038_nature12915/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_nature12915/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1038_nature12915/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1038_nature12915/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1038_nature12915/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1038_nature13376": {
+      "doi": "10.1038/nature13376",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/nature13376",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1038_nature13376/original.html"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1038_s41586-020-1941-5": {
+      "doi": "10.1038/s41586-020-1941-5",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/s41586-020-1941-5",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41586-020-1941-5/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41586-020-1941-5/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Forest age and water yield",
+      "landing_url": "https://www.nature.com/articles/s41586-020-1941-5",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\""
+    },
+    "10.1038_s41561-022-00983-6": {
+      "doi": "10.1038/s41561-022-00983-6",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/s41561-022-00983-6?error=cookies_not_supported&code=878a739c-666d-4c3e-a11b-e874a338eba9",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41561-022-00983-6/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41561-022-00983-6/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Ozone depletion over the Arctic affects spring climate in the Northern Hemisphere",
+      "landing_url": "https://www.nature.com/articles/s41561-022-00983-6",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\""
+    },
+    "10.1038_s43247-024-01295-w": {
+      "doi": "10.1038/s43247-024-01295-w",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/s43247-024-01295-w?error=cookies_not_supported&code=7f269c99-5e6f-461f-a869-d74c8cfb969e",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/original.html",
+        "table1.html": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/table1.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1038_s43247-024-01295-w/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Hydrological drought forecasts using precipitation data depend on catchment properties and human activities",
+      "landing_url": "https://www.nature.com/articles/s43247-024-01295-w",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "expected_outcome": "fulltext"
+    },
+    "10.1038_s44221-022-00024-x": {
+      "doi": "10.1038/s44221-022-00024-x",
+      "publisher": "springer",
+      "source_url": "https://www.nature.com/articles/s44221-022-00024-x?error=cookies_not_supported&code=fd4a58ff-1e9c-4ce3-b7dd-de227a9ca384",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s44221-022-00024-x/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s44221-022-00024-x/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "How Australia's Millennium drought induced hydrological shifts",
+      "landing_url": "https://www.nature.com/articles/s44221-022-00024-x",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\""
+    },
+    "10.1073_pnas.2309123120": {
+      "doi": "10.1073/pnas.2309123120",
+      "publisher": "pnas",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2309123120",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2309123120/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1073_pnas.2309123120/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2309123120/original.html",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1073_pnas.2309123120/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1073_pnas.2309123120/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Amazon deforestation causes strong regional warming",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2309123120",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1073_pnas.2317456120": {
+      "doi": "10.1073/pnas.2317456120",
+      "publisher": "pnas",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2317456120",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "commentary.html": "tests/fixtures/golden_criteria/10.1073_pnas.2317456120/commentary.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2317456120/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2317456120/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Amazon deforestation implications in local/regional climate change",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2317456120",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1073_pnas.2406303121": {
+      "doi": "10.1073/pnas.2406303121",
+      "publisher": "pnas",
+      "source_url": "https://www.pnas.org/doi/full/10.1073/pnas.2406303121",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "abstract.html": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/abstract.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/expected.json",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1073_pnas.2406303121/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1080_19455224.2025.2547671": {
+      "doi": "10.1080/19455224.2025.2547671",
+      "publisher": "tandf",
+      "source_url": "https://www.tandfonline.com/doi/full/10.1080/19455224.2025.2547671",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "bilingual.html": "tests/fixtures/golden_criteria/10.1080_19455224.2025.2547671/bilingual.html"
+      },
+      "fixture_family": "golden",
+      "expected_live_status": "skipped_unsupported_provider",
+      "expected_review_status": "skipped",
+      "out_of_scope_reason": "Provider support for TandF is intentionally out of scope for this live review run."
+    },
+    "10.1109_ACCESS.2024.3352924": {
+      "doi": "10.1109/ACCESS.2024.3352924",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10388355/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/references.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_ACCESS.2024.3352924/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE Access dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10388355/",
+      "article_number": "10388355",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_CICTN64563.2025.10932570": {
+      "doi": "10.1109/CICTN64563.2025.10932570",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10932570/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/references.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_CICTN64563.2025.10932570/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE conference proceedings dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10932570/",
+      "article_number": "10932570",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_RITA.2026.3668995": {
+      "doi": "10.1109/RITA.2026.3668995",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/11417163/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/landing.html",
+        "multimedia.json": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/multimedia.json",
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_RITA.2026.3668995/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE RITA supplementary multimedia sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/11417163/",
+      "article_number": "11417163",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_MPER.1985.5526567": {
+      "doi": "10.1109/MPER.1985.5526567",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=5526567",
+      "origin_kind": "synthetic",
+      "usage_kind": "content",
+      "assets": {
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_MPER.1985.5526567/landing.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_MPER.1985.5526567/extracted.md",
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_MPER.1985.5526567/expected.json",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_MPER.1985.5526567/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_MPER.1985.5526567/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE legacy PDF fallback sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/5526567/",
+      "article_number": "5526567",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "ieee_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_PGEC.1967.264619": {
+      "doi": "10.1109/PGEC.1967.264619",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4038993",
+      "origin_kind": "synthetic",
+      "usage_kind": "content",
+      "assets": {
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_PGEC.1967.264619/landing.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_PGEC.1967.264619/extracted.md",
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_PGEC.1967.264619/expected.json",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_PGEC.1967.264619/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_PGEC.1967.264619/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE early legacy PDF fallback sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/4038993/",
+      "article_number": "4038993",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "ieee_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_TBME.2024.3434477": {
+      "doi": "10.1109/TBME.2024.3434477",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10612240/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/references.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_TBME.2024.3434477/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE TBME dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10612240/",
+      "article_number": "10612240",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1109_TCOMM.2024.3395332": {
+      "doi": "10.1109/TCOMM.2024.3395332",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10511075/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_TCOMM.2024.3395332/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_TCOMM.2024.3395332/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_TCOMM.2024.3395332/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_TCOMM.2024.3395332/references.json"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE TCOMM dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10511075/",
+      "article_number": "10511075",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext"
+    },
+    "10.1109_TDEI.2024.3373549": {
+      "doi": "10.1109/TDEI.2024.3373549",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10459335/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_TDEI.2024.3373549/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_TDEI.2024.3373549/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_TDEI.2024.3373549/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_TDEI.2024.3373549/references.json"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE TDEI dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10459335/",
+      "article_number": "10459335",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext"
+    },
+    "10.1109_TE.2024.3376795": {
+      "doi": "10.1109/TE.2024.3376795",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10496257/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_TE.2024.3376795/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_TE.2024.3376795/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_TE.2024.3376795/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_TE.2024.3376795/references.json"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE TE dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10496257/",
+      "article_number": "10496257",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext"
+    },
+    "10.1109_TIM.2024.3509573": {
+      "doi": "10.1109/TIM.2024.3509573",
+      "publisher": "ieee",
+      "source_url": "https://ieeexplore.ieee.org/rest/document/10772041/?logAccess=true",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/original.html",
+        "landing.html": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/landing.html",
+        "references.json": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/references.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1109_TIM.2024.3509573/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "IEEE TIM dynamic HTML sample",
+      "landing_url": "https://ieeexplore.ieee.org/document/10772041/",
+      "article_number": "10772041",
+      "route_kind": "html",
+      "expected_route": "dynamic_html",
+      "expected_source": "ieee_html",
+      "expected_content_kind": "fulltext",
+      "content_type": "text/html;charset=utf-8",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.1111_cas.16117": {
+      "doi": "10.1111/cas.16117",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/cas.16117",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "extracted.md": "tests/fixtures/golden_criteria/10.1111_cas.16117/extracted.md"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1111_cas.16395": {
+      "doi": "10.1111/cas.16395",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/full/10.1111/cas.16395",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "extracted.md": "tests/fixtures/golden_criteria/10.1111_cas.16395/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_cas.16395/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_cas.16395/expected.json",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1111_cas.16395/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1111_cas.16395/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1111_gcb.16386": {
+      "doi": "10.1111/gcb.16386",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16386",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "bilingual.html": "tests/fixtures/golden_criteria/10.1111_gcb.16386/bilingual.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16386/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16386/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "10.1111/gcb.16386",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16386",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1111_gcb.16414": {
+      "doi": "10.1111/gcb.16414",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/full/10.1111/gcb.16414",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16414/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1111_gcb.16414/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16414/original.html",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1111_gcb.16414/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1111_gcb.16414/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Contrasting temperature effects on the velocity of early- versus late-stage vegetation green-up in the Northern Hemisphere",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16414",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1111_gcb.16455": {
+      "doi": "10.1111/gcb.16455",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16455",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16455/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16455/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Tropical surface temperature response to vegetation cover changes and the role of drylands",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16455",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1111_gcb.16998": {
+      "doi": "10.1111/gcb.16998",
+      "publisher": "wiley",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16998",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16998/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16998/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1111_gcb.16998/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1111_gcb.16998/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1111_gcb.16998/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Drought thresholds that impact vegetation reveal the divergent responses of vegetation growth to drought across China",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16998",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1126_sciadv.abf8021": {
+      "doi": "10.1126/sciadv.abf8021",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/10.1126/sciadv.abf8021",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.abf8021/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.abf8021/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Increasing precipitation variability on daily-to-multiyear time scales in a warmer world",
+      "landing_url": "https://www.science.org/doi/10.1126/sciadv.abf8021",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1126_sciadv.abg9690": {
+      "doi": "10.1126/sciadv.abg9690",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/10.1126/sciadv.abg9690",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.abg9690/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.abg9690/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Greenhouse warming intensifies north tropical Atlantic climate variability",
+      "landing_url": "https://www.science.org/doi/10.1126/sciadv.abg9690",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1126_sciadv.adl6155": {
+      "doi": "10.1126/sciadv.adl6155",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/full/10.1126/sciadv.adl6155",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "article.json": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/article.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/original.html",
+        "body_assets/sciadv.adl6155-f1.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f1.jpg",
+        "body_assets/sciadv.adl6155-f2.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f2.jpg",
+        "body_assets/sciadv.adl6155-f3.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f3.jpg",
+        "body_assets/sciadv.adl6155-f4.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f4.jpg",
+        "body_assets/sciadv.adl6155-f5.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f5.jpg",
+        "body_assets/sciadv.adl6155-f6.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f6.jpg",
+        "body_assets/sciadv.adl6155-f7.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f7.jpg",
+        "body_assets/sciadv.adl6155-f8.jpg": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/body_assets/sciadv.adl6155-f8.jpg",
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1126_sciadv.adl6155/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "expected_outcome": "fulltext",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1126_sciadv.adm9732": {
+      "doi": "10.1126/sciadv.adm9732",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/10.1126/sciadv.adm9732",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.adm9732/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.adm9732/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Disturbance amplifies sensitivity of dryland productivity to precipitation variability",
+      "landing_url": "https://www.science.org/doi/10.1126/sciadv.adm9732",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1126_science.abp8622": {
+      "doi": "10.1126/science.abp8622",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/10.1126/science.abp8622",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.abp8622/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.abp8622/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_science.abp8622/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1126_science.abp8622/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1126_science.abp8622/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "The drivers and impacts of Amazon forest degradation",
+      "landing_url": "https://www.science.org/doi/10.1126/science.abp8622",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1126_science.adp0212": {
+      "doi": "10.1126/science.adp0212",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/10.1126/science.adp0212",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.adp0212/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_science.adp0212/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.adp0212/original.html",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1126_science.adp0212/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1126_science.adp0212/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Anthropogenic amplification of precipitation variability over the past century",
+      "landing_url": "https://www.science.org/doi/10.1126/science.adp0212",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1126_science.adz3492": {
+      "doi": "10.1126/science.adz3492",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.adz3492",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.adz3492/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_science.adz3492/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.adz3492/original.html",
+        "body_assets/science.adz3492-f1.svg": "tests/fixtures/golden_criteria/10.1126_science.adz3492/body_assets/science.adz3492-f1.svg",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1126_science.adz3492/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1126_science.adz3492/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "New demand goals for energy and climate resilience",
+      "landing_url": "https://www.science.org/doi/10.1126/science.adz3492",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1126_science.ady3136": {
+      "doi": "10.1126/science.ady3136",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.ady3136",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_science.ady3136/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.ady3136/original.html"
+      },
+      "fixture_family": "golden"
+    },
+    "10.1126_science.aeg3511": {
+      "doi": "10.1126/science.aeg3511",
+      "publisher": "science",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.aeg3511",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.aeg3511/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1126_science.aeg3511/extracted.md",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.aeg3511/original.html",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1126_science.aeg3511/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1126_science.aeg3511/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Magma plumbing beneath Yellowstone",
+      "landing_url": "https://www.science.org/doi/10.1126/science.aeg3511",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1345_aph.1M379": {
+      "doi": "10.1345/aph.1M379",
+      "publisher": "sage",
+      "source_url": "https://journals.sagepub.com/doi/full/10.1345/aph.1M379",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "bilingual.html": "tests/fixtures/golden_criteria/10.1345_aph.1M379/bilingual.html"
+      },
+      "fixture_family": "golden",
+      "expected_live_status": "skipped_unsupported_provider",
+      "expected_review_status": "skipped",
+      "out_of_scope_reason": "Provider support for Sage is intentionally out of scope for this live review run."
+    },
+    "scenario_elsevier_author_groups_minimal": {
+      "doi": "scenario:elsevier_author_groups_minimal",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_author_groups_minimal",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_author_groups_minimal/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_generic_metadata_boundaries": {
+      "doi": "scenario:generic_metadata_boundaries",
+      "publisher": "generic",
+      "source_url": "scenario://generic_metadata_boundaries",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "generic_description.html": "tests/fixtures/golden_criteria/_scenarios/generic_metadata_boundaries/generic_description.html",
+        "redirect_stub.html": "tests/fixtures/golden_criteria/_scenarios/generic_metadata_boundaries/redirect_stub.html"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_provider_dom_abstract_fallback": {
+      "doi": "scenario:provider_dom_abstract_fallback",
+      "publisher": "science",
+      "source_url": "scenario://provider_dom_abstract_fallback",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "payload.json": "tests/fixtures/golden_criteria/_scenarios/provider_dom_abstract_fallback/payload.json"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_inline_figure_link_rewrite": {
+      "doi": "scenario:inline_figure_link_rewrite",
+      "publisher": "generic",
+      "source_url": "scenario://inline_figure_link_rewrite",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "article.md": "tests/fixtures/golden_criteria/_scenarios/inline_figure_link_rewrite/article.md",
+        "assets.json": "tests/fixtures/golden_criteria/_scenarios/inline_figure_link_rewrite/assets.json"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_asset_download_diagnostics": {
+      "doi": "scenario:asset_download_diagnostics",
+      "publisher": "mcp",
+      "source_url": "scenario://asset_download_diagnostics",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "article_payload.json": "tests/fixtures/golden_criteria/_scenarios/asset_download_diagnostics/article_payload.json"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_table_flatten_or_list": {
+      "doi": "scenario:table_flatten_or_list",
+      "publisher": "generic",
+      "source_url": "scenario://table_flatten_or_list",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "complex_table.html": "tests/fixtures/golden_criteria/_scenarios/table_flatten_or_list/complex_table.html"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_availability_body_metrics": {
+      "doi": "scenario:availability_body_metrics",
+      "publisher": "models",
+      "source_url": "scenario://availability_body_metrics",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "code_availability.md": "tests/fixtures/golden_criteria/_scenarios/availability_body_metrics/code_availability.md"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_section_hints_availability": {
+      "doi": "scenario:section_hints_availability",
+      "publisher": "models",
+      "source_url": "scenario://section_hints_availability",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "article.md": "tests/fixtures/golden_criteria/_scenarios/section_hints_availability/article.md",
+        "section_hints.json": "tests/fixtures/golden_criteria/_scenarios/section_hints_availability/section_hints.json"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_formula_latex_normalization": {
+      "doi": "scenario:formula_latex_normalization",
+      "publisher": "generic",
+      "source_url": "scenario://formula_latex_normalization",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "samples.json": "tests/fixtures/golden_criteria/_scenarios/formula_latex_normalization/samples.json"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_elsevier_formula_inline_display": {
+      "doi": "scenario:elsevier_formula_inline_display",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_formula_inline_display",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_formula_inline_display/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_elsevier_formula_missing": {
+      "doi": "scenario:elsevier_formula_missing",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_formula_missing",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_formula_missing/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_elsevier_supplementary_display": {
+      "doi": "scenario:elsevier_supplementary_display",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_supplementary_display",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_supplementary_display/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_elsevier_supplementary_asset_only": {
+      "doi": "scenario:elsevier_supplementary_asset_only",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_supplementary_asset_only",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_supplementary_asset_only/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_elsevier_complex_table_span": {
+      "doi": "scenario:elsevier_complex_table_span",
+      "publisher": "elsevier",
+      "source_url": "scenario://elsevier_complex_table_span",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/_scenarios/elsevier_complex_table_span/original.xml"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_springer_main_content_direct_children": {
+      "doi": "scenario:springer_main_content_direct_children",
+      "publisher": "springer",
+      "source_url": "scenario://springer_main_content_direct_children",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/_scenarios/springer_main_content_direct_children/original.html"
+      },
+      "fixture_family": "scenario"
+    },
+    "scenario_wiley_abbreviations_trailing": {
+      "doi": "scenario:wiley_abbreviations_trailing",
+      "publisher": "wiley",
+      "source_url": "scenario://wiley_abbreviations_trailing",
+      "origin_kind": "contract_scenario",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/_scenarios/wiley_abbreviations_trailing/original.html"
+      },
+      "fixture_family": "scenario"
+    },
+    "10.1016_j.agrformet.2024.110321": {
+      "doi": "10.1016/j.agrformet.2024.110321",
+      "publisher": "elsevier",
+      "title": "Land-atmosphere feedback exacerbated the mega heatwave and drought over the Yangtze River Basin of China during summer 2022",
+      "source_url": "/content/article/doi/10.1016%2Fj.agrformet.2024.110321?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S0168192324004349",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.110321/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.agrformet.2024.110321/original.xml"
+      }
+    },
+    "10.1016_j.ecolind.2023.110326": {
+      "doi": "10.1016/j.ecolind.2023.110326",
+      "publisher": "elsevier",
+      "title": "Climate warming-induced phenology changes dominate vegetation productivity in Northern Hemisphere ecosystems",
+      "source_url": "/content/article/doi/10.1016%2Fj.ecolind.2023.110326?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S1470160X23004685",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2023.110326/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2023.110326/original.xml"
+      }
+    },
+    "10.1016_j.ecolind.2024.112140": {
+      "doi": "10.1016/j.ecolind.2024.112140",
+      "publisher": "elsevier",
+      "title": "The variability in sensitivity of vegetation greenness to climate change across Eurasia",
+      "source_url": "/content/article/doi/10.1016%2Fj.ecolind.2024.112140?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S1470160X24005971",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2024.112140/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2024.112140/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2024.112140/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2024.112140/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1016_j.ecolind.2024.112140/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "fulltext"
+    },
+    "10.1016_j.jhydrol.2023.130125": {
+      "doi": "10.1016/j.jhydrol.2023.130125",
+      "publisher": "elsevier",
+      "title": "An evaluation of the response of vegetation greenness, moisture, fluorescence, and temperature-based remote sensing indicators to drought stress",
+      "source_url": "/content/article/doi/10.1016%2Fj.jhydrol.2023.130125?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S0022169423010673",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2023.130125/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.jhydrol.2023.130125/original.xml"
+      }
+    },
+    "10.1016_j.rse.2024.114346": {
+      "doi": "10.1016/j.rse.2024.114346",
+      "publisher": "elsevier",
+      "title": "Patterns and Trends in Northern Hemisphere River Ice Phenology from 2000 to 2021",
+      "source_url": "/content/article/doi/10.1016%2Fj.rse.2024.114346?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S003442572400364X",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.rse.2024.114346/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.rse.2024.114346/original.xml"
+      }
+    },
+    "10.1016_j.rse.2025.114648": {
+      "doi": "10.1016/j.rse.2025.114648",
+      "publisher": "elsevier",
+      "title": "Seasonality of vegetation greenness in Southeast Asia unveiled by geostationary satellite observations",
+      "source_url": "/content/article/doi/10.1016%2Fj.rse.2025.114648?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S0034425725000525",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.rse.2025.114648/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.rse.2025.114648/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1016_j.rse.2025.114648/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1016_j.rse.2025.114648/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1016_j.rse.2025.114648/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "fulltext"
+    },
+    "10.1016_j.scitotenv.2022.158109": {
+      "doi": "10.1016/j.scitotenv.2022.158109",
+      "publisher": "elsevier",
+      "title": "Land-atmosphere coupling speeds up flash drought onset",
+      "source_url": "/content/article/doi/10.1016%2Fj.scitotenv.2022.158109?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S0048969722052081",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.scitotenv.2022.158109/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.scitotenv.2022.158109/original.xml"
+      }
+    },
+    "10.1016_j.scitotenv.2022.158499": {
+      "doi": "10.1016/j.scitotenv.2022.158499",
+      "publisher": "elsevier",
+      "title": "Assessing the impact of drought-land cover change on global vegetation greenness and productivity",
+      "source_url": "/content/article/doi/10.1016%2Fj.scitotenv.2022.158499?view=FULL",
+      "landing_url": "https://linkinghub.elsevier.com/retrieve/pii/S004896972205598X",
+      "route_kind": "official",
+      "content_type": "text/xml;charset=UTF-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1016_j.scitotenv.2022.158499/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.1016_j.scitotenv.2022.158499/original.xml"
+      }
+    },
+    "10.1038_s41467-022-30729-2": {
+      "doi": "10.1038/s41467-022-30729-2",
+      "publisher": "springer",
+      "title": "The timing of unprecedented hydrological drought under climate change",
+      "source_url": "https://www.nature.com/articles/s41467-022-30729-2?error=cookies_not_supported&code=25e21ede-f852-4acd-a8a6-ae7d0b3ab002",
+      "landing_url": "https://www.nature.com/articles/s41467-022-30729-2",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41467-022-30729-2/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41467-022-30729-2/original.html"
+      }
+    },
+    "10.1038_s41558-022-01584-2": {
+      "doi": "10.1038/s41558-022-01584-2",
+      "publisher": "springer",
+      "title": "Widespread spring phenology effects on drought recovery of Northern Hemisphere ecosystems",
+      "source_url": "https://www.nature.com/articles/s41558-022-01584-2?error=cookies_not_supported&code=469bc604-3e9f-4bd3-a263-b81a5ef66bc6",
+      "landing_url": "https://www.nature.com/articles/s41558-022-01584-2",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41558-022-01584-2/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41558-022-01584-2/original.html"
+      }
+    },
+    "10.1038_s41561-022-00912-7": {
+      "doi": "10.1038/s41561-022-00912-7",
+      "publisher": "springer",
+      "title": "Drought self-propagation in drylands due to land-atmosphere feedbacks",
+      "source_url": "https://www.nature.com/articles/s41561-022-00912-7?error=cookies_not_supported&code=8bd4e815-f1ef-42f5-b359-ac6504182eb6",
+      "landing_url": "https://www.nature.com/articles/s41561-022-00912-7",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41561-022-00912-7/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41561-022-00912-7/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1038_s41561-022-00912-7/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1038_s41561-022-00912-7/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1038_s41561-022-00912-7/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "fulltext"
+    },
+    "10.1038_s41561-022-00974-7": {
+      "doi": "10.1038/s41561-022-00974-7",
+      "publisher": "springer",
+      "title": "Springtime arctic ozone depletion forces northern hemisphere climate anomalies",
+      "source_url": "https://www.nature.com/articles/s41561-022-00974-7?error=cookies_not_supported&code=2d22bdf5-5eee-4d9a-b904-a7a8dd3754e9",
+      "landing_url": "https://www.nature.com/articles/s41561-022-00974-7",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41561-022-00974-7/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41561-022-00974-7/original.html"
+      }
+    },
+    "10.1038_s41612-021-00218-2": {
+      "doi": "10.1038/s41612-021-00218-2",
+      "publisher": "springer",
+      "title": "Northern Hemisphere drought risk in a warming climate",
+      "source_url": "https://www.nature.com/articles/s41612-021-00218-2?error=cookies_not_supported&code=c757a944-9b8c-44d6-bf90-b70e477c0d4c",
+      "landing_url": "https://www.nature.com/articles/s41612-021-00218-2",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s41612-021-00218-2/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s41612-021-00218-2/original.html"
+      }
+    },
+    "10.1038_s43247-024-01270-5": {
+      "doi": "10.1038/s43247-024-01270-5",
+      "publisher": "springer",
+      "title": "Earlier spring greening in Northern Hemisphere terrestrial biomes enhanced net ecosystem productivity in summer",
+      "source_url": "https://www.nature.com/articles/s43247-024-01270-5?error=cookies_not_supported&code=cadcc321-0498-4ff7-95a8-0b010aebe341",
+      "landing_url": "https://www.nature.com/articles/s43247-024-01270-5",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s43247-024-01270-5/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s43247-024-01270-5/original.html"
+      }
+    },
+    "10.1038_s43247-024-01885-8": {
+      "doi": "10.1038/s43247-024-01885-8",
+      "publisher": "springer",
+      "title": "Embedding machine-learnt sub-grid variability improves climate model precipitation patterns",
+      "source_url": "https://www.nature.com/articles/s43247-024-01885-8?error=cookies_not_supported&code=f799b99f-ff4a-48bd-aa7d-01443cd48778",
+      "landing_url": "https://www.nature.com/articles/s43247-024-01885-8",
+      "route_kind": "html",
+      "content_type": "text/html; charset=\"UTF-8\"",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1038_s43247-024-01885-8/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1038_s43247-024-01885-8/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1038_s43247-024-01885-8/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1038_s43247-024-01885-8/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1038_s43247-024-01885-8/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "fulltext"
+    },
+    "10.1073_pnas.1915921117": {
+      "doi": "10.1073/pnas.1915921117",
+      "publisher": "pnas",
+      "title": "Global snow drought hot spots and characteristics",
+      "source_url": "https://www.pnas.org/doi/full/10.1073/pnas.1915921117",
+      "landing_url": "https://pnas.org/doi/full/10.1073/pnas.1915921117",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.1915921117/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.1915921117/original.html"
+      }
+    },
+    "10.1073_pnas.2208095119": {
+      "doi": "10.1073/pnas.2208095119",
+      "publisher": "pnas",
+      "title": "The importance of internal climate variability in climate impact projections",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2208095119",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2208095119",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2208095119/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2208095119/original.html"
+      }
+    },
+    "10.1073_pnas.2305050120": {
+      "doi": "10.1073/pnas.2305050120",
+      "publisher": "pnas",
+      "title": "10.1073/pnas.2305050120",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2305050120",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2305050120",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2305050120/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2305050120/original.html"
+      }
+    },
+    "10.1073_pnas.2310157121": {
+      "doi": "10.1073/pnas.2310157121",
+      "publisher": "pnas",
+      "title": "A large net carbon loss attributed to anthropogenic and natural disturbances in the Amazon Arc of Deforestation",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2310157121",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2310157121",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2310157121/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2310157121/original.html"
+      }
+    },
+    "10.1073_pnas.2314265121": {
+      "doi": "10.1073/pnas.2314265121",
+      "publisher": "pnas",
+      "title": "Weaker land-atmosphere coupling in global storm-resolving simulation",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2314265121",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2314265121",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2314265121/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2314265121/original.html"
+      }
+    },
+    "10.1073_pnas.2322622121": {
+      "doi": "10.1073/pnas.2322622121",
+      "publisher": "pnas",
+      "title": "Partitioning the drivers of Antarctic glacier mass balance (2003-2020) using satellite observations and a regional climate model",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2322622121",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2322622121",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2322622121/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2322622121/original.html"
+      }
+    },
+    "10.1073_pnas.2402656121": {
+      "doi": "10.1073/pnas.2402656121",
+      "publisher": "pnas",
+      "title": "US Corn Belt enhances regional precipitation recycling",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2402656121",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2402656121",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2402656121/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2402656121/original.html"
+      }
+    },
+    "10.1073_pnas.2410294121": {
+      "doi": "10.1073/pnas.2410294121",
+      "publisher": "pnas",
+      "title": "Surging compound drought-heatwaves underrated in global soils",
+      "source_url": "https://www.pnas.org/doi/10.1073/pnas.2410294121",
+      "landing_url": "https://pnas.org/doi/10.1073/pnas.2410294121",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1073_pnas.2410294121/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1073_pnas.2410294121/original.html"
+      }
+    },
+    "10.1111_gcb.15322": {
+      "doi": "10.1111/gcb.15322",
+      "publisher": "wiley",
+      "title": "Accelerated rate of vegetation green-up related to warming at northern high latitudes",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.15322",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.15322",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.15322/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.15322/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1111_gcb.15322/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1111_gcb.15322/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1111_gcb.15322/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "fulltext"
+    },
+    "10.1111_gcb.16011": {
+      "doi": "10.1111/gcb.16011",
+      "publisher": "wiley",
+      "title": "Vegetation green-up date is more sensitive to permafrost degradation than climate change in spring across the northern permafrost region",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16011",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16011",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16011/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16011/original.html"
+      }
+    },
+    "10.1111_gcb.16561": {
+      "doi": "10.1111/gcb.16561",
+      "publisher": "wiley",
+      "title": "Climate-driven vegetation greening further reduces water availability in drylands",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16561",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16561",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16561/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16561/original.html"
+      }
+    },
+    "10.1111_gcb.16745": {
+      "doi": "10.1111/gcb.16745",
+      "publisher": "wiley",
+      "title": "Contrasting ecosystem vegetation response in global drylands under drying and wetting conditions",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16745",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16745",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16745/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16745/original.html"
+      }
+    },
+    "10.1111_gcb.16758": {
+      "doi": "10.1111/gcb.16758",
+      "publisher": "wiley",
+      "title": "Spring phenology rather than climate dominates the trends in peak of growing season in the Northern Hemisphere",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16758",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16758",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.16758/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.16758/original.html"
+      }
+    },
+    "10.1111_gcb.17141": {
+      "doi": "10.1111/gcb.17141",
+      "publisher": "wiley",
+      "title": "Declining coupling between vegetation and drought over the past three decades",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.17141",
+      "landing_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.17141",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1111_gcb.17141/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1111_gcb.17141/original.html"
+      }
+    },
+    "10.1126_sciadv.aax6869": {
+      "doi": "10.1126/sciadv.aax6869",
+      "publisher": "science",
+      "title": "Strong future increases in Arctic precipitation variability linked to poleward moisture transport",
+      "source_url": "https://www.science.org/doi/10.1126/sciadv.aax6869",
+      "landing_url": "https://www.science.org/doi/10.1126/sciadv.aax6869",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.aax6869/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.aax6869/original.html"
+      }
+    },
+    "10.1126_sciadv.abj3309": {
+      "doi": "10.1126/sciadv.abj3309",
+      "publisher": "science",
+      "title": "Projections of future forest degradation and CO2 emissions for the Brazilian Amazon",
+      "source_url": "https://www.science.org/doi/10.1126/sciadv.abj3309",
+      "landing_url": "https://www.science.org/doi/10.1126/sciadv.abj3309",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_sciadv.abj3309/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_sciadv.abj3309/original.html"
+      }
+    },
+    "10.1126_science.abb3021": {
+      "doi": "10.1126/science.abb3021",
+      "publisher": "science",
+      "title": "Long-term forest degradation surpasses deforestation in the Brazilian Amazon",
+      "source_url": "https://www.science.org/doi/10.1126/science.abb3021",
+      "landing_url": "https://www.science.org/doi/10.1126/science.abb3021",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.abb3021/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.abb3021/original.html"
+      }
+    },
+    "10.1126_science.ade0347": {
+      "doi": "10.1126/science.ade0347",
+      "publisher": "science",
+      "title": "Magma accumulation at depths of prior rhyolite storage beneath Yellowstone Caldera",
+      "source_url": "https://www.science.org/doi/10.1126/science.ade0347",
+      "landing_url": "https://www.science.org/doi/10.1126/science.ade0347",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "golden",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1126_science.ade0347/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1126_science.ade0347/original.html"
+      }
+    },
+    "10.1007_s00382-018-4286-0__block": {
+      "doi": "10.1007/s00382-018-4286-0",
+      "publisher": "springer",
+      "title": "Does global warming amplify interannual climate variability?",
+      "source_url": "https://link.springer.com/article/10.1007/s00382-018-4286-0",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1007_s00382-018-4286-0/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1007_s00382-018-4286-0/raw.html",
+        "expected.json": "tests/fixtures/block/10.1007_s00382-018-4286-0/expected.json",
+        "markdown-quality.json": "tests/fixtures/block/10.1007_s00382-018-4286-0/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/block/10.1007_s00382-018-4286-0/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "blocked",
+      "route_kind": "blocked",
+      "content_type": "text/html"
+    },
+    "10.1007_s11430-021-9892-6__block": {
+      "doi": "10.1007/s11430-021-9892-6",
+      "publisher": "springer",
+      "title": "Estimation of China\u2019s terrestrial ecosystem carbon sink: Methods, progress and prospects",
+      "source_url": "https://link.springer.com/article/10.1007/s11430-021-9892-6",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1007_s11430-021-9892-6/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1007_s11430-021-9892-6/raw.html"
+      }
+    },
+    "10.1007_s12652-019-01399-8__block": {
+      "doi": "10.1007/s12652-019-01399-8",
+      "publisher": "springer",
+      "title": "Sentiment analysis and text categorization of cancer medical records with LSTM",
+      "source_url": "https://link.springer.com/article/10.1007/s12652-019-01399-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1007_s12652-019-01399-8/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1007_s12652-019-01399-8/raw.html"
+      }
+    },
+    "10.1007_s13351-020-9829-8__block": {
+      "doi": "10.1007/s13351-020-9829-8",
+      "publisher": "springer",
+      "title": "Causes and Changes of Drought in China: Research Progress and Prospects",
+      "source_url": "https://link.springer.com/article/10.1007/s13351-020-9829-8",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1007_s13351-020-9829-8/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1007_s13351-020-9829-8/raw.html"
+      }
+    },
+    "10.1073_pnas.2509692123__block": {
+      "doi": "10.1073/pnas.2509692123",
+      "publisher": "pnas",
+      "title": "A discrete serotonergic circuit involved in the generation of tinnitus behavior",
+      "source_url": "https://www.pnas.org/doi/full/10.1073/pnas.2509692123",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1073_pnas.2509692123/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1073_pnas.2509692123/raw.html",
+        "expected.json": "tests/fixtures/block/10.1073_pnas.2509692123/expected.json",
+        "markdown-quality.json": "tests/fixtures/block/10.1073_pnas.2509692123/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/block/10.1073_pnas.2509692123/markdown-quality-prompt.md"
+      },
+      "expected_outcome": "blocked",
+      "route_kind": "blocked",
+      "content_type": "text/html"
+    },
+    "10.1073_pnas.2523032123__block": {
+      "doi": "10.1073/pnas.2523032123",
+      "publisher": "pnas",
+      "title": "Simple biological controllers drive the evolution of soft modes",
+      "source_url": "https://www.pnas.org/doi/abs/10.1073/pnas.2523032123",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1073_pnas.2523032123/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1073_pnas.2523032123/raw.html"
+      }
+    },
+    "10.1073_pnas.2534432123__block": {
+      "doi": "10.1073/pnas.2534432123",
+      "publisher": "pnas",
+      "title": "The intestinal microbiota impacts nutritional immunity and resistance to *Acinetobacter baumannii* pneumonia",
+      "source_url": "https://www.pnas.org/doi/abs/10.1073/pnas.2534432123?__cf_chl_tk=2JD97eZZ5s5jUC7L2so0V3lR.Yd3R1iUQWiacuY1pc8-1776825642-1.0.1.1-ff1tcpmID9tVjsyn5QLkJFWB1BW5CMMgKHyhoFb7lXk",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1073_pnas.2534432123/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1073_pnas.2534432123/raw.html"
+      }
+    },
+    "10.1073_pnas.2607267123__block": {
+      "doi": "10.1073/pnas.2607267123",
+      "publisher": "pnas",
+      "title": "Reconfigurable hydrogel interfaces for soft brain electrodes",
+      "source_url": "https://www.pnas.org/doi/full/10.1073/pnas.2607267123",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1073_pnas.2607267123/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1073_pnas.2607267123/raw.html"
+      }
+    },
+    "10.1111_gcb.16386__block": {
+      "doi": "10.1111/gcb.16386",
+      "publisher": "wiley",
+      "title": "Cerrado deforestation threatens regional climate and water availability for agriculture and ecosystems",
+      "source_url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/gcb.16386",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1111_gcb.16386/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1111_gcb.16386/raw.html"
+      }
+    },
+    "10.1111_gcb.16414__block": {
+      "doi": "10.1111/gcb.16414",
+      "publisher": "wiley",
+      "title": "Contrasting temperature effects on the velocity of early- versus late-stage vegetation green-up in the Northern Hemisphere",
+      "source_url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/gcb.16414",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1111_gcb.16414/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1111_gcb.16414/raw.html"
+      }
+    },
+    "10.1111_gcb.16758__block": {
+      "doi": "10.1111/gcb.16758",
+      "publisher": "wiley",
+      "title": "Spring phenology rather than climate dominates the trends in peak of growing season in the Northern Hemisphere",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16758",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1111_gcb.16758/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1111_gcb.16758/raw.html"
+      }
+    },
+    "10.1111_gcb.16998__block": {
+      "doi": "10.1111/gcb.16998",
+      "publisher": "wiley",
+      "title": "Drought thresholds that impact vegetation reveal the divergent responses of vegetation growth to drought across China",
+      "source_url": "https://onlinelibrary.wiley.com/doi/10.1111/gcb.16998",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1111_gcb.16998/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1111_gcb.16998/raw.html"
+      }
+    },
+    "10.1126_science.167.3914.61__block": {
+      "doi": "10.1126/science.167.3914.61",
+      "publisher": "science",
+      "title": "Cockroach Leg Regeneration: Effects of Ecdysterone in vitro",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.167.3914.61",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "raw.html": "tests/fixtures/block/10.1126_science.167.3914.61/raw.html"
+      }
+    },
+    "10.1126_science.6985744__block": {
+      "doi": "10.1126/science.6985744",
+      "publisher": "science",
+      "title": "Riddle of the Nobel Debate",
+      "source_url": "https://www.science.org/doi/10.1126/science.6985744",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1126_science.6985744/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1126_science.6985744/raw.html"
+      }
+    },
+    "10.1126_science.7809609__block": {
+      "doi": "10.1126/science.7809609",
+      "publisher": "science",
+      "title": "Single Cells as Biosensors for Chemical Separations",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.7809609",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "raw.html": "tests/fixtures/block/10.1126_science.7809609/raw.html"
+      }
+    },
+    "10.1126_science.aeg3511__block": {
+      "doi": "10.1126/science.aeg3511",
+      "publisher": "science",
+      "title": "Magma plumbing beneath Yellowstone",
+      "source_url": "https://www.science.org/doi/full/10.1126/science.aeg3511",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "fixture_family": "block",
+      "assets": {
+        "extracted.md": "tests/fixtures/block/10.1126_science.aeg3511/extracted.md",
+        "raw.html": "tests/fixtures/block/10.1126_science.aeg3511/raw.html"
+      }
+    },
+    "10.5194_acp-1-1-2001": {
+      "doi": "10.5194/acp-1-1-2001",
+      "publisher": "copernicus",
+      "source_url": "https://acp.copernicus.org/articles/1/1/2001/acp-1-1-2001.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/original.pdf",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.5194_acp-1-1-2001/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "298 K rate coefficients for the reaction of OH with i-C3H7I, n-C3H7I and C3H8",
+      "landing_url": "https://acp.copernicus.org/articles/1/1/2001/",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "copernicus_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext",
+      "expected_outcome": "fulltext"
+    },
+    "10.5194_bg-1-1-2004": {
+      "doi": "10.5194/bg-1-1-2004",
+      "publisher": "copernicus",
+      "source_url": "https://bg.copernicus.org/articles/1/1/2004/bg-1-1-2004.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_bg-1-1-2004/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.5194_bg-1-1-2004/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.5194_bg-1-1-2004/original.pdf",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_bg-1-1-2004/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "A field-based method for simultaneous measurements of the d18O and d13C of soil CO2 efflux",
+      "landing_url": "https://bg.copernicus.org/articles/1/1/2004/",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "copernicus_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext"
+    },
+    "10.5194_cp-1-1-2005": {
+      "doi": "10.5194/cp-1-1-2005",
+      "publisher": "copernicus",
+      "source_url": "https://cp.copernicus.org/articles/1/1/2005/cp-1-1-2005.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_cp-1-1-2005/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.5194_cp-1-1-2005/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.5194_cp-1-1-2005/original.pdf",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_cp-1-1-2005/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Quantifying the effect of vegetation dynamics on the climate of the Last Glacial Maximum",
+      "landing_url": "https://cp.copernicus.org/articles/1/1/2005/",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "copernicus_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext"
+    },
+    "10.5194_dwes-1-1-2008": {
+      "doi": "10.5194/dwes-1-1-2008",
+      "publisher": "copernicus",
+      "source_url": "https://dwes.copernicus.org/articles/1/1/2008/dwes-1-1-2008.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_dwes-1-1-2008/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.5194_dwes-1-1-2008/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.5194_dwes-1-1-2008/original.pdf",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_dwes-1-1-2008/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Correlations between total cell concentration, total adenosine tri-phosphate concentration and heterotrophic plate counts during microbial monitoring of drinking water",
+      "landing_url": "https://dwes.copernicus.org/articles/1/1/2008/",
+      "route_kind": "pdf_fallback",
+      "expected_route": "pdf_fallback",
+      "expected_source": "copernicus_pdf",
+      "expected_content_kind": "fulltext",
+      "content_type": "application/pdf",
+      "expected_live_status": "fulltext"
+    },
+    "10.5194_acp-24-1-2024": {
+      "doi": "10.5194/acp-24-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://acp.copernicus.org/articles/24/1/2024/acp-24-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/original.xml",
+        "extracted.md": "tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.5194_acp-24-1-2024/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Seasonal variations in photooxidant formation and light absorption in aqueous extracts of ambient particles",
+      "landing_url": "https://acp.copernicus.org/articles/24/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml",
+      "expected_outcome": "fulltext"
+    },
+    "10.5194_hess-28-1-2024": {
+      "doi": "10.5194/hess-28-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://hess.copernicus.org/articles/28/1/2024/hess-28-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_hess-28-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_hess-28-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Water cycle changes in Czechia: a multi-source water budget perspective",
+      "landing_url": "https://hess.copernicus.org/articles/28/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_gmd-17-1-2024": {
+      "doi": "10.5194/gmd-17-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://gmd.copernicus.org/articles/17/1/2024/gmd-17-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_gmd-17-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_gmd-17-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Scenario setup and forcing data for impact model evaluation and impact attribution within the third round of the Inter-Sectoral Impact Model Intercomparison Project (ISIMIP3a)",
+      "landing_url": "https://gmd.copernicus.org/articles/17/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_tc-18-1-2024": {
+      "doi": "10.5194/tc-18-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://tc.copernicus.org/articles/18/1/2024/tc-18-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_tc-18-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_tc-18-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Assessment of rock glaciers and their water storage in Guokalariju, Tibetan Plateau",
+      "landing_url": "https://tc.copernicus.org/articles/18/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_essd-16-1-2024": {
+      "doi": "10.5194/essd-16-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://essd.copernicus.org/articles/16/1/2024/essd-16-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_essd-16-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_essd-16-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "A merged continental planetary boundary layer height dataset based on high-resolution radiosonde measurements, ERA5 reanalysis, and GLDAS",
+      "landing_url": "https://essd.copernicus.org/articles/16/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_nhess-24-1-2024": {
+      "doi": "10.5194/nhess-24-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://nhess.copernicus.org/articles/24/1/2024/nhess-24-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_nhess-24-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_nhess-24-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Slope Unit Maker (SUMak): an efficient and parameter-free algorithm for delineating slope units to improve landslide modeling",
+      "landing_url": "https://nhess.copernicus.org/articles/24/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_amt-17-1-2024": {
+      "doi": "10.5194/amt-17-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://amt.copernicus.org/articles/17/1/2024/amt-17-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_amt-17-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_amt-17-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "On the use of routine airborne observations for evaluation and monitoring of satellite observations of thermodynamic profiles",
+      "landing_url": "https://amt.copernicus.org/articles/17/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.5194_bg-21-1-2024": {
+      "doi": "10.5194/bg-21-1-2024",
+      "publisher": "copernicus",
+      "source_url": "https://bg.copernicus.org/articles/21/1/2024/bg-21-1-2024.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.5194_bg-21-1-2024/expected.json",
+        "original.xml": "tests/fixtures/golden_criteria/10.5194_bg-21-1-2024/original.xml"
+      },
+      "fixture_family": "golden",
+      "title": "Soil priming effects and involved microbial community along salt gradients",
+      "landing_url": "https://bg.copernicus.org/articles/21/1/2024/",
+      "route_kind": "xml",
+      "content_type": "application/xml"
+    },
+    "10.1175_jcli-d-23-0738.1": {
+      "doi": "10.1175/jcli-d-23-0738.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/clim/37/24/JCLI-D-23-0738.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jcli-d-23-0738.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_jcli-d-23-0738.1/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1175_jcli-d-23-0738.1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1175_jcli-d-23-0738.1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1175_jcli-d-23-0738.1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "A Slower North Equatorial Countercurrent but Faster Equatorial Undercurrent in a Warming Climate",
+      "landing_url": "https://journals.ametsoc.org/view/journals/clim/37/24/JCLI-D-23-0738.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1175_bams-d-24-0223.1": {
+      "doi": "10.1175/bams-d-24-0223.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/bams/107/5/BAMS-D-24-0223.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0223.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0223.1/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0223.1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0223.1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0223.1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "What Makes a Successful Community Model for Research and Operations? Lessons Learned from WAVEWATCH III\u00ae",
+      "landing_url": "https://journals.ametsoc.org/view/journals/bams/107/5/BAMS-D-24-0223.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1175_waf-d-24-0019.1": {
+      "doi": "10.1175/waf-d-24-0019.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/wefo/39/12/WAF-D-24-0019.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_waf-d-24-0019.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_waf-d-24-0019.1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "A Bayesian Framework for the Probabilistic Interpretation of Radar Observations and Severe Hailstorm Reports",
+      "landing_url": "https://journals.ametsoc.org/view/journals/wefo/39/12/WAF-D-24-0019.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1175_jtech-d-24-0028.1": {
+      "doi": "10.1175/jtech-d-24-0028.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/atot/41/12/JTECH-D-24-0028.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jtech-d-24-0028.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_jtech-d-24-0028.1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Assessing Air\u2013Sea Surface Turbulent Heat Fluxes from Reanalyses Using Concurrent Shipboard Measurements",
+      "landing_url": "https://journals.ametsoc.org/view/journals/atot/41/12/JTECH-D-24-0028.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1175_jamc-d-24-0048.1": {
+      "doi": "10.1175/jamc-d-24-0048.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/apme/63/12/JAMC-D-24-0048.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jamc-d-24-0048.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_jamc-d-24-0048.1/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1175_jamc-d-24-0048.1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1175_jamc-d-24-0048.1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1175_jamc-d-24-0048.1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Retrieval of Boundary Layer Precipitable Water from GOES ABI Using Machine Learning Techniques",
+      "landing_url": "https://journals.ametsoc.org/view/journals/apme/63/12/JAMC-D-24-0048.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1175_jhm-d-23-0228.1": {
+      "doi": "10.1175/jhm-d-23-0228.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/hydr/25/12/JHM-D-23-0228.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jhm-d-23-0228.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_jhm-d-23-0228.1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Locally Defined Seasonal Rainfall Characteristics within the Horn of Africa Drylands from Rain Gauge Observations",
+      "landing_url": "https://journals.ametsoc.org/view/journals/hydr/25/12/JHM-D-23-0228.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1175_mwr-d-24-0060.1": {
+      "doi": "10.1175/mwr-d-24-0060.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/mwre/152/12/MWR-D-24-0060.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_mwr-d-24-0060.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_mwr-d-24-0060.1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Lightning and Radar Measures of Mixed-Phase Updraft Variability in Tracked Storms during the TRACER Field Campaign in Houston, Texas",
+      "landing_url": "https://journals.ametsoc.org/view/journals/mwre/152/12/MWR-D-24-0060.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1175_jpo-d-23-0234.1": {
+      "doi": "10.1175/jpo-d-23-0234.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/phoc/54/12/JPO-D-23-0234.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jpo-d-23-0234.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_jpo-d-23-0234.1/original.html"
+      },
+      "fixture_family": "golden",
+      "title": "Optimal Transition Paths for AMOC Collapse and Recovery in a Stochastic Box Model",
+      "landing_url": "https://journals.ametsoc.org/view/journals/phoc/54/12/JPO-D-23-0234.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html"
+    },
+    "10.1175_aies-d-23-0093.1": {
+      "doi": "10.1175/aies-d-23-0093.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/view/journals/aies/3/4/AIES-D-23-0093.1.xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_aies-d-23-0093.1/expected.json",
+        "original.html": "tests/fixtures/golden_criteria/10.1175_aies-d-23-0093.1/original.html",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1175_aies-d-23-0093.1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1175_aies-d-23-0093.1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1175_aies-d-23-0093.1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Evidential Deep Learning: Enhancing Predictive Uncertainty Estimation for Earth System Science Applications",
+      "landing_url": "https://journals.ametsoc.org/view/journals/aies/3/4/AIES-D-23-0093.1.xml",
+      "route_kind": "html",
+      "content_type": "text/html",
+      "expected_outcome": "fulltext"
+    },
+    "10.1175_bams-d-24-0270.1": {
+      "doi": "10.1175/bams-d-24-0270.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/downloadpdf/view/journals/bams/aop/BAMS-D-24-0270.1/BAMS-D-24-0270.1.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/original.pdf",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1175_bams-d-24-0270.1/markdown-quality-prompt.md"
+      },
+      "fixture_family": "golden",
+      "title": "Integrating High-Resolution Modeling with Diverse Field Campaign Observations through an Open Science Summer School",
+      "landing_url": "https://journals.ametsoc.org/view/journals/bams/aop/BAMS-D-24-0270.1/BAMS-D-24-0270.1.xml",
+      "route_kind": "pdf_fallback",
+      "content_type": "application/pdf",
+      "expected_outcome": "fulltext"
+    },
+    "10.1175_jcli-d-25-0547.1": {
+      "doi": "10.1175/jcli-d-25-0547.1",
+      "publisher": "ams",
+      "source_url": "https://journals.ametsoc.org/downloadpdf/view/journals/clim/39/10/JCLI-D-25-0547.1.pdf",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "expected.json": "tests/fixtures/golden_criteria/10.1175_jcli-d-25-0547.1/expected.json",
+        "landing.html": "tests/fixtures/golden_criteria/10.1175_jcli-d-25-0547.1/landing.html",
+        "original.pdf": "tests/fixtures/golden_criteria/10.1175_jcli-d-25-0547.1/original.pdf"
+      },
+      "fixture_family": "golden",
+      "title": "Corrigendum",
+      "landing_url": "https://journals.ametsoc.org/view/journals/clim/39/10/JCLI-D-25-0547.1.xml",
+      "route_kind": "pdf_fallback",
+      "content_type": "application/pdf"
+    },
+    "10.3390_en16186655": {
+      "doi": "10.3390/en16186655",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/1996-1073/16/18/6655",
+      "fetched_at": "2026-05-18T10:51:55Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.3390_en16186655/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_en16186655/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_en16186655/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_en16186655/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_en16186655/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_membranes15030093": {
+      "doi": "10.3390/membranes15030093",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2077-0375/15/3/93",
+      "fetched_at": "2026-05-18T10:52:33Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_membranes15030093/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_membranes15030093/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_membranes15030093/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_membranes15030093/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_membranes15030093/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_su12072826": {
+      "doi": "10.3390/su12072826",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2071-1050/12/7/2826",
+      "fetched_at": "2026-05-18T10:52:36Z",
+      "purpose": "table",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_su12072826/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_su12072826/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_su12072826/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_su12072826/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_su12072826/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_math11030657": {
+      "doi": "10.3390/math11030657",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2227-7390/11/3/657",
+      "fetched_at": "2026-05-18T10:52:39Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_math11030657/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_math11030657/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_math11030657/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_math11030657/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_math11030657/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_rs16010010": {
+      "doi": "10.3390/rs16010010",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2072-4292/16/1/10",
+      "fetched_at": "2026-05-18T10:52:42Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_rs16010010/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_rs16010010/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_rs16010010/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_rs16010010/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_rs16010010/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_foods10081757": {
+      "doi": "10.3390/foods10081757",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2304-8158/10/8/1757",
+      "fetched_at": "2026-05-18T10:52:45Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_foods10081757/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_foods10081757/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_foods10081757/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_foods10081757/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_foods10081757/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_w15040758": {
+      "doi": "10.3390/w15040758",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/2073-4441/15/4/758",
+      "fetched_at": "2026-05-18T10:52:48Z",
+      "purpose": "references",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_w15040758/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_w15040758/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_w15040758/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_w15040758/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_w15040758/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_ijerph18094484": {
+      "doi": "10.3390/ijerph18094484",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/1660-4601/18/9/4484",
+      "fetched_at": "2026-05-18T10:52:58Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_ijerph18094484/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_ijerph18094484/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_ijerph18094484/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_ijerph18094484/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_ijerph18094484/markdown-quality-prompt.md"
+      }
+    },
+    "10.3390_s23010001": {
+      "doi": "10.3390/s23010001",
+      "publisher": "mdpi",
+      "source_url": "https://www.mdpi.com/1424-8220/23/1/1",
+      "fetched_at": "2026-05-18T10:53:01Z",
+      "purpose": "supplementary",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.3390_s23010001/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.3390_s23010001/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.3390_s23010001/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.3390_s23010001/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.3390_s23010001/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsos.150470": {
+      "doi": "10.1098/rsos.150470",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rsos/article/3/1/150470/36439/First-report-of-Plesiochelys-etalloni-and",
+      "fetched_at": "2026-05-22T10:44:06Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rsos.150470/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsos.150470/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsos.150470/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsos.150470/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsos.150470/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsos.201188": {
+      "doi": "10.1098/rsos.201188",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rsos/article/7/10/201188/95104/Learning-agents-in-Black-Scholes-financial",
+      "fetched_at": "2026-05-22T10:44:09Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rsos.201188/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsos.201188/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsos.201188/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsos.201188/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsos.201188/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsta.2020.0108": {
+      "doi": "10.1098/rsta.2020.0108",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://watermark02.silverchair.com/rsta.2020.0108.pdf?token=%2A%2A%2A",
+      "fetched_at": "2026-05-22T10:44:12Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsos.201200": {
+      "doi": "10.1098/rsos.201200",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rsos/article/7/10/201200/95314/Adaptation-of-the-carbamoyl-phosphate-synthetase",
+      "fetched_at": "2026-05-22T10:44:17Z",
+      "purpose": "references",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rsos.201200/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsos.201200/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsos.201200/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsos.201200/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsos.201200/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsta.2019.0558": {
+      "doi": "10.1098/rsta.2019.0558",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rsta/article/378/2173/20190558/41050/Creation-and-application-of-virtual-patient",
+      "fetched_at": "2026-05-22T10:44:19Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rsif.2019.0334": {
+      "doi": "10.1098/rsif.2019.0334",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rsif/article/16/158/20190334/87174/Hepatitis-C-virus-modelled-as-an-indirectly",
+      "fetched_at": "2026-05-22T10:44:21Z",
+      "purpose": "supplementary",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/markdown-quality-prompt.md"
+      }
+    },
+    "10.1098_rspb.2020.0097": {
+      "doi": "10.1098/rspb.2020.0097",
+      "publisher": "royalsocietypublishing",
+      "source_url": "https://royalsocietypublishing.org/rspb/article/287/1927/20200097/85581/Fitness-benefits-of-male-dominance-behaviours",
+      "fetched_at": "2026-05-22T10:44:24Z",
+      "purpose": "table",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/extracted.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/markdown-quality.json",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/markdown-quality-prompt.md"
+      }
+    },
+    "10.1146_annurev-control-030123-013355": {
+      "doi": "10.1146/annurev-control-030123-013355",
+      "publisher": "annualreviews",
+      "source_url": "https://www.annualreviews.org/content/journals/10.1146/annurev-control-030123-013355",
+      "fetched_at": "2026-05-23T13:39:59Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/markdown-quality.json",
+        "body_assets/annualreviews-figure-1.png": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/body_assets/annualreviews-figure-1.png",
+        "body_assets/annualreviews-figure-2.png": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/body_assets/annualreviews-figure-2.png",
+        "body_assets/annualreviews-figure-3.png": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/body_assets/annualreviews-figure-3.png",
+        "body_assets/annualreviews-figure-4.png": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/body_assets/annualreviews-figure-4.png",
+        "body_assets/annualreviews-figure-5.png": "tests/fixtures/golden_criteria/10.1146_annurev-control-030123-013355/body_assets/annualreviews-figure-5.png"
+      }
+    },
+    "10.1146_annurev-med-120811-171056": {
+      "doi": "10.1146/annurev-med-120811-171056",
+      "publisher": "annualreviews",
+      "source_url": "https://www.annualreviews.org/docserver/fulltext/med/65/1/annurev-med-120811-171056.pdf?expires=1779544513&id=id&accname=ar-387953&checksum=59CE5DF6C95684936821561B61D37FBC",
+      "fetched_at": "2026-05-23T13:40:08Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1146_annurev-med-120811-171056/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1146_annurev-med-120811-171056/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1146_annurev-med-120811-171056/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1146_annurev-med-120811-171056/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1146_annurev-med-120811-171056/markdown-quality.json"
+      }
+    },
+    "10.1146_annurev-environ-102511-084654": {
+      "doi": "10.1146/annurev-environ-102511-084654",
+      "publisher": "annualreviews",
+      "source_url": "https://www.annualreviews.org/content/journals/10.1146/annurev-environ-102511-084654",
+      "fetched_at": "2026-05-23T13:43:01Z",
+      "purpose": "references",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/markdown-quality.json",
+        "body_assets/annualreviews-figure-1.gif": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/body_assets/annualreviews-figure-1.gif",
+        "body_assets/annualreviews-figure-2.gif": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/body_assets/annualreviews-figure-2.gif",
+        "body_assets/annualreviews-figure-3.gif": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/body_assets/annualreviews-figure-3.gif",
+        "body_assets/annualreviews-figure-4.gif": "tests/fixtures/golden_criteria/10.1146_annurev-environ-102511-084654/body_assets/annualreviews-figure-4.gif"
+      }
+    },
+    "10.1146_annurev-neuro-062111-150343": {
+      "doi": "10.1146/annurev-neuro-062111-150343",
+      "publisher": "annualreviews",
+      "source_url": "https://www.annualreviews.org/content/journals/10.1146/annurev-neuro-062111-150343",
+      "fetched_at": "2026-05-24T03:09:58Z",
+      "purpose": "supplementary",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1146_annurev-neuro-062111-150343/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1146_annurev-neuro-062111-150343/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1146_annurev-neuro-062111-150343/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1146_annurev-neuro-062111-150343/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1146_annurev-neuro-062111-150343/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pone.0015338": {
+      "doi": "10.1371/journal.pone.0015338",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0015338&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:20Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/markdown-quality.json",
+        "body_assets/pone.0015338.e001.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.e001.png",
+        "body_assets/pone.0015338.e002.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.e002.png",
+        "body_assets/pone.0015338.e003.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.e003.png",
+        "body_assets/pone.0015338.e004.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.e004.png",
+        "body_assets/pone.0015338.g001.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g001.png",
+        "body_assets/pone.0015338.g002.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g002.png",
+        "body_assets/pone.0015338.g003.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g003.png",
+        "body_assets/pone.0015338.g004.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g004.png",
+        "body_assets/pone.0015338.g005.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g005.png",
+        "body_assets/pone.0015338.g006.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g006.png",
+        "body_assets/pone.0015338.g007.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g007.png",
+        "body_assets/pone.0015338.g008.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g008.png",
+        "body_assets/pone.0015338.g009.png": "tests/fixtures/golden_criteria/10.1371_journal.pone.0015338/body_assets/pone.0015338.g009.png"
+      }
+    },
+    "10.1371_journal.pone.0126635": {
+      "doi": "10.1371/journal.pone.0126635",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0126635&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:22Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0126635/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0126635/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0126635/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0126635/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0126635/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pbio.0040298": {
+      "doi": "10.1371/journal.pbio.0040298",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosbiology/article/file?id=10.1371/journal.pbio.0040298&type=printable",
+      "fetched_at": "2026-05-24T12:13:23Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1371_journal.pbio.0040298/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pbio.0040298/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pbio.0040298/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pbio.0040298/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pbio.0040298/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pone.0026949": {
+      "doi": "10.1371/journal.pone.0026949",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0026949&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:26Z",
+      "purpose": "references",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0026949/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0026949/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0026949/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0026949/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0026949/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pone.0263725": {
+      "doi": "10.1371/journal.pone.0263725",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0263725&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:54Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0263725/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0263725/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0263725/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0263725/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0263725/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pone.0218513": {
+      "doi": "10.1371/journal.pone.0218513",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0218513&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:55Z",
+      "purpose": "supplementary",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0218513/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0218513/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0218513/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0218513/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0218513/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pone.0304873": {
+      "doi": "10.1371/journal.pone.0304873",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0304873&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:57Z",
+      "purpose": "table",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pone.0304873/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0304873/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0304873/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pone.0304873/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pone.0304873/markdown-quality.json"
+      }
+    },
+    "10.1371_journal.pcbi.1003118": {
+      "doi": "10.1371/journal.pcbi.1003118",
+      "publisher": "plos",
+      "source_url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371/journal.pcbi.1003118&type=manuscript",
+      "fetched_at": "2026-05-24T12:13:58Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/xml",
+      "route_kind": "xml",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.xml": "tests/fixtures/golden_criteria/10.1371_journal.pcbi.1003118/original.xml",
+        "expected.json": "tests/fixtures/golden_criteria/10.1371_journal.pcbi.1003118/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1371_journal.pcbi.1003118/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1371_journal.pcbi.1003118/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1371_journal.pcbi.1003118/markdown-quality.json"
+      }
+    },
+    "10.1093_bioinformatics_btaa823": {
+      "doi": "10.1093/bioinformatics/btaa823",
+      "publisher": "oxfordacademic",
+      "source_url": "https://academic.oup.com/bioinformatics/article/37/4/497/5909988",
+      "fetched_at": "2026-05-25T07:15:20Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa823/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa823/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa823/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa823/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa823/markdown-quality.json"
+      }
+    },
+    "10.1093_bioinformatics_btaa161": {
+      "doi": "10.1093/bioinformatics/btaa161",
+      "publisher": "oxfordacademic",
+      "source_url": "https://academic.oup.com/bioinformatics/article/36/11/3409/5802463",
+      "fetched_at": "2026-05-25T07:15:22Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa161/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa161/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa161/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa161/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa161/markdown-quality.json"
+      }
+    },
+    "10.1093_bioinformatics_btaa153": {
+      "doi": "10.1093/bioinformatics/btaa153",
+      "publisher": "oxfordacademic",
+      "title": "MIXnorm: normalizing RNA-seq data from formalin-fixed paraffin-embedded samples",
+      "source_url": "https://academic.oup.com/bioinformatics/article-pdf/36/11/3401/50670770/bioinformatics_36_11_3401.pdf",
+      "fetched_at": "2026-05-25T09:01:32Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa153/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa153/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa153/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa153/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1093_bioinformatics_btaa153/markdown-quality.json"
+      },
+      "diagnostics": {
+        "browser_final_url": "https://watermark02.silverchair.com/bioinformatics_36_11_3401.pdf",
+        "browser_final_url_redacted": true,
+        "capture_source_url": "https://academic.oup.com/bioinformatics/article-pdf/36/11/3401/50670770/bioinformatics_36_11_3401.pdf"
+      }
+    },
+    "10.1021_acsomega.4c03987": {
+      "doi": "10.1021/acsomega.4c03987",
+      "publisher": "acs",
+      "title": "Functionalized Metal-Free Carbon Nanosphere Catalyst for the Selective C-N Bond Formation under Open-Air Conditions",
+      "source_url": "https://pubs.acs.org/doi/10.1021/acsomega.4c03987",
+      "fetched_at": "2026-05-26T04:59:09Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1021_acsomega.4c03987/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1021_acsomega.4c03987/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1021_acsomega.4c03987/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1021_acsomega.4c03987/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1021_acsomega.4c03987/markdown-quality.json"
+      }
+    },
+    "10.1021_acsomega.3c06992": {
+      "doi": "10.1021/acsomega.3c06992",
+      "publisher": "acs",
+      "title": "General Equation to Estimate the Physicochemical Properties of Aliphatic Amines",
+      "source_url": "https://pubs.acs.org/doi/full/10.1021/acsomega.3c06992",
+      "landing_url": "https://pubs.acs.org/doi/10.1021/acsomega.3c06992",
+      "fetched_at": "2026-05-26T10:50:41Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1021_acsomega.3c06992/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1021_acsomega.3c06992/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1021_acsomega.3c06992/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1021_acsomega.3c06992/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1021_acsomega.3c06992/markdown-quality.json"
+      }
+    },
+    "10.1021_acsomega.2c02828": {
+      "doi": "10.1021/acsomega.2c02828",
+      "publisher": "acs",
+      "title": "General Equation to Express Changes in the Physicochemical Properties of Organic Homologues",
+      "source_url": "https://pubs.acs.org/doi/pdf/10.1021/acsomega.2c02828",
+      "landing_url": "https://pubs.acs.org/doi/10.1021/acsomega.2c02828",
+      "fetched_at": "2026-05-26T10:50:47Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/markdown-quality.json"
+      }
+    },
+    "10.1088_1748-9326_ab7d02": {
+      "doi": "10.1088/1748-9326/ab7d02",
+      "publisher": "iop",
+      "title": "Quantifying the role of internal variability in the temperature we expect to observe in the coming decades",
+      "source_url": "https://iopscience.iop.org/article/10.1088/1748-9326/ab7d02",
+      "fetched_at": "2026-05-27T05:05:00Z",
+      "purpose": "structure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1088_1748-9326_ab7d02/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1088_1748-9326_ab7d02/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1088_1748-9326_ab7d02/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1088_1748-9326_ab7d02/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1088_1748-9326_ab7d02/markdown-quality.json"
+      }
+    },
+    "10.1088_2058-9565_ac3460": {
+      "doi": "10.1088/2058-9565/ac3460",
+      "publisher": "iop",
+      "source_url": "https://iopscience.iop.org/article/10.1088/2058-9565/ac3460",
+      "title": "Quantum pattern recognition in photonic circuits",
+      "fetched_at": "2026-05-27T07:17:37Z",
+      "purpose": "table",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html;charset=UTF-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1088_2058-9565_ac3460/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1088_2058-9565_ac3460/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1088_2058-9565_ac3460/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1088_2058-9565_ac3460/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1088_2058-9565_ac3460/markdown-quality.json"
+      }
+    },
+    "10.1088_1748-9326_aa9f73": {
+      "doi": "10.1088/1748-9326/aa9f73",
+      "publisher": "iop",
+      "source_url": "https://doi.org/10.1088/1748-9326/aa9f73",
+      "fetched_at": "2026-05-27T07:19:06Z",
+      "purpose": "pdf_fallback",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "application/pdf",
+      "route_kind": "pdf_fallback",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.pdf": "tests/fixtures/golden_criteria/10.1088_1748-9326_aa9f73/original.pdf",
+        "expected.json": "tests/fixtures/golden_criteria/10.1088_1748-9326_aa9f73/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1088_1748-9326_aa9f73/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1088_1748-9326_aa9f73/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1088_1748-9326_aa9f73/markdown-quality.json"
+      },
+      "diagnostics": {
+        "browser_final_url": "https://iopscience.iop.org/article/10.1088/1748-9326/aa9f73/pdf",
+        "browser_final_url_redacted": false,
+        "capture_source_url": "https://doi.org/10.1088/1748-9326/aa9f73"
+      }
+    },
+    "10.1063_5.0129134": {
+      "doi": "10.1063/5.0129134",
+      "publisher": "aip",
+      "source_url": "https://pubs.aip.org/aip/adv/article/12/12/125205/2820011/On-chip-on-demand-delivery-of-K-for-in-vitro",
+      "fetched_at": "2026-05-27T10:22:34Z",
+      "purpose": "figure",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1063_5.0129134/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1063_5.0129134/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1063_5.0129134/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1063_5.0129134/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1063_5.0129134/markdown-quality.json",
+        "body_assets/m_125205_1_f1.jpeg": "tests/fixtures/golden_criteria/10.1063_5.0129134/body_assets/m_125205_1_f1.jpeg",
+        "body_assets/m_125205_1_f2.jpeg": "tests/fixtures/golden_criteria/10.1063_5.0129134/body_assets/m_125205_1_f2.jpeg",
+        "body_assets/m_125205_1_f3.jpeg": "tests/fixtures/golden_criteria/10.1063_5.0129134/body_assets/m_125205_1_f3.jpeg",
+        "body_assets/m_125205_1_f4.jpeg": "tests/fixtures/golden_criteria/10.1063_5.0129134/body_assets/m_125205_1_f4.jpeg"
+      }
+    },
+    "10.1063_5.0188905": {
+      "doi": "10.1063/5.0188905",
+      "publisher": "aip",
+      "source_url": "https://pubs.aip.org/aip/jap/article/135/8/085105/3266915/Machine-learned-atomic-cluster-expansion",
+      "fetched_at": "2026-05-27T10:22:38Z",
+      "purpose": "formula",
+      "expected_outcome": "fulltext",
+      "fixture_family": "golden",
+      "content_type": "text/html; charset=utf-8",
+      "route_kind": "html",
+      "origin_kind": "real_replay",
+      "usage_kind": "content",
+      "assets": {
+        "original.html": "tests/fixtures/golden_criteria/10.1063_5.0188905/original.html",
+        "expected.json": "tests/fixtures/golden_criteria/10.1063_5.0188905/expected.json",
+        "extracted.md": "tests/fixtures/golden_criteria/10.1063_5.0188905/extracted.md",
+        "markdown-quality-prompt.md": "tests/fixtures/golden_criteria/10.1063_5.0188905/markdown-quality-prompt.md",
+        "markdown-quality.json": "tests/fixtures/golden_criteria/10.1063_5.0188905/markdown-quality.json"
+      }
+    }
+  },
+  "tests": [
+    {
+      "test": "tests/unit/test_html_shared_helpers.py::test_parse_html_metadata_does_not_treat_generic_description_as_abstract",
+      "anchors": [
+        "rule-generic-metadata-boundaries"
+      ],
+      "samples": [
+        "scenario_generic_metadata_boundaries"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_shared_helpers.py::test_parse_html_metadata_uses_redirect_stub_lookup_title",
+      "anchors": [
+        "rule-generic-metadata-boundaries"
+      ],
+      "samples": [
+        "scenario_generic_metadata_boundaries"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_build_article_structure_extracts_authors_from_author_groups",
+      "anchors": [
+        "rule-provider-owned-authors"
+      ],
+      "samples": [
+        "scenario_elsevier_author_groups_minimal"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_real_display_formula_renders_as_formula_block",
+      "anchors": [
+        "rule-elsevier-formula-rendering"
+      ],
+      "samples": [
+        "10.1016_j.agrformet.2024.109975"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_inline_math_symbols_stay_inline",
+      "anchors": [
+        "rule-elsevier-formula-rendering"
+      ],
+      "samples": [
+        "scenario_elsevier_formula_inline_display"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_formula_placeholder_is_visible_when_conversion_fails",
+      "anchors": [
+        "rule-elsevier-formula-rendering"
+      ],
+      "samples": [
+        "scenario_elsevier_formula_missing"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_supplementary_display_is_omitted_from_body_and_listed_with_caption",
+      "anchors": [
+        "rule-elsevier-supplementary-materials"
+      ],
+      "samples": [
+        "scenario_elsevier_supplementary_display"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_supplementary_asset_without_display_is_listed_as_supplementary_material",
+      "anchors": [
+        "rule-elsevier-supplementary-materials"
+      ],
+      "samples": [
+        "scenario_elsevier_supplementary_asset_only"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_real_supplementary_e_component_from_golden_xml_is_listed",
+      "anchors": [
+        "rule-elsevier-supplementary-materials"
+      ],
+      "samples": [
+        "10.1016_j.ecolind.2024.112140"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_split_inline_variable_subscripts_are_rejoined_in_paragraphs",
+      "anchors": [
+        "rule-preserve-inline-semantics-in-body-and-tables"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_graphical_abstract_assets_do_not_appear_in_additional_figures",
+      "anchors": [
+        "rule-elsevier-graphical-abstract"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_graphical_abstract_only_document_does_not_create_additional_figures",
+      "anchors": [
+        "rule-elsevier-graphical-abstract"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_real_graphical_abstract_from_golden_xml_is_excluded_from_figures",
+      "anchors": [
+        "rule-elsevier-graphical-abstract"
+      ],
+      "samples": [
+        "10.1016_j.scitotenv.2022.158499"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_complex_table_spans_are_semantically_expanded",
+      "anchors": [
+        "rule-elsevier-complex-table-span-degradation"
+      ],
+      "samples": [
+        "scenario_elsevier_complex_table_span"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_real_complex_table_records_layout_degradation_quality",
+      "anchors": [
+        "rule-elsevier-complex-table-span-degradation"
+      ],
+      "samples": [
+        "10.1016_j.jhydrol.2021.126210"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_table_placement_contracts",
+      "anchors": [
+        "rule-elsevier-table-placement"
+      ],
+      "samples": [
+        "10.1016_j.jhydrol.2021.126210"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_xml_multilingual_abstract_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_xml_non_english_only_article_is_preserved",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_appendix_figure_renders_as_figure_block",
+      "anchors": [
+        "rule-elsevier-appendix-context"
+      ],
+      "samples": [
+        "10.1016_j.rse.2026.115369"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_appendix_reference_keeps_asset_in_appendix",
+      "anchors": [
+        "rule-elsevier-appendix-context"
+      ],
+      "samples": [
+        "10.1016_j.rse.2026.115369"
+      ]
+    },
+    {
+      "test": "tests/unit/test_elsevier_markdown.py::test_elsevier_appendix_table_renders_as_markdown_table",
+      "anchors": [
+        "rule-elsevier-appendix-context"
+      ],
+      "samples": [
+        "10.1016_j.rse.2026.115369"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_science_fixture_markdown_omits_frontmatter_and_collateral_noise",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1126_science.ady3136"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_science_fixture_keeps_data_availability_but_filters_teaser_figure",
+      "anchors": [
+        "rule-keep-data-availability-once"
+      ],
+      "samples": [
+        "10.1126_science.ady3136"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_pnas_abstract_fixture_is_rejected",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_pnas_full_fixture_omits_real_page_collateral_noise",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_pnas_full_fixture_keeps_data_availability_and_renders_table_markdown",
+      "anchors": [
+        "rule-keep-data-availability-once",
+        "rule-preserve-inline-semantics-in-body-and-tables"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_pnas_collateral_data_availability_fixture_is_not_duplicated",
+      "anchors": [
+        "rule-keep-data-availability-once"
+      ],
+      "samples": [
+        "10.1073_pnas.2309123120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_wiley_full_fixture_extracts_body_sections_from_real_html",
+      "anchors": [
+        "rule-keep-semantic-parent-heading",
+        "rule-preserve-inline-semantics-in-body-and-tables"
+      ],
+      "samples": [
+        "10.1111_gcb.16414"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_wiley_full_fixture_omits_real_page_collateral_noise",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1111_gcb.16414"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_wiley_full_fixture_keeps_data_availability_but_filters_other_back_matter",
+      "anchors": [
+        "rule-keep-data-availability-once"
+      ],
+      "samples": [
+        "10.1111_gcb.16414"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_wiley_references_use_visible_citation_text_not_doi_only",
+      "anchors": [
+        "rule-wiley-reference-text"
+      ],
+      "samples": [
+        "10.1111_gcb.15322",
+        "10.1111_gcb.16998"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_science_perspective_fixture_extracts_fulltext_without_section_headings",
+      "anchors": [
+        "rule-keep-headingless-body-flat"
+      ],
+      "samples": [
+        "10.1126_science.aeg3511"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_markdown.py::test_science_adp0212_fixture_splits_display_equations_and_caption_sentences",
+      "anchors": [
+        "rule-readable-equation-caption-spacing"
+      ],
+      "samples": [
+        "10.1126_science.adp0212"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_wiley_real_fixture_filters_frontmatter_and_viewer_noise",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1111_gcb.16414"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_wiley_real_fixture_appends_abbreviations_after_body_content",
+      "anchors": [
+        "rule-wiley-abbreviations-trailing"
+      ],
+      "samples": [
+        "10.1111_cas.16395"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_wiley_abbreviations_scenario_moves_frontmatter_glossary_after_body",
+      "anchors": [
+        "rule-wiley-abbreviations-trailing"
+      ],
+      "samples": [
+        "scenario_wiley_abbreviations_trailing"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_wiley_real_fixture_keeps_methods_subcontent_in_body",
+      "anchors": [
+        "rule-keep-semantic-parent-heading"
+      ],
+      "samples": [
+        "10.1111_gcb.16455"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_pnas_real_fixture_keeps_significance_and_abstract_before_main_text",
+      "anchors": [
+        "rule-stable-frontmatter-order"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_pnas_real_fixture_preserves_figures_equations_and_heading_trimming",
+      "anchors": [
+        "rule-readable-equation-caption-spacing"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_pnas_real_fixture_renders_table_and_inline_cell_formatting",
+      "anchors": [
+        "rule-preserve-inline-semantics-in-body-and-tables"
+      ],
+      "samples": [
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_pnas_real_commentary_keeps_headingless_body_flat",
+      "anchors": [
+        "rule-keep-headingless-body-flat"
+      ],
+      "samples": [
+        "10.1073_pnas.2317456120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_science_real_fixture_keeps_formula_and_figure_caption_spacing",
+      "anchors": [
+        "rule-readable-equation-caption-spacing"
+      ],
+      "samples": [
+        "10.1126_science.adp0212"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_shared_equation_normalization_handles_real_science_and_pnas_fixtures",
+      "anchors": [
+        "rule-readable-equation-caption-spacing"
+      ],
+      "samples": [
+        "10.1126_sciadv.abf8021",
+        "10.1126_sciadv.abg9690",
+        "10.1126_sciadv.adm9732",
+        "10.1073_pnas.2406303121"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_science_real_frontmatter_fixture_preserves_structured_summaries_and_main_text",
+      "anchors": [
+        "rule-stable-frontmatter-order",
+        "rule-preserve-subscripts-in-headings"
+      ],
+      "samples": [
+        "10.1126_science.abp8622"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_rewrite_inline_figure_links_prefers_local_paths_for_existing_science_image_blocks",
+      "anchors": [
+        "rule-rewrite-inline-figure-links"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_rewrite_inline_figure_links_is_data_driven_for_non_legacy_publisher",
+      "anchors": [
+        "rule-rewrite-inline-figure-links"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess.py::test_rewrite_inline_figure_links_ignores_cross_references_in_asset_captions",
+      "anchors": [
+        "rule-rewrite-inline-figure-links"
+      ],
+      "samples": [
+        "scenario_inline_figure_link_rewrite"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_science_provider_rewrites_inline_figure_links_to_downloaded_local_assets",
+      "anchors": [
+        "rule-rewrite-inline-figure-links"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_science_provider_uses_extracted_dom_abstract_and_restores_lead_body_text",
+      "anchors": [
+        "rule-provider-owned-authors"
+      ],
+      "samples": [
+        "scenario_provider_dom_abstract_fallback"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_provider_owned_html_signals_populate_final_article_authors",
+      "anchors": [
+        "rule-provider-owned-authors"
+      ],
+      "samples": [
+        "10.1126_science.adp0212",
+        "10.1111_gcb.16998",
+        "10.1073_pnas.2309123120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_science_provider_falls_back_to_dom_authors_when_datalayer_is_missing",
+      "anchors": [
+        "rule-provider-owned-authors"
+      ],
+      "samples": [
+        "10.1126_science.adp0212"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_pnas_provider_renders_headingless_commentary_without_synthetic_title_section",
+      "anchors": [
+        "rule-keep-headingless-body-flat"
+      ],
+      "samples": [
+        "10.1073_pnas.2317456120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_science_provider_keeps_frontmatter_sections_but_only_one_abstract_in_final_article",
+      "anchors": [
+        "rule-stable-frontmatter-order"
+      ],
+      "samples": [
+        "10.1126_science.abp8622"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_science_provider_replay_for_adl6155_keeps_materials_and_methods_wrapper_heading",
+      "anchors": [
+        "rule-keep-semantic-parent-heading"
+      ],
+      "samples": [
+        "10.1126_sciadv.adl6155"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_wiley_provider_deduplicates_near_matching_abstract_in_final_article_render",
+      "anchors": [
+        "rule-stable-frontmatter-order"
+      ],
+      "samples": [
+        "10.1111_gcb.16998"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_wiley_provider_replay_for_2004gb002273_body_assets_avoid_trailing_figures_noise",
+      "anchors": [
+        "rule-no-trailing-figures-appendix",
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1029_2004gb002273"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_html.py::test_pnas_provider_keeps_frontmatter_once_and_filters_collateral_noise_in_final_render",
+      "anchors": [
+        "rule-filter-publisher-ui-noise",
+        "rule-stable-frontmatter-order"
+      ],
+      "samples": [
+        "10.1073_pnas.2309123120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_provider_asset_failures.py::test_science_provider_replay_for_adz3492_saves_svg_body_asset",
+      "anchors": [
+        "rule-image-download-validates-real-images"
+      ],
+      "samples": [
+        "10.1126_science.adz3492"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_springer_paywall_article_markdown_strips_preview_sentence",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1007_s00382-018-4286-0__block"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_springernature_fulltext_markdown_strips_ai_alt_disclaimer",
+      "anchors": [
+        "rule-filter-publisher-ui-noise"
+      ],
+      "samples": [
+        "10.1038_s44221-022-00024-x"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_old_nature_fixture_keeps_single_methods_summary_and_methods_sections",
+      "anchors": [
+        "rule-springer-methods-summary"
+      ],
+      "samples": [
+        "10.1038_nature12915"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_old_nature_downloaded_body_figures_inline_without_trailing_figures_block",
+      "anchors": [
+        "rule-no-trailing-figures-appendix"
+      ],
+      "samples": [
+        "10.1038_nature13376"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_new_nature_downloaded_body_figures_inline_without_trailing_figures_block",
+      "anchors": [
+        "rule-no-trailing-figures-appendix"
+      ],
+      "samples": [
+        "10.1038_s41561-022-00983-6"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_springer_markdown_preserves_subscripts_in_section_headings",
+      "anchors": [
+        "rule-preserve-subscripts-in-headings"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_springer_markdown_ignores_ai_alt_text_when_caption_exists",
+      "anchors": [
+        "rule-springer-caption-precedence"
+      ],
+      "samples": []
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_nature_matters_arising_fixture_keeps_main_content_before_reporting_summary",
+      "anchors": [
+        "rule-springer-main-content-direct-children"
+      ],
+      "samples": [
+        "10.1038_s41586-020-1941-5"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_regressions.py::test_springer_main_content_scenario_keeps_direct_child_order",
+      "anchors": [
+        "rule-springer-main-content-direct-children"
+      ],
+      "samples": [
+        "scenario_springer_main_content_direct_children"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_tables.py::test_render_table_markdown_handles_real_springer_classic_table_page",
+      "anchors": [
+        "rule-springer-inline-table"
+      ],
+      "samples": [
+        "10.1007_s10584-011-0143-4"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_tables.py::test_springer_html_injects_real_nature_inline_table_page_with_flattened_headers",
+      "anchors": [
+        "rule-springer-inline-table"
+      ],
+      "samples": [
+        "10.1038_s43247-024-01295-w"
+      ]
+    },
+    {
+      "test": "tests/unit/test_springer_html_tables.py::test_springer_html_keeps_article_success_when_inline_table_page_has_no_table",
+      "anchors": [
+        "rule-springer-inline-table"
+      ],
+      "samples": [
+        "10.1007_s10584-011-0143-4"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_rejects_science_paywall_sample_with_abstract",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1126_science.aeg3511__block"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_accepts_science_entitled_fulltext_fixture",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1126_science.aeg3511"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_rejects_springer_paywall_samples_without_promoting_ancillary_sections",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1007_s00382-018-4286-0__block",
+        "10.1007_s11430-021-9892-6__block",
+        "10.1007_s12652-019-01399-8__block",
+        "10.1007_s13351-020-9829-8__block"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_rejects_wiley_paywall_metadata_with_abstract",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1111_gcb.16414__block"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_accepts_wiley_fulltext_fixture_despite_login_chrome",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1111_gcb.16998"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_rejects_pnas_paywall_metadata_with_abstract",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1073_pnas.2509692123__block"
+      ]
+    },
+    {
+      "test": "tests/unit/test_html_availability.py::test_assess_html_accepts_pnas_fulltext_fixture_despite_institutional_login_chrome",
+      "anchors": [
+        "rule-html-availability-contract"
+      ],
+      "samples": [
+        "10.1073_pnas.2309123120"
+      ]
+    },
+    {
+      "test": "tests/unit/test_mcp_payload_cache.py::test_article_payload_preserves_asset_download_diagnostics",
+      "anchors": [
+        "rule-asset-download-diagnostic-fields"
+      ],
+      "samples": [
+        "scenario_asset_download_diagnostics"
+      ]
+    },
+    {
+      "test": "tests/unit/test_atypon_browser_workflow_postprocess_units.py::test_extract_atypon_browser_workflow_markdown_falls_back_complex_table_to_bullets",
+      "anchors": [
+        "rule-table-flatten-or-list"
+      ],
+      "samples": [
+        "scenario_table_flatten_or_list"
+      ]
+    },
+    {
+      "test": "tests/unit/test_models_render.py::test_article_from_markdown_keeps_code_availability_without_counting_it_as_fulltext",
+      "anchors": [
+        "rule-availability-excluded-from-body-metrics"
+      ],
+      "samples": [
+        "scenario_availability_body_metrics"
+      ]
+    },
+    {
+      "test": "tests/unit/test_models_render.py::test_article_from_markdown_coerces_dict_object_and_section_hint_in_declared_order",
+      "anchors": [
+        "rule-section-hints-normalize-availability"
+      ],
+      "samples": [
+        "scenario_section_hints_availability"
+      ]
+    },
+    {
+      "test": "tests/unit/test_formula_conversion.py::test_normalize_latex_repairs_identifier_escaped_underscores",
+      "anchors": [
+        "rule-formula-latex-normalization"
+      ],
+      "samples": [
+        "scenario_formula_latex_normalization"
+      ]
+    },
+    {
+      "test": "tests/unit/test_formula_conversion.py::test_normalize_latex_scenario_samples_are_katex_compatible",
+      "anchors": [
+        "rule-formula-latex-normalization"
+      ],
+      "samples": [
+        "scenario_formula_latex_normalization"
+      ]
+    },
+    {
+      "test": "tests/unit/test_regression_samples.py::test_wiley_bilingual_fixture_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": [
+        "10.1111_gcb.16386"
+      ]
+    },
+    {
+      "test": "tests/unit/test_regression_samples.py::test_springer_bilingual_fixture_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": [
+        "10.1007_s13158-025-00473-x"
+      ]
+    },
+    {
+      "test": "tests/unit/test_regression_samples.py::test_elsevier_bilingual_fixture_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": [
+        "10.1016_S1575-1813(18)30261-4"
+      ]
+    },
+    {
+      "test": "tests/unit/test_regression_samples.py::test_sage_bilingual_fixture_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": [
+        "10.1345_aph.1M379"
+      ]
+    },
+    {
+      "test": "tests/unit/test_regression_samples.py::test_tandf_bilingual_fixture_preserves_parallel_abstract_sections",
+      "anchors": [
+        "rule-keep-parallel-multilingual-abstracts"
+      ],
+      "samples": [
+        "10.1080_19455224.2025.2547671"
+      ]
+    }
+  ]
+}

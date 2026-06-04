@@ -1,0 +1,79 @@
+{
+  "captured_at": "2026-05-09T03:49:43.166486+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2605.06659v1"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2605.06659v1",
+    "updated": "2026-05-07T17:58:27+00:00",
+    "published": "2026-05-07T17:58:27+00:00",
+    "title": "The Pulsar Radial Acceleration Relation",
+    "authors": [
+      "Tariq Yasin",
+      "Harry Desmond"
+    ],
+    "summary": "The radial acceleration relation (RAR) links observed and baryonic accelerations, and is best established in rotation curves of late-type galaxies. Pulsar timing, which measures line-of-sight (LOS) differential accelerations between the Sun and pulsars, provides a novel probe of this relation, including along directions outside the Galactic disc. By combining these pulsar differential accelerations with the acceleration at the Sun, we test whether current pulsar timing data carry information on a vector generalisation of the RAR, ${g}_{\\rm obs}=ν(|{g}_{\\rm bar}|){g}_{\\rm bar}$. Comparing the measured SPARC RAR (generalised to 3D) to 26 binary-system pulsars with literature accelerations, we find a reduced $χ^2$ of 3.58, compared with 10.86 for Newtonian baryonic gravity alone. However, setting all accelerations to that of the Sun gives a reduced $χ^2$ of 3.75, showing that this vector RAR test is dominated by the Solar acceleration with current data.",
+    "comment": "3 pages; submitted to RNAAS",
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "astro-ph.GA",
+    "categories": [
+      "astro-ph.GA",
+      "astro-ph.CO",
+      "astro-ph.HE"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2605.06659v1",
+    "short_id": "2605.06659v1"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2605.06659v1",
+    "external_doi": null,
+    "title": "The Pulsar Radial Acceleration Relation",
+    "authors": [
+      "Tariq Yasin",
+      "Harry Desmond"
+    ],
+    "abstract": "The radial acceleration relation (RAR) links observed and baryonic accelerations, and is best established in rotation curves of late-type galaxies. Pulsar timing, which measures line-of-sight (LOS) differential accelerations between the Sun and pulsars, provides a novel probe of this relation, including along directions outside the Galactic disc. By combining these pulsar differential accelerations with the acceleration at the Sun, we test whether current pulsar timing data carry information on a vector generalisation of the RAR, ${g}_{\\rm obs}=ν(|{g}_{\\rm bar}|){g}_{\\rm bar}$. Comparing the measured SPARC RAR (generalised to 3D) to 26 binary-system pulsars with literature accelerations, we find a reduced $χ^2$ of 3.58, compared with 10.86 for Newtonian baryonic gravity alone. However, setting all accelerations to that of the Sun gives a reduced $χ^2$ of 3.75, showing that this vector RAR test is dominated by the Solar acceleration with current data.",
+    "published": "2026-05-07",
+    "updated": "2026-05-07",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2605.06659v1",
+    "arxiv_id": "2605.06659v1",
+    "primary_category": "astro-ph.GA",
+    "categories": [
+      "astro-ph.GA",
+      "astro-ph.CO",
+      "astro-ph.HE"
+    ],
+    "keywords": [
+      "astro-ph.GA",
+      "astro-ph.CO",
+      "astro-ph.HE"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.06659v1",
+    "html_url": "https://arxiv.org/html/2605.06659v1",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2605.06659v1",
+        "content_type": "text/html",
+        "content_version": "2605.06659v1",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2605.06659v1",
+        "content_type": "application/pdf",
+        "content_version": "2605.06659v1",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}

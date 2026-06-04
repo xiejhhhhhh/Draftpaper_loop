@@ -1,0 +1,542 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1d3 20150301//EN" "http://jats.nlm.nih.gov/publishing/1.1d3/JATS-journalpublishing1.dtd">
+<article article-type="research-article" dtd-version="1.1d3" xml:lang="en" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+<front>
+<journal-meta>
+<journal-id journal-id-type="nlm-ta">PLoS ONE</journal-id>
+<journal-id journal-id-type="publisher-id">plos</journal-id>
+<journal-id journal-id-type="pmc">plosone</journal-id>
+<journal-title-group>
+<journal-title>PLOS ONE</journal-title>
+</journal-title-group>
+<issn pub-type="epub">1932-6203</issn>
+<publisher>
+<publisher-name>Public Library of Science</publisher-name>
+<publisher-loc>San Francisco, CA USA</publisher-loc>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.1371/journal.pone.0263725</article-id>
+<article-id pub-id-type="publisher-id">PONE-D-21-14637</article-id>
+<article-categories>
+<subj-group subj-group-type="heading">
+<subject>Research Article</subject>
+</subj-group>
+<subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Communications</subject><subj-group><subject>Social communication</subject><subj-group><subject>Social media</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Computer and information sciences</subject><subj-group><subject>Network analysis</subject><subj-group><subject>Social networks</subject><subj-group><subject>Social media</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Social networks</subject><subj-group><subject>Social media</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Communications</subject><subj-group><subject>Social communication</subject><subj-group><subject>Social media</subject><subj-group><subject>Twitter</subject></subj-group></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Computer and information sciences</subject><subj-group><subject>Network analysis</subject><subj-group><subject>Social networks</subject><subj-group><subject>Social media</subject><subj-group><subject>Twitter</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Social networks</subject><subj-group><subject>Social media</subject><subj-group><subject>Twitter</subject></subj-group></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Research and analysis methods</subject><subj-group><subject>Research assessment</subject><subj-group><subject>Citation analysis</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Communications</subject><subj-group><subject>Social communication</subject></subj-group></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Research and analysis methods</subject><subj-group><subject>Research assessment</subject><subj-group><subject>Altmetrics</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Research and analysis methods</subject><subj-group><subject>Research assessment</subject><subj-group><subject>Bibliometrics</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Computer and information sciences</subject><subj-group><subject>Network analysis</subject><subj-group><subject>Social networks</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Social sciences</subject><subj-group><subject>Sociology</subject><subj-group><subject>Social networks</subject></subj-group></subj-group></subj-group><subj-group subj-group-type="Discipline-v3">
+<subject>Computer and information sciences</subject><subj-group><subject>Computer networks</subject><subj-group><subject>Internet</subject></subj-group></subj-group></subj-group></article-categories>
+<title-group>
+<article-title>Social media usage to share information in communication journals: An analysis of social media activity and article citations</article-title>
+<alt-title alt-title-type="running-head">Social media usage to share information</alt-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author" corresp="yes" xlink:type="simple">
+<contrib-id authenticated="true" contrib-id-type="orcid">https://orcid.org/0000-0002-8617-8429</contrib-id>
+<name name-style="western">
+<surname>Özkent</surname>
+<given-names>Yasemin</given-names>
+</name>
+<role content-type="http://credit.niso.org/contributor-roles/conceptualization/">Conceptualization</role>
+<role content-type="http://credit.niso.org/contributor-roles/data-curation/">Data curation</role>
+<role content-type="http://credit.niso.org/contributor-roles/formal-analysis/">Formal analysis</role>
+<role content-type="http://credit.niso.org/contributor-roles/funding-acquisition/">Funding acquisition</role>
+<role content-type="http://credit.niso.org/contributor-roles/investigation/">Investigation</role>
+<role content-type="http://credit.niso.org/contributor-roles/methodology/">Methodology</role>
+<role content-type="http://credit.niso.org/contributor-roles/project-administration/">Project administration</role>
+<role content-type="http://credit.niso.org/contributor-roles/resources/">Resources</role>
+<role content-type="http://credit.niso.org/contributor-roles/software/">Software</role>
+<role content-type="http://credit.niso.org/contributor-roles/supervision/">Supervision</role>
+<role content-type="http://credit.niso.org/contributor-roles/validation/">Validation</role>
+<role content-type="http://credit.niso.org/contributor-roles/visualization/">Visualization</role>
+<role content-type="http://credit.niso.org/contributor-roles/writing-original-draft/">Writing – original draft</role>
+<role content-type="http://credit.niso.org/contributor-roles/writing-review-editing/">Writing – review &amp; editing</role>
+<xref ref-type="corresp" rid="cor001">*</xref>
+<xref ref-type="aff" rid="aff001"/>
+</contrib>
+</contrib-group>
+<aff id="aff001"><addr-line>Department of Radio Television and Cinema, Selcuk University, Konya, Turkey</addr-line></aff>
+<contrib-group>
+<contrib contrib-type="editor" xlink:type="simple">
+<name name-style="western">
+<surname>Hermes-Lima</surname>
+<given-names>Marcelo</given-names>
+</name>
+<role>Editor</role>
+<xref ref-type="aff" rid="edit1"/>
+</contrib>
+</contrib-group>
+<aff id="edit1"><addr-line>Universidade de Brasilia, BRAZIL</addr-line></aff>
+<author-notes>
+<fn fn-type="conflict" id="coi001">
+<p>The authors have declared that no competing interests exist.</p>
+</fn>
+<corresp id="cor001">* E-mail: <email xlink:type="simple">yaseminuzuntok@selcuk.edu.tr</email></corresp>
+</author-notes>
+<pub-date pub-type="epub">
+<day>9</day>
+<month>2</month>
+<year>2022</year>
+</pub-date>
+<pub-date pub-type="collection">
+<year>2022</year>
+</pub-date>
+<volume>17</volume>
+<issue>2</issue>
+<elocation-id>e0263725</elocation-id>
+<history>
+<date date-type="received">
+<day>3</day>
+<month>5</month>
+<year>2021</year>
+</date>
+<date date-type="accepted">
+<day>25</day>
+<month>1</month>
+<year>2022</year>
+</date>
+</history>
+<permissions>
+<copyright-year>2022</copyright-year>
+<copyright-holder>Yasemin Özkent</copyright-holder>
+<license xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">
+<license-p>This is an open access article distributed under the terms of the <ext-link ext-link-type="uri" xlink:href="http://creativecommons.org/licenses/by/4.0/" xlink:type="simple">Creative Commons Attribution License</ext-link>, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited.</license-p>
+</license>
+</permissions>
+<self-uri content-type="pdf" xlink:href="info:doi/10.1371/journal.pone.0263725"/>
+<abstract>
+<p>Social media has surrounded every area of life, and social media platforms have become indispensable for today’s communication. Many journals use social media actively to promote and disseminate new articles. Its use to share the articles contributes many benefits, such as reaching more people and spreading information faster. However, there is no consensus in the studies that to evaluate between tweeted and non-tweeted papers regarding their citation numbers. Therefore, it was aimed to show the effect of social media on the citations of articles in the top ten communication-based journals. For this purpose, this work evaluated original articles published in the top 10 communication journals in 2018. The top 10 communication-based journals were chosen based on SCImago Journal &amp; Country Rank (cited in 2019). Afterward, it was recorded the traditional citation numbers (Google Scholar and Thompson-Reuters Web of Science) and social media exposure of the articles in January 2021 (nearly three years after the articles’ publication date). It was assumed that this period would allow the impact of the published articles (the citations and Twitter mentions) to be fully observed. Based on this assessment, a positive correlation between exposure to social media and article citations was observed in this study.</p>
+</abstract>
+<funding-group>
+<funding-statement>The authors received no specific funding for this work.</funding-statement>
+</funding-group>
+<counts>
+<fig-count count="1"/>
+<table-count count="3"/>
+<page-count count="11"/>
+</counts>
+<custom-meta-group>
+<custom-meta id="data-availability">
+<meta-name>Data Availability</meta-name>
+<meta-value>The data underlying the results presented in the study are available from: <ext-link ext-link-type="uri" xlink:href="https://github.com/yaseminozkent/minimal-data-set.git" xlink:type="simple">https://github.com/yaseminozkent/minimal-data-set.git</ext-link>.</meta-value>
+</custom-meta>
+</custom-meta-group>
+</article-meta>
+</front>
+<body>
+<sec id="sec001" sec-type="intro">
+<title>Introduction</title>
+<p>The social network has become a tool for bringing people together, allowing individuals to list the users they are connected to, and to see other users’ connections [<xref ref-type="bibr" rid="pone.0263725.ref001">1</xref>]. Social media platforms (blogs, social networking sites, microblogging, etc.) contain all Web 2.0-based services. Social media has surrounded every area of life, and social media platforms are indispensable for today’s communication [<xref ref-type="bibr" rid="pone.0263725.ref002">2</xref>]. Scientists from various fields frequently use SoMe, especially Twitter, in most of their professional activities [<xref ref-type="bibr" rid="pone.0263725.ref003">3</xref>].</p>
+<p>Scientists often use social media platforms to produce and debate ideas, share real-time information, spread their research, and find collaborators [<xref ref-type="bibr" rid="pone.0263725.ref002">2</xref>, <xref ref-type="bibr" rid="pone.0263725.ref004">4</xref>]. The way information is collected, disseminated and consumed has been significantly changed because social media by it is encompassing and easily accessible. There has been a significant increase in the number of studies related to social media with an increase in the use of the Internet [<xref ref-type="bibr" rid="pone.0263725.ref005">5</xref>]. The increased use of social media has also significantly affected how research is spread. Circulated articles through social media are more visible than not circulated articles [<xref ref-type="bibr" rid="pone.0263725.ref006">6</xref>]. Various scientific studies have examined this relationship, and most have found a positive correlation between article citations and Twitter exposure [<xref ref-type="bibr" rid="pone.0263725.ref007">7</xref>–<xref ref-type="bibr" rid="pone.0263725.ref009">9</xref>].</p>
+<p>Studies focusing on new media technologies in connection with the digital age since the 2000s have taken an important place in communication studies [<xref ref-type="bibr" rid="pone.0263725.ref010">10</xref>]. In their extensive studies on research topics in communication journals, Elisabeth Günther and Emese Domahidi (2017) observed that the Internet and social media have become the most important focus for communication research, in parallel with classical media, such as TV or newspaper [<xref ref-type="bibr" rid="pone.0263725.ref010">10</xref>]. Social media is an important field of study and practice in both interdisciplinary and communication fields [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>–<xref ref-type="bibr" rid="pone.0263725.ref014">14</xref>]. Social media research is encouraged in the field of communication, as people today present themselves through digitally networked platforms. Therefore, this study aimed to demonstrate the effect of social media on citation numbers of articles in communication-based journals. The relationship between the traditional citation numbers of articles and social media posts was analyzed in present study. Thus, it was aimed to shed light on the relationship between social media usage and the number of article citations in the field of communication.</p>
+<sec id="sec002">
+<title>Literature review</title>
+<p>The emergence of social media took place simultaneously with Web 2.0. With the introduction of Web 2.0 into our lives, the Internet has become individualized, and use of social networks increased gradually. The Internet has become an interactive virtual world from a read-only state, and it has brought a different dimension to communication [<xref ref-type="bibr" rid="pone.0263725.ref012">12</xref>]. Today, social media is a wide network of interactions where people from many areas [<xref ref-type="bibr" rid="pone.0263725.ref015">15</xref>]. In particular, Internet has become a part of life due to the widespread use of smartphones. The majority of people actively use social media in daily life [<xref ref-type="bibr" rid="pone.0263725.ref016">16</xref>]. A recent study has stated that 70% of peoples in the USA have at least one social media account nowadays. The peoples over 65 years old of 62% have a social media account and they are regularly on social media. This observation is also similar for adolescents. The using of social networks has been reported as 77% for teenagers aged 13–16 years in 25 European countries [<xref ref-type="bibr" rid="pone.0263725.ref016">16</xref>, <xref ref-type="bibr" rid="pone.0263725.ref017">17</xref>]. These social network users interact for an average of more than 2.4 hours a day on social media [<xref ref-type="bibr" rid="pone.0263725.ref018">18</xref>]. This increased instant interaction has further increased the use of social media. Beside, social media platforms allows independent sharing, regardless of age, venue, and gender. Thus, information spreads rapidly across a wide area [<xref ref-type="bibr" rid="pone.0263725.ref015">15</xref>, <xref ref-type="bibr" rid="pone.0263725.ref018">18</xref>]. Additionally, social media platforms ensure simple interaction pathways between people, companies, and scientists without leaving the desk. Therefore, many scientists use social media in their personal or professional lives [<xref ref-type="bibr" rid="pone.0263725.ref019">19</xref>].</p>
+<p>The most commonly used platform for the purpose of spreading science is Twitter [<xref ref-type="bibr" rid="pone.0263725.ref020">20</xref>]. Twitter is the most popular microblogging platform nowadays. This platform allows the publication of short messages by its users and enables them to communicate with each other. Evan Williams, Biz Stone, and Jack Dorsey created Twitter in March 2006 and brought into use in July 2006. Twitter has become one of the 10 most visited websites in 2013 and was defined as “the SMS of the Internet” [<xref ref-type="bibr" rid="pone.0263725.ref021">21</xref>, <xref ref-type="bibr" rid="pone.0263725.ref022">22</xref>]. In 2019, it was reported that there were 330 million monthly and 145 million daily active Twitter users. Nowadays, it was reached 339 million users in 2020 [<xref ref-type="bibr" rid="pone.0263725.ref023">23</xref>]. The number of Twitter users has been increasing daily. Today, Twitter ranks as the world’s second most widely used social network. Twitter users can follow a conversation and discuss a topic using messages named “tweets.” Tweets are constrained to 140 characters of text. Later, this limit was increased to 280 characters. Twitter allows the sharing of photos or videos [<xref ref-type="bibr" rid="pone.0263725.ref024">24</xref>]. Twitter was initially used to share news about the lives of celebrities. Afterward, it reached a broader audience quickly, especially with the participation of famous names and the involvement of political campaigns. On average, approximately 98 thousand tweets are sent every minute on the platform, allowing an excellent interaction. Given the rise in popularity of Twitter, its use is increasing in all parts of society [<xref ref-type="bibr" rid="pone.0263725.ref025">25</xref>]. This widespread use has also caught the attention of the scientific community. The use of Twitter as a tool for the dissemination of academic articles has soon become the focus of attention in the scientific world.</p>
+<p>Academic output has increased gradually worldwide. Therefore, eliminating the relevant from the irrelevant has become essential for the scientific world. Thus, an impact scale has been necessitated the published articles [<xref ref-type="bibr" rid="pone.0263725.ref026">26</xref>]. The primary impact of the published article has been measured by its citations [<xref ref-type="bibr" rid="pone.0263725.ref026">26</xref>]. However, article citations have recently become questionable due to negative factors, such as the slow process of identifying truly impactful articles. The long wait time required the emergence of the articles’ importance has led to need for an alternative metric scale [<xref ref-type="bibr" rid="pone.0263725.ref027">27</xref>].</p>
+<p>Today, non-traditional metrics, altmetrics, are increasingly used to measure the real-time reach and influence of a scientific article [<xref ref-type="bibr" rid="pone.0263725.ref026">26</xref>, <xref ref-type="bibr" rid="pone.0263725.ref028">28</xref>]. The term altmetrics was first proposed by Jason Priem in 2010 [<xref ref-type="bibr" rid="pone.0263725.ref029">29</xref>]. Thereafter, it has gained wide use in highlighting previously unknown and unrecognized scholarly impact metrics of studies [<xref ref-type="bibr" rid="pone.0263725.ref026">26</xref>, <xref ref-type="bibr" rid="pone.0263725.ref030">30</xref>]. The alternative metric scores play a role in complementing traditional metrics or indicators [<xref ref-type="bibr" rid="pone.0263725.ref031">31</xref>]. Many publishers, such as SAGE, Taylor-Francis Group, Elsevier, Nature Publishing Group, and Public Library of Science provide much information to their readers by their altmetrics evaluating system [<xref ref-type="bibr" rid="pone.0263725.ref032">32</xref>]. These altmetrics are calculated by various methods, including “Altmetric” and “Plum Analytics” [<xref ref-type="bibr" rid="pone.0263725.ref033">33</xref>]. All altmetrics that are an alternative to the traditional citation system provide a score for the research output.</p>
+<p>These scores have become attractive for researchers [<xref ref-type="bibr" rid="pone.0263725.ref034">34</xref>]. Many scientists believe that these alternative metric scores show the real impact of published articles [<xref ref-type="bibr" rid="pone.0263725.ref035">35</xref>–<xref ref-type="bibr" rid="pone.0263725.ref037">37</xref>]. Many web-based platforms play a significant role in obtaining an altmetric score [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>, <xref ref-type="bibr" rid="pone.0263725.ref031">31</xref>]. With the data obtained from these platforms, a digital score was acquired for academic output [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>]. All altmetrics are based on the using social media and other online tools for disseminating scholarly information [<xref ref-type="bibr" rid="pone.0263725.ref038">38</xref>]. The use of social media platforms contributes significantly the spread of shared information in a wider environment. Thus, the sharing of academic output on social media accounts can reach more people faster by eliminating the waiting period in the traditional citation system [<xref ref-type="bibr" rid="pone.0263725.ref039">39</xref>, <xref ref-type="bibr" rid="pone.0263725.ref040">40</xref>]. They have also allowed the impact of articles to be more immediately determined, contrary to traditional citation metrics [<xref ref-type="bibr" rid="pone.0263725.ref041">41</xref>].</p>
+<p>However, some concerns remain that the altmetric score can be manipulated [<xref ref-type="bibr" rid="pone.0263725.ref042">42</xref>, <xref ref-type="bibr" rid="pone.0263725.ref043">43</xref>]. In particular, the use of automatic bot can affect the altmetric scores of articles [<xref ref-type="bibr" rid="pone.0263725.ref044">44</xref>]. Further, Twitter accounts can affect the results of shared articles. These account holders may be social workers, companies, or politicians, and would have more followers than others [<xref ref-type="bibr" rid="pone.0263725.ref045">45</xref>, <xref ref-type="bibr" rid="pone.0263725.ref046">46</xref>]. Thus, some researchers suggest the use of “alt‑index” to measure the social visibility of scientific research [<xref ref-type="bibr" rid="pone.0263725.ref006">6</xref>]. Similarly, Haustein et al. argued that social media metrics could not actually be regarded as alternatives to traditional citations; hence, they proposed these metrics as promoters of traditional citations [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>]. The authors suggested the use of “Twitter Coupling” to deal with these concerns [<xref ref-type="bibr" rid="pone.0263725.ref038">38</xref>]. Although this may be a solution there is a consensus in many studies that social media usage will increase the impact of academic papers, thus ignoring these concerns [<xref ref-type="bibr" rid="pone.0263725.ref047">47</xref>, <xref ref-type="bibr" rid="pone.0263725.ref048">48</xref>].</p>
+<p>The potential of social media platforms to connect with other fields raises various scientific questions [<xref ref-type="bibr" rid="pone.0263725.ref049">49</xref>]. Therefore, the papers in the social sciences and humanities are more often found on social media platforms [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>]. Today, social interaction is so intertwined with media that it is not possible to separate social media from the media sector. Thus, most studies related to social media have been published in the communication sciences. This increased usage of these social networks has led to the research question, “How are altmetrics and citation measures related in communication journals?” Tonia et al. (2016) stated that there were no statistical differences between tweeted and non-tweeted papers regarding their citation numbers [<xref ref-type="bibr" rid="pone.0263725.ref050">50</xref>]. Costas et al. (2015) found only weak correlations in citations suggested by altmetrics and traditional citation analysis [<xref ref-type="bibr" rid="pone.0263725.ref035">35</xref>]. Further, some articles can be more attractive than other on social media platforms. Hence, some researchers have argued that there is a difference between social impact and real impact [<xref ref-type="bibr" rid="pone.0263725.ref011">11</xref>]. However, Thelwall et al. (2013) found that altmetrics was associated with citation counts [<xref ref-type="bibr" rid="pone.0263725.ref051">51</xref>]. Another study stated that there is a positive relationship between social media posts and academic citations [<xref ref-type="bibr" rid="pone.0263725.ref052">52</xref>]. Similarly, Shuai et al. (2012) detected significant correlations between tweets and early citations on 4,606 pre-prints articles [<xref ref-type="bibr" rid="pone.0263725.ref008">8</xref>]. Nevertheless, there is no consensus in the studies that to evaluate between tweeted and non-tweeted papers regarding their citation numbers in communication science, which is the scientific field mostly associated with social media and Twitter. The studies related to social media are encouraged in the field of communication as people present themselves through digitally networked platforms today. Therefore, it was hypothesized that there might be a correlation between Twitter posts and traditional citations the articles in the top ten communication-based journals.</p>
+</sec>
+</sec>
+<sec id="sec003" sec-type="materials|methods">
+<title>Materials and methods</title>
+<sec id="sec004">
+<title>Study design</title>
+<p>The present study was designed as a retrospective cross-sectional study. The aim was to examine the effect of Twitter and other social media platforms on academic citations. Therefore, the top ten communication-based journals [<xref ref-type="bibr" rid="pone.0263725.ref009">9</xref>] were evaluated based on the SCImago Journal &amp; Country Rank (cited in 2019). It was used the SCImago Journal &amp; Country Rank search field to select journals and filtered only “communication” journals. The selection criteria were the top ten communication-based journals according to their SCImago Journal Rank indicator. This indicator is a measure of journals’ academic impact and accounts for both the number of citations received by a journal and the importance or prestige of the journals in which the citations [<xref ref-type="bibr" rid="pone.0263725.ref053">53</xref>]. The impact factor of these journals was ≥ 2, and the quartile (Q) index was Q1. All ten journals had similar indexes and similar impact factors. It was assumed that this would reduce the potential for unwanted variation differences in social media activity.</p>
+<p>Impact Factor: The impact factor has been defined as an indicator of academic journal. It reflects the year’s average number of citations per paper published during the preceding two years. It is often used as a relative indicator of a journal’s importance in its field. The journals with high impact factors are thought to be more important than those with low impact factors [<xref ref-type="bibr" rid="pone.0263725.ref054">54</xref>].</p>
+<p>Q index: The journals’ rank in each specific category is separated into quartiles by the Journal Citation Report and SCImago Journal and Country Rank: Q1, Q2, Q3 and Q4. Q1 comprises the top 25% of journals in the list; Q2, Q3, and Q4 comprise 25% to 50%, 50% to 75%, and 75% to 100% of journals in the list, respectively (<ext-link ext-link-type="uri" xlink:href="https://www.mondragon.edu/en/web/biblioteka/publications-impact-indexes" xlink:type="simple">https://www.mondragon.edu/en/web/biblioteka/publications-impact-indexes</ext-link>).</p>
+<p>These Journals “Political Communication (Q1, IF: 4.339)”, “Journal of Advertising (Q1, IF: 6.302)”, “Journal of Communication (Q1, IF: 4.846)”, Big Data and Society (Q1, IF: 4.577), Applied Linguistics (Q1, IF: 4.286), Communication Methods and Measures (Q1, IF: 5.281), New Media and Society (Q1, IF: 4.577), Human Communication Research (Q1, IF: 3.540), Public Opinion Quarterly (Q1, IF: 2.494), and Digital Journalism (Q1, IF: 4.476) were included in this present study (<xref ref-type="table" rid="pone.0263725.t001">Table 1</xref>).</p>
+<table-wrap id="pone.0263725.t001" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0263725.t001</object-id>
+<label>Table 1</label> <caption><title>The characteristics of journals.</title></caption>
+<alternatives>
+<graphic id="pone.0263725.t001g" mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0263725.t001" xlink:type="simple"/>
+<table>
+<colgroup>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+</colgroup>
+<thead>
+<tr>
+<th align="left" style="background-color:#A5A5A5">Journals’ Name</th>
+<th align="center" style="background-color:#A5A5A5">5-Years IF</th>
+<th align="center" style="background-color:#A5A5A5">IF (2019)</th>
+<th align="center" style="background-color:#A5A5A5">Q index</th>
+<th align="center" style="background-color:#A5A5A5">Issues (per year)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Political Communication</bold></td>
+<td align="center" style="background-color:#EDEDED">5.068</td>
+<td align="center" style="background-color:#EDEDED">4.339</td>
+<td align="center" style="background-color:#EDEDED">Q1</td>
+<td align="center" style="background-color:#EDEDED">6</td>
+</tr>
+<tr>
+<td align="left"><bold>Journal of Advertising</bold></td>
+<td align="center">N/A</td>
+<td align="center">6.302</td>
+<td align="center">Q1</td>
+<td align="center">5</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Journal of Communication</bold></td>
+<td align="center" style="background-color:#EDEDED">7.175</td>
+<td align="center" style="background-color:#EDEDED">4.846</td>
+<td align="center" style="background-color:#EDEDED">Q1</td>
+<td align="center" style="background-color:#EDEDED">6</td>
+</tr>
+<tr>
+<td align="left"><bold>Big Data and Society</bold></td>
+<td align="center">N/A</td>
+<td align="center">4.577</td>
+<td align="center">Q1</td>
+<td align="center">2</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Applied Linguistics</bold></td>
+<td align="center" style="background-color:#EDEDED">4.901</td>
+<td align="center" style="background-color:#EDEDED">4.286</td>
+<td align="center" style="background-color:#EDEDED">Q1</td>
+<td align="center" style="background-color:#EDEDED">6</td>
+</tr>
+<tr>
+<td align="left"><bold>Communication Methods and Measures</bold></td>
+<td align="center">N/A</td>
+<td align="center">5.281</td>
+<td align="center">Q1</td>
+<td align="center">4</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>New Media and Society</bold></td>
+<td align="center" style="background-color:#EDEDED">4.972</td>
+<td align="center" style="background-color:#EDEDED">4.577</td>
+<td align="center" style="background-color:#EDEDED">Q1</td>
+<td align="center" style="background-color:#EDEDED">12</td>
+</tr>
+<tr>
+<td align="left"><bold>Human Communication Research</bold></td>
+<td align="center">4.039</td>
+<td align="center">3.540</td>
+<td align="center">Q1</td>
+<td align="center">4</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Public Opinion Quarterly</bold></td>
+<td align="center" style="background-color:#EDEDED">3.259</td>
+<td align="center" style="background-color:#EDEDED">2.494</td>
+<td align="center" style="background-color:#EDEDED">Q1</td>
+<td align="center" style="background-color:#EDEDED">5</td>
+</tr>
+<tr>
+<td align="left"><bold>Digital Journalism</bold></td>
+<td align="center">N/A</td>
+<td align="center">4.476</td>
+<td align="center">Q1</td>
+<td align="center">10</td>
+</tr>
+</tbody>
+</table>
+</alternatives>
+<table-wrap-foot>
+<fn id="t001fn001"><p>IF: impact factor; Q index: quartile index; N/A: not available</p></fn>
+</table-wrap-foot>
+</table-wrap>
+</sec>
+<sec id="sec005">
+<title>Data collection</title>
+<p>All issues of these journals in 2018 were reviewed through the journals’ web pages. All published articles in this year were evaluated on the web pages’ archive. The date range was considered based on published issues in the journals. Only original articles (meta-analyses, systematic reviews, original research articles, and research notes) in 2018 were included in this study. Articles such as editorials, book review articles, case reports, letters to the editor, and other non-research correspondences were excluded.</p>
+<p>The findings of the articles (title, doi number, article type) were recorded. In January 2021, the title of the article or doi number was searched one by one in Google Scholar (GS) and Web of Science (WoS) Clarivate. The traditional citation numbers (GS and WoS) of these articles were recorded. The tweet number and social media posts of these articles were searched by their metric evaluating system (<ext-link ext-link-type="uri" xlink:href="https://www.altmetric.com/" xlink:type="simple">https://www.altmetric.com/</ext-link>) and recorded. The data were appraised nearly three years after the articles’ publication date. It was thought that this period would allow the impact of published articles (the citations and Twitter mentions) to be fully observed.</p>
+</sec>
+</sec>
+<sec id="sec006" sec-type="results">
+<title>Results</title>
+<p>Seven hundred and eleven articles were published in the top ten communication-based journals in 2018. After the exclusion criteria were applied, 572 articles were included for analysis. A total of 570 articles (99.7%) were cited at least once on GS, and 518 articles (90.6%) were cited at least once on WoS. The total cumulative number of citations for all the articles was 21,242 for GS and 5,874 for WoS. The number value of citations ranged from 0 to 868 on GS, and 0–235 on WoS. The median number of citations was 19 citations (interquartile range (IQR): 0–868 citations) for GS, and five citations (IQR: 0–235 citations) for WoS (<xref ref-type="table" rid="pone.0263725.t002">Table 2</xref>).</p>
+<table-wrap id="pone.0263725.t002" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0263725.t002</object-id>
+<label>Table 2</label> <caption><title>The number of citations, mentions of Twitter and other platforms on the articles journal basis.</title></caption>
+<alternatives>
+<graphic id="pone.0263725.t002g" mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0263725.t002" xlink:type="simple"/>
+<table>
+<colgroup>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+</colgroup>
+<thead>
+<tr>
+<th align="left" style="background-color:#A5A5A5">Journals’ name</th>
+<th align="center" style="background-color:#A5A5A5">Articles (n) (%)</th>
+<th align="center" style="background-color:#A5A5A5">Citations (GS)<xref ref-type="table-fn" rid="t002fn001"><sup>≠</sup></xref></th>
+<th align="center" style="background-color:#A5A5A5">Citations (WoS) <xref ref-type="table-fn" rid="t002fn001"><sup>≠</sup></xref></th>
+<th align="center" style="background-color:#A5A5A5">Mentions (Twitter) <xref ref-type="table-fn" rid="t002fn001"><sup>≠</sup></xref></th>
+<th align="center" style="background-color:#A5A5A5">Mentions (Other platforms) <xref ref-type="table-fn" rid="t002fn001"><sup>≠</sup></xref></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Political Communication</bold></td>
+<td align="center" style="background-color:#EDEDED">29 (5.1)</td>
+<td align="center" style="background-color:#EDEDED">17 (3–171)</td>
+<td align="center" style="background-color:#EDEDED">2 (0–36)</td>
+<td align="center" style="background-color:#EDEDED">35 (10–417)</td>
+<td align="center" style="background-color:#EDEDED">42 (14–342)</td>
+</tr>
+<tr>
+<td align="left"><bold>Journal of Advertising</bold></td>
+<td align="center">24 (4.2)</td>
+<td align="center">16 (2–203)</td>
+<td align="center">1 (0–10)</td>
+<td align="center">0 (0–12)</td>
+<td align="center">3.5 (0–878)</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Journal of Communication</bold></td>
+<td align="center" style="background-color:#EDEDED">57 (10)</td>
+<td align="center" style="background-color:#EDEDED">15 (2–191)</td>
+<td align="center" style="background-color:#EDEDED">5 (0–90)</td>
+<td align="center" style="background-color:#EDEDED">12 (0–301)</td>
+<td align="center" style="background-color:#EDEDED">39 (0–318)</td>
+</tr>
+<tr>
+<td align="left"><bold>Big Data and Society</bold></td>
+<td align="center">39 (6.8)</td>
+<td align="center">16 (1–155)</td>
+<td align="center">5 (0–42)</td>
+<td align="center">33 (10–212)</td>
+<td align="center">53 (14–396)</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Applied Linguistics</bold></td>
+<td align="center" style="background-color:#EDEDED">39 (6.8)</td>
+<td align="center" style="background-color:#EDEDED">21 (2–710)</td>
+<td align="center" style="background-color:#EDEDED">5 (1–235)</td>
+<td align="center" style="background-color:#EDEDED">2 (0–164)</td>
+<td align="center" style="background-color:#EDEDED">42 (0–456)</td>
+</tr>
+<tr>
+<td align="left"><bold>Communication Methods and Measures</bold></td>
+<td align="center">15 (2.6)</td>
+<td align="center">22 (5–156)</td>
+<td align="center">2 (0–13)</td>
+<td align="center">3 (0–41)</td>
+<td align="center">29 (6–303)</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>New Media and Society</bold></td>
+<td align="center" style="background-color:#EDEDED">245 (42.9)</td>
+<td align="center" style="background-color:#EDEDED">23 (0–468)</td>
+<td align="center" style="background-color:#EDEDED">7 (0–168)</td>
+<td align="center" style="background-color:#EDEDED">8 (0–502)</td>
+<td align="center" style="background-color:#EDEDED">51 (0–702)</td>
+</tr>
+<tr>
+<td align="left"><bold>Human Communication Research</bold></td>
+<td align="center">20 (3.5)</td>
+<td align="center">9.5 (2–38)</td>
+<td align="center">3.5 (0–19)</td>
+<td align="center">2 (0–21)</td>
+<td align="center">20 (0–81)</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Public Opinion Quarterly</bold></td>
+<td align="center" style="background-color:#EDEDED">30 (5.2)</td>
+<td align="center" style="background-color:#EDEDED">8.5 (1–121)</td>
+<td align="center" style="background-color:#EDEDED">3.5 (0–49)</td>
+<td align="center" style="background-color:#EDEDED">11 (0–374)</td>
+<td align="center" style="background-color:#EDEDED">18 (0–241)</td>
+</tr>
+<tr>
+<td align="left"><bold>Digital Journalism</bold></td>
+<td align="center">74 (12.9)</td>
+<td align="center">14.5 (0–868)</td>
+<td align="center">3 (0–62)</td>
+<td align="center">7 (0–135)</td>
+<td align="center">27 (0–1019)</td>
+</tr>
+<tr>
+<td align="left" style="background-color:#EDEDED"><bold>Total</bold></td>
+<td align="center" style="background-color:#EDEDED">572 (100)</td>
+<td align="center" style="background-color:#EDEDED">19 (0–868)</td>
+<td align="center" style="background-color:#EDEDED">2 (0–235)</td>
+<td align="center" style="background-color:#EDEDED">9 (0–502)</td>
+<td align="center" style="background-color:#EDEDED">39.5 (0–1019)</td>
+</tr>
+</tbody>
+</table>
+</alternatives>
+<table-wrap-foot>
+<fn id="t002fn001"><p><sup>≠</sup> The values were presented as median (minimum-maximum).</p></fn>
+</table-wrap-foot>
+</table-wrap>
+<p>In all, 522 articles (91.3%) were posted at least once on Twitter or other platforms. The total number of mentions on all social media platforms was 50,624 items. Overall, the most-used social media platform was Twitter. The majority of articles (n: 500; 87.4%) were mentioned at least once on Twitter, and these articles had cumulatively tweets 13,438 tweet. The median value of Twitter posts was nine tweets (IQR: 0–502 tweet).</p>
+<p>The median citation value of articles on GS was 21 citations (IQR: 0–868) for the articles that had been tweeted at least one. However, it was nine (IQR: 0–72) citations for non-tweeted articles. Further, the median WoS citation number was five (IQR: 0–235) for tweeted articles and two (IQR: 0–19) for non-tweeted articles.</p>
+<p>The tweeted articles were cited more often than those with no tweets on both platforms (for GS: Mann-Whitney U: 10107, Z: -6.022, p&lt; 0.001; for WoS: Mann-Whitney U: 10547, Z: -5.699, p&lt; 0.001, respectively). This observation was also similar for the other platforms (for GS: Mann-Whitney U: 6493, Z: -5.875, p&lt; 0.001; for WoS: Mann-Whitney U: 6735.5, Z: -5.671, p&lt; 0.001, respectively) (<xref ref-type="table" rid="pone.0263725.t003">Table 3</xref>).</p>
+<table-wrap id="pone.0263725.t003" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0263725.t003</object-id>
+<label>Table 3</label> <caption><title>The articles with exposure social media were related to the higher citation rates.</title></caption>
+<alternatives>
+<graphic id="pone.0263725.t003g" mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0263725.t003" xlink:type="simple"/>
+<table>
+<colgroup>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+<col align="left" valign="middle"/>
+</colgroup>
+<thead>
+<tr>
+<th align="left"/>
+<th align="left"/>
+<th align="center">Median GS citations</th>
+<th align="center">Median WoS citations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" rowspan="2"><bold>Twitter Mentions</bold></td>
+<td align="left">No</td>
+<td align="center">9</td>
+<td align="center">2</td>
+</tr>
+<tr>
+<td align="left">Yes</td>
+<td align="center">21</td>
+<td align="center">5</td>
+</tr>
+<tr>
+<td align="left"><bold>P value</bold></td>
+<td align="left"/>
+<td align="center">&lt;0.001</td>
+<td align="center">&lt;0.001</td>
+</tr>
+<tr>
+<td align="left" rowspan="2"><bold>Other SoMe Platforms</bold></td>
+<td align="left">No</td>
+<td align="center">8</td>
+<td align="center">2</td>
+</tr>
+<tr>
+<td align="left">Yes</td>
+<td align="center">20</td>
+<td align="center">5</td>
+</tr>
+<tr>
+<td align="left"><bold>P value</bold></td>
+<td align="left"/>
+<td align="center">&lt;0.001</td>
+<td align="center">&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+</alternatives>
+<table-wrap-foot>
+<fn id="t003fn001"><p>GS: Google Scholar; WoS: Web of Science; SoMe: Social Media.</p></fn>
+</table-wrap-foot>
+</table-wrap>
+<p>It was observed that a significant correlation between the number of Twitter posts and the number of citations in GS (r = 0.44, p&lt;0.001) and in WoS (r = 0.50, P&lt;0.001). Similarly, there was also a positive correlation between the number of mentions on all platforms and the number of citations in GS (r = 0.83, p&lt;0.001) and WoS (r = 0.71, p&lt;0.001) (<xref ref-type="fig" rid="pone.0263725.g001">Fig 1</xref>).</p>
+<fig id="pone.0263725.g001" position="float">
+<object-id pub-id-type="doi">10.1371/journal.pone.0263725.g001</object-id>
+<label>Fig 1</label>
+<caption>
+<title>The correlation between citation of articles, and metric value and Twitter posts.</title>
+<p>A. The relationship between metric value of articles and Google scholar citations. B. The relationship between metric value of articles and Web of Science citations. C. The relationship between Twitter posts of articles and Web of Science citations. D. The relationship between Twitter posts of articles and Google Scholar citations.</p>
+</caption>
+<graphic mimetype="image" position="float" xlink:href="info:doi/10.1371/journal.pone.0263725.g001" xlink:type="simple"/>
+</fig>
+</sec>
+<sec id="sec007" sec-type="conclusions">
+<title>Discussion</title>
+<p>Social networks in academia are rapidly improving, and significantly increasing use by the scientific community [<xref ref-type="bibr" rid="pone.0263725.ref055">55</xref>]. Many journals frequently use these tools for advertising and sharing information [<xref ref-type="bibr" rid="pone.0263725.ref056">56</xref>]. Social media platforms have brought another dimension to access the information. With developments in social sharing platforms, there has been a transition to the digital age of accessing information [<xref ref-type="bibr" rid="pone.0263725.ref057">57</xref>]. Thus, these platforms have presented new opportunities for researchers to extend their publications the scientific society [<xref ref-type="bibr" rid="pone.0263725.ref036">36</xref>, <xref ref-type="bibr" rid="pone.0263725.ref058">58</xref>]. Similarly, this present study found that the articles exposed to social media were cited more than the articles not posted on social media. This study showed that the visibility of articles might be increased by sharing them on social media, which allows the real effects of the articles to emerge more rapidly.</p>
+<p>Generally, the use of all networks has a similar effect, but the most used platform for this purpose is Twitter. Twitter allows for the rapid sharing of information within seconds of posting a tweet. Thus, the dissemination rate of tweets increases exponentially [<xref ref-type="bibr" rid="pone.0263725.ref059">59</xref>]. As in other studies, it was found that more use of Twitter than other platforms in this study. Moreover, a positive correlation was observed between the altmetric score, Twitter posts, and citation rate of articles. The articles that were tweeted at least once were cited more than those with no posts on both platforms (for GS, p &lt;0.001; and for WoS, p &lt;0.001). The findings support the conclusion that Twitter activity may reflect the quality of articles or increase their citations. Thus, the measure of social platforms based on tweets should be used to complement the traditional metrics of article citations.</p>
+<p>Especially the science of communication is the social sciences field most related to social networks. The traditional publishing continues in the communication sciences, but its adoption of social media-related studies is increasing daily [<xref ref-type="bibr" rid="pone.0263725.ref010">10</xref>, <xref ref-type="bibr" rid="pone.0263725.ref014">14</xref>]. Therefore, sharing and disseminating the articles in communication journals may significantly increase their citation rates. This present study revealed this relationship and highlighted the impact of using social networks in the academic world. Thus, authors and journals should share all articles using social media tools to increase the impact of the article.</p>
+<p>The use of social media platforms in the scientific world will make an important contribution to traditional metric systems. Published articles can be posted on social media to reach more people, disseminate information quickly and increase their impact faster [<xref ref-type="bibr" rid="pone.0263725.ref060">60</xref>]. Further, academic journals’ use of Twitter will promote the journals and increase the citation numbers of the articles [<xref ref-type="bibr" rid="pone.0263725.ref009">9</xref>, <xref ref-type="bibr" rid="pone.0263725.ref060">60</xref>]. Many journals share all of their articles published on their social media accounts. Some journals only share articles they deem important. However, increasing the visibility of articles on social media platforms could be a tool for reaching more people. Thus, this study shows that Twitter posts could mediate these articles to reach more people.</p>
+<p>The results of this study show that articles with exposure to social media had higher citation rates. There was also a positive correlation between exposure to social media and article citations. Therefore, the scientist and journals should develop new projects to increase the usage of social media.</p>
+<p>However, the present study has some limitations. First, it analyzed only the number of citations and the number of tweets and did not evaluate their content or the Twitter account holders. Second, this study evaluated only the top 10 journals in the communication science. Third, multiple factors (such as sending articles to the press at the same time, focusing on some specific communication topics, and evaluating popular topics) may play a role in the emergence of the articles’ impact. Posting articles on Twitter is only one contributor to this impact. Further, this study examined the relationship between the number of Twitter posts and the number of citations of articles. However, the cause of the relationship was not analyzed. Therefore, more work is needed to explain potential causes of the relationships between posts and citations of an article. Nevertheless, this study presented significant findings that highlight the importance of using social media in academia.</p>
+</sec>
+</body>
+<back>
+<ref-list>
+<title>References</title>
+<ref id="pone.0263725.ref001"><label>1</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Burgess</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Bruns</surname> <given-names>A</given-names></name>. <article-title>Twitter archives and the challenges of" Big Social Data" for media and communication research</article-title>. <source>M/C Journal</source>. <year>2012</year>;<volume>15</volume>(<issue>5</issue>).</mixed-citation></ref>
+<ref id="pone.0263725.ref002"><label>2</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Obar</surname> <given-names>JA</given-names></name>, <name name-style="western"><surname>Wildman</surname> <given-names>SS</given-names></name>. <article-title>Social media definition and the governance challenge-an introduction to the special issue</article-title>. <source>Telecommunications policy</source>. <year>2015</year>;<volume>39</volume>(<issue>9</issue>):<fpage>745</fpage>–<lpage>750</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref003"><label>3</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Ross</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Terras</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Warwick</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Welsh</surname> <given-names>A</given-names></name>. <article-title>Enabled backchannel: Conference Twitter use by digital humanists</article-title>. <source>Journal of Documentation</source>. <year>2011</year>;<volume>67</volume>(<issue>2</issue>): <fpage>214</fpage>–<lpage>237</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref004"><label>4</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Paradis</surname> <given-names>N</given-names></name>, <name name-style="western"><surname>Knoll</surname> <given-names>MA</given-names></name>, <name name-style="western"><surname>Shah</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Lambert</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Delouya</surname> <given-names>G</given-names></name>, <name name-style="western"><surname>Bahig</surname> <given-names>H</given-names></name>, <etal>et al</etal>. <article-title>Twitter: A Platform for Dissemination and Discussion of Scientific Papers in Radiation Oncology</article-title>. <source>American Journal of Clinical Oncology</source>. <year>2020</year>;<volume>43</volume>(<issue>6</issue>):<fpage>442</fpage>–<lpage>445</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1097/COC.0000000000000685" xlink:type="simple">10.1097/COC.0000000000000685</ext-link></comment> <object-id pub-id-type="pmid">32167936</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref005"><label>5</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Lenhart</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Purcell</surname> <given-names>K</given-names></name>, <name name-style="western"><surname>Smith</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Zickuhr</surname> <given-names>K</given-names></name>. <article-title>Social Media &amp; Mobile Internet Use among Teens and Young Adults.</article-title> <source>Millennials. Pew internet American life project</source>. <year>2010</year>.</mixed-citation></ref>
+<ref id="pone.0263725.ref006"><label>6</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hassan</surname> <given-names>S-U</given-names></name>, <name name-style="western"><surname>Iqbal</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Aljohani</surname> <given-names>NR</given-names></name>, <name name-style="western"><surname>Alelyani</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Zuccala</surname> <given-names>A</given-names></name>. <article-title>Introducing the ‘alt-index’for measuring the social visibility of scientific research</article-title>. <source>Scientometrics</source>. <year>2020</year>;<volume>123</volume>:<fpage>1407</fpage>–<lpage>1419</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref007"><label>7</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Eysenbach</surname> <given-names>G.</given-names></name> <article-title>Can tweets predict citations? Metrics of social impact based on Twitter and correlation with traditional metrics of scientific impact</article-title>. <source>Journal of medical Internet research</source>. <year>2011</year>;<volume>13</volume>(<issue>4</issue>):<fpage>e123</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.2196/jmir.2012" xlink:type="simple">10.2196/jmir.2012</ext-link></comment> <object-id pub-id-type="pmid">22173204</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref008"><label>8</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Shuai</surname> <given-names>X</given-names></name>, <name name-style="western"><surname>Pepe</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Bollen</surname> <given-names>J</given-names></name>. <article-title>How the scientific community reacts to newly submitted preprints: Article downloads, twitter mentions, and citations.</article-title> <source>PloS One.</source> <year>2012</year>;<volume>7</volume>(<issue>11</issue>):<fpage>e47523</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0047523" xlink:type="simple">10.1371/journal.pone.0047523</ext-link></comment> <object-id pub-id-type="pmid">23133597</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref009"><label>9</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Peoples</surname> <given-names>BK</given-names></name>, <name name-style="western"><surname>Midway</surname> <given-names>SR</given-names></name>, <name name-style="western"><surname>Sackett</surname> <given-names>D</given-names></name>, <name name-style="western"><surname>Lynch</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Cooney</surname> <given-names>PB</given-names></name>. <article-title>Twitter predicts citation rates of ecological research</article-title>. <source>PLoS One</source>. <year>2016</year>;<volume>11</volume>(<issue>11</issue>):<fpage>e0166570</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0166570" xlink:type="simple">10.1371/journal.pone.0166570</ext-link></comment> <object-id pub-id-type="pmid">27835703</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref010"><label>10</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Günther</surname> <given-names>E</given-names></name>, <name name-style="western"><surname>Domahidi</surname> <given-names>E</given-names></name>. <article-title>What Communication Scholars Write About: An Analysis of 80 Years of Research in High-Impact Journals</article-title>. <source>International Journal of Communication</source>. <year>2017</year>;<volume>11</volume>:<fpage>3051</fpage>–<lpage>3071</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref011"><label>11</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Haustein</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Costas</surname> <given-names>R</given-names></name>, <name name-style="western"><surname>Larivière</surname> <given-names>V</given-names></name>. <article-title>Characterizing social media metrics of scholarly papers: The effect of document properties and collaboration patterns</article-title>. <source>PloS one</source>. <year>2015</year>;<volume>10</volume>(<issue>3</issue>):<fpage>e0120495</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0120495" xlink:type="simple">10.1371/journal.pone.0120495</ext-link></comment> <object-id pub-id-type="pmid">25780916</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref012"><label>12</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Kazaz</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Özkent</surname> <given-names>Y</given-names></name>. <article-title>The use of Twitter in synchronous with television series: A research on students of communication faculty</article-title>. <source>Selcuk Communication</source>. <year>2016</year>(<issue>9</issue>):<fpage>205</fpage>–<lpage>24</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref013"><label>13</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Evans</surname> <given-names>JA</given-names></name>, <name name-style="western"><surname>Foster</surname> <given-names>JG</given-names></name>. <article-title>Metaknowledge</article-title>. <source>Science (New York, NY).</source> <year>2011</year>;<volume>331</volume>(<issue>6018</issue>):<fpage>721</fpage>–<lpage>5</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1126/science.1201765" xlink:type="simple">10.1126/science.1201765</ext-link></comment> <object-id pub-id-type="pmid">21311014</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref014"><label>14</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Rogers</surname> <given-names>JJB</given-names></name>. <source>The use of social media and its impact for research</source>. <year>2019</year>;<volume>14</volume>(<issue>3</issue>):<fpage>5022</fpage>–<lpage>4</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref015"><label>15</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>O’Leary</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Sheehan</surname> <given-names>K</given-names></name>, <name name-style="western"><surname>Lentz</surname> <given-names>S</given-names></name>. <source>Small Business Smarts: Building Buzz with Social Media: Building Buzz with Social Media: ABC-CLIO</source>; <year>2011</year>.</mixed-citation></ref>
+<ref id="pone.0263725.ref016"><label>16</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Greenwood</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Perrin</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Duggan</surname> <given-names>M</given-names></name>. <article-title>Social media update 2016.</article-title> <source>Pew Research Center</source>. <year>2016</year>;<volume>11</volume>(<issue>2</issue>):<fpage>1</fpage>–<lpage>18</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref017"><label>17</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hadjipanayis</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Efstathiou</surname> <given-names>E</given-names></name>, <name name-style="western"><surname>Altorjai</surname> <given-names>P</given-names></name>, <name name-style="western"><surname>Stiris</surname> <given-names>T</given-names></name>, <name name-style="western"><surname>Valiulis</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Koletzko</surname> <given-names>B</given-names></name>, <etal>et al</etal>. <article-title>Social media and children: what is the paediatrician’s role?</article-title> <source>European journal of pediatrics</source>. <year>2019</year>;<volume>178</volume>(<issue>10</issue>):<fpage>1605</fpage>–<lpage>12</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s00431-019-03458-w" xlink:type="simple">10.1007/s00431-019-03458-w</ext-link></comment> <object-id pub-id-type="pmid">31468108</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref018"><label>18</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Appel</surname> <given-names>G</given-names></name>, <name name-style="western"><surname>Grewal</surname> <given-names>L</given-names></name>, <name name-style="western"><surname>Hadi</surname> <given-names>R</given-names></name>, <name name-style="western"><surname>Stephen</surname> <given-names>AT</given-names></name>. <article-title>The future of social media in marketing</article-title>. <source>Journal of the Academy of Marketing Science</source>. <year>2020</year>;<volume>48</volume>(<issue>1</issue>):<fpage>79</fpage>–<lpage>95</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s11747-019-00695-1" xlink:type="simple">10.1007/s11747-019-00695-1</ext-link></comment> <object-id pub-id-type="pmid">32431463</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref019"><label>19</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Chandrasekar</surname> <given-names>T</given-names></name>, <name name-style="western"><surname>Goldberg</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Klaassen</surname> <given-names>Z</given-names></name>, <name name-style="western"><surname>Wallis</surname> <given-names>CJD</given-names></name>, <name name-style="western"><surname>Leong</surname> <given-names>JY</given-names></name>, <name name-style="western"><surname>Liem</surname> <given-names>S</given-names></name>, <etal>et al</etal>. <article-title>Twitter and academic Urology in the United States and Canada: a comprehensive assessment of the Twitterverse in 2019.</article-title> <source>BJU Int</source>. <year>2020</year>;<volume>125</volume>(<issue>1</issue>):<fpage>173</fpage>–<lpage>81</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1111/bju.14920" xlink:type="simple">10.1111/bju.14920</ext-link></comment> <object-id pub-id-type="pmid">31602782</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref020"><label>20</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>López-Goñi</surname> <given-names>I</given-names></name>, <name name-style="western"><surname>Sánchez-Angulo</surname> <given-names>M</given-names></name>. <article-title>Social networks as a tool for science communication and public engagement: focus on Twitter</article-title>. <source>FEMS Microbiology Letters</source>. <year>2017</year>;<volume>365</volume>(<issue>2</issue>).</mixed-citation></ref>
+<ref id="pone.0263725.ref021"><label>21</label><mixed-citation publication-type="other" xlink:type="simple">The top 500 sites on the web [Available from: <ext-link ext-link-type="uri" xlink:href="https://www.alexa.com/topsites" xlink:type="simple">https://www.alexa.com/topsites</ext-link>.</mixed-citation></ref>
+<ref id="pone.0263725.ref022"><label>22</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>D’Monte</surname> <given-names>L.</given-names></name> <article-title>Swine flu’s tweet tweet causes online flutter</article-title>. <source>Business Standard.</source> <year>2009</year>;<volume>29</volume>.</mixed-citation></ref>
+<ref id="pone.0263725.ref023"><label>23</label><mixed-citation publication-type="other" xlink:type="simple">Twitter: number of monthly active users 2010–2019: Statista Research Department; 2021 [Available from: <ext-link ext-link-type="uri" xlink:href="https://www.statista.com/statistics/282087/number-of-monthly-active-twitter-users/" xlink:type="simple">https://www.statista.com/statistics/282087/number-of-monthly-active-twitter-users/</ext-link>.</mixed-citation></ref>
+<ref id="pone.0263725.ref024"><label>24</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Webb</surname> <given-names>S.</given-names></name> <article-title>Twitter use in physics conferences</article-title>. <source>Scientometrics</source>. <year>2016</year>;<volume>108</volume>(<issue>3</issue>):<fpage>1267</fpage>–<lpage>86</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s11192-016-2031-1" xlink:type="simple">10.1007/s11192-016-2031-1</ext-link></comment> <object-id pub-id-type="pmid">27570319</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref025"><label>25</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Haustein</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Peters</surname> <given-names>I</given-names></name>, <name name-style="western"><surname>Sugimoto</surname> <given-names>CR</given-names></name>, <name name-style="western"><surname>Thelwall</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Larivière</surname> <given-names>V</given-names></name>. <article-title>Tweeting biomedicine: An analysis of tweets and citations in the biomedical literature</article-title>. <source>Journal of the Association for Information Science and Technology</source>. <year>2014</year>;<volume>65</volume>(<issue>4</issue>):<fpage>656</fpage>–<lpage>69</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref026"><label>26</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Warren</surname> <given-names>HR</given-names></name>, <name name-style="western"><surname>Raison</surname> <given-names>N</given-names></name>, <name name-style="western"><surname>Dasgupta</surname> <given-names>P</given-names></name>. <article-title>The Rise of Altmetrics</article-title>. <source>JAMA</source>. <year>2017</year>;<volume>317</volume>(<issue>2</issue>):<fpage>131</fpage>–<lpage>2</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1001/jama.2016.18346" xlink:type="simple">10.1001/jama.2016.18346</ext-link></comment> <object-id pub-id-type="pmid">28097363</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref027"><label>27</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Bornmann</surname> <given-names>L.</given-names></name> <article-title>Do altmetrics point to the broader impact of research? An overview of benefits and disadvantages of altmetrics</article-title>. <source>Journal of informetrics</source>. <year>2014</year>;<volume>8</volume>(<issue>4</issue>):<fpage>895</fpage>–<lpage>903</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref028"><label>28</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Bornmann</surname> <given-names>L</given-names></name>, <name name-style="western"><surname>Haunschild</surname> <given-names>R</given-names></name>. <article-title>Do altmetrics correlate with the quality of papers? A large-scale empirical study based on F1000Prime data</article-title>. <source>PloS one</source>. <year>2018</year>;<volume>13</volume>(<issue>5</issue>):<fpage>e0197133</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0197133" xlink:type="simple">10.1371/journal.pone.0197133</ext-link></comment> <object-id pub-id-type="pmid">29791468</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref029"><label>29</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Priem</surname> <given-names>JJT</given-names></name>, <article-title>September. I like the term# articlelevelmetrics, but it fails to imply* diversity* of measures</article-title>. <source>Lately, I’m liking# altmetrics.</source> <year>2010</year>;<volume>28</volume>.</mixed-citation></ref>
+<ref id="pone.0263725.ref030"><label>30</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Priem</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Groth</surname> <given-names>P</given-names></name>, <name name-style="western"><surname>Taraborelli</surname> <given-names>D</given-names></name>. <article-title>The altmetrics collection</article-title>. <source>PLoS One</source>. <year>2012</year>;<volume>7</volume>(<issue>11</issue>):<fpage>e48753</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0048753" xlink:type="simple">10.1371/journal.pone.0048753</ext-link></comment> <object-id pub-id-type="pmid">23133655</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref031"><label>31</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Kousha</surname> <given-names>K</given-names></name>, <name name-style="western"><surname>Thelwall</surname> <given-names>M</given-names></name>. <article-title>Can Google Scholar and Mendeley help to assess the scholarly impacts of dissertations?</article-title> <source>Journal of Informetrics</source>. <year>2019</year>;<volume>13</volume>(<issue>2</issue>):<fpage>467</fpage>–<lpage>84</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref032"><label>32</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Erdt</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Nagarajan</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Sin</surname> <given-names>S-CJ</given-names></name>, <name name-style="western"><surname>Theng</surname> <given-names>Y-L</given-names></name>. <article-title>Altmetrics: an analysis of the state-of-the-art in measuring research impact on social media</article-title>. <source>Scientometrics</source>. <year>2016</year>;<volume>109</volume>(<issue>2</issue>):<fpage>1117</fpage>–<lpage>66</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref033"><label>33</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Liu</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Adie</surname> <given-names>E</given-names></name>. <article-title>New perspectives on article-level metrics: developing ways to assess research uptake and impact online</article-title>. <source>Insights</source>. <year>2013</year>;<volume>26</volume>(<issue>2</issue>):<fpage>153</fpage>–<lpage>8</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref034"><label>34</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Braun</surname> <given-names>T</given-names></name>, <name name-style="western"><surname>Glänzel</surname> <given-names>W</given-names></name>, <name name-style="western"><surname>Schubert</surname> <given-names>A</given-names></name>. <article-title>A Hirsch-type index for journals</article-title>. <source>Scientometrics</source>. <year>2006</year>;<volume>69</volume>(<issue>1</issue>):<fpage>169</fpage>–<lpage>73</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref035"><label>35</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Costas</surname> <given-names>R</given-names></name>, <name name-style="western"><surname>Zahedi</surname> <given-names>Z</given-names></name>, <name name-style="western"><surname>Wouters</surname> <given-names>P</given-names></name>. <article-title>Do “altmetrics” correlate with citations? Extensive comparison of altmetric indicators with citations from a multidisciplinary perspective</article-title>. <source>Journal of the Association for Information Science Technology</source>. <year>2015</year>;<volume>66</volume>(<issue>10</issue>):<fpage>2003</fpage>–<lpage>19</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref036"><label>36</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hassan</surname> <given-names>S-U</given-names></name>, <name name-style="western"><surname>Imran</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Gillani</surname> <given-names>U</given-names></name>, <name name-style="western"><surname>Aljohani</surname> <given-names>NR</given-names></name>, <name name-style="western"><surname>Bowman</surname> <given-names>TD</given-names></name>, <name name-style="western"><surname>Didegah</surname> <given-names>F</given-names></name>. <article-title>Measuring social media activity of scientific literature: an exhaustive comparison of scopus and novel altmetrics big data</article-title>. <source>Scientometrics</source>. <year>2017</year>;<volume>113</volume>(<issue>2</issue>):<fpage>1037</fpage>–<lpage>57</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref037"><label>37</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Repiso</surname> <given-names>R</given-names></name>, <name name-style="western"><surname>Castillo-Esparcia</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Torres-Salinas</surname> <given-names>D</given-names></name>. <article-title>Altmetrics, alternative indicators for Web of Science Communication studies journals</article-title>. <source>Scientometrics</source>. <year>2019</year>;<volume>119</volume>(<issue>2</issue>):<fpage>941</fpage>–<lpage>58</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref038"><label>38</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hassan</surname> <given-names>S-U</given-names></name>, <name name-style="western"><surname>Aljohani</surname> <given-names>NR</given-names></name>, <name name-style="western"><surname>Shabbir</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Ali</surname> <given-names>U</given-names></name>, <name name-style="western"><surname>Iqbal</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Sarwar</surname> <given-names>R</given-names></name>, <etal>et al</etal>. <article-title>Tweet Coupling: a social media methodology for clustering scientific publications</article-title>. <source>Scientometrics</source>. <year>2020</year>;<volume>124</volume>:<fpage>973</fpage>–<lpage>91</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref039"><label>39</label><mixed-citation publication-type="other" xlink:type="simple">Ananiadou S, Thompson P, Nawaz R, editors. Enhancing search: Events and their discourse context. International conference on intelligent text processing and computational linguistics; 2013: Springer.</mixed-citation></ref>
+<ref id="pone.0263725.ref040"><label>40</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Shu</surname> <given-names>F</given-names></name>, <name name-style="western"><surname>Lou</surname> <given-names>W</given-names></name>, <name name-style="western"><surname>Haustein</surname> <given-names>S</given-names></name>. <article-title>Can Twitter increase the visibility of Chinese publications?</article-title> <source>Scientometrics</source>. <year>2018</year>;<volume>116</volume>(<issue>1</issue>):<fpage>505</fpage>–<lpage>19</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref041"><label>41</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Zahedi</surname> <given-names>Z</given-names></name>, <name name-style="western"><surname>Costas</surname> <given-names>R</given-names></name>. <article-title>General discussion of data quality challenges in social media metrics: Extensive comparison of four major altmetric data aggregators</article-title>. <source>PLoS One</source>. <year>2018</year>;<volume>13</volume>(<issue>5</issue>):<fpage>e0197326</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0197326" xlink:type="simple">10.1371/journal.pone.0197326</ext-link></comment> <object-id pub-id-type="pmid">29772003</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref042"><label>42</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Bartneck</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Kokkelmans</surname> <given-names>S</given-names></name>. <article-title>Detecting h-index manipulation through self-citation analysis</article-title>. <source>Scientometrics</source>. <year>2011</year>;<volume>87</volume>(<issue>1</issue>):<fpage>85</fpage>–<lpage>98</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s11192-010-0306-5" xlink:type="simple">10.1007/s11192-010-0306-5</ext-link></comment> <object-id pub-id-type="pmid">21472020</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref043"><label>43</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Kwok</surname> <given-names>R.</given-names></name> <article-title>Research impact: Altmetrics make their mark</article-title>. <source>Nature</source>. <year>2013</year>;<volume>500</volume>(<issue>7463</issue>):<fpage>491</fpage>–<lpage>3</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1038/nj7463-491a" xlink:type="simple">10.1038/nj7463-491a</ext-link></comment> <object-id pub-id-type="pmid">23977678</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref044"><label>44</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Haustein</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Bowman</surname> <given-names>TD</given-names></name>, <name name-style="western"><surname>Holmberg</surname> <given-names>K</given-names></name>, <name name-style="western"><surname>Tsou</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Sugimoto</surname> <given-names>CR</given-names></name>, <name name-style="western"><surname>Larivière</surname> <given-names>V</given-names></name>. <article-title>Tweets as impact indicators: Examining the implications of automated “bot” accounts on Twitter</article-title>. <source>Journal of the Association for Information Science Technology</source>. <year>2016</year>;<volume>67</volume>(<issue>1</issue>):<fpage>232</fpage>–<lpage>8</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref045"><label>45</label><mixed-citation publication-type="other" xlink:type="simple">Quercia D, Kosinski M, Stillwell D, Crowcroft J, editors. Our twitter profiles, our selves: Predicting personality with twitter. 2011 IEEE third international conference on privacy, security, risk and trust and 2011 IEEE third international conference on social computing; 2011: IEEE.</mixed-citation></ref>
+<ref id="pone.0263725.ref046"><label>46</label><mixed-citation publication-type="other" xlink:type="simple">Tsou A, Bowman TD, Ghazinejad A, Sugimoto CR, editors. Who tweets about science? Issi; 2015: Istanbul.</mixed-citation></ref>
+<ref id="pone.0263725.ref047"><label>47</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Ovadia</surname> <given-names>S.</given-names></name> <article-title>Exploring the potential of Twitter as a research tool</article-title>. <source>Behavioral and Social Sciences Librarian</source>. <year>2009</year>;<volume>28</volume>(<issue>4</issue>):<fpage>202</fpage>–<lpage>5</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref048"><label>48</label><mixed-citation publication-type="other" xlink:type="simple">Darling ES, Shiffman D, Côté IM, Drew JA. The role of Twitter in the life cycle of a scientific publication. arXiv preprint arXiv:. 2013.</mixed-citation></ref>
+<ref id="pone.0263725.ref049"><label>49</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hermida</surname> <given-names>A.</given-names></name> <source>Tell everyone: Why we share and why it matters: Anchor Canada</source>; <year>2016</year>.</mixed-citation></ref>
+<ref id="pone.0263725.ref050"><label>50</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Tonia</surname> <given-names>T</given-names></name>, <name name-style="western"><surname>Van Oyen</surname> <given-names>H</given-names></name>, <name name-style="western"><surname>Berger</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Schindler</surname> <given-names>C</given-names></name>, <name name-style="western"><surname>Künzli</surname> <given-names>N</given-names></name>. <article-title>If I tweet will you cite? The effect of social media exposure of articles on downloads and citations</article-title>. <source>International journal of public health</source>. <year>2016</year>;<volume>61</volume>(<issue>4</issue>):<fpage>513</fpage>–<lpage>20</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1007/s00038-016-0831-y" xlink:type="simple">10.1007/s00038-016-0831-y</ext-link></comment> <object-id pub-id-type="pmid">27193574</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref051"><label>51</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Thelwall</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Haustein</surname> <given-names>S</given-names></name>, <name name-style="western"><surname>Larivière</surname> <given-names>V</given-names></name>, <name name-style="western"><surname>Sugimoto</surname> <given-names>CR</given-names></name>. <article-title>Do altmetrics work? Twitter and ten other social web services</article-title>. <source>PloS one</source>. <year>2013</year>;<volume>8</volume>(<issue>5</issue>):<fpage>e64841</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1371/journal.pone.0064841" xlink:type="simple">10.1371/journal.pone.0064841</ext-link></comment> <object-id pub-id-type="pmid">23724101</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref052"><label>52</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Zhang</surname> <given-names>D</given-names></name>, <name name-style="western"><surname>Earp</surname> <given-names>BE</given-names></name>. <article-title>Correlation Between Social Media Posts and Academic Citations of Orthopaedic Research.</article-title> <source>J Am Acad Orthop Surg Glob Res Rev</source>. <year>2020</year>;<volume>4</volume>(<issue>9</issue>):<fpage>e20.00151</fpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.5435/JAAOSGlobal-D-20-00151" xlink:type="simple">10.5435/JAAOSGlobal-D-20-00151</ext-link></comment> <object-id pub-id-type="pmid">32890011</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref053"><label>53</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Falagas</surname> <given-names>ME</given-names></name>, <name name-style="western"><surname>Kouranos</surname> <given-names>VD</given-names></name>, <name name-style="western"><surname>Arencibia-Jorge</surname> <given-names>R</given-names></name>, <name name-style="western"><surname>Karageorgopoulos</surname> <given-names>DE</given-names></name>. <article-title>Comparison of SCImago journal rank indicator with journal impact factor</article-title>. <source>The FASEB journal</source>. <year>2008</year>;<volume>22</volume>(<issue>8</issue>):<fpage>2623</fpage>–<lpage>8</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1096/fj.08-107938" xlink:type="simple">10.1096/fj.08-107938</ext-link></comment> <object-id pub-id-type="pmid">18408168</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref054"><label>54</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Garfield</surname> <given-names>E.</given-names></name> <article-title>The history and meaning of the journal impact factor</article-title>. <source>jama</source>. <year>2006</year>;<volume>295</volume>(<issue>1</issue>):<fpage>90</fpage>–<lpage>3</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1001/jama.295.1.90" xlink:type="simple">10.1001/jama.295.1.90</ext-link></comment> <object-id pub-id-type="pmid">16391221</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref055"><label>55</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Regenberg</surname> <given-names>A</given-names></name>. <article-title>Science and Social Media.</article-title> <source>Stem Cells Transl Med</source>. <year>2019</year>;<volume>8</volume>(<issue>12</issue>):<fpage>1226</fpage>–<lpage>9</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1002/sctm.19-0066" xlink:type="simple">10.1002/sctm.19-0066</ext-link></comment> <object-id pub-id-type="pmid">31282132</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref056"><label>56</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Kelly</surname> <given-names>BS</given-names></name>, <name name-style="western"><surname>Redmond</surname> <given-names>CE</given-names></name>, <name name-style="western"><surname>Nason</surname> <given-names>GJ</given-names></name>, <name name-style="western"><surname>Healy</surname> <given-names>GM</given-names></name>, <name name-style="western"><surname>Horgan</surname> <given-names>NA</given-names></name>, <name name-style="western"><surname>Heffernan</surname> <given-names>EJ</given-names></name>. <article-title>The use of Twitter by radiology journals: an analysis of Twitter activity and impact factor</article-title>. <source>Journal of the American College of Radiology</source>. <year>2016</year>;<volume>13</volume>(<issue>11</issue>):<fpage>1391</fpage>–<lpage>6</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1016/j.jacr.2016.06.041" xlink:type="simple">10.1016/j.jacr.2016.06.041</ext-link></comment> <object-id pub-id-type="pmid">27577594</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref057"><label>57</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Priem</surname> <given-names>J</given-names></name>, <name name-style="western"><surname>Hemminger</surname> <given-names>BH</given-names></name>. <article-title>Scientometrics 2.0: New metrics of scholarly impact on the social Web</article-title>. <source>First monday</source>. <year>2010</year>;<volume>15</volume>(<issue>7</issue>).</mixed-citation></ref>
+<ref id="pone.0263725.ref058"><label>58</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Hassan</surname> <given-names>S-U</given-names></name>, <name name-style="western"><surname>Bowman</surname> <given-names>TD</given-names></name>, <name name-style="western"><surname>Shabbir</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Akhtar</surname> <given-names>A</given-names></name>, <name name-style="western"><surname>Imran</surname> <given-names>M</given-names></name>, <name name-style="western"><surname>Aljohani</surname> <given-names>NR</given-names></name>. <article-title>Influential tweeters in relation to highly cited articles in altmetric big data</article-title>. <source>Scientometrics</source>. <year>2019</year>;<volume>119</volume>(<issue>1</issue>):<fpage>481</fpage>–<lpage>93</lpage>.</mixed-citation></ref>
+<ref id="pone.0263725.ref059"><label>59</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Nason</surname> <given-names>GJ</given-names></name>, <name name-style="western"><surname>O’Kelly</surname> <given-names>F</given-names></name>, <name name-style="western"><surname>Kelly</surname> <given-names>ME</given-names></name>, <name name-style="western"><surname>Phelan</surname> <given-names>N</given-names></name>, <name name-style="western"><surname>Manecksha</surname> <given-names>RP</given-names></name>, <name name-style="western"><surname>Lawrentschuk</surname> <given-names>N</given-names></name>, <etal>et al</etal>. <article-title>The emerging use of T witter by urological journals</article-title>. <source>BJU international</source>. <year>2015</year>;<volume>115</volume>(<issue>3</issue>):<fpage>486</fpage>–<lpage>90</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1111/bju.12840" xlink:type="simple">10.1111/bju.12840</ext-link></comment> <object-id pub-id-type="pmid">24925047</object-id></mixed-citation></ref>
+<ref id="pone.0263725.ref060"><label>60</label><mixed-citation publication-type="journal" xlink:type="simple"><name name-style="western"><surname>Smith</surname> <given-names>ZL</given-names></name>, <name name-style="western"><surname>Chiang</surname> <given-names>AL</given-names></name>, <name name-style="western"><surname>Bowman</surname> <given-names>D</given-names></name>, <name name-style="western"><surname>Wallace</surname> <given-names>MB</given-names></name>. <article-title>Longitudinal relationship between social media activity and article citations in the journal Gastrointestinal Endoscopy</article-title>. <source>Gastrointestinal endoscopy</source>. <year>2019</year>;<volume>90</volume>(<issue>1</issue>):<fpage>77</fpage>–<lpage>83</lpage>. <comment>doi: <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.1016/j.gie.2019.03.028" xlink:type="simple">10.1016/j.gie.2019.03.028</ext-link></comment> <object-id pub-id-type="pmid">30935934</object-id></mixed-citation></ref>
+</ref-list>
+</back>
+</article>

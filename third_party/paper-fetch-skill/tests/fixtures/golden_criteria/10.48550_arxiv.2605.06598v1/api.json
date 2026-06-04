@@ -1,0 +1,82 @@
+{
+  "captured_at": "2026-05-09T03:49:43.840221+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2605.06598v1"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2605.06598v1",
+    "updated": "2026-05-07T17:22:18+00:00",
+    "published": "2026-05-07T17:22:18+00:00",
+    "title": "Mathematical Modeling of Early Embryonic Cell Cycles of Drosophila melanogaster",
+    "authors": [
+      "Meskerem Abebaw Mebratie",
+      "Benedikt Drebes",
+      "Katja Kapp",
+      "Arno Müller",
+      "Werner M. Seiler"
+    ],
+    "summary": "In the early stages of development, Drosophila melanogaster embryos possess very fast and well-coordinated cell cycles. In the cell cycle, CDK activity is essentially regulated by binding CDK and CycB to form an active complex and by phosphorylating CDK via CDC25 and dephosphorylating it via Wee1. We develop a mathematical model for the embryonic cell cycle which is biochemically sound and which can be rigorously analysed after a model reduction. We show that there exists a region in the parameter space where the model describes oscillations. We then focus on the role of two parameters: the CycB synthesis and the activation coefficient of APC. Our main biological hypothesis is that the first one is responsible for the period lengthening over the first 14 cycles which can be experimentally observed and this hypothesis is supported by numerical simulations of our model: if the CycB synthesis is made time-dependent with a prescribed dynamics, then our simulations show qualitatively a very similar behavior to experimental data reported in the literature.",
+    "comment": "20 pages, 7 figures",
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "q-bio.QM",
+    "categories": [
+      "q-bio.QM",
+      "q-bio.CB"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2605.06598v1",
+    "short_id": "2605.06598v1"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2605.06598v1",
+    "external_doi": null,
+    "title": "Mathematical Modeling of Early Embryonic Cell Cycles of Drosophila melanogaster",
+    "authors": [
+      "Meskerem Abebaw Mebratie",
+      "Benedikt Drebes",
+      "Katja Kapp",
+      "Arno Müller",
+      "Werner M. Seiler"
+    ],
+    "abstract": "In the early stages of development, Drosophila melanogaster embryos possess very fast and well-coordinated cell cycles. In the cell cycle, CDK activity is essentially regulated by binding CDK and CycB to form an active complex and by phosphorylating CDK via CDC25 and dephosphorylating it via Wee1. We develop a mathematical model for the embryonic cell cycle which is biochemically sound and which can be rigorously analysed after a model reduction. We show that there exists a region in the parameter space where the model describes oscillations. We then focus on the role of two parameters: the CycB synthesis and the activation coefficient of APC. Our main biological hypothesis is that the first one is responsible for the period lengthening over the first 14 cycles which can be experimentally observed and this hypothesis is supported by numerical simulations of our model: if the CycB synthesis is made time-dependent with a prescribed dynamics, then our simulations show qualitatively a very similar behavior to experimental data reported in the literature.",
+    "published": "2026-05-07",
+    "updated": "2026-05-07",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2605.06598v1",
+    "arxiv_id": "2605.06598v1",
+    "primary_category": "q-bio.QM",
+    "categories": [
+      "q-bio.QM",
+      "q-bio.CB"
+    ],
+    "keywords": [
+      "q-bio.QM",
+      "q-bio.CB"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2605.06598v1",
+    "html_url": "https://arxiv.org/html/2605.06598v1",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2605.06598v1",
+        "content_type": "text/html",
+        "content_version": "2605.06598v1",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2605.06598v1",
+        "content_type": "application/pdf",
+        "content_version": "2605.06598v1",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}

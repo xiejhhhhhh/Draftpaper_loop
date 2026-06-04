@@ -1,0 +1,133 @@
+schema_version: 2
+provider: royalsocietypublishing
+reviewed_at: '2026-05-22T10:58:54Z'
+reviewed_by: operator
+fixtures:
+- fixture: tests/fixtures/golden_criteria/10.1098_rsta.2019.0558
+  purpose: structure
+  doi: 10.1098/rsta.2019.0558
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/extracted.md
+  baseline_markdown_sha256: 1de454fb857adcdc6c0caf6649ab518cfc07fcfb7c5b68ea9e2179909164dace
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## Abstract'
+  - must include virtual patient cohorts
+  - must include Schematic of the strategies for obtaining a virtual cohort
+  - must not include Close navigation menu
+  - must not include Open figure viewer
+  - must not match (?m)^- Figure$
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsta.2019.0558/markdown-quality.json
+  markdown_quality_sha256: d88f7bf666e60b1095d3cf8317239cb37f3e97956558011e026e10ea864cb2c6
+- fixture: tests/fixtures/golden_criteria/10.1098_rspb.2020.0097
+  purpose: table
+  doi: 10.1098/rspb.2020.0097
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/extracted.md
+  baseline_markdown_sha256: 5afeb1a51409cf054c67859d19a7b5fb61ecfa00732298f7c2254e8849b87464
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include table 1
+  - must include male reproductive success
+  - must not include Download slide
+  - must not include Article navigation
+  - must match (?m)^\|.+\|$
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rspb.2020.0097/markdown-quality.json
+  markdown_quality_sha256: 557dfcdc1458c6a22173209d0d24f808d2f1bffa58fab9f59ee41b1139a85d03
+- fixture: tests/fixtures/golden_criteria/10.1098_rsos.201188
+  purpose: formula
+  doi: 10.1098/rsos.201188
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsos.201188/extracted.md
+  baseline_markdown_sha256: 3abbec52939b823c61f7429ae1d973839e852a3347fc0fa707b1d8b0b372f844
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include Black
+  - must include Scholes
+  - must not include Open figure viewer
+  - must not include Download slide
+  - must match (?:\$|Equation|BS)
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsos.201188/markdown-quality.json
+  markdown_quality_sha256: dfc622e95528796841d33f4b39d5f6579c45462d5375d1a025ed1b7009858570
+- fixture: tests/fixtures/golden_criteria/10.1098_rsos.150470
+  purpose: figure
+  doi: 10.1098/rsos.150470
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsos.150470/extracted.md
+  baseline_markdown_sha256: bb726758017cba9233eb729396c84ecf892f2d2ded7403e0c351fb6319acc9f9
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include figures 1
+  - must include Plesiochelys
+  - must include Palaeobiogeographic distribution
+  - must not include Download slide
+  - must not include Article navigation
+  - must not match (?m)^- Figure$
+  - must match (?:figure|figures 1)
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsos.150470/markdown-quality.json
+  markdown_quality_sha256: 579daf24e057a53f69fbd167f3e9051b715e2cd812bb577c88a1d8a216cfec27
+- fixture: tests/fixtures/golden_criteria/10.1098_rsif.2019.0334
+  purpose: supplementary
+  doi: 10.1098/rsif.2019.0334
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/extracted.md
+  baseline_markdown_sha256: 0045878d6324cd38544430b52e264558528c626e7daa59f7e6824e853b9f82d7
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include electronic supplementary material
+  - must include hepatitis C virus
+  - must not include Download citation
+  - must not include Article navigation
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsif.2019.0334/markdown-quality.json
+  markdown_quality_sha256: d6fcc48f9e7f6dccd301bea227ff39ea190b8d41c908e408c4f701a3fc80588b
+- fixture: tests/fixtures/golden_criteria/10.1098_rsos.201200
+  purpose: references
+  doi: 10.1098/rsos.201200
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsos.201200/extracted.md
+  baseline_markdown_sha256: a01459bc62ff1ef476e4a8ed3ac7fbaf27338cf8efb2f4883d5cde836895e9b6
+  review_notes: Semantic review completed against committed fixture evidence.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - 'must include ## References'
+  - must include Reference
+  - must not include Google Scholar
+  - must not include Download citation
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsos.201200/markdown-quality.json
+  markdown_quality_sha256: 76541f9eab2cd92280b301fbb2a3ac3b0416d59ef7b66580b6917ffb8cc49f9a
+- fixture: tests/fixtures/golden_criteria/10.1098_rsta.2020.0108
+  purpose: pdf_fallback
+  doi: 10.1098/rsta.2020.0108
+  baseline_markdown_path: tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/extracted.md
+  baseline_markdown_sha256: 39cac044fc543ed1709bdf8fe70e68f856278e47cd0641deaa737eaa095aef6c
+  review_notes: Semantic review completed against committed shared text-only PDF conversion baseline; no provider-specific PDF Markdown cleanup is required for this fixture.
+  sample_representative: true
+  markdown_semantic_reviewed: true
+  issues: []
+  assertions:
+  - must include non-empty shared PDF Markdown text
+  - must include ## 1. Introduction
+  - must include Many recent and spectacular advances in the world of materials
+  - must not include Access Denied
+  - must not include <html
+  - must not include Object moved
+  fixes: []
+  markdown_quality_path: tests/fixtures/golden_criteria/10.1098_rsta.2020.0108/markdown-quality.json
+  markdown_quality_sha256: 68975c6bad2c4c814e0badf03a1dfc0d0ec899bb9e5152e431368f489a7b8040

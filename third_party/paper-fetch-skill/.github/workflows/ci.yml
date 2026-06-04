@@ -1,0 +1,811 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_live_mcp:
+        description: "Run live MCP smoke tests"
+        required: false
+        default: false
+        type: boolean
+      run_ieee_live_mcp:
+        description: "Include IEEE Xplore fulltext smoke tests; requires an authorized runner/network"
+        required: false
+        default: false
+        type: boolean
+      run_full_golden:
+        description: "Run full golden corpus regression"
+        required: false
+        default: false
+        type: boolean
+      publish_release:
+        description: "Publish GitHub Release with offline packages"
+        required: false
+        default: false
+        type: boolean
+      run_offline_windows_only:
+        description: "Run only the Windows offline installer packaging job"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run ruff
+        run: python -m ruff check .
+
+      - name: Run contract type check
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: python -m mypy
+
+      - name: Validate local preflight script
+        run: bash scripts/dev-preflight.sh --help
+
+  unit:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up Haskell toolchain for formula tests
+        id: setup-haskell
+        uses: haskell-actions/setup@v2.11.0
+        with:
+          ghc-version: "9.8.4"
+          cabal-version: "latest"
+
+      - name: Restore formula tool cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+            .formula-tools
+          key: ${{ runner.os }}-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-${{ hashFiles('src/paper_fetch/formula/install.py', 'src/paper_fetch/resources/formula/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Install formula test backend
+        run: |
+          python -m paper_fetch.formula.install --target-dir "$PWD/.formula-tools" --no-node
+          ./.formula-tools/bin/texmath --help >/dev/null
+
+      - name: Run unit suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+          PAPER_FETCH_FORMULA_TOOLS_DIR: ${{ github.workspace }}/.formula-tools
+        run: |
+          python -m pytest tests/unit -q --durations=30
+          python -m pytest tests/devtools -q --durations=30
+
+  integration:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Validate extraction rules docs
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: python scripts/validate_extraction_rules.py --ci
+
+      - name: Run integration suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: python -m pytest tests/integration -q --durations=30
+
+  package-smoke:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Install wheel in clean venv
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/paper-fetch-wheel-smoke"
+          "$RUNNER_TEMP/paper-fetch-wheel-smoke/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/paper-fetch-wheel-smoke/bin/python" -m pip install dist/*.whl
+
+      - name: Verify console scripts
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/paper-fetch-wheel-smoke/bin/paper-fetch" --help >/dev/null
+          "$RUNNER_TEMP/paper-fetch-wheel-smoke/bin/python" - <<'PY'
+          from importlib.metadata import entry_points
+
+          scripts = {entry_point.name: entry_point for entry_point in entry_points(group="console_scripts")}
+          scripts["paper-fetch-mcp"].load()
+          PY
+
+  offline-linux-x86-64:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.11"
+            python-tag: "cp311"
+          - python-version: "3.12"
+            python-tag: "cp312"
+          - python-version: "3.13"
+            python-tag: "cp313"
+          - python-version: "3.14"
+            python-tag: "cp314"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Haskell toolchain for bundled texmath
+        id: setup-haskell
+        uses: haskell-actions/setup@v2.11.0
+        with:
+          ghc-version: "9.8.4"
+          cabal-version: "latest"
+
+      - name: Restore formula tool cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-${{ hashFiles('src/paper_fetch/formula/install.py', 'src/paper_fetch/resources/formula/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-
+
+      - name: Install browser system dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "playwright>=1.47,<2"
+          python -m playwright install-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Build offline package
+        run: scripts/build-offline-package.sh --output-dir "$PWD/offline-artifacts"
+
+      - name: Verify offline package
+        run: scripts/verify-offline-package.sh "$PWD/offline-artifacts/paper-fetch-skill-offline-linux-x86_64-${{ matrix.python-tag }}.sh"
+
+      - name: Verify Linux runtime package layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$PWD/offline-artifacts/paper-fetch-skill-offline-linux-x86_64-${{ matrix.python-tag }}.sh"
+          install_root="$RUNNER_TEMP/paper-fetch-layout-${{ matrix.python-tag }}"
+          layout_home="$RUNNER_TEMP/paper-fetch-layout-home-${{ matrix.python-tag }}"
+          rm -rf "$install_root" "$layout_home"
+          mkdir -p "$layout_home"
+          HOME="$layout_home" SHELL=/bin/bash "$package" --install-dir "$install_root" --preset=headless --no-user-config --skip-smoke
+          test -f "$install_root/runtime/site-packages/paper_fetch/__init__.py"
+          test -x "$install_root/bin/paper-fetch"
+          test -x "$install_root/bin/paper-fetch-install-formula-tools"
+          for forbidden in src tests wheelhouse dist .github pyproject.toml; do
+            if [ -e "$install_root/$forbidden" ]; then
+              echo "Linux runtime package must not include source/build path: $forbidden" >&2
+              exit 1
+            fi
+          done
+
+      - name: Upload offline package
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-fetch-skill-offline-linux-x86_64-${{ matrix.python-tag }}
+          path: offline-artifacts/paper-fetch-skill-offline-linux-x86_64-${{ matrix.python-tag }}.sh
+          if-no-files-found: error
+
+  offline-macos-install:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.run_offline_windows_only }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.11"
+            python-tag: "cp311"
+          - python-version: "3.12"
+            python-tag: "cp312"
+          - python-version: "3.13"
+            python-tag: "cp313"
+          - python-version: "3.14"
+            python-tag: "cp314"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Haskell toolchain for bundled texmath
+        id: setup-haskell
+        uses: haskell-actions/setup@v2.11.0
+        with:
+          ghc-version: "9.8.4"
+          cabal-version: "latest"
+
+      - name: Restore formula tool cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-${{ hashFiles('src/paper_fetch/formula/install.py', 'src/paper_fetch/resources/formula/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-
+
+      - name: Build macOS offline package
+        run: scripts/build-offline-package.sh --output-dir "$PWD/offline-artifacts"
+
+      - name: Verify macOS offline package
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          case "$arch" in
+            arm64|aarch64) package_arch="arm64" ;;
+            x86_64|amd64) package_arch="x86_64" ;;
+            *) echo "Unsupported macOS runner architecture: $arch" >&2; exit 1 ;;
+          esac
+          scripts/verify-offline-package.sh "$PWD/offline-artifacts/paper-fetch-skill-offline-macos-$package_arch-${{ matrix.python-tag }}.tar.gz"
+
+      - name: Verify macOS headful install layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          case "$arch" in
+            arm64|aarch64) package_arch="arm64" ;;
+            x86_64|amd64) package_arch="x86_64" ;;
+            *) echo "Unsupported macOS runner architecture: $arch" >&2; exit 1 ;;
+          esac
+          package="$PWD/offline-artifacts/paper-fetch-skill-offline-macos-$package_arch-${{ matrix.python-tag }}.tar.gz"
+          bundle_root="$RUNNER_TEMP/paper-fetch-macos-bundle"
+          bundle="$bundle_root/paper-fetch-skill-offline-macos-$package_arch-${{ matrix.python-tag }}"
+          install_root="$RUNNER_TEMP/paper-fetch-macos-install"
+          layout_home="$RUNNER_TEMP/paper-fetch-macos-home"
+          rm -rf "$bundle_root" "$install_root" "$layout_home"
+          mkdir -p "$bundle_root" "$layout_home"
+          tar -xzf "$package" -C "$bundle_root"
+          HOME="$layout_home" SHELL=/bin/bash "$bundle/install-offline.sh" --install-dir "$install_root" --preset=headful --no-user-config --skip-smoke
+          test -f "$install_root/runtime/site-packages/paper_fetch/__init__.py"
+          test -x "$install_root/bin/paper-fetch"
+          test -x "$install_root/bin/paper-fetch-install-formula-tools"
+          grep -F -q 'CLOAKBROWSER_HEADLESS="false"' "$install_root/offline.env"
+          for forbidden in src tests wheelhouse dist .github pyproject.toml; do
+            if [ -e "$install_root/$forbidden" ]; then
+              echo "macOS runtime package must not include source/build path: $forbidden" >&2
+              exit 1
+            fi
+          done
+
+      - name: Verify macOS installed package browser smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          case "$arch" in
+            arm64|aarch64) package_arch="arm64" ;;
+            x86_64|amd64) package_arch="x86_64" ;;
+            *) echo "Unsupported macOS runner architecture: $arch" >&2; exit 1 ;;
+          esac
+          package="$PWD/offline-artifacts/paper-fetch-skill-offline-macos-$package_arch-${{ matrix.python-tag }}.tar.gz"
+          bundle_root="$RUNNER_TEMP/paper-fetch-macos-browser-bundle"
+          bundle="$bundle_root/paper-fetch-skill-offline-macos-$package_arch-${{ matrix.python-tag }}"
+          install_root="$RUNNER_TEMP/paper-fetch-macos-browser-install"
+          browser_home="$RUNNER_TEMP/paper-fetch-macos-browser-home"
+          browser_profile="$RUNNER_TEMP/paper-fetch-macos-browser-profile"
+          rm -rf "$bundle_root" "$install_root" "$browser_home" "$browser_profile"
+          mkdir -p "$bundle_root" "$browser_home" "$browser_profile"
+          tar -xzf "$package" -C "$bundle_root"
+
+          browser_binary=""
+          for candidate in \
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+            "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"; do
+            if [ -x "$candidate" ]; then
+              browser_binary="$candidate"
+              break
+            fi
+          done
+          [ -n "$browser_binary" ] || {
+            echo "No executable browser binary found for macOS CloakBrowser smoke." >&2
+            exit 1
+          }
+
+          HOME="$browser_home" \
+          SHELL=/bin/bash \
+          CLOAKBROWSER_BINARY_PATH="$browser_binary" \
+          "$bundle/install-offline.sh" --install-dir "$install_root" --preset=headless --no-user-config
+
+          # shellcheck disable=SC1091
+          source "$install_root/activate-offline.sh"
+          export CLOAKBROWSER_BINARY_PATH="$browser_binary"
+          export CLOAKBROWSER_HEADLESS="true"
+          export CLOAKBROWSER_USER_DATA_DIR="$browser_profile"
+
+          paper-fetch --help >/dev/null
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          from paper_fetch._cloakbrowser_runtime import import_cloakbrowser
+
+          binary_path = os.environ.get("CLOAKBROWSER_BINARY_PATH")
+          assert binary_path and Path(binary_path).is_file(), binary_path
+
+          cloakbrowser = import_cloakbrowser()
+          browser = cloakbrowser.launch(headless=True)
+          try:
+              context = browser.new_context()
+              try:
+                  page = context.new_page()
+                  page.goto("data:text/html,<title>paper-fetch macOS browser smoke</title><main>ok</main>")
+                  assert page.title() == "paper-fetch macOS browser smoke"
+              finally:
+                  context.close()
+          finally:
+              browser.close()
+          PY
+
+      - name: Upload macOS offline package
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-fetch-skill-offline-macos-${{ matrix.python-tag }}
+          path: offline-artifacts/paper-fetch-skill-offline-macos-*-${{ matrix.python-tag }}.tar.gz
+          if-no-files-found: error
+
+  offline-windows-x86-64:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Haskell toolchain for bundled texmath
+        id: setup-haskell
+        uses: haskell-actions/setup@v2.11.0
+        with:
+          ghc-version: "9.8.4"
+          cabal-version: "latest"
+
+      - name: Restore formula tool cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-${{ hashFiles('src/paper_fetch/formula/install.py', 'src/paper_fetch/resources/formula/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-offline-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build offline package
+        shell: pwsh
+        run: ./scripts/build-offline-package-windows.ps1 -OutputDir "$PWD/offline-artifacts"
+
+      - name: Verify setup installer
+        shell: pwsh
+        run: |
+          $setup = "$PWD/offline-artifacts/paper-fetch-skill-windows-x86_64-setup.exe"
+          $installRoot = Join-Path $env:RUNNER_TEMP "PaperFetchSkill"
+          $fakeBin = Join-Path $env:RUNNER_TEMP "paper-fetch-fake-hosts"
+          $fakeLog = Join-Path $env:RUNNER_TEMP "paper-fetch-fake-hosts.log"
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $installRoot, $fakeBin
+          Remove-Item -Force -ErrorAction SilentlyContinue $fakeLog
+          New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
+          New-Item -ItemType Directory -Force -Path $fakeBin | Out-Null
+
+          @'
+          @echo off
+          echo codex %*>>"%PAPER_FETCH_FAKE_CLI_LOG%"
+          exit /b 0
+          '@ | Set-Content -LiteralPath (Join-Path $fakeBin "codex.cmd") -Encoding ASCII
+          @'
+          @echo off
+          echo claude %*>>"%PAPER_FETCH_FAKE_CLI_LOG%"
+          exit /b 0
+          '@ | Set-Content -LiteralPath (Join-Path $fakeBin "claude.cmd") -Encoding ASCII
+
+          $env:PAPER_FETCH_FAKE_CLI_LOG = $fakeLog
+          $env:PATH = "$fakeBin;$env:PATH"
+          $preexistingOfflineEnv = @(
+            'ELSEVIER_API_KEY="secret"',
+            'USER_NOTE="keep"',
+            '',
+            '# BEGIN paper-fetch offline managed',
+            "PAPER_FETCH_DOWNLOAD_DIR='C:/old/downloads'",
+            '# END paper-fetch offline managed'
+          ) -join "`n"
+          $preexistingOfflineEnv += "`n"
+          [System.IO.File]::WriteAllText((Join-Path $installRoot "offline.env"), $preexistingOfflineEnv, [System.Text.UTF8Encoding]::new($false))
+          foreach ($staleDir in @("src", "tests", ".github", "wheelhouse", "dist")) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $installRoot $staleDir) | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path (Join-Path $installRoot $staleDir) "old.txt"), "old", [System.Text.UTF8Encoding]::new($false))
+          }
+          [System.IO.File]::WriteAllText((Join-Path $installRoot "pyproject.toml"), "[project]", [System.Text.UTF8Encoding]::new($false))
+
+          $setupLog = Join-Path $env:RUNNER_TEMP "paper-fetch-setup.log"
+          $setupArgs = @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/DIR=`"$installRoot`"",
+            "/LOG=`"$setupLog`""
+          )
+          $setupProcess = Start-Process -FilePath $setup -ArgumentList $setupArgs -Wait -PassThru
+          if ($setupProcess.ExitCode -ne 0) {
+            Get-Content $setupLog -ErrorAction SilentlyContinue
+            throw "Setup installer failed with exit code $($setupProcess.ExitCode)"
+          }
+
+          $runtimePython = Join-Path $installRoot "runtime/python.exe"
+          $mathmlNode = Join-Path $installRoot "runtime/Lib/site-packages/playwright/driver/node.exe"
+          function Invoke-RuntimePythonScript {
+            param(
+              [string]$Script,
+              [string[]]$Arguments = @()
+            )
+
+            $scriptPath = Join-Path $env:RUNNER_TEMP ("paper-fetch-smoke-{0}.py" -f [System.Guid]::NewGuid().ToString("N"))
+            try {
+              [System.IO.File]::WriteAllText($scriptPath, $Script, [System.Text.UTF8Encoding]::new($false))
+              & $runtimePython -X utf8 $scriptPath @Arguments
+              if ($LASTEXITCODE -ne 0) {
+                throw "Bundled Python smoke script failed with exit code $LASTEXITCODE"
+              }
+            } finally {
+              Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+          foreach ($requiredPath in @(
+            "runtime/Lib/site-packages/paper_fetch/__init__.py",
+            "bin/paper-fetch.cmd",
+            "bin/paper-fetch-mcp.cmd",
+            "skills/paper-fetch-skill/SKILL.md",
+            "installer/manifest.json",
+            "scripts/windows-installer-helper.ps1"
+          )) {
+            $absoluteRequiredPath = Join-Path $installRoot $requiredPath
+            if (-not (Test-Path -LiteralPath $absoluteRequiredPath)) {
+              throw "Windows installer is missing runtime path: $requiredPath"
+            }
+          }
+          foreach ($forbiddenPath in @(
+            "src",
+            "tests",
+            ".github",
+            "wheelhouse",
+            "dist",
+            "pyproject.toml"
+          )) {
+            $absoluteForbiddenPath = Join-Path $installRoot $forbiddenPath
+            if (Test-Path -LiteralPath $absoluteForbiddenPath) {
+              throw "Windows runtime package must not include source/build path: $forbiddenPath"
+            }
+          }
+          $offlineEnv = Get-Content -LiteralPath (Join-Path $installRoot "offline.env") -Raw
+          $offlineEnvRoot = $installRoot.Replace("\", "/")
+          $managedBeginCount = [regex]::Matches($offlineEnv, [regex]::Escape("# BEGIN paper-fetch offline managed")).Count
+          if (-not $offlineEnv.Contains('ELSEVIER_API_KEY="secret"')) {
+            throw "Existing offline.env secret was not preserved.`n$offlineEnv"
+          }
+          if (-not $offlineEnv.Contains('USER_NOTE="keep"')) {
+            throw "Existing offline.env custom content was not preserved.`n$offlineEnv"
+          }
+          if ($managedBeginCount -ne 1) {
+            throw "Expected one managed offline.env block, found $managedBeginCount.`n$offlineEnv"
+          }
+          if ($offlineEnv.Contains("C:/old/downloads")) {
+            throw "Old offline.env managed block was not replaced.`n$offlineEnv"
+          }
+          if (-not $offlineEnv.Contains("$offlineEnvRoot/downloads")) {
+            throw "offline.env managed block does not point at the install root.`n$offlineEnv"
+          }
+          if (-not $offlineEnv.Contains("MATHML_TO_LATEX_NODE_BIN='$offlineEnvRoot/runtime/Lib/site-packages/playwright/driver/node.exe'")) {
+            throw "offline.env managed block does not pin bundled MathML Node.`n$offlineEnv"
+          }
+          $expectedBrowserUserAgent = "PAPER_FETCH_BROWSER_USER_AGENT='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'"
+          if (-not $offlineEnv.Contains($expectedBrowserUserAgent)) {
+            throw "offline.env managed block does not enable default browser UA.`n$offlineEnv"
+          }
+          if ($offlineEnv -match "(?m)^\s*#.*PAPER_FETCH_BROWSER_USER_AGENT") {
+            throw "offline.env managed block left default browser UA commented.`n$offlineEnv"
+          }
+
+          $providerStatusCheck = @'
+          import paper_fetch
+          import paper_fetch.mcp.server
+          from paper_fetch.mcp.fetch_tool import provider_status_payload
+
+          assert "providers" in provider_status_payload()
+          '@
+          Invoke-RuntimePythonScript -Script $providerStatusCheck
+          & (Join-Path $installRoot "bin/paper-fetch.cmd") --help | Out-Null
+          & (Join-Path $installRoot "formula-tools/bin/texmath.exe") --help | Out-Null
+          & $mathmlNode --version | Out-Null
+
+          $cloakbrowserCheck = @'
+          import cloakbrowser
+
+          assert hasattr(cloakbrowser, "launch")
+          '@
+          Invoke-RuntimePythonScript -Script $cloakbrowserCheck
+
+          $log = Get-Content -LiteralPath $fakeLog -Raw
+          foreach ($expected in @(
+            "codex mcp remove paper-fetch",
+            "codex mcp add",
+            "MATHML_TO_LATEX_NODE_BIN=$installRoot\runtime\Lib\site-packages\playwright\driver\node.exe",
+            "claude mcp remove -s user paper-fetch",
+            "claude mcp add -s user"
+          )) {
+            if ($log -notlike "*$expected*") {
+              throw "Fake host CLI log is missing: $expected`n$log"
+            }
+          }
+
+      - name: Upload offline package
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-fetch-skill-windows-x86_64-setup
+          path: offline-artifacts/paper-fetch-skill-windows-x86_64-setup.exe
+          if-no-files-found: error
+
+  release-offline-packages:
+    needs:
+      - lint
+      - unit
+      - integration
+      - package-smoke
+      - offline-linux-x86-64
+      - offline-macos-install
+      - offline-windows-x86-64
+    if: >-
+      ${{
+        !inputs.run_offline_windows_only &&
+        startsWith(github.ref, 'refs/tags/v') &&
+        (
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+        )
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Download offline packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: paper-fetch-skill-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Verify release asset set
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=(
+            paper-fetch-skill-offline-linux-x86_64-cp311.sh
+            paper-fetch-skill-offline-linux-x86_64-cp312.sh
+            paper-fetch-skill-offline-linux-x86_64-cp313.sh
+            paper-fetch-skill-offline-linux-x86_64-cp314.sh
+            paper-fetch-skill-windows-x86_64-setup.exe
+          )
+          python_tags=(cp311 cp312 cp313 cp314)
+
+          for asset in "${expected[@]}"; do
+            if [ ! -f "release-artifacts/$asset" ]; then
+              echo "Missing release asset: $asset" >&2
+              exit 1
+            fi
+          done
+          macos_asset_count=0
+          for python_tag in "${python_tags[@]}"; do
+            shopt -s nullglob
+            macos_assets=(release-artifacts/paper-fetch-skill-offline-macos-*-"$python_tag".tar.gz)
+            shopt -u nullglob
+            if [ "${#macos_assets[@]}" -ne 1 ]; then
+              echo "Expected exactly one macOS $python_tag release asset, found ${#macos_assets[@]}:" >&2
+              find release-artifacts -maxdepth 1 -type f -name 'paper-fetch-skill-offline-macos-*.tar.gz' -print | sort >&2
+              exit 1
+            fi
+            macos_asset_name="$(basename "${macos_assets[0]}")"
+            if [[ "$macos_asset_name" != "paper-fetch-skill-offline-macos-arm64-$python_tag.tar.gz" && "$macos_asset_name" != "paper-fetch-skill-offline-macos-x86_64-$python_tag.tar.gz" ]]; then
+              echo "Unexpected macOS release asset name: ${macos_assets[0]}" >&2
+              exit 1
+            fi
+            macos_asset_count=$((macos_asset_count + ${#macos_assets[@]}))
+          done
+
+          actual_count="$(find release-artifacts -maxdepth 1 -type f | wc -l | tr -d ' ')"
+          expected_count="$((${#expected[@]} + macos_asset_count))"
+          if [ "$actual_count" -ne "$expected_count" ]; then
+            echo "Expected $expected_count release assets, found $actual_count:" >&2
+            find release-artifacts -maxdepth 1 -type f -print | sort >&2
+            exit 1
+          fi
+
+          find release-artifacts -maxdepth 1 -type f -print | sort
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: release-artifacts/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  full-golden:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_full_golden && !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up Haskell toolchain for formula tests
+        id: setup-haskell
+        uses: haskell-actions/setup@v2.11.0
+        with:
+          ghc-version: "9.8.4"
+          cabal-version: "latest"
+
+      - name: Restore formula tool cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+            .formula-tools
+          key: ${{ runner.os }}-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-${{ hashFiles('src/paper_fetch/formula/install.py', 'src/paper_fetch/resources/formula/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-formula-tools-${{ steps.setup-haskell.outputs.ghc-version }}-
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Install formula test backend
+        run: |
+          python -m paper_fetch.formula.install --target-dir "$PWD/.formula-tools" --no-node
+          ./.formula-tools/bin/texmath --help >/dev/null
+
+      - name: Run full golden corpus regression
+        env:
+          PAPER_FETCH_RUN_FULL_GOLDEN: "1"
+          PAPER_FETCH_FORMULA_TOOLS_DIR: ${{ github.workspace }}/.formula-tools
+        run: python -m pytest tests/integration/test_golden_corpus.py -q
+
+  live-mcp:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_mcp && !inputs.run_offline_windows_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run live MCP suite when secrets are available
+        shell: bash
+        env:
+          PAPER_FETCH_RUN_LIVE: "1"
+          CROSSREF_MAILTO: ${{ secrets.CROSSREF_MAILTO }}
+          ELSEVIER_API_KEY: ${{ secrets.ELSEVIER_API_KEY }}
+        run: |
+          missing=()
+          for key in CROSSREF_MAILTO ELSEVIER_API_KEY; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Skipping live MCP tests because required secrets are missing: ${missing[*]}"
+            exit 0
+          fi
+
+          # Live MCP tests share external publisher/API state and secrets, so they
+          # run serially even though regular unit/integration suites use xdist.
+          pytest -n 0 tests/live/test_live_mcp.py -k "not ieee"
+
+          if [ "${{ inputs.run_ieee_live_mcp }}" = "true" ]; then
+            pytest -n 0 tests/live/test_live_mcp.py -k "ieee"
+          else
+            echo "Skipping IEEE live MCP smoke; enable run_ieee_live_mcp on an authorized runner/network."
+          fi

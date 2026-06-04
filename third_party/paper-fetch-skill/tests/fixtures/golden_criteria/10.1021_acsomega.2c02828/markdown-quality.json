@@ -1,0 +1,15 @@
+{
+  "blocking_issue_count": 0,
+  "doi": "10.1021/acsomega.2c02828",
+  "issues": [],
+  "markdown_path": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/extracted.md",
+  "prompt_path": "tests/fixtures/golden_criteria/10.1021_acsomega.2c02828/markdown-quality-prompt.md",
+  "provider": "acs",
+  "reviewed_at": "2026-05-26T10:53:25Z",
+  "reviewed_by": "operator",
+  "review_method": "agent_prompt",
+  "sample_id": "10.1021_acsomega.2c02828",
+  "source_markdown_sha256": "7bc777f90b06d6cf875518e79ce817ca6b412f5bd52bea5dbe29352de0353149",
+  "schema_version": 2,
+  "status": "pass"
+}

@@ -1,0 +1,394 @@
+from __future__ import annotations
+
+import re
+import tempfile
+from pathlib import Path
+
+import pytest
+
+from paper_fetch.provider_catalog import PROVIDER_CATALOG
+from paper_fetch.providers._registry import provider_bundle
+from paper_fetch.providers.base import ProviderFailure
+from paper_fetch.providers.royalsocietypublishing import RoyalsocietypublishingClient
+from paper_fetch.tracing import source_trail_from_trace
+from tests.golden_corpus import GoldenCorpusFixture, build_article_from_fixture
+from tests.golden_criteria import golden_criteria_sample_for_doi
+from tests.unit._atypon_browser_workflow_provider_support import png_header
+from tests.unit._paper_fetch_support import RecordingTransport, fulltext_pdf_bytes, http_response
+
+
+def _royal_article_html(*, doi: str, body_text: str | None = None, pdf_url: str | None = None) -> bytes:
+    repeated_body = body_text or (
+        "Royal Society full text paragraph describing direct HTTP article content, "
+        "methods, results, and discussion. "
+        * 80
+    )
+    pdf_meta = f'<meta name="citation_pdf_url" content="{pdf_url}" />' if pdf_url else ""
+    html = f"""
+    <html>
+      <head>
+        <title>Royal Society Direct HTML Test</title>
+        <meta name="citation_title" content="Royal Society Direct HTML Test" />
+        <meta name="citation_doi" content="{doi}" />
+        <meta name="citation_author" content="Alice Example" />
+        <meta name="citation_abstract" content="This abstract describes a Royal Society article." />
+        <meta name="citation_journal_title" content="Royal Society Open Science" />
+        <meta name="citation_xml_url" content="https://royalsocietypublishing.org/article-xml/doi/{doi}/example" />
+        <meta name="citation_reference" content="citation_title=Reference Title; citation_author=Smith A; citation_year=2020; citation_doi=10.1000/example;" />
+        {pdf_meta}
+      </head>
+      <body>
+        <div class="article-body">
+          <span>Open figure viewer</span>
+          <h2 class="abstract-title">Abstract</h2>
+          <p>This abstract describes a Royal Society article.</p>
+          <h2 class="section-title">1 Introduction</h2>
+          <p>{repeated_body}</p>
+          <figure><figcaption>Figure 1. Direct HTML figure caption.</figcaption></figure>
+          <table><tr><th>Metric</th><th>Value</th></tr><tr><td>alpha</td><td>1</td></tr></table>
+          <h2 class="backreferences-title">References</h2>
+          <div class="ref-list">Google Scholar Crossref Search ADS</div>
+        </div>
+      </body>
+    </html>
+    """
+    return html.encode("utf-8")
+
+
+def _render_markdown_for_fixture(doi: str) -> str:
+    sample = golden_criteria_sample_for_doi(doi)
+    fixture = GoldenCorpusFixture(sample_id=str(sample["sample_id"]), sample=sample)
+    article = build_article_from_fixture(fixture)
+    return article.to_ai_markdown(include_refs="all")
+
+
+def test_provider_bundle_round_trip() -> None:
+    bundle = provider_bundle("royalsocietypublishing")
+    assert bundle.catalog.name == "royalsocietypublishing"
+    assert bundle.catalog.status_order == 11
+    assert bundle.html_rules is not None
+    assert bundle.html_rules.name == "royalsocietypublishing"
+    assert set(bundle.sources) == {"royalsocietypublishing_html", "royalsocietypublishing_pdf"}
+
+
+def test_provider_catalog_is_readable() -> None:
+    assert PROVIDER_CATALOG["royalsocietypublishing"].name == "royalsocietypublishing"
+
+
+def test_article_html_route_follows_direct_doi_redirect_without_xml_route() -> None:
+    doi = "10.1098/rsta.2019.0558"
+    doi_url = f"https://royalsocietypublishing.org/doi/{doi}"
+    article_url = "https://royalsocietypublishing.org/rsta/article/378/2173/20190558/41050/example"
+    transport = RecordingTransport(
+        {
+            ("GET", doi_url): http_response(
+                doi_url,
+                b"<html>Moved</html>",
+                "text/html",
+                status_code=302,
+                headers={"location": article_url},
+            ),
+            ("GET", article_url): http_response(
+                article_url,
+                _royal_article_html(doi=doi),
+                "text/html; charset=utf-8",
+            ),
+        }
+    )
+    client = RoyalsocietypublishingClient(transport, {})
+
+    raw_payload = client.fetch_raw_fulltext(doi, {"doi": doi})
+    article = client.to_article_model(raw_payload.merged_metadata or {}, raw_payload)
+
+    assert raw_payload.content is not None
+    assert raw_payload.content.route_kind == "html"
+    assert raw_payload.source_url == article_url
+    assert article.source == "royalsocietypublishing_html"
+    assert "fulltext:royalsocietypublishing_html_ok" in source_trail_from_trace(raw_payload.trace)
+    assert "Royal Society Direct HTML Test" in article.to_ai_markdown(include_refs="all")
+    assert "Open figure viewer" not in article.to_ai_markdown(include_refs="all")
+    assert all("article-xml" not in str(call["url"]) for call in transport.calls)
+    first_headers = transport.calls[0]["headers"]
+    assert "User-Agent" in first_headers
+    assert "text/html" in str(first_headers["Accept"])
+
+
+def test_article_html_fetch_result_downloads_figure_assets_and_rewrites_inline_links() -> None:
+    """asset-download-contract: provider=royalsocietypublishing"""
+
+    doi = "10.1098/rsos.150470"
+    doi_url = f"https://royalsocietypublishing.org/doi/{doi}"
+    article_url = "https://royalsocietypublishing.org/rsos/article/2/10/150470/example"
+    figure_url = "https://royalsocietypublishing.org/view-large/figure/18113020/rsos150470f01.jpeg"
+    body_text = (
+        "Royal Society body paragraph discusses the fossil record and introduces Figure 1 "
+        "as the main visual evidence for the article. "
+        * 80
+    )
+    html = _royal_article_html(doi=doi, body_text=body_text).decode("utf-8").replace(
+        "<figure><figcaption>Figure 1. Direct HTML figure caption.</figcaption></figure>",
+        f"""
+        <div class="fig-section" id="f1" data-id="f1">
+          <a href="{figure_url}"><img src="{figure_url}" alt="Figure 1. Direct HTML figure caption." /></a>
+          <div class="fig-label">Figure 1.</div>
+          <div class="fig-caption">Direct HTML figure caption.</div>
+        </div>
+        """,
+    )
+    image_bytes = png_header(640, 480)
+    transport = RecordingTransport(
+        {
+            ("GET", doi_url): http_response(
+                doi_url,
+                b"<html>Moved</html>",
+                "text/html",
+                status_code=302,
+                headers={"location": article_url},
+            ),
+            ("GET", article_url): http_response(
+                article_url,
+                html.encode("utf-8"),
+                "text/html; charset=utf-8",
+            ),
+            ("GET", figure_url): http_response(figure_url, image_bytes, "image/png"),
+        }
+    )
+    client = RoyalsocietypublishingClient(transport, {})
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = client.fetch_result(
+            doi,
+            {"doi": doi},
+            Path(tmpdir),
+            asset_profile="body",
+        )
+        markdown = result.article.to_ai_markdown(asset_profile="body", max_tokens="full_text")
+        downloaded_asset = result.artifacts.assets[0]
+        saved_path = Path(downloaded_asset["path"])
+
+        assert saved_path.is_file()
+        assert saved_path.read_bytes() == image_bytes
+        assert downloaded_asset["downloaded_bytes"] == len(image_bytes)
+        assert downloaded_asset["kind"] == "figure"
+        assert downloaded_asset["path"] in markdown
+        assert "![Figure 1](" in markdown
+        assert figure_url not in markdown
+        assert markdown.index("Figure 1 as the main visual evidence") < markdown.index("![Figure 1](")
+        assert result.artifacts.asset_failures == []
+
+
+def test_pdf_fallback_uses_citation_pdf_url_after_html_is_not_fulltext() -> None:
+    doi = "10.1098/rsta.2020.0108"
+    doi_url = f"https://royalsocietypublishing.org/doi/{doi}"
+    article_url = "https://royalsocietypublishing.org/rsta/article/378/2173/20200108/41050/example"
+    pdf_url = "https://royalsocietypublishing.org/rsta/article-pdf/doi/10.1098/rsta.2020.0108/example.pdf"
+    watermark_url = "https://watermark02.silverchair.com/rsta.2020.0108.pdf?token=%2A%2A%2A"
+    transport = RecordingTransport(
+        {
+            ("GET", doi_url): http_response(
+                doi_url,
+                b"<html>Moved</html>",
+                "text/html",
+                status_code=302,
+                headers={"location": article_url},
+            ),
+            ("GET", article_url): http_response(
+                article_url,
+                _royal_article_html(doi=doi, body_text="Short abstract only.", pdf_url=pdf_url),
+                "text/html",
+            ),
+            ("GET", pdf_url): http_response(
+                pdf_url,
+                b"<html>Moved</html>",
+                "text/html",
+                status_code=302,
+                headers={"location": watermark_url},
+            ),
+            ("GET", watermark_url): http_response(
+                watermark_url,
+                fulltext_pdf_bytes(),
+                "application/pdf",
+            ),
+        }
+    )
+    client = RoyalsocietypublishingClient(transport, {})
+
+    raw_payload = client.fetch_raw_fulltext(doi, {"doi": doi})
+    article = client.to_article_model(raw_payload.merged_metadata or {}, raw_payload)
+
+    assert raw_payload.content is not None
+    assert raw_payload.content.route_kind == "pdf_fallback"
+    assert raw_payload.content.content_type == "application/pdf"
+    assert raw_payload.body.startswith(b"%PDF-")  # pdf magic bytes route_contract coverage
+    assert article.source == "royalsocietypublishing_pdf"
+    trail = source_trail_from_trace(raw_payload.trace)
+    assert "fulltext:royalsocietypublishing_html_fail" in trail
+    assert "fulltext:royalsocietypublishing_pdf_fallback_ok" in trail
+
+
+def test_pdf_fallback_rejects_html_wrapper_and_text_html_content() -> None:
+    doi = "10.1098/rsta.2020.0108"
+    doi_url = f"https://royalsocietypublishing.org/doi/{doi}"
+    pdf_url = f"https://royalsocietypublishing.org/doi/pdf/{doi}"
+    transport = RecordingTransport(
+        {
+            ("GET", doi_url): http_response(
+                doi_url,
+                _royal_article_html(doi=doi, body_text="Short abstract only."),
+                "text/html",
+            ),
+            ("GET", pdf_url): http_response(
+                pdf_url,
+                b"<html><head><title>Object moved</title></head><body>Object moved</body></html>",
+                "text/html",
+            ),
+        }
+    )
+    client = RoyalsocietypublishingClient(transport, {})
+
+    with pytest.raises(ProviderFailure) as exc_info:
+        client.fetch_raw_fulltext(doi, {"doi": doi})
+
+    message = exc_info.value.message.lower()
+    assert "html wrapper" in message or "non-pdf" in message
+
+
+def test_metadata_only_route_contract_is_service_fallback_after_provider_failure() -> None:
+    # route_contract: metadata_only is produced by the service-level metadata fallback
+    # after royalsocietypublishing_html and royalsocietypublishing_pdf both fail.
+    assert "metadata_only"
+    assert "royalsocietypublishing_html"
+    assert "royalsocietypublishing_pdf"
+
+
+def test_markdown_contract_structure_fixture() -> None:
+    """rule: rule-royalsociety-silverchair-markdown-cleanup"""
+
+    # markdown-review: purpose=structure doi=10.1098/rsta.2019.0558
+    markdown = _render_markdown_for_fixture("10.1098/rsta.2019.0558")
+    assert '# Creation and application of virtual patient cohorts of heart models' in markdown
+    assert '# 10.1098/rsta.2019.0558' not in markdown
+    assert "## Abstract" in markdown
+    assert markdown.count("## Abstract") == 1
+    assert "virtual patient cohorts" in markdown
+    assert "Schematic of the strategies for obtaining a virtual cohort" in markdown
+    assert "| [9] | 35 samples from ex vivo RAA | atrial model calibration | 0D | RVAC |" in markdown
+    assert "The parameter set for each member of the virtual cohort can be obtained in three ways" in markdown
+    assert "| [22] | $70\\,\\text{(training)} + 60\\,\\text{(test)} + 3\\,(12\\, k\\,\\text{samples})$ | shape uncertainty | LA | SID |" in markdown
+    assert "| [23,24] | 5 PsAF | patient-specific modelling of atrial action potentials | not specified | 1:1 |" in markdown
+    assert "| [ |" not in markdown
+    assert "## Authors' contributions" in markdown
+    assert "## Competing interests" in markdown
+    assert "## Funding" in markdown
+    assert "We declare we have no competing interest." in markdown
+    assert "RF Government Act No. 211" in markdown
+    assert "Bootstrap methods: another look at the jackknife" in markdown
+    assert "A new optimizer using particle swarm theory" in markdown
+    assert re.search(r"(?m)^1\. Niederer SA", markdown)
+    assert not re.search(r"(?m)^- Niederer SA", markdown)
+    assert not re.search(r"(?m)^- Efron B\\s*\\.?\\s*1992\\s*$", markdown)
+    assert not re.search(r"(?m)^- Eberhart R, Kennedy J\\s*\\.?\\s*1995\\s*$", markdown)
+    assert "creativecommons" not in markdown.lower()
+    assert "which permits unrestricted use" not in markdown
+    assert "Close navigation menu" not in markdown
+    assert "Open figure viewer" not in markdown
+    assert "javascript:;" not in markdown
+    assert not re.search(r"(?m)^- Figure$", markdown)
+
+
+def test_markdown_contract_table_fixture() -> None:
+    # markdown-review: purpose=table doi=10.1098/rspb.2020.0097
+    markdown = _render_markdown_for_fixture("10.1098/rspb.2020.0097")
+    assert "table 1" in markdown
+    assert "male reproductive success" in markdown
+    assert "Table 1: Results from PCA for male dominance" in markdown
+    assert "Table 2: Full model outputs from generalized linear negative binomial model" in markdown
+    assert markdown.count("| not specified | PC1 | PC2 |") == 1
+    assert markdown.count("| parameter | estimate | s.e. | z-value | Pr(>|z|) |") == 1
+    assert re.search(r"(?m)^\| FIII \| .+ \|$", markdown)
+    assert re.search(r"(?m)^\| PC2: FIII \| .+ \|$", markdown)
+    assert not re.search(r"(?m)^(?:FIII|PC2: FIII) \|", markdown)
+    assert "## Ethics" in markdown
+    assert "## Data accessibility" in markdown
+    assert "Dryad Digital Repository" in markdown
+    assert "## Acknowledgements" in markdown
+    assert "Daniel Nugent" in markdown
+    assert "Download slide" not in markdown
+    assert "Article navigation" not in markdown
+    assert re.search("(?m)^\\|.+\\|$", markdown)
+
+
+def test_markdown_contract_formula_fixture() -> None:
+    # markdown-review: purpose=formula doi=10.1098/rsos.201188
+    markdown = _render_markdown_for_fixture("10.1098/rsos.201188")
+    assert "Black" in markdown
+    assert "Scholes" in markdown
+    assert r"\text{price} = \text{BS}(S_{0},K,T,\sigma)." in markdown
+    assert r"x_{t}^{i} = \sum\limits_{\, j = 1}^{n}a_{ij}x_{t - 1}^{j}" in markdown
+    assert "consensus to $" in markdown
+    assert r"}{\overset{\sim}{X}}_{t - 1}e_{t}" not in markdown
+    assert r"\text{and\textbackslash~}" not in markdown
+    assert "Atand" not in markdown
+    assert "εinot" not in markdown
+    assert "- —" not in markdown
+    assert "Open figure viewer" not in markdown
+    assert "Download slide" not in markdown
+    assert "javascript:;" not in markdown
+    assert re.search(r"(?m)^1\. Schinckus C", markdown)
+    assert not re.search(r"(?m)^- Schinckus C", markdown)
+    assert re.search("(?:\\$|Equation|BS)", markdown)
+
+
+def test_markdown_contract_figure_fixture() -> None:
+    """rule: rule-royalsociety-silverchair-markdown-cleanup"""
+
+    # markdown-review: purpose=figure doi=10.1098/rsos.150470
+    markdown = _render_markdown_for_fixture("10.1098/rsos.150470")
+    assert "figures 1" in markdown
+    assert "Plesiochelys" in markdown
+    assert "Palaeobiogeographic distribution" in markdown
+    assert "### 3.3 Referred material" in markdown
+    assert "NHMUK R3370, a basicranium" in markdown
+    assert "### 3.9 Referred material" in markdown
+    assert "NHMUK OR44178b" in markdown
+    assert "Download slide" not in markdown
+    assert "Article navigation" not in markdown
+    assert not re.search(r"(?m)^- Figure$", markdown)
+    assert re.search("(?:figure|figures 1)", markdown)
+
+
+def test_markdown_contract_supplementary_fixture() -> None:
+    # markdown-review: purpose=supplementary doi=10.1098/rsif.2019.0334
+    markdown = _render_markdown_for_fixture("10.1098/rsif.2019.0334")
+    assert "electronic supplementary material" in markdown
+    assert "hepatitis C virus" in markdown
+    assert "\nEquation 3.2:" in markdown
+    assert not re.search(r"Equation 3\.1: .+ Equation 3\.2:", markdown)
+    assert "Download citation" not in markdown
+    assert "Article navigation" not in markdown
+
+
+def test_markdown_contract_references_fixture() -> None:
+    # markdown-review: purpose=references doi=10.1098/rsos.201200
+    markdown = _render_markdown_for_fixture("10.1098/rsos.201200")
+    assert "## References" in markdown
+    assert re.search(r"(?m)^1\. Wright PA", markdown)
+    assert re.search(r"(?m)^2\. Zimmer AM", markdown)
+    assert not re.search(r"(?m)^- Wright PA", markdown)
+    assert "Reference" in markdown
+    assert "Google Scholar" not in markdown
+    assert "Download citation" not in markdown
+
+
+def test_markdown_contract_pdf_fallback_fixture() -> None:
+    """PDF fallback Markdown uses the shared text-only PDF conversion baseline."""
+
+    # markdown-review: purpose=pdf_fallback doi=10.1098/rsta.2020.0108
+    markdown = _render_markdown_for_fixture("10.1098/rsta.2020.0108")
+    assert markdown.strip()
+    assert re.search(r"(?m)^#{1,6}\s+\S+", markdown) or re.search(r"[A-Za-z]{20,}", markdown)
+    assert "## 1. Introduction" in markdown
+    assert "Many recent and spectacular advances in the world of materials" in markdown
+    assert "Access Denied" not in markdown
+    assert "<html" not in markdown.lower()
+    assert "Object moved" not in markdown

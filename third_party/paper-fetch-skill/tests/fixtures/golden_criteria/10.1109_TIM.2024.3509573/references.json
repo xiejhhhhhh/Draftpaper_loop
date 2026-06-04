@@ -1,0 +1,906 @@
+{
+  "articleNumber": "10772041",
+  "references": [
+    {
+      "order": "1",
+      "text": "Y. Chen, Z. Zhang, C. Yuan, B. Li, Y. Deng, and W. Hu, “Channel-wise topology refinement graph convolution for skeleton-based action recognition,” in <em>Proc. IEEE/CVF Int. Conf. Comput. Vis.</em>, Oct. 2021, pp. 13359–13368.",
+      "title": "Channel-wise topology refinement graph convolution for skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/9710007",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9710007",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9710007",
+        "pdfSize": "7695",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Channel-wise topology refinement graph convolution for skeleton-based action recognition&doi=10.1109/ICCV48922.2021.01311",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Channel-wise topology refinement graph convolution for skeleton-based action recognition&doi=10.1109/ICCV48922.2021.01311",
+      "refType": "biblio",
+      "id": "ref1",
+      "errorMsg": ""
+    },
+    {
+      "order": "2",
+      "text": "H. Duan, J. Wang, K. Chen, and D. Lin, “PYSKL: Towards good practices for skeleton action recognition,” in <em>Proc. ACM Int. Conf. Multimedia (ACMMM)</em>, 2022, pp. 7351–7354.",
+      "title": "PYSKL: Towards good practices for skeleton action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1145/3503161.3548546",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1145/3503161.3548546&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=PYSKL: Towards good practices for skeleton action recognition&rft.jtitle=Proc. ACM Int. Conf. Multimedia (ACMMM)&rft.spage=7351&rft.epage=7354&rft.au=H.Duan&rft.aulast=H.Duan",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=PYSKL: Towards good practices for skeleton action recognition&doi=10.1145/3503161.3548546",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=PYSKL: Towards good practices for skeleton action recognition&doi=10.1145/3503161.3548546",
+      "refType": "biblio",
+      "id": "ref2",
+      "errorMsg": ""
+    },
+    {
+      "order": "3",
+      "text": "R. Liu, Y. Liu, W. Xin, Q. Miao, and L. Li, “Action jitter killer: Joint noise optimization cascade for skeleton-based action recognition,” <em>IEEE Trans. Instrum. Meas.</em>, vol. 73, pp. 1–14, 2024.",
+      "title": "Action jitter killer: Joint noise optimization cascade for skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10458955",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10458955",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10458955",
+        "pdfSize": "3980",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Action jitter killer: Joint noise optimization cascade for skeleton-based action recognition&doi=10.1109/TIM.2024.3370958",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Action jitter killer: Joint noise optimization cascade for skeleton-based action recognition&doi=10.1109/TIM.2024.3370958",
+      "refType": "biblio",
+      "id": "ref3",
+      "errorMsg": ""
+    },
+    {
+      "order": "4",
+      "text": "A. Sabater, L. Santos, J. Santos-Victor, A. Bernardino, L. Montesano, and A. C. Murillo, “One-shot action recognition in challenging therapy scenarios,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW)</em>, Jun. 2021, pp. 2777–2785.",
+      "title": "One-shot action recognition in challenging therapy scenarios",
+      "links": {
+        "documentLink": "/document/9523094",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9523094",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9523094",
+        "pdfSize": "2130",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=One-shot action recognition in challenging therapy scenarios&doi=10.1109/CVPRW53098.2021.00312",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=One-shot action recognition in challenging therapy scenarios&doi=10.1109/CVPRW53098.2021.00312",
+      "refType": "biblio",
+      "id": "ref4",
+      "errorMsg": ""
+    },
+    {
+      "order": "5",
+      "text": "M. Deyzel and R. P. Theart, “One-shot skeleton-based action recognition on strength and conditioning exercises,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops (CVPRW)</em>, Jun. 2023, pp. 5169–5178.",
+      "title": "One-shot skeleton-based action recognition on strength and conditioning exercises",
+      "links": {
+        "documentLink": "/document/10208705",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10208705",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10208705",
+        "pdfSize": "2825",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=One-shot skeleton-based action recognition on strength and conditioning exercises&doi=10.1109/CVPRW59228.2023.00545",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=One-shot skeleton-based action recognition on strength and conditioning exercises&doi=10.1109/CVPRW59228.2023.00545",
+      "refType": "biblio",
+      "id": "ref5",
+      "errorMsg": ""
+    },
+    {
+      "order": "6",
+      "text": "F. Xu, F. Xu, J. Xie, C.-M. Pun, H. Lu, and H. Gao, “Action recognition framework in traffic scene for autonomous driving system,” <em>IEEE Trans. Intell. Transp. Syst.</em>, vol. 23, no. 11, pp. 22301–22311, Nov. 2021.",
+      "title": "Action recognition framework in traffic scene for autonomous driving system",
+      "links": {
+        "documentLink": "/document/9660768",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9660768",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9660768",
+        "pdfSize": "2858",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Action recognition framework in traffic scene for autonomous driving system&doi=10.1109/TITS.2021.3135251",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Action recognition framework in traffic scene for autonomous driving system&doi=10.1109/TITS.2021.3135251",
+      "refType": "biblio",
+      "id": "ref6",
+      "errorMsg": ""
+    },
+    {
+      "order": "7",
+      "text": "X. Wang, “CLIP-guided prototype modulating for few-shot action recognition,” <em>Int. J. Comput. Vis.</em>, vol. 132, no. 6, pp. 1899–1912, Jun. 2023.",
+      "title": "CLIP-guided prototype modulating for few-shot action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/s11263-023-01917-4",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/s11263-023-01917-4&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=CLIP-guided prototype modulating for few-shot action recognition&rft.jtitle=Int. J. Comput. Vis.&rft.date=2023&rft.volume=132&rft.issue=6&rft.spage=1899&rft.epage=1912&rft.au=X.Wang&rft.aulast=X.Wang",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=CLIP-guided prototype modulating for few-shot action recognition&doi=10.1007/s11263-023-01917-4",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=CLIP-guided prototype modulating for few-shot action recognition&doi=10.1007/s11263-023-01917-4",
+      "refType": "biblio",
+      "id": "ref7",
+      "errorMsg": ""
+    },
+    {
+      "order": "8",
+      "text": "R. Jin, X. Wang, G. Wang, Y. Lu, H.-M. Hu, and H. Wang, “Embedding adaptation network with transformer for few-shot action recognition,” in <em>Proc. Asian Conf. Mach. Learn.</em>, 2023, pp. 515–530.",
+      "title": "Embedding adaptation network with transformer for few-shot action recognition",
+      "links": {
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Embedding adaptation network with transformer for few-shot action recognition&rft.jtitle=Proc. Asian Conf. Mach. Learn.&rft.spage=515&rft.epage=530&rft.au=R.Jin&rft.aulast=R.Jin",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Embedding adaptation network with transformer for few-shot action recognition",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Embedding adaptation network with transformer for few-shot action recognition",
+      "refType": "biblio",
+      "id": "ref8",
+      "errorMsg": ""
+    },
+    {
+      "order": "9",
+      "text": "Y. Huang, L. Yang, and Y. Sato, “Compound prototype matching for few-shot action recognition,” in <em>Proc. 17th Eur. Conf. Comput. Vis. (ECCV)</em>, Oct. 2022, pp. 351–368.",
+      "title": "Compound prototype matching for few-shot action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/978-3-031-19772-7_21",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/978-3-031-19772-7_21&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Compound prototype matching for few-shot action recognition&rft.jtitle=Proc. 17th Eur. Conf. Comput. Vis. (ECCV)&rft.spage=351&rft.epage=368&rft.au=Y.Huang&rft.aulast=Y.Huang",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Compound prototype matching for few-shot action recognition&doi=10.1007/978-3-031-19772-7_21",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Compound prototype matching for few-shot action recognition&doi=10.1007/978-3-031-19772-7_21",
+      "refType": "biblio",
+      "id": "ref9",
+      "errorMsg": ""
+    },
+    {
+      "order": "10",
+      "text": "X. Liu, S. Zhou, L. Wang, and G. Hua, “Parallel attention interaction network for few-shot skeleton-based action recognition,” in <em>Proc. IEEE/CVF Int. Conf. Comput. Vis.</em>, Oct. 2023, pp. 1379–1388.",
+      "title": "Parallel attention interaction network for few-shot skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10377291",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10377291",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10377291",
+        "pdfSize": "1891",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Parallel attention interaction network for few-shot skeleton-based action recognition&doi=10.1109/ICCV51070.2023.00133",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Parallel attention interaction network for few-shot skeleton-based action recognition&doi=10.1109/ICCV51070.2023.00133",
+      "refType": "biblio",
+      "id": "ref10",
+      "errorMsg": ""
+    },
+    {
+      "order": "11",
+      "text": "J. Snell, K. Swersky, and R. Zemel, “Prototypical networks for few-shot learning,” in <em>Proc. Adv. Neural Inf. Process. Syst.</em>, 2017, pp. 4080–4090.",
+      "title": "Prototypical networks for few-shot learning",
+      "links": {
+        "crossRefLink": "https://doi.org/10.5555/3294996.3295163",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.5555/3294996.3295163&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Prototypical networks for few-shot learning&rft.jtitle=Proc. Adv. Neural Inf. Process. Syst.&rft.spage=4080&rft.epage=4090&rft.au=J.Snell&rft.aulast=J.Snell",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Prototypical networks for few-shot learning&doi=10.5555/3294996.3295163",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Prototypical networks for few-shot learning&doi=10.5555/3294996.3295163",
+      "refType": "biblio",
+      "id": "ref11",
+      "errorMsg": ""
+    },
+    {
+      "order": "12",
+      "text": "Q. Chen, L. Chen, Q. Li, J. Shi, D. Wang, and C. Shen, “Metric learning-based few-shot adversarial domain adaptation: A cross-machine diagnosis method for ball screws of industrial robots,” <em>IEEE Trans. Instrum. Meas.</em>, vol. 73, pp. 1–10, 2024.",
+      "title": "Metric learning-based few-shot adversarial domain adaptation: A cross-machine diagnosis method for ball screws of industrial robots",
+      "links": {
+        "documentLink": "/document/10535297",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10535297",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10535297",
+        "pdfSize": "18373",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Metric learning-based few-shot adversarial domain adaptation: A cross-machine diagnosis method for ball screws of industrial robots&doi=10.1109/TIM.2024.3403183",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Metric learning-based few-shot adversarial domain adaptation: A cross-machine diagnosis method for ball screws of industrial robots&doi=10.1109/TIM.2024.3403183",
+      "refType": "biblio",
+      "id": "ref12",
+      "errorMsg": ""
+    },
+    {
+      "order": "13",
+      "text": "N. Ma, “Learning spatial-preserved skeleton representations for few-shot action recognition,” in <em>Proc. Eur. Conf. Comput. Vis.</em>, 2022, pp. 174–191.",
+      "title": "Learning spatial-preserved skeleton representations for few-shot action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/978-3-031-19772-7_11",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/978-3-031-19772-7_11&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Learning spatial-preserved skeleton representations for few-shot action recognition&rft.jtitle=Proc. Eur. Conf. Comput. Vis.&rft.spage=174&rft.epage=191&rft.au=N.Ma&rft.aulast=N.Ma",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Learning spatial-preserved skeleton representations for few-shot action recognition&doi=10.1007/978-3-031-19772-7_11",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Learning spatial-preserved skeleton representations for few-shot action recognition&doi=10.1007/978-3-031-19772-7_11",
+      "refType": "biblio",
+      "id": "ref13",
+      "errorMsg": ""
+    },
+    {
+      "order": "14",
+      "text": "K. Cao, J. Ji, Z. Cao, C.-Y. Chang, and J. C. Niebles, “Few-shot video classification via temporal alignment,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)</em>, Jun. 2020, pp. 10618–10627.",
+      "title": "Few-shot video classification via temporal alignment",
+      "links": {
+        "documentLink": "/document/9156793",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9156793",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9156793",
+        "pdfSize": "642",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Few-shot video classification via temporal alignment&doi=10.1109/CVPR42600.2020.01063",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Few-shot video classification via temporal alignment&doi=10.1109/CVPR42600.2020.01063",
+      "refType": "biblio",
+      "id": "ref14",
+      "errorMsg": ""
+    },
+    {
+      "order": "15",
+      "text": "X. Wang, “Hybrid relation guided set matching for few-shot action recognition,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)</em>, Jun. 2022, pp. 19948–19957.",
+      "title": "Hybrid relation guided set matching for few-shot action recognition",
+      "links": {
+        "documentLink": "/document/9879029",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9879029",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9879029",
+        "pdfSize": "703",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Hybrid relation guided set matching for few-shot action recognition&doi=10.1109/CVPR52688.2022.01932",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Hybrid relation guided set matching for few-shot action recognition&doi=10.1109/CVPR52688.2022.01932",
+      "refType": "biblio",
+      "id": "ref15",
+      "errorMsg": ""
+    },
+    {
+      "order": "16",
+      "text": "J. Liu, A. Shahroudy, M. Perez, G. Wang, L.-Y. Duan, and A. C. Kot, “NTU RGB+ 120: A large-scale benchmark for 3D human activity understanding,” <em>IEEE Trans. Pattern Anal. Mach. Intell.</em>, vol. 42, no. 10, pp. 2684–2701, Oct. 2020.",
+      "title": "NTU RGB+ 120: A large-scale benchmark for 3D human activity understanding",
+      "links": {
+        "documentLink": "/document/8713892",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=8713892",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "8713892",
+        "pdfSize": "3068",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=NTU RGB+ 120: A large-scale benchmark for 3D human activity understanding&doi=10.1109/TPAMI.2019.2916873",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=NTU RGB+ 120: A large-scale benchmark for 3D human activity understanding&doi=10.1109/TPAMI.2019.2916873",
+      "refType": "biblio",
+      "id": "ref16",
+      "errorMsg": ""
+    },
+    {
+      "order": "17",
+      "text": "J. Carreira and A. Zisserman, “Quo vadis, action recognition? A new model and the kinetics dataset,” in <em>Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)</em>, Jul. 2017, pp. 6299–6308.",
+      "title": "Quo vadis, action recognition? A new model and the kinetics dataset",
+      "links": {
+        "documentLink": "/document/8099985",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=8099985",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "8099985",
+        "pdfSize": "955",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Quo vadis, action recognition? A new model and the kinetics dataset&doi=10.1109/CVPR.2017.502",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Quo vadis, action recognition? A new model and the kinetics dataset&doi=10.1109/CVPR.2017.502",
+      "refType": "biblio",
+      "id": "ref17",
+      "errorMsg": ""
+    },
+    {
+      "order": "18",
+      "text": "Y. Wanyan, X. Yang, C. Chen, and C. Xu, “Active exploration of multimodal complementarity for few-shot action recognition,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)</em>, Jun. 2023, pp. 6492–6502.",
+      "title": "Active exploration of multimodal complementarity for few-shot action recognition",
+      "links": {
+        "documentLink": "/document/10203554",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10203554",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10203554",
+        "pdfSize": "424",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Active exploration of multimodal complementarity for few-shot action recognition&doi=10.1109/CVPR52729.2023.00628",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Active exploration of multimodal complementarity for few-shot action recognition&doi=10.1109/CVPR52729.2023.00628",
+      "refType": "biblio",
+      "id": "ref18",
+      "errorMsg": ""
+    },
+    {
+      "order": "19",
+      "text": "Y. Tang, B. Béjar, and R. Vidal, “Semantic-aware video representation for few-shot action recognition,” in <em>Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV)</em>, Jan. 2024, pp. 6458–6468.",
+      "title": "Semantic-aware video representation for few-shot action recognition",
+      "links": {
+        "documentLink": "/document/10484029",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10484029",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10484029",
+        "pdfSize": "1154",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Semantic-aware video representation for few-shot action recognition&doi=10.1109/WACV57701.2024.00633",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Semantic-aware video representation for few-shot action recognition&doi=10.1109/WACV57701.2024.00633",
+      "refType": "biblio",
+      "id": "ref19",
+      "errorMsg": ""
+    },
+    {
+      "order": "20",
+      "text": "X. Liu, H. Zhang, H. Pirsiavash, and X. Liu, “MASTAF: A model-agnostic spatio-temporal attention fusion network for few-shot video classification,” in <em>Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV)</em>, Jan. 2023, pp. 2508–2517.",
+      "title": "MASTAF: A model-agnostic spatio-temporal attention fusion network for few-shot video classification",
+      "links": {
+        "documentLink": "/document/10030894",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10030894",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10030894",
+        "pdfSize": "1841",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=MASTAF: A model-agnostic spatio-temporal attention fusion network for few-shot video classification&doi=10.1109/WACV56688.2023.00254",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=MASTAF: A model-agnostic spatio-temporal attention fusion network for few-shot video classification&doi=10.1109/WACV56688.2023.00254",
+      "refType": "biblio",
+      "id": "ref20",
+      "errorMsg": ""
+    },
+    {
+      "order": "21",
+      "text": "X. Wang, Y. Yan, H.-M. Hu, B. Li, and H. Wang, “Cross-modal contrastive learning network for few-shot action recognition,” <em>IEEE Trans. Image Process.</em>, vol. 33, pp. 1257–1271, 2024.",
+      "title": "Cross-modal contrastive learning network for few-shot action recognition",
+      "links": {
+        "documentLink": "/document/10411850",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10411850",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10411850",
+        "pdfSize": "1951",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Cross-modal contrastive learning network for few-shot action recognition&doi=10.1109/TIP.2024.3354104",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Cross-modal contrastive learning network for few-shot action recognition&doi=10.1109/TIP.2024.3354104",
+      "refType": "biblio",
+      "id": "ref21",
+      "errorMsg": ""
+    },
+    {
+      "order": "22",
+      "text": "C. Li, J. Zhang, S. Wu, X. Jin, and S. Shan, “Hierarchical compositional representations for few-shot action recognition,” <em>Comput. Vis. Image Understand.</em>, vol. 240, Mar. 2024, Art. no. 103911.",
+      "title": "Hierarchical compositional representations for few-shot action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1016/j.cviu.2023.103911",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1016/j.cviu.2023.103911&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Hierarchical compositional representations for few-shot action recognition&rft.jtitle=Comput. Vis. Image Understand.&rft.date=2024&rft.volume=240&rft.au=C.Li&rft.aulast=C.Li",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Hierarchical compositional representations for few-shot action recognition&doi=10.1016/j.cviu.2023.103911",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Hierarchical compositional representations for few-shot action recognition&doi=10.1016/j.cviu.2023.103911",
+      "refType": "biblio",
+      "id": "ref22",
+      "errorMsg": ""
+    },
+    {
+      "order": "23",
+      "text": "L. Wang, J. Liu, L. Zheng, T. Gedeon, and P. Koniusz, “Meet JEANIE: A similarity measure for 3D skeleton sequences via temporal-viewpoint alignment,” <em>Int. J. Comput. Vis.</em>, vol. 132, no. 9, pp. 4091–4122, Sep. 2024.",
+      "title": "Meet JEANIE: A similarity measure for 3D skeleton sequences via temporal-viewpoint alignment",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/s11263-024-02070-2",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/s11263-024-02070-2&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Meet JEANIE: A similarity measure for 3D skeleton sequences via temporal-viewpoint alignment&rft.jtitle=Int. J. Comput. Vis.&rft.date=2024&rft.volume=132&rft.issue=9&rft.spage=4091&rft.epage=4122&rft.au=L.Wang&rft.aulast=L.Wang",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Meet JEANIE: A similarity measure for 3D skeleton sequences via temporal-viewpoint alignment&doi=10.1007/s11263-024-02070-2",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Meet JEANIE: A similarity measure for 3D skeleton sequences via temporal-viewpoint alignment&doi=10.1007/s11263-024-02070-2",
+      "refType": "biblio",
+      "id": "ref23",
+      "errorMsg": ""
+    },
+    {
+      "order": "24",
+      "text": "J. Lee, M. Sim, and H.-J. Choi, “MMTS: Multimodal teacher–student learning for one-shot human action recognition,” in <em>Proc. IEEE Int. Conf. Big Data Smart Comput. (BigComp)</em>, Feb. 2023, pp. 235–242.",
+      "title": "MMTS: Multimodal teacher–student learning for one-shot human action recognition",
+      "links": {
+        "documentLink": "/document/10066809",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10066809",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10066809",
+        "pdfSize": "543",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=MMTS: Multimodal teacher–student learning for one-shot human action recognition&doi=10.1109/BigComp57234.2023.00045",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=MMTS: Multimodal teacher–student learning for one-shot human action recognition&doi=10.1109/BigComp57234.2023.00045",
+      "refType": "biblio",
+      "id": "ref24",
+      "errorMsg": ""
+    },
+    {
+      "order": "25",
+      "text": "S. Yang, J. Liu, S. Lu, E. M. Hwa, and A. C. Kot, “One-shot action recognition via multi-scale spatial–temporal skeleton matching,” <em>IEEE Trans. Pattern Anal. Mach. Intell.</em>, vol. 46, no. 7, pp. 5149–5156, Jul. 2024.",
+      "title": "One-shot action recognition via multi-scale spatial–temporal skeleton matching",
+      "links": {
+        "documentLink": "/document/10428035",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10428035",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10428035",
+        "pdfSize": "1490",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=One-shot action recognition via multi-scale spatial–temporal skeleton matching&doi=10.1109/TPAMI.2024.3363831",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=One-shot action recognition via multi-scale spatial–temporal skeleton matching&doi=10.1109/TPAMI.2024.3363831",
+      "refType": "biblio",
+      "id": "ref25",
+      "errorMsg": ""
+    },
+    {
+      "order": "26",
+      "text": "X. Li, J. Lu, X. Chen, and X. Zhang, “Spatial–temporal adaptive metric learning network for one-shot skeleton-based action recognition,” <em>IEEE Signal Process. Lett.</em>, vol. 31, pp. 321–325, 2024.",
+      "title": "Spatial–temporal adaptive metric learning network for one-shot skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10382656",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10382656",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10382656",
+        "pdfSize": "2083",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Spatial–temporal adaptive metric learning network for one-shot skeleton-based action recognition&doi=10.1109/LSP.2024.3351070",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Spatial–temporal adaptive metric learning network for one-shot skeleton-based action recognition&doi=10.1109/LSP.2024.3351070",
+      "refType": "biblio",
+      "id": "ref26",
+      "errorMsg": ""
+    },
+    {
+      "order": "27",
+      "text": "T. Chen, “Part-aware prototypical graph network for one-shot skeleton-based action recognition,” in <em>Proc. IEEE 17th Int. Conf. Autom. Face Gesture Recognit.</em>, Jan. 2023, pp. 1–8.",
+      "title": "Part-aware prototypical graph network for one-shot skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10042671",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10042671",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10042671",
+        "pdfSize": "1610",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Part-aware prototypical graph network for one-shot skeleton-based action recognition&doi=10.1109/FG57933.2023.10042671",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Part-aware prototypical graph network for one-shot skeleton-based action recognition&doi=10.1109/FG57933.2023.10042671",
+      "refType": "biblio",
+      "id": "ref27",
+      "errorMsg": ""
+    },
+    {
+      "order": "28",
+      "text": "M. Deyzel and R. P. Theart, “One-shot skeleton-based action recognition on strength and conditioning exercises,” in <em>Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.</em>, 2023, pp. 5168–5177.",
+      "title": "One-shot skeleton-based action recognition on strength and conditioning exercises",
+      "links": {
+        "documentLink": "/document/10208705",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10208705",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10208705",
+        "pdfSize": "2825",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=One-shot skeleton-based action recognition on strength and conditioning exercises&doi=10.1109/CVPRW59228.2023.00545",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=One-shot skeleton-based action recognition on strength and conditioning exercises&doi=10.1109/CVPRW59228.2023.00545",
+      "refType": "biblio",
+      "id": "ref28",
+      "errorMsg": ""
+    },
+    {
+      "order": "29",
+      "text": "K. Peng, A. Roitberg, K. Yang, J. Zhang, and R. Stiefelhagen, “Delving deep into one-shot skeleton-based action recognition with diverse occlusions,” <em>IEEE Trans. Multimedia</em>, vol. 25, pp. 1489–1504, 2023.",
+      "title": "Delving deep into one-shot skeleton-based action recognition with diverse occlusions",
+      "links": {
+        "documentLink": "/document/10011561",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10011561",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10011561",
+        "pdfSize": "6336",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Delving deep into one-shot skeleton-based action recognition with diverse occlusions&doi=10.1109/TMM.2023.3235300",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Delving deep into one-shot skeleton-based action recognition with diverse occlusions&doi=10.1109/TMM.2023.3235300",
+      "refType": "biblio",
+      "id": "ref29",
+      "errorMsg": ""
+    },
+    {
+      "order": "30",
+      "text": "A. Zhu, Q. Ke, M. Gong, and J. Bailey, “Adaptive local-component-aware graph convolutional network for one-shot skeleton-based action recognition,” in <em>Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. (WACV)</em>, Jan. 2023, pp. 6038–6047.",
+      "title": "Adaptive local-component-aware graph convolutional network for one-shot skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10030878",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10030878",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10030878",
+        "pdfSize": "1520",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Adaptive local-component-aware graph convolutional network for one-shot skeleton-based action recognition&doi=10.1109/WACV56688.2023.00598",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Adaptive local-component-aware graph convolutional network for one-shot skeleton-based action recognition&doi=10.1109/WACV56688.2023.00598",
+      "refType": "biblio",
+      "id": "ref30",
+      "errorMsg": ""
+    },
+    {
+      "order": "31",
+      "text": "Z. Li, X. Gong, R. Song, P. Duan, J. Liu, and W. Zhang, “SMAM: Self and mutual adaptive matching for skeleton-based few-shot action recognition,” <em>IEEE Trans. Image Process.</em>, vol. 32, pp. 392–402, 2022.",
+      "title": "SMAM: Self and mutual adaptive matching for skeleton-based few-shot action recognition",
+      "links": {
+        "documentLink": "/document/9975251",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9975251",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9975251",
+        "pdfSize": "8710",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=SMAM: Self and mutual adaptive matching for skeleton-based few-shot action recognition&doi=10.1109/TIP.2022.3226410",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=SMAM: Self and mutual adaptive matching for skeleton-based few-shot action recognition&doi=10.1109/TIP.2022.3226410",
+      "refType": "biblio",
+      "id": "ref31",
+      "errorMsg": ""
+    },
+    {
+      "order": "32",
+      "text": "L. Xie, Y. Yang, Z. Fu, and S. M. Naqvi, “One-shot medical action recognition with a cross-attention mechanism and dynamic time warping,” in <em>Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP)</em>, Jun. 2023, pp. 1–5.",
+      "title": "One-shot medical action recognition with a cross-attention mechanism and dynamic time warping",
+      "links": {
+        "documentLink": "/document/10097186",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10097186",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10097186",
+        "pdfSize": "1285",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=One-shot medical action recognition with a cross-attention mechanism and dynamic time warping&doi=10.1109/ICASSP49357.2023.10097186",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=One-shot medical action recognition with a cross-attention mechanism and dynamic time warping&doi=10.1109/ICASSP49357.2023.10097186",
+      "refType": "biblio",
+      "id": "ref32",
+      "errorMsg": ""
+    },
+    {
+      "order": "33",
+      "text": "R. Memmesheimer, S. Haring, N. Theisen, and D. Paulus, “Skeleton-DML: Deep metric learning for skeleton-based one-shot action recognition,” in <em>Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.</em>, Jan. 2022, pp. 3702–3710.",
+      "title": "Skeleton-DML: Deep metric learning for skeleton-based one-shot action recognition",
+      "links": {
+        "documentLink": "/document/9706634",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=9706634",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "9706634",
+        "pdfSize": "4819",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Skeleton-DML: Deep metric learning for skeleton-based one-shot action recognition&doi=10.1109/WACV51458.2022.00091",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Skeleton-DML: Deep metric learning for skeleton-based one-shot action recognition&doi=10.1109/WACV51458.2022.00091",
+      "refType": "biblio",
+      "id": "ref33",
+      "errorMsg": ""
+    },
+    {
+      "order": "34",
+      "text": "I. Tolstikhin, “MLP-mixer: An all-MLP architecture for vision,” in <em>Proc. Adv. Neural Inf. Process. Syst.</em>, vol. 34, 2021, pp. 24261–24272.",
+      "title": "MLP-mixer: An all-MLP architecture for vision",
+      "links": {
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=MLP-mixer: An all-MLP architecture for vision&rft.jtitle=Proc. Adv. Neural Inf. Process. Syst.&rft.volume=34&rft.spage=24261&rft.epage=24272&rft.au=I.Tolstikhin&rft.aulast=I.Tolstikhin",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=MLP-mixer: An all-MLP architecture for vision",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=MLP-mixer: An all-MLP architecture for vision",
+      "refType": "biblio",
+      "id": "ref34",
+      "errorMsg": ""
+    },
+    {
+      "order": "35",
+      "text": "S. Yan, Y. Xiong, and D. Lin, “Spatial temporal graph convolutional networks for skeleton-based action recognition,” in <em>Proc. AAAI Conf. Artif. Intell.</em>, vol. 32, 2018, pp. 7444–7452.",
+      "title": "Spatial temporal graph convolutional networks for skeleton-based action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1609/aaai.v32i1.12328",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1609/aaai.v32i1.12328&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Spatial temporal graph convolutional networks for skeleton-based action recognition&rft.jtitle=Proc. AAAI Conf. Artif. Intell.&rft.volume=32&rft.spage=7444&rft.epage=7452&rft.au=S.Yan&rft.aulast=S.Yan",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Spatial temporal graph convolutional networks for skeleton-based action recognition&doi=10.1609/aaai.v32i1.12328",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Spatial temporal graph convolutional networks for skeleton-based action recognition&doi=10.1609/aaai.v32i1.12328",
+      "refType": "biblio",
+      "id": "ref35",
+      "errorMsg": ""
+    },
+    {
+      "order": "36",
+      "text": "J. Lee, M. Lee, D. Lee, and S. Lee, “Hierarchically decomposed graph convolutional networks for skeleton-based action recognition,” in <em>Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV)</em>, Oct. 2023, pp. 10410–10419.",
+      "title": "Hierarchically decomposed graph convolutional networks for skeleton-based action recognition",
+      "links": {
+        "documentLink": "/document/10377200",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=10377200",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "10377200",
+        "pdfSize": "1237",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Hierarchically decomposed graph convolutional networks for skeleton-based action recognition&doi=10.1109/ICCV51070.2023.00958",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Hierarchically decomposed graph convolutional networks for skeleton-based action recognition&doi=10.1109/ICCV51070.2023.00958",
+      "refType": "biblio",
+      "id": "ref36",
+      "errorMsg": ""
+    },
+    {
+      "order": "37",
+      "text": "M. Guo, E. Chou, D.-A. Huang, S. Song, S. Yeung, and L. Fei-Fei, “Neural graph matching networks for fewshot 3D action recognition,” in <em>Proc. Eur. Conf. Comput. Vis.</em>, 2018, pp. 673–689.",
+      "title": "Neural graph matching networks for fewshot 3D action recognition",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/978-3-030-01246-5_40",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/978-3-030-01246-5_40&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Neural graph matching networks for fewshot 3D action recognition&rft.jtitle=Proc. Eur. Conf. Comput. Vis.&rft.spage=673&rft.epage=689&rft.au=M.Guo&rft.aulast=M.Guo",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Neural graph matching networks for fewshot 3D action recognition&doi=10.1007/978-3-030-01246-5_40",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Neural graph matching networks for fewshot 3D action recognition&doi=10.1007/978-3-030-01246-5_40",
+      "refType": "biblio",
+      "id": "ref37",
+      "errorMsg": ""
+    },
+    {
+      "order": "38",
+      "text": "L. Zhao and L. Akoglu, “Pairnorm: Tackling oversmoothing in GNNs,” in <em>Proc. 8th Int. Conf. Learn. Represent.</em>, 2020, pp. 1–17.",
+      "title": "Pairnorm: Tackling oversmoothing in GNNs",
+      "links": {
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Pairnorm: Tackling oversmoothing in GNNs&rft.jtitle=Proc. 8th Int. Conf. Learn. Represent.&rft.spage=1&rft.epage=17&rft.au=L.Zhao&rft.aulast=L.Zhao",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Pairnorm: Tackling oversmoothing in GNNs",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Pairnorm: Tackling oversmoothing in GNNs",
+      "refType": "biblio",
+      "id": "ref38",
+      "errorMsg": ""
+    },
+    {
+      "order": "39",
+      "text": "Z. Cao, T. Simon, S.-E. Wei, and Y. Sheikh, “Realtime multi-person 2D pose estimation using part affinity fields,” in <em>Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)</em>, Jul. 2017, pp. 7291–7299.",
+      "title": "Realtime multi-person 2D pose estimation using part affinity fields",
+      "links": {
+        "documentLink": "/document/8099626",
+        "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=8099626",
+        "accessType": {
+          "type": "subscribed",
+          "message": "Included in Your Digital Subscription"
+        },
+        "accessToolTip": "Included in Your Digital Subscription",
+        "accessIcon": "icon.access.subscribed.png",
+        "articleNumber": "8099626",
+        "pdfSize": "3380",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Realtime multi-person 2D pose estimation using part affinity fields&doi=10.1109/CVPR.2017.143",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Realtime multi-person 2D pose estimation using part affinity fields&doi=10.1109/CVPR.2017.143",
+      "refType": "biblio",
+      "id": "ref39",
+      "errorMsg": ""
+    },
+    {
+      "order": "40",
+      "text": "A. Paszke, S. Gross, F. Massa, A. Lerer, and Bradbury, “Pytorch: An imperative style, high-performance deep learning library,” in <em>Proc. Adv. Neural Inf. Process. Syst.</em>, vol. 32, 2019, pp. 8024–8035.",
+      "title": "Pytorch: An imperative style, high-performance deep learning library",
+      "links": {
+        "crossRefLink": "https://doi.org/10.5555/3454287.3455008",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.5555/3454287.3455008&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Pytorch: An imperative style, high-performance deep learning library&rft.jtitle=Proc. Adv. Neural Inf. Process. Syst.&rft.volume=32&rft.spage=8024&rft.epage=8035&rft.au=A.Paszke&rft.aulast=A.Paszke",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Pytorch: An imperative style, high-performance deep learning library&doi=10.5555/3454287.3455008",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Pytorch: An imperative style, high-performance deep learning library&doi=10.5555/3454287.3455008",
+      "refType": "biblio",
+      "id": "ref40",
+      "errorMsg": ""
+    },
+    {
+      "order": "41",
+      "text": "L. Zhu and Y. Yang, “Compound memory networks for few-shot video classification,” in <em>Proc. Eur. Conf. Comput. Vis.</em>, 2018, pp. 782–797.",
+      "title": "Compound memory networks for few-shot video classification",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1007/978-3-030-01234-2_46",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1007/978-3-030-01234-2_46&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Compound memory networks for few-shot video classification&rft.jtitle=Proc. Eur. Conf. Comput. Vis.&rft.spage=782&rft.epage=797&rft.au=L.Zhu&rft.aulast=L.Zhu",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Compound memory networks for few-shot video classification&doi=10.1007/978-3-030-01234-2_46",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Compound memory networks for few-shot video classification&doi=10.1007/978-3-030-01234-2_46",
+      "refType": "biblio",
+      "id": "ref41",
+      "errorMsg": ""
+    },
+    {
+      "order": "42",
+      "text": "M. Cuturi and M. Blondel, “Soft-DTW: A differentiable loss function for time-series,” in <em>Proc. 34th Int. Conf. Mach. Learn.</em>, 2017, pp. 894–903.",
+      "title": "Soft-DTW: A differentiable loss function for time-series",
+      "links": {
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Soft-DTW: A differentiable loss function for time-series&rft.jtitle=Proc. 34th Int. Conf. Mach. Learn.&rft.spage=894&rft.epage=903&rft.au=M.Cuturi&rft.aulast=M.Cuturi",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Soft-DTW: A differentiable loss function for time-series",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Soft-DTW: A differentiable loss function for time-series",
+      "refType": "biblio",
+      "id": "ref42",
+      "errorMsg": ""
+    },
+    {
+      "order": "43",
+      "text": "Y. Rong, W. Huang, T. Xu, and J. Huang, “Dropedge: Towards deep graph convolutional networks on node classification,” in <em>Proc. Int. Conf. Learn. Represent.</em>, 2019, pp. 2818–2829.",
+      "title": "Dropedge: Towards deep graph convolutional networks on node classification",
+      "links": {
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Dropedge: Towards deep graph convolutional networks on node classification&rft.jtitle=Proc. Int. Conf. Learn. Represent.&rft.spage=2818&rft.epage=2829&rft.au=Y.Rong&rft.aulast=Y.Rong",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Dropedge: Towards deep graph convolutional networks on node classification",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Dropedge: Towards deep graph convolutional networks on node classification",
+      "refType": "biblio",
+      "id": "ref43",
+      "errorMsg": ""
+    },
+    {
+      "order": "44",
+      "text": "A. Vaswani, “Attention is all you need,” in <em>Proc. Adv. Neural Inf. Process. Syst.</em>, vol. 30, 2017, pp. 6000–6010.",
+      "title": "Attention is all you need",
+      "links": {
+        "crossRefLink": "https://doi.org/10.48550/ARXIV.1706.03762",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.48550/ARXIV.1706.03762&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=Attention is all you need&rft.jtitle=Proc. Adv. Neural Inf. Process. Syst.&rft.volume=30&rft.spage=6000&rft.epage=6010&rft.au=A.Vaswani&rft.aulast=A.Vaswani",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=Attention is all you need&doi=10.48550/ARXIV.1706.03762",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=Attention is all you need&doi=10.48550/ARXIV.1706.03762",
+      "refType": "biblio",
+      "id": "ref44",
+      "errorMsg": ""
+    },
+    {
+      "order": "45",
+      "text": "J. Su, M. Ahmed, Y. Lu, S. Pan, W. Bo, and Y. Liu, “RoFormer: Enhanced transformer with rotary position embedding,” <em>Neurocomputing</em>, vol. 568, Feb. 2024, Art. no. 127063.",
+      "title": "RoFormer: Enhanced transformer with rotary position embedding",
+      "links": {
+        "crossRefLink": "https://doi.org/10.1016/j.neucom.2023.127063",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.1016/j.neucom.2023.127063&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=RoFormer: Enhanced transformer with rotary position embedding&rft.jtitle=Neurocomputing&rft.date=2024&rft.volume=568&rft.au=J.Su&rft.aulast=J.Su",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=RoFormer: Enhanced transformer with rotary position embedding&doi=10.1016/j.neucom.2023.127063",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=RoFormer: Enhanced transformer with rotary position embedding&doi=10.1016/j.neucom.2023.127063",
+      "refType": "biblio",
+      "id": "ref45",
+      "errorMsg": ""
+    },
+    {
+      "order": "46",
+      "text": "J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training of deep bidirectional transformers for language understanding,” in <em>Proc. Conf. North Amer. Chapter Assoc. Comput. Linguistics, Hum. Lang. Technol.</em>, Jun. 2019, pp. 4171–4186.",
+      "title": "BERT: Pre-training of deep bidirectional transformers for language understanding",
+      "links": {
+        "crossRefLink": "https://doi.org/10.48550/arXiv.1810.04805",
+        "openUrlLink": "http://zm8lp2fe5j.search.serialssolutions.com/?url_ver=Z39.88-2004&rfr_id=info:sid/IEEE.org:XPLORE&rft_id=info:doi/10.48550/arXiv.1810.04805&url_ctx_fmt=info:ofi/fmt:kev:mtx:ctx&rft_val_fmt=info:ofi/fmt:kev:mtx:journal&rft.atitle=BERT: Pre-training of deep bidirectional transformers for language understanding&rft.jtitle=Proc. Conf. North Amer. Chapter Assoc. Comput. Linguistics, Hum. Lang. Technol.&rft.spage=4171&rft.epage=4186&rft.au=J.Devlin&rft.aulast=J.Devlin",
+        "openUrlImgLoc": "/assets/img/btn.find-in-library.png"
+      },
+      "googleScholarStructredQuery": "title=BERT: Pre-training of deep bidirectional transformers for language understanding&doi=10.48550/arXiv.1810.04805",
+      "googleScholarLink": "https://scholar.google.com/scholar_lookup?hl=en&title=BERT: Pre-training of deep bidirectional transformers for language understanding&doi=10.48550/arXiv.1810.04805",
+      "refType": "biblio",
+      "id": "ref46",
+      "errorMsg": ""
+    }
+  ]
+}

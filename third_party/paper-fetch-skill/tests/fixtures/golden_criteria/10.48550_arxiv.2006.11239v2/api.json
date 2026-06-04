@@ -1,0 +1,78 @@
+{
+  "captured_at": "2026-05-09T03:49:44.060041+00:00",
+  "source_url": "https://export.arxiv.org/api/query",
+  "query": {
+    "id_list": [
+      "2006.11239v2"
+    ],
+    "max_results": 1
+  },
+  "raw_result": {
+    "entry_id": "http://arxiv.org/abs/2006.11239v2",
+    "updated": "2020-12-16T21:15:05+00:00",
+    "published": "2020-06-19T17:24:44+00:00",
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": [
+      "Jonathan Ho",
+      "Ajay Jain",
+      "Pieter Abbeel"
+    ],
+    "summary": "We present high quality image synthesis results using diffusion probabilistic models, a class of latent variable models inspired by considerations from nonequilibrium thermodynamics. Our best results are obtained by training on a weighted variational bound designed according to a novel connection between diffusion probabilistic models and denoising score matching with Langevin dynamics, and our models naturally admit a progressive lossy decompression scheme that can be interpreted as a generalization of autoregressive decoding. On the unconditional CIFAR10 dataset, we obtain an Inception score of 9.46 and a state-of-the-art FID score of 3.17. On 256x256 LSUN, we obtain sample quality similar to ProgressiveGAN. Our implementation is available at https://github.com/hojonathanho/diffusion",
+    "comment": null,
+    "journal_ref": null,
+    "doi": null,
+    "primary_category": "cs.LG",
+    "categories": [
+      "cs.LG",
+      "stat.ML"
+    ],
+    "pdf_url": "https://arxiv.org/pdf/2006.11239v2",
+    "short_id": "2006.11239v2"
+  },
+  "provider_metadata": {
+    "provider": "arxiv",
+    "official_provider": true,
+    "doi": "10.48550/arxiv.2006.11239v2",
+    "external_doi": null,
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": [
+      "Jonathan Ho",
+      "Ajay Jain",
+      "Pieter Abbeel"
+    ],
+    "abstract": "We present high quality image synthesis results using diffusion probabilistic models, a class of latent variable models inspired by considerations from nonequilibrium thermodynamics. Our best results are obtained by training on a weighted variational bound designed according to a novel connection between diffusion probabilistic models and denoising score matching with Langevin dynamics, and our models naturally admit a progressive lossy decompression scheme that can be interpreted as a generalization of autoregressive decoding. On the unconditional CIFAR10 dataset, we obtain an Inception score of 9.46 and a state-of-the-art FID score of 3.17. On 256x256 LSUN, we obtain sample quality similar to ProgressiveGAN. Our implementation is available at https://github.com/hojonathanho/diffusion",
+    "published": "2020-06-19",
+    "updated": "2020-12-16",
+    "journal_title": "arXiv",
+    "publisher": "arXiv",
+    "landing_page_url": "https://arxiv.org/abs/2006.11239v2",
+    "arxiv_id": "2006.11239v2",
+    "primary_category": "cs.LG",
+    "categories": [
+      "cs.LG",
+      "stat.ML"
+    ],
+    "keywords": [
+      "cs.LG",
+      "stat.ML"
+    ],
+    "license_urls": [],
+    "references": [],
+    "pdf_url": "https://arxiv.org/pdf/2006.11239v2",
+    "html_url": "https://arxiv.org/html/2006.11239v2",
+    "fulltext_links": [
+      {
+        "url": "https://arxiv.org/html/2006.11239v2",
+        "content_type": "text/html",
+        "content_version": "2006.11239v2",
+        "intended_application": "full_text"
+      },
+      {
+        "url": "https://arxiv.org/pdf/2006.11239v2",
+        "content_type": "application/pdf",
+        "content_version": "2006.11239v2",
+        "intended_application": "full_text"
+      }
+    ]
+  }
+}
