@@ -8,9 +8,15 @@ Run commands from `C:\DraftPaper_CLI` unless the package is installed into the a
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "..." --field "..." --target-journal "General Academic Journal"
 python -m draftpaper_cli.cli load-project --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli checkpoint --project C:\DraftPaper_CLI\projects\my_project --stage research_plan --note "User approved the research plan"
+python -m draftpaper_cli.cli resume --project C:\DraftPaper_CLI\projects\my_project --checkpoint-hash abc123def456
 python -m draftpaper_cli.cli mark-stage-stale --project C:\DraftPaper_CLI\projects\my_project --stage references
 python -m draftpaper_cli.cli update-stage-status --project C:\DraftPaper_CLI\projects\my_project --stage data --status draft
 ```
+
+`status` and `run-pipeline` are the orchestrator layer. They inspect `project.json`, stage manifests, `project_passport.yaml`, and append-only ledgers to report the next safe action. `checkpoint` records an explicit human confirmation boundary in `checkpoint_ledger.jsonl`; `resume` consumes it by appending a resume event, never by deleting or rewriting the checkpoint.
 
 ## Literature and Plan
 

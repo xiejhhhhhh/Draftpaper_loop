@@ -65,6 +65,13 @@ Use the DraftPaper CLI in C:\Draftpaper_commercial to create a paper project for
 
 Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next stage. The raw `draftpaper` commands below are the underlying interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
 
+For staged work, Codex should first call the orchestrator layer:
+
+```powershell
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
+```
+
 ### One-Command Local Setup
 
 Run this from the directory where you want to place the repository. The command clones the private repository, creates a local virtual environment, installs DraftPaper CLI, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
@@ -83,6 +90,8 @@ After setup, the installed `draftpaper` command can be used from the repository 
 
 ```powershell
 .\.venv\Scripts\draftpaper create-project --root .\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper status --project .\projects\your_project
+.\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
 ```
@@ -99,6 +108,8 @@ For a quick local smoke test without live literature search, create and validate
 ```powershell
 python -m pip install -e .
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
@@ -112,7 +123,9 @@ python -m unittest discover -s tests
 
 ## Implementation Status
 
-The CLI already includes staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, and final quality checks.
+The CLI already includes an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`) plus staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, and final quality checks.
+
+Every project now carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
 `generate-analysis-code` reads retrieved literature, `methods/method_requirements.json`, `methods/method_plan.md`, and `data/data_inventory.json`, then writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`. The generated baseline now produces two tables and four required SVG figures by default: data analysis workflow, data processing workflow, method analysis workflow, and data-to-method output workflow. It is intentionally a reproducible scaffold rather than a final scientific model; `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output exists. `inventory-results` then converts the verified figures and tables into `results/result_manifest.yaml`, and `write-results` writes citation-free result paragraphs from that manifest.
 

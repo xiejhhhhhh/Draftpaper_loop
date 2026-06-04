@@ -206,6 +206,9 @@ def create_project(
     _write_simple_yaml(project_path / "project.yaml", metadata)
     _write_stage_manifests(project_path, metadata)
     _write_idea_note(project_path, metadata)
+    from .passport import initialize_project_passport
+
+    initialize_project_passport(project_path)
 
     return ProjectScaffold(
         project_id=project_slug,

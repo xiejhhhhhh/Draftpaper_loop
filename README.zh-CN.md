@@ -61,6 +61,13 @@ github_submit/                  # GitHub 提交材料和说明
 
 Codex 应该负责运行对应 CLI 命令、读取生成的本地项目文件，并汇报下一步。下面的 `draftpaper` 命令是底层接口，主要用于调试、自动化脚本或不通过 Codex 使用时，并不是要替代和 Codex 的正常对话。
 
+分阶段工作时，Codex 应该先调用总控层：
+
+```powershell
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
+```
+
 ### 一键本地安装
 
 在你希望保存项目的目录中运行下面这条命令。它会克隆私有仓库，创建本地虚拟环境，安装 DraftPaper CLI，并打印 CLI 帮助信息。`paper-fetch-skill` 已经 vendored 在 `third_party/paper-fetch-skill`，只有需要全文抓取时再单独安装。
@@ -79,6 +86,8 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 
 ```powershell
 .\.venv\Scripts\draftpaper create-project --root .\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper status --project .\projects\your_project
+.\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
 ```
@@ -95,6 +104,8 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 ```powershell
 python -m pip install -e .
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
@@ -108,7 +119,9 @@ python -m unittest discover -s tests
 
 ## 当前实现状态
 
-CLI 已经实装项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、基于文献和 methods 描述的 baseline 分析代码生成、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
+CLI 已经实装总控层命令（`status`、`checkpoint`、`resume`、`run-pipeline`），以及项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、基于文献和 methods 描述的 baseline 分析代码生成、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
+
+每个项目现在都会带有 DraftPaper Passport：`project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl`、`integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、人工 checkpoint 和 integrity event，方便换电脑迁移，也避免依赖 Codex 对话记忆来判断项目状态。
 
 `generate-analysis-code` 会读取已检索文献、`methods/method_requirements.json`、`methods/method_plan.md` 和 `data/data_inventory.json`，在项目 `code/` 目录下生成可审阅、可运行的 Python baseline 分析代码，并写入 `methods/analysis_code_manifest.json`。默认输出已经扩展为两张表和四张 SVG 图：数据分析流程、数据处理流程、方法分析流程、数据喂入方法后的输出流程。该阶段不是跳过科研审查的最终模型生成器，而是可复现的代码脚手架；后续仍必须用 `verify-methods` 运行生成命令、记录 `methods/run_manifest.yaml`，并确认所有声明输出都存在后才能继续写 Methods。`inventory-results` 会把通过验证的图表转成 `results/result_manifest.yaml`，`write-results` 再根据该 manifest 写出不含文献引用的结果段落。
 

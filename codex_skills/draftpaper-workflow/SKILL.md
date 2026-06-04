@@ -19,6 +19,14 @@ python -m draftpaper_cli.cli <command>
 
 Read `references/commands.md` when exact command syntax is needed.
 
+Before choosing a stage command, call:
+
+```powershell
+python -m draftpaper_cli.cli status --project <project>
+```
+
+Use `run-pipeline` to ask the orchestrator for the next safe CLI action. Use `checkpoint` whenever a stage requires explicit human confirmation; if `status` reports `pipeline_state=awaiting_confirmation`, do not continue into downstream stages until the user confirms and `resume` consumes the checkpoint hash.
+
 ## Stage Order
 
 Run stages in this order unless the user asks for a focused rerun:
@@ -65,6 +73,8 @@ If only LaTeX template files change, rerun `assemble-latex` and `quality-check`.
 ## Gates
 
 Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. If `generate-plan` returns `blocked_high_similarity`, stop and report the similar paper warning; rerun with `--allow-high-similarity` only after the user explicitly chooses to continue. Never verify or write Methods before `assess-data-feasibility` returns `pass` or `conditional_pass` and `collect-method-plan` has produced method requirements. When generated code is needed, run `generate-analysis-code` before `verify-methods`, then use the returned `verify_command` and declared outputs. The default generated outputs include `metrics.csv`, `analysis_summary.csv`, and four SVG figures for data analysis, data processing, method analysis, and data-to-method outputs. If data feasibility returns `revise_required` or `blocked`, stop and report whether the user should add data, lower claim strength, revise the research question, or abandon the current paper plan. Never write Results before `assess-result-validity` returns `pass` or `conditional_pass`. Always run `inventory-results` before `write-results` so the result paragraphs are derived from verified figures and tables. If result validity fails, report whether the likely backtracking target is data, method, or research plan. Results must contain no citation commands. Discussion may cite literature, but citation keys must come from BibTeX and citation evidence. Data and Methods citation evidence is context-specific: if `citation_evidence.csv` contains `section=data` or `section=methods`, the matching manuscript section should cite at least one corresponding key or `quality-check` will report a context-reference warning. Always run `quality-check` before telling the user a draft package is ready.
+
+Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. Treat these files as append-only audit state owned by the core CLI. Do not edit them manually; use `status`, `checkpoint`, `resume`, or stage commands.
 
 ## Skill Reuse
 

@@ -6,6 +6,8 @@ from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInput
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
 from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_latex, compile_latex_pdf
 from .methods import MethodsGateError, verify_methods, write_methods
+from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
+from .passport import PassportError, load_project_passport, refresh_project_passport
 from .project_scaffold import ProjectAlreadyExistsError, ProjectScaffold, create_project
 from .project_state import (
     InvalidStageStatusError,
@@ -33,6 +35,8 @@ __all__ = [
     "LatexAssemblyError",
     "LatexCitationError",
     "MethodsGateError",
+    "OrchestratorError",
+    "PassportError",
     "ResultsGateError",
     "ProjectAlreadyExistsError",
     "ProjectScaffold",
@@ -46,6 +50,12 @@ __all__ = [
     "update_stage_status",
     "validate_project",
     "run_quality_check",
+    "status_project",
+    "checkpoint_project",
+    "resume_project",
+    "run_pipeline",
+    "load_project_passport",
+    "refresh_project_passport",
     "generate_analysis_code",
     "write_introduction",
     "inventory_data",

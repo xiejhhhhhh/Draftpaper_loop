@@ -15,6 +15,32 @@ Local Web UI wrapper
 Future SaaS/API wrapper
 ```
 
+## Priority A/B Foundation: Orchestrator and DraftPaper Passport
+
+The workflow now has a thin orchestrator layer above the individual stage commands. The orchestrator does not write paper content; it inspects project state, passport state, stage manifests, and append-only ledgers, then reports the next safe CLI action.
+
+Implemented orchestrator commands:
+
+```powershell
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli checkpoint --project C:\DraftPaper_CLI\projects\my_project --stage research_plan --note "User approved the research plan"
+python -m draftpaper_cli.cli resume --project C:\DraftPaper_CLI\projects\my_project --checkpoint-hash abc123def456
+```
+
+Each project also carries a DraftPaper Passport:
+
+```text
+project_passport.yaml
+artifact_ledger.jsonl
+checkpoint_ledger.jsonl
+integrity_ledger.jsonl
+```
+
+`project_passport.yaml` is JSON-compatible YAML so the core package does not need a YAML runtime dependency. It stores the current project snapshot, artifact hashes, current pipeline state, and the latest unconsumed checkpoint. The ledgers are append-only JSONL files. They must be changed only through CLI commands, not by hand.
+
+This foundation is the portable state layer for Codex skills, Web UI, desktop UI, and future API/SaaS wrappers. Wrapper layers should call `status` or `run-pipeline` first, then call the stage command suggested by the orchestrator.
+
 ## Priority 1: Single-Paper Project Directory Model
 
 Each research idea becomes an independent project directory:
@@ -24,6 +50,10 @@ research_paper_agent/data/projects/
   project_slug/
     project.json
     project.yaml
+    project_passport.yaml
+    artifact_ledger.jsonl
+    checkpoint_ledger.jsonl
+    integrity_ledger.jsonl
     idea/
     research_plan/
     references/
@@ -57,12 +87,17 @@ The workflow should expose these callable stages:
 
 ```text
 create_project
+status_project
+checkpoint_project
+resume_project
+run_pipeline
 search_literature
 resolve_journal_template
 generate_research_plan
 write_introduction
 prepare_data_section
 collect_method_plan
+generate_analysis_code
 verify_methods
 write_methods
 assess_result_validity
@@ -600,6 +635,8 @@ quality_checks
 
 ```powershell
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "..." --field "..."
+python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --target-journal APJS
 python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\my_project

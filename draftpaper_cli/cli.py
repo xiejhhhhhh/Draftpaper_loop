@@ -14,6 +14,8 @@ from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pd
 from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
 from .methods import MethodsGateError, verify_methods, write_methods
+from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
+from .passport import PassportError
 from .project_scaffold import ProjectAlreadyExistsError, create_project
 from .project_state import (
     InvalidStageStatusError,
@@ -49,6 +51,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate-project", help="Validate project metadata and stage manifests.")
     validate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    status = subparsers.add_parser("status", help="Report orchestrated pipeline status and next action.")
+    status.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    checkpoint = subparsers.add_parser("checkpoint", help="Create an explicit user-confirmation checkpoint.")
+    checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    checkpoint.add_argument("--stage", required=True, help="Stage being checkpointed.")
+    checkpoint.add_argument("--note", default="", help="Human-readable checkpoint note.")
+
+    resume = subparsers.add_parser("resume", help="Resume from a checkpoint hash.")
+    resume.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    resume.add_argument("--checkpoint-hash", required=True, help="Checkpoint hash to consume.")
+    resume.add_argument("--note", default="", help="Human-readable resume note.")
+
+    run = subparsers.add_parser("run-pipeline", help="Plan the next orchestrated pipeline action.")
+    run.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     update = subparsers.add_parser("update-stage-status", help="Update one stage status.")
     update.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -184,6 +202,42 @@ def main(argv: list[str] | None = None) -> int:
         report = validate_project(args.project)
         print(json.dumps(report, ensure_ascii=False))
         return 0 if report.get("status") == "passed" else 1
+
+    if args.command == "status":
+        try:
+            result = status_project(args.project)
+        except (OrchestratorError, PassportError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "checkpoint":
+        try:
+            result = checkpoint_project(args.project, stage=args.stage, note=args.note)
+        except (OrchestratorError, PassportError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "resume":
+        try:
+            result = resume_project(args.project, checkpoint_hash=args.checkpoint_hash, note=args.note)
+        except (OrchestratorError, PassportError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "run-pipeline":
+        try:
+            result = run_pipeline(args.project)
+        except (OrchestratorError, PassportError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") in {"planned", "awaiting_confirmation"} else 1
 
     if args.command == "update-stage-status":
         try:
