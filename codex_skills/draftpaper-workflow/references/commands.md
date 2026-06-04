@@ -63,7 +63,10 @@ python -m draftpaper_cli.cli write-discussion --project C:\DraftPaper_CLI\projec
 python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project --compile-pdf
 python -m draftpaper_cli.cli compile-latex-pdf --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli quality-check --project C:\DraftPaper_CLI\projects\my_project
 ```
+
+`run-integrity-gate` returns exit code `0` for passed and `1` for failed. It writes `integrity/integrity_report.json`, `integrity/integrity_report.md`, and appends an `integrity_gate` event to `integrity_ledger.jsonl`. Run it before `quality-check` to catch missing BibTeX keys, missing citation evidence, Results citations, missing result artifacts, and unbound result claims.
 
 `quality-check` returns exit code `0` for passed and `1` for failed. It still writes `quality_checks/quality_report.json` on failure.

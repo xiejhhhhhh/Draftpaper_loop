@@ -50,31 +50,32 @@ Run stages in this order unless the user asks for a focused rerun:
 15. `write-results`
 16. `write-discussion`
 17. `assemble-latex`
-18. `quality-check`
+18. `run-integrity-gate`
+19. `quality-check`
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
 ## Rerun Rules
 
-If references change, rerun `generate-plan`, `write-introduction`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If references change, rerun `generate-plan`, `write-introduction`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If journal profile or target template changes, rerun `generate-plan`, all writing stages, `assemble-latex`, and `quality-check`.
+If journal profile or target template changes, rerun `generate-plan`, all writing stages, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If research plan changes, rerun `write-introduction`, `inventory-data`, `assess-data-quality`, `assess-data-feasibility`, `collect-method-plan`, `generate-analysis-code`, affected method work, `write-methods`, `assess-result-validity`, `write-results`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If research plan changes, rerun `write-introduction`, `inventory-data`, `assess-data-quality`, `assess-data-feasibility`, `collect-method-plan`, `generate-analysis-code`, affected method work, `write-methods`, `assess-result-validity`, `write-results`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If data changes, rerun `inventory-data`, `assess-data-quality`, `assess-data-feasibility`, `collect-method-plan`, `generate-analysis-code`, `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If data changes, rerun `inventory-data`, `assess-data-quality`, `assess-data-feasibility`, `collect-method-plan`, `generate-analysis-code`, `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If generated code changes, rerun `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If generated code changes, rerun `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If method plan or methods code changes, rerun `collect-method-plan` when needed, `generate-analysis-code` when generated code is used, `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If method plan or methods code changes, rerun `collect-method-plan` when needed, `generate-analysis-code` when generated code is used, `verify-methods`, `write-methods`, `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If results change, rerun `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, and `quality-check`.
+If results change, rerun `assess-result-validity`, `inventory-results`, `write-results`, `write-discussion`, `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
-If only LaTeX template files change, rerun `assemble-latex` and `quality-check`.
+If only LaTeX template files change, rerun `assemble-latex`, `run-integrity-gate`, and `quality-check`.
 
 ## Gates
 
-Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. If `generate-plan` returns `blocked_high_similarity`, stop and report the similar paper warning; rerun with `--allow-high-similarity` only after the user explicitly chooses to continue. Never verify or write Methods before `assess-data-feasibility` returns `pass` or `conditional_pass` and `collect-method-plan` has produced method requirements. When generated code is needed, run `generate-analysis-code` before `verify-methods`, then use the returned `verify_command` and declared outputs. The default generated outputs include `metrics.csv`, `analysis_summary.csv`, and four SVG figures for data analysis, data processing, method analysis, and data-to-method outputs. If data feasibility returns `revise_required` or `blocked`, stop and report whether the user should add data, lower claim strength, revise the research question, or abandon the current paper plan. Never write Results before `assess-result-validity` returns `pass` or `conditional_pass`. Always run `inventory-results` before `write-results` so the result paragraphs are derived from verified figures and tables. If result validity fails, report whether the likely backtracking target is data, method, or research plan. Results must contain no citation commands. Discussion may cite literature, but citation keys must come from BibTeX and citation evidence. Data and Methods citation evidence is context-specific: if `citation_evidence.csv` contains `section=data` or `section=methods`, the matching manuscript section should cite at least one corresponding key or `quality-check` will report a context-reference warning. Always run `quality-check` before telling the user a draft package is ready.
+Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. If `generate-plan` returns `blocked_high_similarity`, stop and report the similar paper warning; rerun with `--allow-high-similarity` only after the user explicitly chooses to continue. Never verify or write Methods before `assess-data-feasibility` returns `pass` or `conditional_pass` and `collect-method-plan` has produced method requirements. When generated code is needed, run `generate-analysis-code` before `verify-methods`, then use the returned `verify_command` and declared outputs. The default generated outputs include `metrics.csv`, `analysis_summary.csv`, and four SVG figures for data analysis, data processing, method analysis, and data-to-method outputs. If data feasibility returns `revise_required` or `blocked`, stop and report whether the user should add data, lower claim strength, revise the research question, or abandon the current paper plan. Never write Results before `assess-result-validity` returns `pass` or `conditional_pass`. Always run `inventory-results` before `write-results` so the result paragraphs are derived from verified figures and tables. If result validity fails, report whether the likely backtracking target is data, method, or research plan. Results must contain no citation commands. Discussion may cite literature, but citation keys must come from BibTeX and citation evidence. Data and Methods citation evidence is context-specific: if `citation_evidence.csv` contains `section=data` or `section=methods`, the matching manuscript section should cite at least one corresponding key or integrity/quality checks will report it. Always run `run-integrity-gate` before final `quality-check`; if it fails, route the fix back to references, section citation use, or result manifest/artifacts before telling the user a draft package is ready.
 
 Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. Treat these files as append-only audit state owned by the core CLI. Do not edit them manually; use `status`, `checkpoint`, `resume`, or stage commands.
 

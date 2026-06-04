@@ -56,6 +56,17 @@ def _cli_for(project_path: Path, command: str) -> str:
     return f"python -m draftpaper_cli.cli {command} --project {_quote(project_path)}"
 
 
+def _integrity_is_current(project_path: Path) -> bool:
+    report_path = project_path / "integrity" / "integrity_report.json"
+    if not report_path.exists():
+        return False
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return False
+    return isinstance(report, dict) and report.get("status") == "passed"
+
+
 def _next_stage(metadata: dict[str, Any]) -> str | None:
     stages = metadata.get("stages") or {}
     for stage in STAGE_ORDER:
@@ -77,6 +88,8 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
             "reason": "All declared stages are current.",
         }
     command = STAGE_COMMANDS.get(stage)
+    if stage == "quality_checks" and not _integrity_is_current(project_path):
+        command = "run-integrity-gate"
     if not command:
         raise OrchestratorError(f"No orchestrator command mapping exists for stage: {stage}")
     return {

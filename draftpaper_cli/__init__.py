@@ -4,6 +4,7 @@ from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
+from .integrity_gate import IntegrityGateError, latest_integrity_report, run_integrity_gate
 from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_latex, compile_latex_pdf
 from .methods import MethodsGateError, verify_methods, write_methods
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
@@ -45,6 +46,7 @@ __all__ = [
     "ProjectState",
     "ProjectStateError",
     "QualityGateError",
+    "IntegrityGateError",
     "UnknownStageError",
     "create_project",
     "load_project",
@@ -52,6 +54,8 @@ __all__ = [
     "update_stage_status",
     "validate_project",
     "run_quality_check",
+    "run_integrity_gate",
+    "latest_integrity_report",
     "status_project",
     "checkpoint_project",
     "resume_project",

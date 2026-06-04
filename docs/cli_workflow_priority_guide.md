@@ -54,6 +54,40 @@ python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\pro
 
 `detect-artifact-drift` is read-only. It reports changed, missing, or newly tracked artifacts and maps each path back to a source stage. `sync-artifact-stale` is mutating. It marks downstream dependent stages stale, appends an `artifact_drift` event to `integrity_ledger.jsonl`, and refreshes the passport hash baseline. `status` and `run-pipeline` surface `pipeline_state=drift_detected` before continuing, so Codex/Web/Desktop wrappers should run `sync-artifact-stale` first whenever drift is reported.
 
+## Priority D: Integrity Gate Before Final Quality
+
+The workflow now has an independent integrity gate between LaTeX assembly and the final quality gate. This gate is narrower than `quality-check`: it focuses on traceability, citation existence, and result-claim binding so problems can be routed back to references or results before the final manuscript audit.
+
+Implemented Priority D CLI command:
+
+```powershell
+python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\my_project
+```
+
+Outputs:
+
+```text
+integrity/integrity_report.json
+integrity/integrity_report.md
+integrity_ledger.jsonl
+```
+
+Required checks:
+
+```text
+All Introduction/Data/Methods/Discussion citation keys exist in references/library.bib or latex/library.bib
+All Introduction/Data/Methods/Discussion citations have rows in references/citation_evidence.csv
+Section citations are matched to section-specific citation evidence where available
+Results contains no citation commands
+results/result_manifest.yaml declares at least one figure or table
+Every result manifest entry points to an existing local artifact
+Every result manifest entry has a result_claim
+```
+
+The command returns exit code `0` only when the integrity report passes. It still writes the JSON and Markdown reports on failure. Each run appends an `integrity_gate` event to `integrity_ledger.jsonl`, which lets Codex, Web UI, or later batch workflows audit when a manuscript draft last passed or failed traceability checks.
+
+`status` and `run-pipeline` are now connected to this gate. When the next pending stage is `quality_checks`, the orchestrator recommends `run-integrity-gate` until `integrity/integrity_report.json` exists with `status=passed`. After that, the normal next action becomes `quality-check`.
+
 ## Priority 1: Single-Paper Project Directory Model
 
 Each research idea becomes an independent project directory:
@@ -89,6 +123,7 @@ research_paper_agent/data/projects/
     latex/
       sections/
       template/
+    integrity/
     quality_checks/
 ```
 
@@ -118,6 +153,7 @@ inventory_results
 write_results
 write_discussion
 assemble_latex
+run_integrity_gate
 run_quality_gate
 ```
 
@@ -667,6 +703,7 @@ python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\proje
 python -m draftpaper_cli.cli write-results --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli write-discussion --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli quality-check --project C:\DraftPaper_CLI\projects\my_project
 ```
 

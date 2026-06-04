@@ -9,6 +9,7 @@ from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
+from .integrity_gate import IntegrityGateError, run_integrity_gate
 from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
@@ -159,6 +160,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     quality = subparsers.add_parser("quality-check", help="Run final staged manuscript quality checks.")
     quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    integrity = subparsers.add_parser("run-integrity-gate", help="Run citation evidence and result artifact integrity checks.")
+    integrity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     return parser
 
 
@@ -528,6 +532,18 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = run_quality_check(args.project)
         except QualityGateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "run-integrity-gate":
+        try:
+            result = run_integrity_gate(args.project)
+        except IntegrityGateError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:

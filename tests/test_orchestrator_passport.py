@@ -122,6 +122,42 @@ class OrchestratorPassportTests(unittest.TestCase):
             self.assertEqual(run_payload["status"], "planned")
             self.assertIn("search-literature", run_payload["next_action"]["cli"])
 
+    def test_status_recommends_integrity_gate_before_final_quality_check(self) -> None:
+        from draftpaper_cli.orchestrator import status_project
+        from draftpaper_cli.passport import refresh_project_passport
+        from draftpaper_cli.project_scaffold import _write_json
+        from draftpaper_cli.project_state import update_stage_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Integrity before quality", field="workflow engineering")
+            for stage in [
+                "references",
+                "journal_profile",
+                "research_plan",
+                "introduction",
+                "data",
+                "method_plan",
+                "code",
+                "methods",
+                "result_validity",
+                "results",
+                "discussion",
+                "latex",
+            ]:
+                update_stage_status(project.path, stage, "completed")
+            refresh_project_passport(project.path, event="test_status_ready")
+
+            status = status_project(project.path)
+
+            self.assertEqual(status["next_action"]["stage"], "quality_checks")
+            self.assertEqual(status["next_action"]["command"], "run-integrity-gate")
+
+            _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
+            status_after_integrity = status_project(project.path)
+
+            self.assertEqual(status_after_integrity["next_action"]["stage"], "quality_checks")
+            self.assertEqual(status_after_integrity["next_action"]["command"], "quality-check")
+
 
 if __name__ == "__main__":
     unittest.main()

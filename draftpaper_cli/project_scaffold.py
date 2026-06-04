@@ -40,6 +40,7 @@ PROJECT_DIRECTORIES = [
     "discussion",
     "latex/sections",
     "latex/template",
+    "integrity",
     "quality_checks",
 ]
 
