@@ -51,15 +51,31 @@ github_submit/                  # GitHub 提交材料和说明
 
 ## 快速开始
 
-### 一键安装和启动
+### 在 Codex 中使用
 
-在你希望保存项目的目录中运行下面这条命令。它会克隆私有仓库，创建本地虚拟环境，安装 DraftPaper CLI 和项目内置的 paper-fetch runtime，并打印 CLI 帮助信息。
+这个项目的主要使用方式不是让用户手动敲每一条 CLI 命令，而是让 Codex 读取本仓库并替你调用 DraftPaper CLI。把仓库克隆到本地后，在 Codex 中打开或指向该仓库目录，然后直接用自然语言说：
 
-```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_commercial.git; cd Draftpaper_commercial; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e . -e third_party\paper-fetch-skill; .\.venv\Scripts\draftpaper --help"
+```text
+请使用 C:\Draftpaper_commercial 里的 DraftPaper CLI，基于我的 idea 创建论文项目、检索文献、生成 research plan，并告诉我哪些阶段被阻塞。
 ```
 
-安装后，在仓库根目录中直接使用 `draftpaper` 命令：
+Codex 应该负责运行对应 CLI 命令、读取生成的本地项目文件，并汇报下一步。下面的 `draftpaper` 命令是底层接口，主要用于调试、自动化脚本或不通过 Codex 使用时，并不是要替代和 Codex 的正常对话。
+
+### 一键本地安装
+
+在你希望保存项目的目录中运行下面这条命令。它会克隆私有仓库，创建本地虚拟环境，安装 DraftPaper CLI，并打印 CLI 帮助信息。`paper-fetch-skill` 已经 vendored 在 `third_party/paper-fetch-skill`，只有需要全文抓取时再单独安装。
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_commercial.git; cd Draftpaper_commercial; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+```
+
+可选安装全文抓取 runtime：
+
+```powershell
+.\.venv\Scripts\python -m pip install -e third_party\paper-fetch-skill
+```
+
+安装后，也可以在仓库根目录中直接使用 `draftpaper` 命令：
 
 ```powershell
 .\.venv\Scripts\draftpaper create-project --root .\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
@@ -88,6 +104,12 @@ python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projec
 ```powershell
 python -m unittest discover -s tests
 ```
+
+## 当前实现状态
+
+CLI 已经实装项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
+
+目前 Methods 和 Results 的硬门槛是“验证与写作门槛”：`verify-methods` 会运行用户提供或外部生成的项目代码，写入 `methods/run_manifest.yaml`，并要求声明的输出文件存在后才能继续写 Methods。当前仓库还没有一个单独的 CLI 命令可以直接根据“已检索文献 + 用户 methods 描述”自动生成新的数据分析/方法分析代码。如果产品要做到端到端自动生成分析代码，应该在 `verify-methods` 前新增一个付费工作流阶段。
 
 ## Paper Fetch 集成
 

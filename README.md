@@ -55,15 +55,31 @@ Generated paper projects are stored under `projects/` locally and are intentiona
 
 ## Quick Start
 
-### One-Command Setup
+### Use Through Codex
 
-Run this from the directory where you want to place the repository. The command clones the private repository, creates a local virtual environment, installs DraftPaper CLI plus the vendored paper-fetch runtime, and prints the CLI help.
+The intended product workflow is to let Codex read this repository and call the DraftPaper CLI for you. After cloning the repository locally, open or point Codex to the repository directory and ask in natural language, for example:
 
-```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_commercial.git; cd Draftpaper_commercial; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e . -e third_party\paper-fetch-skill; .\.venv\Scripts\draftpaper --help"
+```text
+Use the DraftPaper CLI in C:\Draftpaper_commercial to create a paper project for this idea, search literature, write the research plan, and tell me which stages are blocked.
 ```
 
-After setup, use the installed `draftpaper` command from the repository root:
+Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next stage. The raw `draftpaper` commands below are the underlying interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
+
+### One-Command Local Setup
+
+Run this from the directory where you want to place the repository. The command clones the private repository, creates a local virtual environment, installs DraftPaper CLI, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_commercial.git; cd Draftpaper_commercial; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+```
+
+Optional full-text fetch runtime:
+
+```powershell
+.\.venv\Scripts\python -m pip install -e third_party\paper-fetch-skill
+```
+
+After setup, the installed `draftpaper` command can be used from the repository root:
 
 ```powershell
 .\.venv\Scripts\draftpaper create-project --root .\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
@@ -92,6 +108,12 @@ Run tests:
 ```powershell
 python -m unittest discover -s tests
 ```
+
+## Implementation Status
+
+The CLI already includes staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, and final quality checks.
+
+The current Methods and Results hard gates are implemented as verification and writing gates. `verify-methods` runs project-local code supplied by the user or generated externally, records `methods/run_manifest.yaml`, and blocks Methods writing until declared outputs exist. The repository does not yet include a standalone CLI command that automatically generates new analysis code from literature plus method notes. That code-generation layer should be added as a separate paid workflow stage before `verify-methods` if the product needs end-to-end automatic data/method analysis code creation.
 
 ## Paper Fetch Integration
 
