@@ -100,6 +100,25 @@ def _write_aas_html(base: Path) -> Path:
     return path
 
 
+def _write_fake_tool(tool_dir: Path, name: str, *, writes_pdf: bool = False) -> Path:
+    suffix = ".cmd" if os.name == "nt" else ""
+    tool = tool_dir / f"{name}{suffix}"
+    if os.name == "nt":
+        lines = ["@echo off", f"echo fake {name} %* >> compile-tools.log"]
+        if writes_pdf:
+            lines.append("echo PDF > main.pdf")
+        lines.append("exit /b 0")
+        tool.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    else:
+        lines = ["#!/usr/bin/env sh", f"echo fake {name} \"$@\" >> compile-tools.log"]
+        if writes_pdf:
+            lines.append("printf 'PDF\\n' > main.pdf")
+        lines.append("exit 0")
+        tool.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        tool.chmod(0o755)
+    return tool
+
+
 class LatexAssemblyTests(unittest.TestCase):
     def test_assemble_latex_requires_all_sections_and_bibtex(self) -> None:
         from draftpaper_cli.latex_assembly import LatexAssemblyError, assemble_latex
@@ -212,21 +231,8 @@ class LatexAssemblyTests(unittest.TestCase):
             assemble_latex(project_path)
             tool_dir = Path(tmp) / "tools"
             tool_dir.mkdir()
-            xelatex = tool_dir / "xelatex.cmd"
-            xelatex.write_text(
-                "@echo off\r\n"
-                "echo fake xelatex %* >> compile-tools.log\r\n"
-                "echo PDF > main.pdf\r\n"
-                "exit /b 0\r\n",
-                encoding="utf-8",
-            )
-            bibtex = tool_dir / "bibtex.cmd"
-            bibtex.write_text(
-                "@echo off\r\n"
-                "echo fake bibtex %* >> compile-tools.log\r\n"
-                "exit /b 0\r\n",
-                encoding="utf-8",
-            )
+            _write_fake_tool(tool_dir, "xelatex", writes_pdf=True)
+            _write_fake_tool(tool_dir, "bibtex")
 
             old_path = os.environ.get("PATH", "")
             with patch.dict(os.environ, {"PATH": str(tool_dir) + os.pathsep + old_path, "LOCALAPPDATA": str(Path(tmp) / "no-localappdata")}):
@@ -244,12 +250,7 @@ class LatexAssemblyTests(unittest.TestCase):
             project_path = prepared_project(tmp)
             tool_dir = Path(tmp) / "tools"
             tool_dir.mkdir()
-            (tool_dir / "xelatex.cmd").write_text(
-                "@echo off\r\n"
-                "echo PDF > main.pdf\r\n"
-                "exit /b 0\r\n",
-                encoding="utf-8",
-            )
+            _write_fake_tool(tool_dir, "xelatex", writes_pdf=True)
             old_path = os.environ.get("PATH", "")
             env = os.environ.copy()
             env["PATH"] = str(tool_dir) + os.pathsep + old_path

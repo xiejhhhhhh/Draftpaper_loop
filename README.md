@@ -16,6 +16,47 @@ The commercial edition keeps the full staged workflow, including local data anal
 
 DraftPaper CLI is a local-first research paper workflow engine. It turns a research idea, local data, verified method code, result artifacts, and traceable literature evidence into a staged LaTeX manuscript draft. The core is a Python package plus CLI; Codex skills, desktop UI, Web UI, and future API/SaaS layers should call the same core workflow rather than reimplementing it.
 
+## Recent Updates
+
+### v0.5.0 (2026-06-09) — review routing and gate-failure diagnosis
+
+This update completes the first review-revise-re-review loop and connects failed final gates back into actionable revision routing.
+
+Highlights:
+
+- Added `diagnose-gate-failures`, `review-draft`, `generate-revision-plan`, `apply-revision`, and `re-review`.
+- Added unified revision issues with `source`, `target_stage`, `files_to_add_or_edit`, `required_user_input`, and `recommended_commands`.
+- Added `review/commitment_ledger.csv` so user revision decisions can be tracked across review cycles.
+- Connected `status` and `run-pipeline` to failed integrity/quality reports so they recommend `diagnose-gate-failures` instead of repeated blind gate reruns.
+- Kept `apply-revision` intentionally conservative: it marks affected stages stale and does not rewrite scientific content automatically.
+
+Validation:
+
+- Local verification: `python -m unittest discover -s tests`
+- Current suite: 91 tests
+
+### v0.4.0 (2026-06-09) — integrity gate and artifact traceability
+
+This update adds an independent integrity gate between LaTeX assembly and final quality checks.
+
+Highlights:
+
+- Added `run-integrity-gate`.
+- Added `integrity/integrity_report.json` and `integrity/integrity_report.md`.
+- Validates BibTeX citation existence, `citation_evidence.csv` traceability, Results no-citation rules, and result-claim artifact binding.
+- Connected `status` and `run-pipeline` so final quality checks wait for a passed integrity report.
+
+### v0.3.0 (2026-06-09) — passport, stale sync, and staged orchestration
+
+This update hardens project portability and rerun behavior.
+
+Highlights:
+
+- Added DraftPaper Passport files: `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`.
+- Added `status`, `checkpoint`, `resume`, and `run-pipeline`.
+- Added hash-based drift detection with `detect-artifact-drift` and `sync-artifact-stale`.
+- Added literature-informed analysis-code generation and default method/result artifacts for local workflow smoke tests.
+
 ## What It Does
 
 DraftPaper CLI organizes one paper as one local project directory and advances it through explicit stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, and quality gates.
