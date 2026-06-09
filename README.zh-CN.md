@@ -1,4 +1,4 @@
-# DraftPaper CLI
+# DraftPaper Commercial
 
 [![AI Research Workflow](https://img.shields.io/badge/AI-Research%20Workflow-5C4D7D?style=flat-square)](#)
 [![Literature Analysis](https://img.shields.io/badge/Literature-Analysis-1D7874?style=flat-square)](#)
@@ -8,33 +8,107 @@
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Open Core](https://img.shields.io/badge/Open--core-Public%20Literature%20Layer-8A5A44?style=flat-square)](#)
 
+本仓库包含 DraftPaper 的私有商业实现。请不要公开发布本仓库，也不要把商业版实现细节同步到公开开源仓库。
+
+商业版保留完整的分阶段科研论文工作流，包括本地数据分析处理、Methods 硬门槛、结果有效性检查、Results 写作、LaTeX 组装、Codex skill 编排、完整性门槛、审稿修订路由和最终质量门槛。公开仓库应只开放用于产品展示和引流的文献分析与验证层。
+
 中文 | [English](README.md)
 
-DraftPaper CLI 是一个本地优先的科研论文流程化写作引擎。它把研究 idea、本地数据、已跑通的方法代码、结果文件和可追溯参考文献证据，组织成分阶段的 LaTeX 论文初稿。核心能力是 Python package + CLI；Codex skill、桌面端、Web UI、未来 API/SaaS 都应该调用同一套核心能力，而不是重复实现。
+DraftPaper CLI 是一个本地优先的科研论文流程化写作引擎。它把研究 idea、本地数据、已验证的方法代码、结果图表和可追溯文献证据组织成分阶段的 LaTeX 论文初稿。核心能力是 Python package + CLI；Codex skills、桌面端、Web UI、未来 API/SaaS 都应该调用同一套核心能力，而不是重复实现业务逻辑。
+
+## 最近更新
+
+### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis
+
+这一版完成第一轮 review-revise-re-review 闭环，并把失败的最终门槛接回可执行的修订路由。
+
+更新重点：
+
+- 新增 `diagnose-gate-failures`、`review-draft`、`generate-revision-plan`、`apply-revision` 和 `re-review`。
+- 新增统一 revision issue schema，记录 `source`、`target_stage`、`files_to_add_or_edit`、`required_user_input` 和 `recommended_commands`。
+- 新增 `review/commitment_ledger.csv`，用于追踪用户在多轮修订中的决策和承诺。
+- 将 `status` 和 `run-pipeline` 接入失败的 integrity/quality 报告，使其推荐 `diagnose-gate-failures`，而不是盲目重复运行失败 gate。
+- `apply-revision` 保持保守：只标记相关阶段 stale，不自动改写科学内容。
+
+验证：
+
+- 本地验证：`python -m unittest discover -s tests`
+- 当前测试规模：91 tests
+
+### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
+
+这一版在 LaTeX 组装和最终质量检查之间加入独立 integrity gate。
+
+更新重点：
+
+- 新增 `run-integrity-gate`。
+- 新增 `integrity/integrity_report.json` 和 `integrity/integrity_report.md`。
+- 检查 BibTeX 引用是否存在、`citation_evidence.csv` 是否可追溯、Results 是否禁用文献引用、result claim 是否绑定真实图表文件。
+- 将 `status` 和 `run-pipeline` 接入 integrity gate，使最终质量检查必须等待完整性报告通过。
+
+### v0.3.0 (2026-06-09) -- passport, stale sync, and staged orchestration
+
+这一版强化项目迁移、状态审计和阶段回退能力。
+
+更新重点：
+
+- 新增 DraftPaper Passport：`project_passport.yaml`、`artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。
+- 新增 `status`、`checkpoint`、`resume` 和 `run-pipeline`。
+- 新增基于 hash 的 artifact drift 检测：`detect-artifact-drift` 和 `sync-artifact-stale`。
+- 新增文献驱动的分析代码生成，并默认生成方法/结果流程图和表格，方便本地 smoke test。
+
+### v0.2.0 (2026-06-09) -- Methods, Results, Discussion, and LaTeX hard gates
+
+这一版把一次性 draft 拆成可验证的论文写作阶段，并把 Methods/Results 的科学约束落到本地文件。
+
+更新重点：
+
+- 新增 `collect-method-plan`，将用户方法描述和文献方法归纳转换为 `methods/method_requirements.json`。
+- 新增 `generate-analysis-code`，根据文献、数据清单和方法需求生成可审阅的本地 baseline 分析代码。
+- 新增 `verify-methods` 和 `methods/run_manifest.yaml`；Methods 写作必须建立在成功运行的方法代码之上。
+- 新增 `assess-result-validity`，当结果无法支撑预期结论时回退到 data、methods 或 research plan。
+- 新增 `inventory-results` 和 `write-results`；Results 只能根据真实图表和表格写作，并禁止文献引用。
+- 新增 `write-discussion`、`assemble-latex`、`compile-latex-pdf` 和 `quality-check`。
+
+### v0.1.0 (2026-06-09) -- project model, references, journal profile, and first writers
+
+这一版建立 DraftPaper CLI 的本地项目骨架和早期论文生成流程。
+
+更新重点：
+
+- 新增单篇论文项目目录模型：`idea/`、`references/`、`research_plan/`、`introduction/`、`data/`、`methods/`、`results/`、`discussion/`、`latex/` 等。
+- 新增 `create-project`、`load-project`、`validate-project`、`update-stage-status` 和 `mark-stage-stale`。
+- 新增免费文献检索路线：Semantic Scholar、arXiv、Crossref、可选 SerpApi。
+- 固定输出 `references/library.bib`、`references/literature_items.json`、`references/citation_evidence.csv` 和 `references/literature_review_notes.md`。
+- 新增基于目标期刊的 `resolve-journal-template` 和文献驱动 `generate-plan`。
+- 新增可追溯 Introduction writer，引用必须同时存在于 BibTeX 和 citation evidence。
 
 ## 它能做什么
 
-DraftPaper CLI 把一篇论文拆成一个本地项目目录，并通过明确阶段推进：创建项目、文献检索、目标期刊模板理解、research plan、Introduction、Data、Methods、Results、Discussion、LaTeX 组装、PDF 审阅和质量门检查。
+DraftPaper CLI 把一篇论文拆成一个本地项目目录，并通过明确阶段推进：创建项目、文献检索、目标期刊模板理解、research plan、Introduction、Data、Methods、Results、Discussion、LaTeX 组装、PDF 审阅、完整性门槛、审稿式修订路由和最终质量门槛。
 
-参考文献流程优先使用免费检索源，包括 Semantic Scholar、arXiv、Crossref 和可选 SerpApi。系统会输出 BibTeX、citation evidence、文献综述笔记、HTML 文献摘要，并按 `idea`、`data`、`methods` 记录每篇文献支撑的论文部分。当 data/methods 文献缺少可读 abstract 时，DraftPaper 会通过 `paper_fetch_adapter.py` 调用项目内 vendored 的 `paper-fetch-skill`，尝试抓取全文 Markdown/JSON 作为证据。
+文献流程优先使用免费检索源，包括 Semantic Scholar、arXiv、Crossref 和可选 SerpApi。系统会输出 BibTeX、citation evidence、文献综述笔记、HTML 文献摘要，并按 `idea`、`data`、`methods` 标记每篇文献支持的论文章节。当 data/methods 文献缺少可读 abstract 时，DraftPaper 可通过 `paper_fetch_adapter.py` 调用项目内 vendored 的 `paper-fetch-skill`，尝试抓取全文 Markdown/JSON 作为证据。
 
 ## 核心能力
 
-- 单篇论文本地项目目录模型和阶段 manifest。
-- 支持阶段状态机、回退重跑、stale 标记和项目验证。
-- `idea`、`data`、`methods` 三类上下文文献检索。
-- 用 `citation_evidence.csv` 追踪每个引用支撑的论断。
-- 目标期刊 profile 阶段，用于限制 LaTeX 模板和写作规范。
+- 单篇论文本地项目目录模型和 staged manifests。
+- 阶段状态机、回退重跑、stale 标记和项目验证。
+- 面向 `idea`、`data`、`methods` 的上下文文献检索。
+- 用 `citation_evidence.csv` 追踪每个引用支持的论断。
+- 目标期刊 profile 阶段，用于约束 LaTeX 模板和写作规范。
+- Data feasibility gate：在方法规划前判断数据能否支撑当前研究目标。
 - Methods 硬门槛：必须先跑通本地方法代码。
-- Result validity gate：结果不足时回退 data/method/research plan。
-- Results 禁止文献引用。
+- Result validity gate：结果不支撑结论时回退 data/method/research plan。
+- Results 禁止文献引用，并绑定真实 figure/table。
 - LaTeX 组装和可选本地 PDF 编译。
+- 独立 integrity gate，用于检查 BibTeX、citation evidence 和结果产物绑定。
+- Review-revise-re-review 闭环，包含 gate failure routing 和 commitment ledger。
 - Quality gate 检查引用、结果文件、stale 阶段和期刊模板。
 - Codex skill wrapper 只是调用层，不承载核心业务逻辑。
 
-## 公开范围
+## 公开和商业范围
 
-这个公开仓库定位为可运行的 CLI 基础框架。README 不展开商业化编排细节、prompt 配方、产品策略和不同学科的私有写作规则。这些内容更适合保存在私有部署文档或商业版 wrapper 仓库中。
+本仓库定位为商业版完整实现。公开开源版本应只开放适合展示和引流的文献分析、引用证据、BibTeX 和验证层；本地化数据分析处理、方法代码生成、结果分析处理、商业编排策略、prompt 配方和学科写作启发式规则应保存在商业版或私有部署说明中。
 
 ## 项目结构
 
@@ -47,32 +121,35 @@ third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
 github_submit/                  # GitHub 提交材料和说明
 ```
 
-本地生成的论文项目放在 `projects/`，并默认被 git 忽略，避免把研究数据、生成稿件、全文缓存和结果文件上传到公开仓库。
+本地生成的论文项目默认放在 `projects/`，并被 git 忽略，避免把研究数据、生成稿件、全文缓存和结果文件上传到仓库。
 
 ## 快速开始
 
 ### 在 Codex 中使用
 
-这个项目的主要使用方式不是让用户手动敲每一条 CLI 命令，而是让 Codex 读取本仓库并替你调用 DraftPaper CLI。把仓库克隆到本地后，在 Codex 中打开或指向该仓库目录，然后直接用自然语言说：
+推荐使用方式不是让用户手动敲每一条 CLI 命令，而是让 Codex 读取该仓库并替你调用 DraftPaper CLI。克隆仓库后，在 Codex 中打开或指向该目录，然后直接用自然语言提出任务，例如：
 
 ```text
 请使用 C:\Draftpaper_commercial 里的 DraftPaper CLI，基于我的 idea 创建论文项目、检索文献、生成 research plan，并告诉我哪些阶段被阻塞。
 ```
 
-Codex 应该负责运行对应 CLI 命令、读取生成的本地项目文件，并汇报下一步。下面的 `draftpaper` 命令是底层接口，主要用于调试、自动化脚本或不通过 Codex 使用时，并不是要替代和 Codex 的正常对话。
+Codex 应负责运行对应 CLI、读取本地项目文件并报告下一步。下面的 `draftpaper` 命令是底层接口，主要用于调试、自动化脚本或不通过 Codex 使用时。
 
-分阶段工作时，Codex 应该先调用总控层：
+分阶段工作时，Codex 应先调用总控层：
 
 ```powershell
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\projects\your_project
 ```
 
 ### 一键本地安装
 
-在你希望保存项目的目录中运行下面这条命令。它会克隆私有仓库，创建本地虚拟环境，安装 DraftPaper CLI，并打印 CLI 帮助信息。`paper-fetch-skill` 已经 vendored 在 `third_party/paper-fetch-skill`，只有需要全文抓取时再单独安装。
+在你希望保存项目的目录中运行下面命令。它会克隆私有仓库、创建本地虚拟环境、安装 DraftPaper CLI，并打印 CLI 帮助信息。`paper-fetch-skill` 已经 vendored 在 `third_party/paper-fetch-skill`，只有需要全文抓取时再单独安装。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_commercial.git; cd Draftpaper_commercial; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
@@ -110,6 +187,7 @@ python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_pr
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
 ```
 
@@ -121,17 +199,21 @@ python -m unittest discover -s tests
 
 ## 当前实现状态
 
-CLI 已经实装总控层命令（`status`、`checkpoint`、`resume`、`run-pipeline`）、基于 hash 的 stale 同步命令（`detect-artifact-drift`、`sync-artifact-stale`），以及项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、基于文献和 methods 描述的 baseline 分析代码生成、方法代码运行验证、Methods 撰写、结果有效性检查、结果清单、Results 撰写、Discussion、LaTeX 组装、PDF 编译和最终质量检查等阶段命令。
+CLI 已实装总控层命令（`status`、`checkpoint`、`resume`、`run-pipeline`）、基于 hash 的 stale 同步命令（`detect-artifact-drift`、`sync-artifact-stale`），以及项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、文献与方法描述驱动的 baseline 分析代码生成、方法代码运行验证、Methods 写作、结果有效性检查、结果清单、Results 写作、Discussion、LaTeX 组装、PDF 编译、独立完整性检查、review/revision routing 和最终质量检查等阶段命令。
 
-每个项目现在都会带有 DraftPaper Passport：`project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl`、`integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、人工 checkpoint 和 integrity event，方便换电脑迁移，也避免依赖 Codex 对话记忆来判断项目状态。
+每个项目都带有 DraftPaper Passport：`project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl`、`integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、人工 checkpoint 和 integrity event，方便换电脑迁移，也避免依赖 Codex 对话记忆判断项目状态。
 
-当被追踪 artifact 的 hash 发生变化时，`status` 会返回 `pipeline_state=drift_detected`，并建议先运行 `sync-artifact-stale`。该命令会把变化文件映射回来源阶段，自动把下游依赖阶段标记为 stale，把 drift 记录写入 `integrity_ledger.jsonl`，并刷新 passport 的 hash 基线。
+当被追踪 artifact 的 hash 发生变化时，`status` 返回 `pipeline_state=drift_detected`，并建议先运行 `sync-artifact-stale`。该命令会把变化文件映射回来源阶段，自动把下游依赖阶段标记为 stale，把 drift 写入 `integrity_ledger.jsonl`，并刷新 passport 的 hash 基线。
 
-`generate-analysis-code` 会读取已检索文献、`methods/method_requirements.json`、`methods/method_plan.md` 和 `data/data_inventory.json`，在项目 `code/` 目录下生成可审阅、可运行的 Python baseline 分析代码，并写入 `methods/analysis_code_manifest.json`。默认输出已经扩展为两张表和四张 SVG 图：数据分析流程、数据处理流程、方法分析流程、数据喂入方法后的输出流程。该阶段不是跳过科研审查的最终模型生成器，而是可复现的代码脚手架；后续仍必须用 `verify-methods` 运行生成命令、记录 `methods/run_manifest.yaml`，并确认所有声明输出都存在后才能继续写 Methods。`inventory-results` 会把通过验证的图表转成 `results/result_manifest.yaml`，`write-results` 再根据该 manifest 写出不含文献引用的结果段落。
+`generate-analysis-code` 会读取已检索文献、`methods/method_requirements.json`、`methods/method_plan.md` 和 `data/data_inventory.json`，在项目 `code/` 目录下生成可审阅、可运行的 Python baseline 分析代码，并写入 `methods/analysis_code_manifest.json`。默认输出包括两张表和四张 SVG 图：数据分析流程、数据处理流程、方法分析流程、数据喂入方法后的输出流程。该阶段不是最终科学模型生成器，而是可复现代码脚手架；后续仍需由 `verify-methods` 运行命令、记录 `methods/run_manifest.yaml`，并确认所有声明输出存在后才能继续写 Methods。
+
+`run-integrity-gate` 会写入 `integrity/integrity_report.json` 和 `integrity/integrity_report.md`，并向 `integrity_ledger.jsonl` 追加 `integrity_gate` event。它检查 manuscript citations 是否存在于 BibTeX、Introduction/Data/Methods/Discussion 引用是否可追溯到 `references/citation_evidence.csv`、Results 是否包含 citation commands，以及 `results/result_manifest.yaml` 中每个 result claim 是否绑定真实本地图表。当项目进入 `quality_checks` 时，`status` 和 `run-pipeline` 会在最终 `quality-check` 前推荐 `run-integrity-gate`，直到完整性报告通过。
+
+`diagnose-gate-failures`、`review-draft`、`generate-revision-plan`、`apply-revision` 和 `re-review` 构成 review-revise-re-review 闭环。Gate failures 会被转换成统一 revision issues，记录 target stage、需要检查的文件、所需用户决策和建议重跑命令。当 integrity 或最终 quality 报告失败时，`status` 和 `run-pipeline` 会自动推荐 `diagnose-gate-failures`。Reviewer layer 会增加保守的稿件层面审查；`apply-revision` 只标记受影响阶段 stale，不会在没有用户确认时自动改写科学内容。
 
 ## Paper Fetch 集成
 
-本仓库把 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。Adapter 会优先使用 PATH 中的 `paper-fetch` 命令；如果没有，也可以使用项目内 vendored runtime source。建议在独立虚拟环境中安装：
+本仓库把 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。Adapter 优先使用 PATH 中的 `paper-fetch` 命令；如果没有，也可以使用项目内 vendored runtime source。建议在独立虚拟环境中安装：
 
 ```powershell
 python -m pip install -e third_party\paper-fetch-skill
@@ -141,4 +223,4 @@ python -m pip install -e third_party\paper-fetch-skill
 
 ## 许可证
 
-DraftPaper CLI 使用 MIT License。第三方组件保留其各自许可证。
+DraftPaper CLI 使用 MIT License。第三方组件保留各自许可证。

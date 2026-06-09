@@ -10,7 +10,7 @@
 
 This repository contains the private commercial implementation of DraftPaper. Do not publish this repository or mirror its implementation details into the public open-source repository.
 
-The commercial edition keeps the full staged workflow, including local data analysis processing, methods hard gates, result validity checks, results writing, LaTeX assembly, Codex skill orchestration, and quality gate logic. The public repository should expose only the literature analysis and validation layer used for product demonstration and lead generation.
+The commercial edition keeps the full staged workflow, including local data analysis processing, methods hard gates, result validity checks, results writing, LaTeX assembly, Codex skill orchestration, integrity gates, review-revision routing, and final quality-gate logic. The public repository should expose only the literature analysis and validation layer used for product demonstration and lead generation.
 
 [中文](README.zh-CN.md) | English
 
@@ -18,7 +18,7 @@ DraftPaper CLI is a local-first research paper workflow engine. It turns a resea
 
 ## Recent Updates
 
-### v0.5.0 (2026-06-09) — review routing and gate-failure diagnosis
+### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis
 
 This update completes the first review-revise-re-review loop and connects failed final gates back into actionable revision routing.
 
@@ -35,7 +35,7 @@ Validation:
 - Local verification: `python -m unittest discover -s tests`
 - Current suite: 91 tests
 
-### v0.4.0 (2026-06-09) — integrity gate and artifact traceability
+### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
 
 This update adds an independent integrity gate between LaTeX assembly and final quality checks.
 
@@ -46,7 +46,7 @@ Highlights:
 - Validates BibTeX citation existence, `citation_evidence.csv` traceability, Results no-citation rules, and result-claim artifact binding.
 - Connected `status` and `run-pipeline` so final quality checks wait for a passed integrity report.
 
-### v0.3.0 (2026-06-09) — passport, stale sync, and staged orchestration
+### v0.3.0 (2026-06-09) -- passport, stale sync, and staged orchestration
 
 This update hardens project portability and rerun behavior.
 
@@ -57,9 +57,35 @@ Highlights:
 - Added hash-based drift detection with `detect-artifact-drift` and `sync-artifact-stale`.
 - Added literature-informed analysis-code generation and default method/result artifacts for local workflow smoke tests.
 
+### v0.2.0 (2026-06-09) -- Methods, Results, Discussion, and LaTeX hard gates
+
+This update split the one-shot draft path into verifiable manuscript stages and moved the scientific constraints for Methods and Results into local project artifacts.
+
+Highlights:
+
+- Added `collect-method-plan` to convert user method notes and literature-informed method summaries into `methods/method_requirements.json`.
+- Added `generate-analysis-code` to create reviewable baseline analysis code from retrieved literature, data inventory, and method requirements.
+- Added `verify-methods` and `methods/run_manifest.yaml`; Methods writing now requires a successful local method-code run.
+- Added `assess-result-validity` so unsupported results can route back to data, methods, or the research plan.
+- Added `inventory-results` and `write-results`; Results writing is bound to real figures/tables and rejects citation commands.
+- Added `write-discussion`, `assemble-latex`, `compile-latex-pdf`, and `quality-check`.
+
+### v0.1.0 (2026-06-09) -- project model, references, journal profile, and first writers
+
+This update established the local project skeleton and the first staged research-writing workflow.
+
+Highlights:
+
+- Added the single-paper project directory model with `idea/`, `references/`, `research_plan/`, `introduction/`, `data/`, `methods/`, `results/`, `discussion/`, and `latex/`.
+- Added `create-project`, `load-project`, `validate-project`, `update-stage-status`, and `mark-stage-stale`.
+- Added free-first literature retrieval through Semantic Scholar, arXiv, Crossref, and optional SerpApi.
+- Standardized reference outputs: `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, and `references/literature_review_notes.md`.
+- Added target-journal template resolution through `resolve-journal-template` and literature-informed `generate-plan`.
+- Added a traceable Introduction writer whose citation keys must exist in both BibTeX and citation evidence.
+
 ## What It Does
 
-DraftPaper CLI organizes one paper as one local project directory and advances it through explicit stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, and quality gates.
+DraftPaper CLI organizes one paper as one local project directory and advances it through explicit stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
 
 The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, DraftPaper can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
 
@@ -70,6 +96,7 @@ The reference workflow uses free literature providers first, including Semantic 
 - Context-aware literature retrieval for `idea`, `data`, and `methods`.
 - Traceable `citation_evidence.csv` for auditable manuscript claims.
 - Journal profile stage for target-journal LaTeX constraints.
+- Data feasibility gate before method planning.
 - Methods hard gate requiring successful local code execution.
 - Result validity gate before Results writing.
 - Results no-citation enforcement.
@@ -79,9 +106,9 @@ The reference workflow uses free literature providers first, including Semantic 
 - Quality gate for citations, result artifacts, stale stages, and journal template checks.
 - Codex skill wrapper that remains only a calling layer.
 
-## Public Scope
+## Public and Commercial Scope
 
-This public repository is an implementation-oriented CLI foundation. It intentionally keeps product strategy, prompt recipes, commercial orchestration details, and discipline-specific writing heuristics out of the README. Those should live in private deployment notes or a commercial wrapper repository.
+This private repository is the commercial implementation. The public open-core repository should only expose the literature analysis, citation evidence, BibTeX, and validation layer suitable for product demonstration. Local data processing, method-code generation, result analysis, commercial orchestration strategy, prompt recipes, and discipline-specific writing heuristics should remain in the private commercial implementation or deployment notes.
 
 ## Project Layout
 
