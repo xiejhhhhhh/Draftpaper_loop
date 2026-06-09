@@ -1,4 +1,8 @@
-"""Local-first CLI workflow for staged research paper projects."""
+"""Local-first CLI workflow for staged research paper projects.
+
+Contact: xiejinhui22@mails.ucas.ac.cn
+Commercial use requires written authorization from the developer.
+"""
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data

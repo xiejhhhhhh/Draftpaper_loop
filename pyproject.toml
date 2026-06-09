@@ -3,9 +3,10 @@ name = "draftpaper-cli"
 version = "0.1.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [
-  { name = "xiejhhhhhh" }
+  { name = "xiejhhhhhh", email = "xiejinhui22@mails.ucas.ac.cn" }
 ]
 keywords = ["research", "latex", "paper-writing", "cli", "codex-skills"]
 
