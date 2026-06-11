@@ -1,31 +1,55 @@
-# DraftPaper CLI
+# Draftpaper-loop
 
-[![AI Research Workflow](https://img.shields.io/badge/AI-Research%20Workflow-5C4D7D?style=flat-square)](#)
-[![Literature Analysis](https://img.shields.io/badge/Literature-Analysis-1D7874?style=flat-square)](#)
-[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#)
-[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#)
-[![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#)
+[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#what-it-does)
+[![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-model)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#key-features)
+[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#key-features)
+[![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#quick-start)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
-[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#license-and-commercial-use)
-
-Contact: [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn)
+[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#license-commercial-use-and-contact)
 
 [中文](README.zh-CN.md) | English
 
-DraftPaper CLI is a local-first staged workflow engine for research paper projects. It turns a research idea, local data, verified method code, result artifacts, and traceable literature evidence into a staged LaTeX manuscript draft. The core capability is a Python package plus CLI; Codex skills, desktop UI, Web UI, and future API/SaaS layers should call the same core workflow rather than reimplementing it.
+Draftpaper-loop is a local-first research paper loop engine. It is not just a one-shot draft generator and not merely a command-line utility. The CLI is the stable tool surface, while the product concept is a repeatable loop: read project state, retrieve evidence, plan the paper, run methods, validate results, assemble LaTeX, review failures, mark stale stages, and rerun only the necessary upstream work until the manuscript is scientifically auditable.
 
-The repository is now published as an open research and development project. You may inspect, learn from, and use it for non-commercial research and personal workflows under the repository license. If you want to use DraftPaper CLI or derivative workflows commercially, contact the developer for written authorization.
+The project follows the loop-engineering shift from prompting an agent turn by turn to designing a system that prompts, observes, verifies, stores state, and decides the next action. For research writing, this matters because a paper draft is rarely correct after one generation. Literature, data, methods, results, journal constraints, and reviewer feedback change each other. Draftpaper-loop treats those changes as first-class loop events instead of ad hoc chat history.
 
 ## What It Does
 
-DraftPaper CLI organizes one paper as one local project directory and advances it through explicit stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
+Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
 
-The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, DraftPaper can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
+The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, Draftpaper-loop can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
+
+## Loop Model
+
+Draftpaper-loop uses a deterministic outer loop around open-ended research and writing work:
+
+```text
+observe project state
+  -> decide next safe stage
+  -> run the stage command
+  -> verify outputs and gates
+  -> record artifacts, hashes, and decisions
+  -> mark downstream stages stale when inputs change
+  -> diagnose failures and route revision
+  -> repeat until the draft is reviewable
+```
+
+The loop is intentionally hybrid. Fixed scientific contracts such as citation existence, result artifact binding, Results no-citation checks, and stale-stage propagation are handled deterministically. Open-ended work such as literature interpretation, research planning, method design, and revision decisions can be assisted by Codex or other agents, but those agents are expected to call the same local project loop instead of bypassing it.
+
+The loop is designed around five engineering components:
+
+- Goal: each paper stage has an explicit target, such as a traceable research plan, a verified method run, a result manifest, or a compilable LaTeX draft.
+- Context: each iteration reloads stable project files, including `project_passport.yaml`, stage manifests, citation evidence, run manifests, result manifests, review reports, and artifact hashes, instead of relying on unbounded chat history.
+- Tools: agents operate through a controlled CLI surface, so literature search, stale synchronization, method verification, integrity checks, and revision routing remain reproducible.
+- Evaluation: automated gates decide whether the current state is acceptable, including data feasibility, method execution, result validity, citation traceability, Results no-citation checks, and final quality checks.
+- Stop conditions: the loop stops when gates pass, pauses for human checkpoints on high-risk scientific decisions, or routes backward when repeated failures show that data, methods, or claims need revision.
 
 ## Key Features
 
 - Single-paper local project model with staged manifests.
-- State machine commands for rerun, stale-stage tracking, and validation.
+- Orchestrator commands for status, next action, checkpoint, resume, and pipeline execution.
+- Hash-based stale detection and backtracking when upstream artifacts change.
 - Context-aware literature retrieval for `idea`, `data`, and `methods`.
 - Traceable `citation_evidence.csv` for auditable manuscript claims.
 - Journal profile stage for target-journal LaTeX constraints.
@@ -36,13 +60,12 @@ The reference workflow uses free literature providers first, including Semantic 
 - LaTeX assembly with optional local PDF compilation.
 - Independent integrity gate for BibTeX existence, citation evidence, and result artifact binding.
 - Review-revise-re-review loop with gate-failure routing and commitment ledger.
-- Quality gate for citations, result artifacts, stale stages, and journal template checks.
 - Codex skill wrapper that remains only a calling layer.
 
 ## Project Layout
 
 ```text
-draftpaper_cli/                 # Core Python package and CLI stages
+draftpaper_cli/                 # Core Python package and CLI stage commands
 codex_skills/draftpaper-workflow # Optional Codex skill wrapper
 docs/                           # Workflow design and priority guide
 tests/                          # Unit tests
@@ -56,13 +79,13 @@ Generated paper projects are stored under `projects/` locally and are intentiona
 
 ### Use Through Codex
 
-The intended workflow is to let Codex read this repository and call the DraftPaper CLI for you. After cloning the repository locally, open or point Codex to the repository directory and ask in natural language, for example:
+The intended workflow is to let Codex read this repository and call the Draftpaper-loop CLI surface for you. After cloning the repository locally, open or point Codex to the repository directory and ask in natural language, for example:
 
 ```text
-Use the DraftPaper CLI in C:\Draftpaper_CLI to create a paper project for this idea, search literature, write the research plan, and tell me which stages are blocked.
+Use Draftpaper-loop in C:\Draftpaper-loop to create a paper project for this idea, search literature, write the research plan, and tell me which loop stage is blocked.
 ```
 
-Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next stage. The raw `draftpaper` commands below are the underlying interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
+Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next safe stage. The raw `draftpaper` commands below are the underlying loop interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
 
 For staged work, Codex should first call the orchestrator layer:
 
@@ -78,10 +101,10 @@ python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\
 
 ### One-Command Local Setup
 
-Run this from the directory where you want to place the repository. The command clones the repository, creates a local virtual environment, installs DraftPaper CLI, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
+Run this from the directory where you want to place the repository. The command clones the repository, creates a local virtual environment, installs the Draftpaper-loop CLI surface, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_CLI.git; cd Draftpaper_CLI; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper-loop.git; cd Draftpaper-loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
 ```
 
 Optional full-text fetch runtime:
@@ -128,7 +151,7 @@ python -m unittest discover -s tests
 
 ## Implementation Status
 
-The CLI already includes an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`) plus hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`) and staged commands for project state, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
@@ -150,21 +173,16 @@ python -m pip install -e third_party\paper-fetch-skill
 
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
-## License and Commercial Use
-
-DraftPaper CLI is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
-
-For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
-
-Third-party components keep their own licenses.
-
 ## Recent Updates
 
+### v0.6.0 (2026-06-11) -- renamed and reframed as Draftpaper-loop
+
+- Reframed the project from a CLI-first paper drafting tool to a loop-engineered research manuscript system.
+- Renamed the README identity from DraftPaper CLI to Draftpaper-loop while keeping `draftpaper` as the stable command-line interface.
+- Added an explicit loop model covering observe, decide, run, verify, persist state, mark stale stages, diagnose failures, and rerun.
+- Moved contact, commercial-use terms, and homepage information to the end of the README after the update log.
+
 ### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis
-
-This update completes the first review-revise-re-review loop and connects failed final gates back into actionable revision routing.
-
-Highlights:
 
 - Added `diagnose-gate-failures`, `review-draft`, `generate-revision-plan`, `apply-revision`, and `re-review`.
 - Added unified revision issues with `source`, `target_stage`, `files_to_add_or_edit`, `required_user_input`, and `recommended_commands`.
@@ -205,3 +223,13 @@ Highlights:
 - Standardized reference outputs: `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, and `references/literature_review_notes.md`.
 - Added target-journal template resolution through `resolve-journal-template` and literature-informed `generate-plan`.
 - Added a traceable Introduction writer whose citation keys must exist in both BibTeX and citation evidence.
+
+## License, Commercial Use, And Contact
+
+Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
+
+For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
+
+Personal homepage: [https://xiejhhhhhh.github.io/Jinhui_profile/](https://xiejhhhhhh.github.io/Jinhui_profile/)
+
+Third-party components keep their own licenses.
