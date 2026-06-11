@@ -10,6 +10,7 @@ from html import unescape
 from pathlib import Path
 from typing import Any
 
+from .html_utils import write_html_report
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 
@@ -20,6 +21,7 @@ REFERENCE_OUTPUTS = [
     "references/search_queries.json",
     "references/citation_evidence.csv",
     "references/literature_review_notes.md",
+    "references/literature_review_notes.html",
     "references/literature_summaries/index.html",
 ]
 
@@ -683,10 +685,9 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
     _write_json(references_dir / "search_queries.json", search_queries or {"idea": query})
     (references_dir / "library.bib").write_text(generate_bibtex(normalized), encoding="utf-8")
     _write_citation_evidence(references_dir / "citation_evidence.csv", citation_evidence_rows(normalized))
-    (references_dir / "literature_review_notes.md").write_text(
-        literature_review_notes(normalized, query=query),
-        encoding="utf-8",
-    )
+    review_notes = literature_review_notes(normalized, query=query)
+    (references_dir / "literature_review_notes.md").write_text(review_notes, encoding="utf-8")
+    write_html_report(references_dir / "literature_review_notes.html", review_notes, title="Literature Review Notes")
     html_outputs = write_literature_html_summaries(references_dir, normalized)
 
     update_stage_status(state.path, "references", "draft")

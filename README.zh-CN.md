@@ -1,93 +1,84 @@
 # Draftpaper-loop
 
-[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#它能做什么)
+[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#功能概览)
 [![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-模型)
-[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#核心能力)
-[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#核心能力)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#核心特性)
+[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#核心特性)
 [![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#快速开始)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#许可证商业使用和联系方式)
 
 中文 | [English](README.md)
 
-Draftpaper-loop 是一个本地优先的科研论文 loop engine。它不是一次性论文初稿生成器，也不只是一个命令行工具。CLI 是稳定的工具调用面，真正的产品概念是一个可反复运行的科研写作循环：读取项目状态、检索证据、规划论文、运行方法、验证结果、组装 LaTeX、审查失败、标记 stale 阶段，并只重跑必要的上游环节，直到论文初稿具备可审计的科学证据链。
+Draftpaper-loop 是一个本地优先的科研论文 loop 引擎。它不是一次性 draft 生成器，也不仅仅是命令行工具。CLI 是稳定的工具调用面，而产品概念是一个可重复执行的 loop：读取项目状态、检索证据、规划论文、运行方法、验证结果、组装 LaTeX、诊断失败、标记 stale 阶段，并只回退重跑必要的上游工作，直到论文初稿具备可审阅和可追溯性。
 
-这个项目采用 loop engineering 的思路：不再让用户一轮一轮手动提示 agent，而是设计一个能够提示、观察、验证、保存状态并决定下一步动作的系统。对科研写作来说，这一点尤其重要，因为论文几乎不可能一次生成就正确。文献、数据、方法、结果、期刊规范和审稿反馈会相互影响。Draftpaper-loop 把这些变化当作一等循环事件，而不是零散的聊天历史。
+这个项目更接近 loop engineering，而不是传统 CLI workflow。对于科研论文而言，文献、数据、方法、结果、目标期刊和审稿意见会互相改变。Draftpaper-loop 把这些改变视为项目状态事件，而不是依赖一次聊天上下文或一次性生成。
 
-## 它能做什么
+## 功能概览
 
-Draftpaper-loop 把一篇论文拆成一个本地项目目录，并通过明确、可重跑的阶段推进：创建项目、文献检索、目标期刊模板理解、research plan、Introduction、Data、Methods、Results、Discussion、LaTeX 组装、PDF 审阅、完整性门槛、审稿式修订路由和最终质量门槛。
+Draftpaper-loop 将单篇论文组织为一个本地项目目录，并通过显式、可重跑的阶段推进：项目创建、文献检索、目标期刊模板解析、research plan、Introduction、Data、Methods、Results、Discussion、LaTeX 组装、PDF 审阅、完整性检查、审稿式 revision routing 和最终 quality gate。
 
-文献流程优先使用免费检索源，包括 Semantic Scholar、arXiv、Crossref 和可选 SerpApi。系统会输出 BibTeX、citation evidence、文献综述笔记、HTML 文献摘要，并按 `idea`、`data`、`methods` 标记每篇文献支持的论文章节。当 data/methods 文献缺少可读 abstract 时，Draftpaper-loop 可通过 `paper_fetch_adapter.py` 调用项目内 vendored 的 `paper-fetch-skill`，尝试抓取全文 Markdown/JSON 作为证据。
+文献流程优先使用免费检索源，包括 Semantic Scholar、arXiv、Crossref 和可选 SerpApi。输出包括 BibTeX、citation evidence、文献综述笔记、HTML 单篇文献摘要，以及面向 Introduction/Data/Methods 的上下文证据。对于缺少 abstract 的数据或方法文献，可以通过项目内的 `paper_fetch_adapter.py` 调用 vendored `paper-fetch-skill` 运行时补全文献证据。
 
 ## Loop 模型
 
-Draftpaper-loop 在开放式科研和写作任务外层包了一层确定性循环：
+Draftpaper-loop 的外层逻辑是：
 
 ```text
 观察项目状态
-  -> 判断下一步安全阶段
-  -> 运行阶段命令
-  -> 验证输出和门槛
+  -> 判断下一步安全行动
+  -> 执行阶段命令
+  -> 验证产物和 gate
   -> 记录 artifact、hash 和决策
   -> 当输入变化时标记下游阶段 stale
-  -> 诊断失败并路由修订
-  -> 重复，直到初稿可审阅
+  -> 诊断失败并回退修订
+  -> 重复直到初稿可审阅
 ```
 
-这个 loop 是混合型的。引用是否存在、结果图表是否绑定、Results 是否禁用文献引用、stale 阶段是否正确传播等科学合约由确定性代码处理。文献理解、研究方案规划、方法设计和修订决策等开放式任务可以由 Codex 或其他 agent 辅助，但这些 agent 应调用同一个本地项目 loop，而不是绕过它直接改写论文。
+确定性约束由 CLI 处理，例如 BibTeX 引用存在性、citation evidence 可追溯性、Results 禁止引用、结果 claim 必须绑定真实图表、stage stale 传播和 artifact hash 检测。开放性任务，例如研究计划、方法设计、图表规划和 revision 判断，可以由 Codex 或其他 Agent 辅助，但 Agent 应该调用同一套本地 loop，而不是绕过项目状态直接写文件。
 
-这个 loop 按五个工程组件设计：
+## 核心特性
 
-- 目标：每个论文阶段都有明确目标，例如可追溯 research plan、已验证 method run、result manifest，或可编译 LaTeX 初稿。
-- 上下文：每轮迭代都重新读取稳定项目文件，包括 `project_passport.yaml`、stage manifests、citation evidence、run manifests、result manifests、review reports 和 artifact hashes，而不是依赖无限增长的聊天历史。
-- 工具：agent 通过受控 CLI 调用面工作，因此文献检索、stale 同步、方法验证、完整性检查和修订路由都可复现。
-- 评估：自动化 gates 判断当前状态是否可接受，包括数据可行性、方法运行、结果有效性、引用可追溯性、Results 禁引用检查和最终质量检查。
-- 停止条件：当 gates 通过时停止；当遇到高风险科学决策时暂停等待人工 checkpoint；当连续失败说明数据、方法或结论强度需要调整时，loop 会向上游回退。
-
-## 核心能力
-
-- 单篇论文本地项目目录模型和 staged manifests。
-- 总控命令支持 status、next action、checkpoint、resume 和 pipeline execution。
-- 基于 hash 的 stale 检测和上游 artifact 变化后的回退。
+- 单篇论文项目目录模型和 stage manifest。
+- `status`、`run-pipeline`、`checkpoint`、`resume` 等 orchestrator 命令。
+- 基于 artifact hash 的 stale 检测和回退。
 - 面向 `idea`、`data`、`methods` 的上下文文献检索。
-- 用 `citation_evidence.csv` 追踪每个引用支持的论断。
-- 目标期刊 profile 阶段，用于约束 LaTeX 模板和写作规范。
-- Data feasibility gate：在方法规划前判断数据能否支撑当前研究目标。
-- Methods 硬门槛：必须先跑通本地方法代码。
-- Result validity gate：结果不支撑结论时回退 data/method/research plan。
-- Results 禁止文献引用，并绑定真实 figure/table。
+- 可追溯的 `citation_evidence.csv`。
+- 目标期刊模板和 LaTeX 约束解析。
+- Data feasibility gate。
+- `plan-figures` 项目专属科研图表规划。
+- `generate-analysis-code` 按 `results/figure_plan.json` 生成分析代码，不再固定输出通用流程图。
+- Methods hard gate，要求本地方法代码成功运行。
+- Result validity gate，结果不支撑结论时回退 data/method/research plan。
+- Results 禁止文献引用，且必须绑定真实图表或表格。
 - LaTeX 组装和可选本地 PDF 编译。
-- 独立 integrity gate，用于检查 BibTeX、citation evidence 和结果产物绑定。
-- Review-revise-re-review 闭环，包含 gate failure routing 和 commitment ledger。
-- Codex skill wrapper 只是调用层，不承载核心业务逻辑。
+- 独立 integrity gate 和 review-revise-re-review 闭环。
+- Codex skill wrapper 仅作为调用层，核心能力仍是 Python package + CLI + 本地项目结构。
 
 ## 项目结构
 
 ```text
-draftpaper_cli/                 # 核心 Python package 和 CLI 阶段命令
+draftpaper_cli/                 # 核心 Python package 和 CLI
 codex_skills/draftpaper-workflow # 可选 Codex skill wrapper
-docs/                           # 工作流设计和优先级指南
+docs/                           # workflow 设计和优先级指南
 tests/                          # 单元测试
 third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
-github_submit/                  # GitHub 提交材料和说明
+github_submit/                  # GitHub 提交资料和说明
 ```
 
-本地生成的论文项目默认放在 `projects/`，并被 git 忽略，避免把研究数据、生成稿件、全文缓存和结果文件上传到仓库。
+生成的论文项目通常位于本地 `projects/` 下，并默认不提交到 git，避免上传研究数据、生成草稿、全文文献缓存和结果图表。
 
 ## 快速开始
 
-### 在 Codex 中使用
+### 通过 Codex 使用
 
-推荐使用方式不是让用户手动敲每一条 CLI 命令，而是让 Codex 读取该仓库并替你调用 Draftpaper-loop 的 CLI 调用面。克隆仓库后，在 Codex 中打开或指向该目录，然后直接用自然语言提出任务，例如：
+推荐方式是让 Codex 读取本仓库并替你调用 Draftpaper-loop CLI。克隆仓库后，在 Codex 中指向仓库目录，然后用自然语言提出任务，例如：
 
 ```text
-请使用 C:\Draftpaper-loop 里的 Draftpaper-loop，基于我的 idea 创建论文项目、检索文献、生成 research plan，并告诉我哪个 loop 阶段被阻塞。
+使用 C:\Draftpaper-loop 中的 Draftpaper-loop，为这个 idea 创建论文项目，检索文献，写 research plan，并告诉我当前 loop 卡在哪个阶段。
 ```
 
-Codex 应负责运行对应 CLI、读取本地项目文件并报告下一步安全阶段。下面的 `draftpaper` 命令是底层 loop 接口，主要用于调试、自动化脚本或不通过 Codex 使用时。
-
-分阶段工作时，Codex 应先调用总控层：
+Codex 应先调用 orchestrator：
 
 ```powershell
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
@@ -96,51 +87,30 @@ python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\p
 python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\projects\your_project
 ```
 
-### 一键本地安装
-
-在你希望保存项目的目录中运行下面命令。它会克隆仓库、创建本地虚拟环境、安装 Draftpaper-loop 的 CLI 调用面，并打印 CLI 帮助信息。`paper-fetch-skill` 已经 vendored 在 `third_party/paper-fetch-skill`，只有需要全文抓取时再单独安装。
+### 本地一键安装
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper-loop.git; cd Draftpaper-loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
 ```
 
-可选安装全文抓取 runtime：
+可选安装全文抓取运行时：
 
 ```powershell
 .\.venv\Scripts\python -m pip install -e third_party\paper-fetch-skill
 ```
 
-安装后，也可以在仓库根目录中直接使用 `draftpaper` 命令：
+底层 CLI 示例：
 
 ```powershell
-.\.venv\Scripts\draftpaper create-project --root .\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper create-project --root .\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 .\.venv\Scripts\draftpaper status --project .\projects\your_project
 .\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
+.\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
+.\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
-```
-
-如果只想快速确认 CLI 能运行，不进行联网文献检索，可以执行：
-
-```powershell
-.\.venv\Scripts\draftpaper create-project --root .\projects --idea "X-ray flaring source classification" --field "machine learning astronomy" --target-journal APJS
-.\.venv\Scripts\draftpaper validate-project --project .\projects\x-ray-flaring-source-classification
-```
-
-### 开发模式安装
-
-```powershell
-python -m pip install -e .
-python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "你的研究idea" --field "machine learning astronomy" --target-journal APJS
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
-python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
 ```
 
 运行测试：
@@ -151,78 +121,69 @@ python -m unittest discover -s tests
 
 ## 当前实现状态
 
-当前实现已经包含核心 loop 原语：总控层命令（`status`、`checkpoint`、`resume`、`run-pipeline`）、基于 hash 的 stale 同步命令（`detect-artifact-drift`、`sync-artifact-stale`），以及项目状态、文献检索、目标期刊 profile、research plan、Introduction、数据清单和可行性检查、method plan 收集、文献与方法描述驱动的 baseline 分析代码生成、方法代码运行验证、Methods 写作、结果有效性检查、结果清单、Results 写作、Discussion、LaTeX 组装、PDF 编译、独立完整性检查、review/revision routing 和最终质量检查等阶段命令。
+当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、Introduction、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、Methods、result validity、result inventory、Results、Discussion、LaTeX assembly、PDF compilation、integrity gate、review/revision routing 和 final quality check。
 
-每个项目都带有 DraftPaper Passport：`project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl`、`integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、人工 checkpoint 和 integrity event，方便换电脑迁移，也避免依赖 Codex 对话记忆判断项目状态。
+每个项目都有 `project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、用户确认点和完整性事件，方便跨电脑迁移和后续审计。
 
-当被追踪 artifact 的 hash 发生变化时，`status` 返回 `pipeline_state=drift_detected`，并建议先运行 `sync-artifact-stale`。该命令会把变化文件映射回来源阶段，自动把下游依赖阶段标记为 stale，把 drift 写入 `integrity_ledger.jsonl`，并刷新 passport 的 hash 基线。
-
-`generate-analysis-code` 会读取已检索文献、`methods/method_requirements.json`、`methods/method_plan.md` 和 `data/data_inventory.json`，在项目 `code/` 目录下生成可审阅、可运行的 Python baseline 分析代码，并写入 `methods/analysis_code_manifest.json`。默认输出包括两张表和四张 SVG 图：数据分析流程、数据处理流程、方法分析流程、数据喂入方法后的输出流程。该阶段不是最终科学模型生成器，而是可复现代码脚手架；后续仍需由 `verify-methods` 运行命令、记录 `methods/run_manifest.yaml`，并确认所有声明输出存在后才能继续写 Methods。
-
-`run-integrity-gate` 会写入 `integrity/integrity_report.json` 和 `integrity/integrity_report.md`，并向 `integrity_ledger.jsonl` 追加 `integrity_gate` event。它检查 manuscript citations 是否存在于 BibTeX、Introduction/Data/Methods/Discussion 引用是否可追溯到 `references/citation_evidence.csv`、Results 是否包含 citation commands，以及 `results/result_manifest.yaml` 中每个 result claim 是否绑定真实本地图表。
-
-`diagnose-gate-failures`、`review-draft`、`generate-revision-plan`、`apply-revision` 和 `re-review` 构成 review-revise-re-review 闭环。Gate failures 会被转换成统一 revision issues，记录 target stage、需要检查的文件、所需用户决策和建议重跑命令。当 integrity 或最终 quality 报告失败时，`status` 和 `run-pipeline` 会自动推荐 `diagnose-gate-failures`。
+`plan-figures` 会观察当前 idea、research plan、target journal、data inventory、method requirements、literature metadata 和用户已经提供的本地图表，生成 `results/figure_plan.json` 与 `results/figure_plan.html`。`generate-analysis-code` 只根据这份 figure plan 生成代码，不再固定输出某几张通用流程图。如果原始数据在服务器/API/云端，或由于隐私和体量无法下载到本地，可以只提供本地处理后表格、结果图或结果表，再通过 `inventory-results` 和 `write-results` 继续写作，但 claim 必须限制在这些可访问 artifact 支持的范围内。
 
 ## Paper Fetch 集成
 
-本仓库把 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。Adapter 优先使用 PATH 中的 `paper-fetch` 命令；如果没有，也可以使用项目内 vendored runtime source。建议在独立虚拟环境中安装：
+本仓库将 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。adapter 会优先使用 `PATH` 中的 `paper-fetch` 命令；如果不可用，则可使用 vendored runtime source。
 
-```powershell
-python -m pip install -e third_party\paper-fetch-skill
-```
-
-该第三方 runtime 使用 MIT License，二次分发时需要保留其 license notice。
+第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
 
 ### v0.6.0 (2026-06-11) -- renamed and reframed as Draftpaper-loop
 
-- 将项目从 CLI-first 论文初稿工具重新定位为 loop-engineered 科研论文系统。
-- README 名称从 DraftPaper CLI 改为 Draftpaper-loop，同时保留 `draftpaper` 作为稳定命令行接口。
-- 新增明确的 loop 模型：观察、判断、运行、验证、保存状态、标记 stale、诊断失败和重跑。
-- 将联系方式、商业使用条款和个人主页移动到 README 末尾，放在版本更新之后。
+- 将项目从 CLI-first 论文生成工具重新定位为 loop-engineered 科研论文系统。
+- README 名称从 DraftPaper CLI 改为 Draftpaper-loop，同时保留 `draftpaper` 作为稳定 CLI 接口。
+- 增加 observe、decide、run、verify、persist state、mark stale、diagnose failure、rerun 的 loop 模型。
+- 新增 `plan-figures`，在生成分析代码前先规划项目专属科研图表。
+- `generate-analysis-code` 改为读取 `results/figure_plan.json`，不再生成固定 workflow 图。
+- 增加远程/服务器/API 数据和用户提供 processed/result artifacts 的支持，并对 claim strength 做 conditional pass 限制。
+- summary 类文档增加 HTML 主产物，例如 research plan、research questions、novelty report、figure plan 和 literature review notes，同时保留 Markdown 兼容文件。
+- 联系方式、商业使用条款和个人主页移动到 README 末尾。
 
 ### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis
 
 - 新增 `diagnose-gate-failures`、`review-draft`、`generate-revision-plan`、`apply-revision` 和 `re-review`。
-- 新增统一 revision issue schema，记录 `source`、`target_stage`、`files_to_add_or_edit`、`required_user_input` 和 `recommended_commands`。
-- 新增 `review/commitment_ledger.csv`，用于追踪用户在多轮修订中的决策和承诺。
-- 将 `status` 和 `run-pipeline` 接入失败的 integrity/quality 报告，使其推荐 `diagnose-gate-failures`，而不是盲目重复运行失败 gate。
-- `apply-revision` 保持保守：只标记相关阶段 stale，不自动改写科学内容。
-- 本地验证：`python -m unittest discover -s tests`
-- 当前测试规模：91 tests
+- 新增统一 revision issue schema。
+- 新增 `review/commitment_ledger.csv`，用于追踪多轮修订中的用户决策。
+- `status` 和 `run-pipeline` 在 integrity/quality 失败后推荐 `diagnose-gate-failures`。
+- 本地验证：`python -m unittest discover -s tests`。
+- 当前测试规模：92 tests。
 
 ### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
 
 - 新增 `run-integrity-gate`。
 - 新增 `integrity/integrity_report.json` 和 `integrity/integrity_report.md`。
-- 检查 BibTeX 引用是否存在、`citation_evidence.csv` 是否可追溯、Results 是否禁用文献引用、result claim 是否绑定真实图表文件。
-- 将 `status` 和 `run-pipeline` 接入 integrity gate，使最终质量检查必须等待完整性报告通过。
+- 检查 BibTeX 引用存在性、`citation_evidence.csv` 可追溯性、Results 禁引用规则和 result claim artifact binding。
 
 ### v0.3.0 (2026-06-09) -- passport, stale sync, and staged orchestration
 
 - 新增 DraftPaper Passport：`project_passport.yaml`、`artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。
 - 新增 `status`、`checkpoint`、`resume` 和 `run-pipeline`。
-- 新增基于 hash 的 artifact drift 检测：`detect-artifact-drift` 和 `sync-artifact-stale`。
-- 新增文献驱动的分析代码生成，并默认生成方法/结果流程图和表格，方便本地 smoke test。
+- 新增 `detect-artifact-drift` 和 `sync-artifact-stale`。
+- 增加早期本地方法/结果 artifact 检查能力。
 
 ### v0.2.0 (2026-06-09) -- Methods, Results, Discussion, and LaTeX hard gates
 
-- 新增 `collect-method-plan`，将用户方法描述和文献方法归纳转换为 `methods/method_requirements.json`。
-- 新增 `generate-analysis-code`，根据文献、数据清单和方法需求生成可审阅的本地 baseline 分析代码。
-- 新增 `verify-methods` 和 `methods/run_manifest.yaml`；Methods 写作必须建立在成功运行的方法代码之上。
-- 新增 `assess-result-validity`，当结果无法支撑预期结论时回退到 data、methods 或 research plan。
-- 新增 `inventory-results` 和 `write-results`；Results 只能根据真实图表和表格写作，并禁止文献引用。
+- 新增 `collect-method-plan`。
+- 新增 `generate-analysis-code`、`verify-methods` 和 `methods/run_manifest.yaml`。
+- 新增 `assess-result-validity`。
+- 新增 `inventory-results` 和 `write-results`，Results 只根据真实图表写作并禁止文献引用。
 - 新增 `write-discussion`、`assemble-latex`、`compile-latex-pdf` 和 `quality-check`。
 
 ### v0.1.0 (2026-06-09) -- project model, references, journal profile, and first writers
 
-- 新增单篇论文项目目录模型：`idea/`、`references/`、`research_plan/`、`introduction/`、`data/`、`methods/`、`results/`、`discussion/`、`latex/` 等。
+- 新增单篇论文项目目录模型。
 - 新增 `create-project`、`load-project`、`validate-project`、`update-stage-status` 和 `mark-stage-stale`。
-- 新增免费文献检索路线：Semantic Scholar、arXiv、Crossref、可选 SerpApi。
-- 固定输出 `references/library.bib`、`references/literature_items.json`、`references/citation_evidence.csv` 和 `references/literature_review_notes.md`。
-- 新增基于目标期刊的 `resolve-journal-template` 和文献驱动 `generate-plan`。
-- 新增可追溯 Introduction writer，引用必须同时存在于 BibTeX 和 citation evidence。
+- 新增免费文献检索路线：Semantic Scholar、arXiv、Crossref 和可选 SerpApi。
+- 标准化 reference outputs：`library.bib`、`literature_items.json`、`citation_evidence.csv` 和 Markdown/HTML literature review notes。
+- 新增 `resolve-journal-template` 和 literature-informed `generate-plan`。
+- 新增可追溯 Introduction writer。
 
 ## 许可证、商业使用和联系方式
 

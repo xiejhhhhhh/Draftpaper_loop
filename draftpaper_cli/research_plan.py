@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .html_utils import write_html_report
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -22,10 +23,13 @@ RESEARCH_PLAN_INPUTS = [
 
 RESEARCH_PLAN_OUTPUTS = [
     "research_plan/research_plan.md",
+    "research_plan/research_plan.html",
     "research_plan/research_questions.md",
+    "research_plan/research_questions.html",
     "research_plan/target_journal_anchor_papers.json",
     "research_plan/novelty_overlap_report.json",
     "research_plan/novelty_overlap_report.md",
+    "research_plan/novelty_overlap_report.html",
 ]
 
 
@@ -215,7 +219,9 @@ def _write_novelty_report_md(path: Path, report: dict[str, Any], anchors: list[d
     for item in anchors:
         lines.append(f"- `{item.get('citation_key')}` {item.get('title')} ({item.get('publication')}, anchor={item.get('anchor_score')}, similarity={item.get('study_similarity_score')})")
     lines.extend(["", "## Recommended Action", "", str(report.get("recommended_action") or "")])
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    markdown = "\n".join(lines) + "\n"
+    path.write_text(markdown, encoding="utf-8")
+    write_html_report(path.with_suffix(".html"), markdown, title="Novelty and Target-Journal Anchor Report")
 
 
 def _evidence_by_claim(citation_rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
@@ -420,14 +426,18 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     questions_text = render_research_questions(state.metadata, citation_rows)
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
     (research_plan_dir / "research_questions.md").write_text(questions_text, encoding="utf-8")
+    write_html_report(research_plan_dir / "research_plan.html", plan_text, title="Literature-Informed Research Plan")
+    write_html_report(research_plan_dir / "research_questions.html", questions_text, title="Research Questions")
 
     update_stage_status(state.path, "research_plan", "draft")
     _set_research_plan_manifest(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),
-        "research_plan": str(research_plan_dir / "research_plan.md"),
-        "research_questions": str(research_plan_dir / "research_questions.md"),
+        "research_plan": str(research_plan_dir / "research_plan.html"),
+        "research_plan_markdown": str(research_plan_dir / "research_plan.md"),
+        "research_questions": str(research_plan_dir / "research_questions.html"),
+        "research_questions_markdown": str(research_plan_dir / "research_questions.md"),
         "citation_count": len(citation_rows),
         "literature_count": len(literature_items),
         "anchor_paper_count": len(anchor_papers),

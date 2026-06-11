@@ -54,6 +54,7 @@ The loop is designed around five engineering components:
 - Traceable `citation_evidence.csv` for auditable manuscript claims.
 - Journal profile stage for target-journal LaTeX constraints.
 - Data feasibility gate before method planning.
+- Project-specific figure planning before analysis-code generation.
 - Methods hard gate requiring successful local code execution.
 - Result validity gate before Results writing.
 - Results no-citation enforcement.
@@ -104,7 +105,7 @@ python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\
 Run this from the directory where you want to place the repository. The command clones the repository, creates a local virtual environment, installs the Draftpaper-loop CLI surface, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper-loop.git; cd Draftpaper-loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
 ```
 
 Optional full-text fetch runtime:
@@ -138,6 +139,7 @@ python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
@@ -151,13 +153,13 @@ python -m unittest discover -s tests
 
 ## Implementation Status
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, literature-informed baseline analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
 When a tracked artifact hash changes, `status` reports `pipeline_state=drift_detected` and recommends `sync-artifact-stale`. That command maps changed artifact paths back to their source stages, marks downstream dependent stages stale, records the drift in `integrity_ledger.jsonl`, and refreshes the passport hash baseline.
 
-`generate-analysis-code` reads retrieved literature, `methods/method_requirements.json`, `methods/method_plan.md`, and `data/data_inventory.json`, then writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`. The generated baseline produces two tables and four required SVG figures by default: data analysis workflow, data processing workflow, method analysis workflow, and data-to-method output workflow. It is intentionally a reproducible scaffold rather than a final scientific model; `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output exists.
+`plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, and any supplied local result artifacts, then writes `results/figure_plan.json` and `results/figure_plan.html`. This is where the loop decides which figures the current paper actually needs. `generate-analysis-code` then reads that figure plan and writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`; it does not emit a fixed set of default workflow diagrams. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output exists.
 
 `run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
 
@@ -180,6 +182,10 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Reframed the project from a CLI-first paper drafting tool to a loop-engineered research manuscript system.
 - Renamed the README identity from DraftPaper CLI to Draftpaper-loop while keeping `draftpaper` as the stable command-line interface.
 - Added an explicit loop model covering observe, decide, run, verify, persist state, mark stale stages, diagnose failures, and rerun.
+- Added `plan-figures` so the loop plans project-specific scientific figures before generating analysis code.
+- Changed `generate-analysis-code` to follow `results/figure_plan.json` instead of producing fixed workflow figures.
+- Added remote/server/API data handling through source manifests and supplied processed/result artifacts with claim-limited conditional passes.
+- Added HTML outputs for summary-style artifacts such as research plans, research questions, novelty reports, figure plans, and literature review notes while keeping Markdown compatibility files.
 - Moved contact, commercial-use terms, and homepage information to the end of the README after the update log.
 
 ### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis
@@ -190,7 +196,7 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Connected `status` and `run-pipeline` to failed integrity/quality reports so they recommend `diagnose-gate-failures` instead of repeated blind gate reruns.
 - Kept `apply-revision` intentionally conservative: it marks affected stages stale and does not rewrite scientific content automatically.
 - Local verification: `python -m unittest discover -s tests`
-- Current suite: 91 tests
+- Current suite: 92 tests
 
 ### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
 
@@ -204,7 +210,7 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Added DraftPaper Passport files: `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`.
 - Added `status`, `checkpoint`, `resume`, and `run-pipeline`.
 - Added hash-based drift detection with `detect-artifact-drift` and `sync-artifact-stale`.
-- Added literature-informed analysis-code generation and default method/result artifacts for local workflow smoke tests.
+- Added literature-informed analysis-code generation and early method/result artifact checks for local workflow smoke tests.
 
 ### v0.2.0 (2026-06-09) -- Methods, Results, Discussion, and LaTeX hard gates
 
@@ -220,7 +226,7 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Added the single-paper project directory model with `idea/`, `references/`, `research_plan/`, `introduction/`, `data/`, `methods/`, `results/`, `discussion/`, and `latex/`.
 - Added `create-project`, `load-project`, `validate-project`, `update-stage-status`, and `mark-stage-stale`.
 - Added free-first literature retrieval through Semantic Scholar, arXiv, Crossref, and optional SerpApi.
-- Standardized reference outputs: `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, and `references/literature_review_notes.md`.
+- Standardized reference outputs: `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, and literature review notes in Markdown plus HTML.
 - Added target-journal template resolution through `resolve-journal-template` and literature-informed `generate-plan`.
 - Added a traceable Introduction writer whose citation keys must exist in both BibTeX and citation evidence.
 

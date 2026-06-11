@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .figure_plan import FigurePlanError, plan_figures, validate_figure_plan_for_codegen
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
@@ -16,6 +17,7 @@ ANALYSIS_CODE_INPUTS = [
     "methods/method_plan.md",
     "methods/method_requirements.json",
     "data/data_inventory.json",
+    "results/figure_plan.json",
 ]
 
 ANALYSIS_CODE_OUTPUTS = [
@@ -25,13 +27,9 @@ ANALYSIS_CODE_OUTPUTS = [
     "methods/analysis_code_manifest.json",
 ]
 
-DEFAULT_DECLARED_OUTPUTS = [
+BASE_TABLE_OUTPUTS = [
     "results/tables/metrics.csv",
     "results/tables/analysis_summary.csv",
-    "results/figures/data_analysis_flow.svg",
-    "results/figures/data_processing_flow.svg",
-    "results/figures/method_analysis_flow.svg",
-    "results/figures/data_to_method_outputs.svg",
 ]
 
 TABULAR_SUFFIXES = {".csv", ".tsv"}
@@ -69,7 +67,11 @@ def _select_tabular_input(inventory: dict[str, Any]) -> dict[str, Any]:
         if str(item.get("suffix") or "").lower() in TABULAR_SUFFIXES and item.get("readable") is not False
     ]
     if not files:
-        raise AnalysisCodeGenerationError("data/data_inventory.json contains no readable CSV/TSV data file.")
+        raise AnalysisCodeGenerationError(
+            "data/data_inventory.json contains no readable CSV/TSV data file for generated analysis code. "
+            "If the raw data are remote or confidential, provide a processed CSV/TSV under data/processed, "
+            "or put supplied figures/tables under results/ and use inventory-results/write-results without code generation."
+        )
     files.sort(key=lambda item: (int(item.get("row_count") or 0), int(item.get("column_count") or 0)), reverse=True)
     return files[0]
 
@@ -97,16 +99,27 @@ def _quote_command(path: str) -> str:
     return f'"{path}"' if " " in path else path
 
 
-def _sanitize_outputs(project_path: Path, output_files: list[str] | None) -> list[str]:
-    outputs = output_files or DEFAULT_DECLARED_OUTPUTS
+def _generated_figure_outputs(figure_plan: dict[str, Any]) -> list[str]:
+    outputs = []
+    for item in figure_plan.get("figures") or []:
+        if item.get("generation_mode") != "generated_code":
+            continue
+        path = str(item.get("path") or "").replace("\\", "/").strip()
+        if path:
+            outputs.append(path)
+    return outputs
+
+
+def _sanitize_outputs(project_path: Path, outputs: list[str]) -> list[str]:
     cleaned = []
     for relative in outputs:
         normalized = str(relative).replace("\\", "/").strip()
         if not normalized:
             continue
         _project_relative_path(project_path, normalized)
-        cleaned.append(normalized)
-    return cleaned or list(DEFAULT_DECLARED_OUTPUTS)
+        if normalized not in cleaned:
+            cleaned.append(normalized)
+    return cleaned
 
 
 def _render_generated_pipeline(manifest: dict[str, Any]) -> str:
@@ -115,8 +128,9 @@ def _render_generated_pipeline(manifest: dict[str, Any]) -> str:
 
 import csv
 import json
-from html import escape
+import math
 from collections import Counter
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -146,11 +160,49 @@ def infer_label_column(rows: list[dict[str, str]]) -> str | None:
     if not rows:
         return None
     columns = list(rows[0].keys())
-    preferred = ["target", "label", "class", "source_class", "y"]
+    planned = []
+    for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
+        planned.extend(figure.get("required_columns") or [])
+    preferred = planned + ["target", "label", "class", "category", "type", "source_class", "y"]
     for column in preferred:
         if column in columns:
             return column
     return None
+
+
+def numeric_columns(rows: list[dict[str, str]], *, exclude: str | None = None, max_columns: int = 8) -> list[str]:
+    if not rows:
+        return []
+    candidates = []
+    for column in rows[0].keys():
+        if column == exclude:
+            continue
+        values = []
+        for row in rows:
+            try:
+                value = float(str(row.get(column, "")).strip())
+            except ValueError:
+                continue
+            if math.isfinite(value):
+                values.append(value)
+        if len(values) >= max(2, int(len(rows) * 0.2)):
+            candidates.append((column, len(values)))
+    candidates.sort(key=lambda item: item[1], reverse=True)
+    return [column for column, _ in candidates[:max_columns]]
+
+
+def column_values(rows: list[dict[str, str]], column: str | None) -> list[float]:
+    if not column:
+        return []
+    values = []
+    for row in rows:
+        try:
+            value = float(str(row.get(column, "")).strip())
+        except ValueError:
+            continue
+        if math.isfinite(value):
+            values.append(value)
+    return values
 
 
 def compute_baseline_metrics(rows: list[dict[str, str]], label_column: str | None) -> dict[str, float]:
@@ -174,32 +226,146 @@ def compute_baseline_metrics(rows: list[dict[str, str]], label_column: str | Non
     return metrics
 
 
-def write_flow_svg(path: Path, title: str, steps: list[str], accent: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    width = 1120
-    height = 210
-    box_width = 210
-    box_height = 72
-    gap = 48
-    start_x = 38
-    box_y = 88
+def svg_header(width: int, height: int, title: str, subtitle: str = "") -> list[str]:
     parts = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}" viewBox="0 0 {{width}} {{height}}">',
-        '<rect width="1120" height="210" fill="#ffffff"/>',
-        f'<text x="38" y="42" font-family="Arial, sans-serif" font-size="24" fill="#1f2937">{{escape(title)}}</text>',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="' + str(width) + '" height="' + str(height) + '" viewBox="0 0 ' + str(width) + ' ' + str(height) + '">',
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<text x="36" y="42" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#111827">' + escape(title) + '</text>',
     ]
-    for index, step in enumerate(steps):
-        x = start_x + index * (box_width + gap)
-        parts.append(f'<rect x="{{x}}" y="{{box_y}}" width="{{box_width}}" height="{{box_height}}" rx="6" fill="#f8fafc" stroke="{{accent}}" stroke-width="2"/>')
-        parts.append(f'<text x="{{x + 18}}" y="{{box_y + 32}}" font-family="Arial, sans-serif" font-size="15" fill="#111827">{{escape(step[:32])}}</text>')
-        if len(step) > 32:
-            parts.append(f'<text x="{{x + 18}}" y="{{box_y + 54}}" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">{{escape(step[32:64])}}</text>')
-        if index < len(steps) - 1:
-            arrow_x = x + box_width + 10
-            parts.append(f'<line x1="{{arrow_x}}" y1="{{box_y + 36}}" x2="{{arrow_x + gap - 20}}" y2="{{box_y + 36}}" stroke="#6b7280" stroke-width="2"/>')
-            parts.append(f'<polygon points="{{arrow_x + gap - 20}},{{box_y + 36}} {{arrow_x + gap - 30}},{{box_y + 29}} {{arrow_x + gap - 30}},{{box_y + 43}}" fill="#6b7280"/>')
+    if subtitle:
+        parts.append('<text x="36" y="68" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">' + escape(subtitle[:140]) + '</text>')
+    return parts
+
+
+def _planned_columns(figure: dict[str, Any], numeric: list[str], label_column: str | None) -> list[str]:
+    columns = [column for column in figure.get("required_columns") or [] if isinstance(column, str)]
+    usable = [column for column in columns if column in numeric or column == label_column]
+    if usable:
+        return usable
+    return numeric[:2] + ([label_column] if label_column else [])
+
+
+def _write_data_overview(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], numeric: list[str], label_column: str | None) -> None:
+    parts = svg_header(920, 350, figure.get("title") or "Data overview", figure.get("scientific_question") or "")
+    cards = [("Rows", str(len(rows))), ("Columns", str(len(rows[0]) if rows else 0)), ("Numeric variables", str(len(numeric))), ("Label", label_column or "not inferred")]
+    for index, (label, value) in enumerate(cards):
+        x = 48 + index * 215
+        parts.append('<rect x="' + str(x) + '" y="96" width="180" height="104" rx="6" fill="#f8fafc" stroke="#2563eb" stroke-width="2"/>')
+        parts.append('<text x="' + str(x + 16) + '" y="132" font-family="Arial, sans-serif" font-size="14" fill="#4b5563">' + escape(label) + '</text>')
+        parts.append('<text x="' + str(x + 16) + '" y="166" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#111827">' + escape(value[:20]) + '</text>')
+    parts.append('<text x="48" y="250" font-family="Arial, sans-serif" font-size="14" fill="#374151">' + escape(figure.get("result_claim_template") or "")[:170] + '</text>')
     parts.append("</svg>")
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\\n".join(parts), encoding="utf-8")
+
+
+def _write_class_balance(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], label_column: str | None) -> None:
+    parts = svg_header(920, 420, figure.get("title") or "Class balance", figure.get("scientific_question") or "")
+    counts = Counter(str(row.get(label_column or "", "")).strip() for row in rows if label_column and str(row.get(label_column, "")).strip())
+    if not counts:
+        parts.append('<text x="48" y="120" font-family="Arial, sans-serif" font-size="15" fill="#374151">No label column was available for class-balance plotting.</text>')
+    else:
+        max_count = max(counts.values()) or 1
+        for index, (label, count) in enumerate(counts.most_common(12)):
+            y = 100 + index * 25
+            width = int(620 * count / max_count)
+            parts.append('<text x="48" y="' + str(y + 16) + '" font-family="Arial, sans-serif" font-size="13" fill="#374151">' + escape(label[:28]) + '</text>')
+            parts.append('<rect x="250" y="' + str(y) + '" width="' + str(width) + '" height="18" fill="#2563eb"/>')
+            parts.append('<text x="' + str(260 + width) + '" y="' + str(y + 14) + '" font-family="Arial, sans-serif" font-size="12" fill="#111827">' + str(count) + '</text>')
+    parts.append("</svg>")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\\n".join(parts), encoding="utf-8")
+
+
+def _write_feature_distribution(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], column: str | None) -> None:
+    values = column_values(rows, column)
+    parts = svg_header(920, 380, figure.get("title") or "Feature distribution", figure.get("scientific_question") or "")
+    if not values:
+        parts.append('<text x="48" y="120" font-family="Arial, sans-serif" font-size="15" fill="#374151">No numeric column was available for feature-distribution plotting.</text>')
+    else:
+        bins = 10
+        lo, hi = min(values), max(values)
+        span = (hi - lo) or 1.0
+        counts = [0] * bins
+        for value in values:
+            bucket = min(bins - 1, int((value - lo) / span * bins))
+            counts[bucket] += 1
+        max_count = max(counts) or 1
+        chart_x, chart_y, chart_w, chart_h = 70, 108, 760, 210
+        parts.append('<text x="70" y="92" font-family="Arial, sans-serif" font-size="13" fill="#374151">Column: ' + escape(str(column)) + '</text>')
+        for index, count in enumerate(counts):
+            bar_w = chart_w / bins - 8
+            bar_h = chart_h * count / max_count
+            x = chart_x + index * (chart_w / bins)
+            y = chart_y + chart_h - bar_h
+            parts.append('<rect x="' + format(x, ".1f") + '" y="' + format(y, ".1f") + '" width="' + format(bar_w, ".1f") + '" height="' + format(bar_h, ".1f") + '" fill="#059669"/>')
+        parts.append('<line x1="' + str(chart_x) + '" y1="' + str(chart_y + chart_h) + '" x2="' + str(chart_x + chart_w) + '" y2="' + str(chart_y + chart_h) + '" stroke="#111827"/>')
+    parts.append("</svg>")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\\n".join(parts), encoding="utf-8")
+
+
+def _write_feature_relationship(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], columns: list[str]) -> None:
+    x_col = columns[0] if columns else None
+    y_col = columns[1] if len(columns) > 1 else None
+    x_vals = column_values(rows, x_col)
+    y_vals = column_values(rows, y_col)
+    n = min(len(x_vals), len(y_vals))
+    parts = svg_header(920, 440, figure.get("title") or "Feature relationship", figure.get("scientific_question") or "")
+    if n < 2:
+        parts.append('<text x="48" y="120" font-family="Arial, sans-serif" font-size="15" fill="#374151">At least two numeric columns are required for a relationship plot.</text>')
+    else:
+        x_vals = x_vals[:n]
+        y_vals = y_vals[:n]
+        x_min, x_max = min(x_vals), max(x_vals)
+        y_min, y_max = min(y_vals), max(y_vals)
+        x_span = (x_max - x_min) or 1.0
+        y_span = (y_max - y_min) or 1.0
+        left, top, width, height = 90, 92, 740, 280
+        parts.append('<rect x="' + str(left) + '" y="' + str(top) + '" width="' + str(width) + '" height="' + str(height) + '" fill="#f9fafb" stroke="#d1d5db"/>')
+        for x, y in zip(x_vals[:400], y_vals[:400]):
+            px = left + (x - x_min) / x_span * width
+            py = top + height - (y - y_min) / y_span * height
+            parts.append('<circle cx="' + format(px, ".1f") + '" cy="' + format(py, ".1f") + '" r="3" fill="#7c3aed" fill-opacity="0.72"/>')
+        parts.append('<text x="' + str(left) + '" y="' + str(top + height + 34) + '" font-family="Arial, sans-serif" font-size="12" fill="#374151">' + escape(str(x_col)) + '</text>')
+        parts.append('<text x="32" y="' + str(top + 16) + '" font-family="Arial, sans-serif" font-size="12" fill="#374151">' + escape(str(y_col)) + '</text>')
+    parts.append("</svg>")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\\n".join(parts), encoding="utf-8")
+
+
+def _write_metric_summary(path: Path, figure: dict[str, Any], metrics: dict[str, float]) -> None:
+    parts = svg_header(920, 350, figure.get("title") or "Metric summary", figure.get("scientific_question") or "")
+    items = [(key, value) for key, value in metrics.items() if key in {{"baseline_accuracy", "f1", "class_count", "feature_column_count", "row_count"}}]
+    max_value = max([float(value) for _, value in items] + [1.0])
+    for index, (key, value) in enumerate(items):
+        y = 96 + index * 42
+        width = 600 * float(value) / max_value
+        parts.append('<text x="60" y="' + str(y + 16) + '" font-family="Arial, sans-serif" font-size="13" fill="#374151">' + escape(key) + '</text>')
+        parts.append('<rect x="260" y="' + str(y) + '" width="' + format(width, ".1f") + '" height="22" fill="#dc2626"/>')
+        parts.append('<text x="' + format(270 + width, ".1f") + '" y="' + str(y + 16) + '" font-family="Arial, sans-serif" font-size="12" fill="#111827">' + format(float(value), ".3g") + '</text>')
+    parts.append("</svg>")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\\n".join(parts), encoding="utf-8")
+
+
+def write_planned_figure(root: Path, figure: dict[str, Any], rows: list[dict[str, str]], metrics: dict[str, float], numeric: list[str], label_column: str | None) -> str | None:
+    if figure.get("generation_mode") != "generated_code":
+        return None
+    path = root / str(figure.get("path") or "")
+    columns = _planned_columns(figure, numeric, label_column)
+    kind = str(figure.get("visualization_type") or "").lower()
+    if kind in {{"class_balance"}}:
+        _write_class_balance(path, figure, rows, label_column)
+    elif kind in {{"feature_distribution", "feature_response", "spatial_or_ranked_scatter"}} and len(columns) < 2:
+        _write_feature_distribution(path, figure, rows, columns[0] if columns else (numeric[0] if numeric else None))
+    elif kind in {{"feature_relationship", "feature_response", "spatial_or_ranked_scatter", "correlation_heatmap"}}:
+        _write_feature_relationship(path, figure, rows, columns)
+    elif kind in {{"metric_summary", "performance", "model_performance"}}:
+        _write_metric_summary(path, figure, metrics)
+    else:
+        _write_data_overview(path, figure, rows, numeric, label_column)
+    return str(path)
 
 
 def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
@@ -207,6 +373,7 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
     input_path = root / PIPELINE_MANIFEST["selected_input_data"]
     rows = read_table(input_path)
     label_column = infer_label_column(rows)
+    numeric = numeric_columns(rows, exclude=label_column)
     metrics = compute_baseline_metrics(rows, label_column)
     metrics_path = root / "results" / "tables" / "metrics.csv"
     summary_path = root / "results" / "tables" / "analysis_summary.csv"
@@ -217,48 +384,17 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
             ("selected_input_data", PIPELINE_MANIFEST["selected_input_data"]),
             ("label_column", label_column or ""),
             ("method_families", ";".join(PIPELINE_MANIFEST.get("method_families") or [])),
-            ("literature_method_count", PIPELINE_MANIFEST.get("literature_method_count", 0)),
+            ("planned_figure_count", len(PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []))),
             ("generated_stage", "analysis_code"),
         ],
         ("key", "value"),
     )
-    figures_dir = root / "results" / "figures"
-    families = PIPELINE_MANIFEST.get("method_families") or ["model workflow"]
-    write_flow_svg(
-        figures_dir / "data_analysis_flow.svg",
-        "Data analysis workflow",
-        ["Local data inventory", "Quality and feasibility gate", "Feature table profiling", "Metric-ready outputs"],
-        "#2563eb",
-    )
-    write_flow_svg(
-        figures_dir / "data_processing_flow.svg",
-        "Data processing workflow",
-        ["Read tabular source data", "Infer label column", "Summarize feature space", "Write analysis tables"],
-        "#059669",
-    )
-    write_flow_svg(
-        figures_dir / "method_analysis_flow.svg",
-        "Method analysis workflow",
-        ["Literature method synthesis", families[0].replace("_", " "), "Baseline metric check", "Run manifest gate"],
-        "#7c3aed",
-    )
-    write_flow_svg(
-        figures_dir / "data_to_method_outputs.svg",
-        "Data-to-method output workflow",
-        ["Selected input data", "Generated pipeline", "Metrics and summaries", "Result figures"],
-        "#dc2626",
-    )
-    return {{
-        "metrics": metrics,
-        "outputs": [
-            str(metrics_path),
-            str(summary_path),
-            str(figures_dir / "data_analysis_flow.svg"),
-            str(figures_dir / "data_processing_flow.svg"),
-            str(figures_dir / "method_analysis_flow.svg"),
-            str(figures_dir / "data_to_method_outputs.svg"),
-        ],
-    }}
+    outputs = [str(metrics_path), str(summary_path)]
+    for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
+        generated = write_planned_figure(root, figure, rows, metrics, numeric, label_column)
+        if generated:
+            outputs.append(generated)
+    return {{"metrics": metrics, "outputs": outputs}}
 '''
 
 
@@ -327,28 +463,40 @@ def generate_analysis_code(
     project: str | Path,
     *,
     output_files: list[str] | None = None,
+    auto_plan_figures: bool = False,
 ) -> dict[str, Any]:
-    """Generate project-local baseline analysis code from literature and method requirements."""
+    """Generate project-local analysis code from the current project-specific figure plan."""
     state = load_project(project)
     try:
         requirements = validate_method_plan_for_methods(state.path)
     except MethodPlanError as exc:
         raise AnalysisCodeGenerationError(str(exc)) from exc
 
+    try:
+        figure_plan = validate_figure_plan_for_codegen(state.path)
+    except FigurePlanError:
+        if not auto_plan_figures:
+            raise AnalysisCodeGenerationError("results/figure_plan.json is required. Run plan-figures first, or use --auto-plan-figures.")
+        plan_figures(state.path)
+        figure_plan = validate_figure_plan_for_codegen(state.path)
+
     inventory = _read_json(state.path / "data" / "data_inventory.json", {})
     if not isinstance(inventory, dict) or not inventory:
         raise AnalysisCodeGenerationError("data/data_inventory.json is required before analysis code generation.")
+    generated_figure_outputs = _generated_figure_outputs(figure_plan)
+    if not generated_figure_outputs:
+        raise AnalysisCodeGenerationError(
+            "The current figure plan contains no generated_code figures. Use supplied results with inventory-results/write-results, or revise the figure plan."
+        )
     selected_input = _select_tabular_input(inventory)
 
     literature_items = _read_json(state.path / "references" / "literature_items.json", [])
     if not isinstance(literature_items, list):
         raise AnalysisCodeGenerationError("references/literature_items.json must contain a list.")
     method_plan_text = _read_text(state.path / "methods" / "method_plan.md")
-    declared_outputs = _sanitize_outputs(state.path, output_files)
+    declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_TABLE_OUTPUTS + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
-    method_families = list(requirements.get("method_families") or [])
-    if not method_families:
-        method_families = ["method_family_requires_user_confirmation"]
+    method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]
 
     manifest = {
         "status": "written",
@@ -364,10 +512,12 @@ def generate_analysis_code(
         "literature_method_count": len(literature_sources),
         "literature_sources": literature_sources,
         "method_plan_excerpt": re.sub(r"\s+", " ", method_plan_text).strip()[:1000],
+        "figure_plan": figure_plan,
         "declared_outputs": declared_outputs,
         "generated_files": ANALYSIS_CODE_OUTPUTS,
         "notes": [
-            "Generated code is a deterministic baseline scaffold. Review and extend it before treating results as final science.",
+            "Generated code follows results/figure_plan.json rather than a fixed plotting template.",
+            "Review the generated code before treating outputs as final science.",
             "Run verify-methods with verify_command before writing Methods or Results.",
         ],
     }
@@ -375,7 +525,7 @@ def generate_analysis_code(
     scripts_dir = state.path / "code" / "scripts"
     src_dir = state.path / "code" / "src"
     tests_dir = state.path / "code" / "tests"
-    for directory in [scripts_dir, src_dir, tests_dir, state.path / "methods", state.path / "results" / "tables"]:
+    for directory in [scripts_dir, src_dir, tests_dir, state.path / "methods", state.path / "results" / "tables", state.path / "results" / "figures"]:
         directory.mkdir(parents=True, exist_ok=True)
 
     (src_dir / "generated_pipeline.py").write_text(_render_generated_pipeline(manifest), encoding="utf-8")
@@ -390,6 +540,7 @@ def generate_analysis_code(
         "status": "written",
         "project_path": str(state.path),
         "analysis_code_manifest": str(state.path / "methods" / "analysis_code_manifest.json"),
+        "figure_plan": str(state.path / "results" / "figure_plan.json"),
         "generated_files": [str(state.path / relative) for relative in ANALYSIS_CODE_OUTPUTS[:-1]],
         "selected_input_data": selected_input.get("path"),
         "declared_outputs": declared_outputs,

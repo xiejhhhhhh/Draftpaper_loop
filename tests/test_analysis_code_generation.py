@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
+from draftpaper_cli.figure_plan import plan_figures
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import verify_methods
 from draftpaper_cli.project_scaffold import create_project
@@ -72,24 +73,20 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="X-ray flaring source classification", field="astronomy machine learning")
             prepare_codegen_project(project.path)
+            figure_plan = plan_figures(project.path)
 
             result = generate_analysis_code(project.path)
 
             self.assertEqual(result["status"], "written")
+            self.assertEqual(figure_plan["status"], "written")
+            self.assertTrue((project.path / "results" / "figure_plan.json").exists())
+            self.assertTrue((project.path / "results" / "figure_plan.html").exists())
             self.assertTrue((project.path / "code" / "scripts" / "run_analysis.py").exists())
             self.assertTrue((project.path / "code" / "src" / "generated_pipeline.py").exists())
             self.assertTrue((project.path / "code" / "tests" / "test_generated_pipeline.py").exists())
-            self.assertEqual(
-                result["declared_outputs"],
-                [
-                    "results/tables/metrics.csv",
-                    "results/tables/analysis_summary.csv",
-                    "results/figures/data_analysis_flow.svg",
-                    "results/figures/data_processing_flow.svg",
-                    "results/figures/method_analysis_flow.svg",
-                    "results/figures/data_to_method_outputs.svg",
-                ],
-            )
+            self.assertIn("results/tables/metrics.csv", result["declared_outputs"])
+            self.assertIn("results/tables/analysis_summary.csv", result["declared_outputs"])
+            self.assertTrue(any(path.startswith("results/figures/") for path in result["declared_outputs"]))
             state = load_project(project.path)
             self.assertEqual(state.metadata["stages"]["code"]["status"], "draft")
             self.assertTrue(state.metadata["stages"]["methods"]["stale"])
@@ -110,10 +107,8 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             metrics = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))["metrics"]
             self.assertIn("f1", metrics)
             self.assertIn("row_count", metrics)
-            self.assertTrue((project.path / "results" / "figures" / "data_analysis_flow.svg").exists())
-            self.assertTrue((project.path / "results" / "figures" / "data_processing_flow.svg").exists())
-            self.assertTrue((project.path / "results" / "figures" / "method_analysis_flow.svg").exists())
-            self.assertTrue((project.path / "results" / "figures" / "data_to_method_outputs.svg").exists())
+            for output in result["declared_outputs"]:
+                self.assertTrue((project.path / output).exists())
 
     def test_cli_generate_analysis_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -128,6 +123,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
                     "generate-analysis-code",
                     "--project",
                     str(project.path),
+                    "--auto-plan-figures",
                 ],
                 check=True,
                 capture_output=True,
@@ -137,6 +133,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "written")
             self.assertIn("verify_command", payload)
+            self.assertTrue((project.path / "results" / "figure_plan.json").exists())
             self.assertTrue(Path(payload["analysis_code_manifest"]).exists())
 
 

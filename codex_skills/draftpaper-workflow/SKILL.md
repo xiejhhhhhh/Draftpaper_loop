@@ -42,21 +42,22 @@ Run stages in this order unless the user asks for a focused rerun:
 7. `assess-data-quality`
 8. `assess-data-feasibility`
 9. `collect-method-plan`
-10. `generate-analysis-code`
-11. `verify-methods`
-12. `write-methods`
-13. `assess-result-validity`
-14. `inventory-results`
-15. `write-results`
-16. `write-discussion`
-17. `assemble-latex`
-18. `run-integrity-gate`
-19. `quality-check`
-20. `diagnose-gate-failures`
-21. `review-draft`
-22. `generate-revision-plan`
-23. `apply-revision` when the user accepts a revision route
-24. `re-review`
+10. `plan-figures`
+11. `generate-analysis-code`
+12. `verify-methods`
+13. `write-methods`
+14. `assess-result-validity`
+15. `inventory-results`
+16. `write-results`
+17. `write-discussion`
+18. `assemble-latex`
+19. `run-integrity-gate`
+20. `quality-check`
+21. `diagnose-gate-failures`
+22. `review-draft`
+23. `generate-revision-plan`
+24. `apply-revision` when the user accepts a revision route
+25. `re-review`
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
@@ -66,7 +67,7 @@ If upstream artifacts change, rerun from the earliest affected stage through dow
 
 ## Gates
 
-Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `generate-analysis-code` before `verify-methods` when generated code is used. Never write Results before result validity passes or conditionally passes; always run `inventory-results` before `write-results`. Results must contain no citations. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`; route failures back to references, section citations, result manifest, or artifacts.
+Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json` rather than a fixed plotting template. Run `generate-analysis-code` before `verify-methods` when generated code is used. If raw data are remote/private/too large and only processed tables or final figures are local, use those artifacts through `inventory-results`/`write-results` and keep claims limited to the supplied evidence. Never write Results before result validity passes or conditionally passes; always run `inventory-results` before `write-results`. Results must contain no citations. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`; route failures back to references, section citations, result manifest, or artifacts.
 
 Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. Treat these files as append-only audit state owned by the core CLI. Do not edit them manually; use `status`, `checkpoint`, `resume`, or stage commands.
 

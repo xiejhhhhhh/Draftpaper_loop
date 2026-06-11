@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from draftpaper_cli.analysis_code import generate_analysis_code
+from draftpaper_cli.figure_plan import plan_figures
 from draftpaper_cli.methods import verify_methods
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import load_project
@@ -19,6 +20,7 @@ class MethodsResultsPipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Pipeline coupling", field="astronomy machine learning")
             prepare_codegen_project(project.path)
+            figure_plan = plan_figures(project.path)
             codegen = generate_analysis_code(project.path)
             verify_methods(
                 project.path,
@@ -30,23 +32,22 @@ class MethodsResultsPipelineTests(unittest.TestCase):
             self.assertEqual(validity["decision"], "pass")
 
             inventory = inventory_results(project.path)
-            self.assertEqual(inventory["figure_count"], 4)
+            self.assertEqual(inventory["figure_count"], figure_plan["generated_figure_count"])
             self.assertEqual(inventory["table_count"], 2)
             manifest = json.loads((project.path / "results" / "result_manifest.yaml").read_text(encoding="utf-8"))
             figure_claims = " ".join(entry["result_claim"] for entry in manifest["figures"])
-            self.assertIn("data analysis workflow", figure_claims)
-            self.assertIn("method analysis workflow", figure_claims)
-            self.assertIn("data-to-method output workflow", figure_claims)
+            self.assertIn("classification", figure_claims.lower())
+            self.assertIn("verified metric", figure_claims.lower())
 
             state_after_inventory = load_project(project.path)
             self.assertEqual(state_after_inventory.metadata["stages"]["results"]["status"], "draft")
             self.assertTrue(state_after_inventory.metadata["stages"]["discussion"]["stale"])
 
             written = write_results(project.path)
-            self.assertEqual(written["artifact_count"], 6)
+            self.assertEqual(written["artifact_count"], figure_plan["generated_figure_count"] + 2)
             results_tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
             self.assertIn("\\includegraphics", results_tex)
-            self.assertIn("data_analysis_flow", results_tex)
+            self.assertIn("figure", results_tex.lower())
             self.assertNotIn("\\cite", results_tex)
 
 

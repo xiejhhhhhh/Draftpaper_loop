@@ -13,6 +13,7 @@ DATA_INVENTORY_OUTPUT = "data/data_inventory.json"
 DATA_QUALITY_OUTPUT = "data/data_quality_report.json"
 DATA_FEASIBILITY_JSON = "data/data_feasibility_report.json"
 DATA_FEASIBILITY_MD = "data/data_feasibility_report.md"
+REMOTE_SOURCE_FILES = ["data/remote_sources.json", "data/source_manifest.json"]
 
 DATA_OUTPUTS = [
     DATA_INVENTORY_OUTPUT,
@@ -63,7 +64,7 @@ def _read_tabular_profile(path: Path) -> dict[str, Any]:
 
 
 def inventory_data(project: str | Path) -> dict[str, Any]:
-    """Inventory local data files under data/raw and data/processed."""
+    """Inventory local data files plus optional remote/API/server data manifests."""
     state = load_project(project)
     files = []
     for base in [state.path / "data" / "raw", state.path / "data" / "processed"]:
@@ -89,10 +90,15 @@ def inventory_data(project: str | Path) -> dict[str, Any]:
                 "size_bytes": path.stat().st_size,
                 **profile,
             })
+    remote_sources = _load_remote_sources(state.path)
+    result_artifacts = _inventory_existing_result_artifacts(state.path)
     payload = {
         "project_id": state.metadata.get("project_id"),
         "file_count": len(files),
         "files": files,
+        "remote_source_count": len(remote_sources),
+        "remote_sources": remote_sources,
+        "result_artifacts": result_artifacts,
         "total_rows": sum(int(item.get("row_count") or 0) for item in files),
         "tabular_file_count": sum(1 for item in files if item.get("suffix") in TABULAR_EXTENSIONS),
     }
@@ -103,8 +109,57 @@ def inventory_data(project: str | Path) -> dict[str, Any]:
         "project_path": str(state.path),
         "data_inventory": str(state.path / DATA_INVENTORY_OUTPUT),
         "file_count": len(files),
+        "remote_source_count": len(remote_sources),
         "total_rows": payload["total_rows"],
     }
+
+
+def _load_remote_sources(project_path: Path) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for relative in REMOTE_SOURCE_FILES:
+        path = project_path / relative
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            raise DataGateError(f"{relative} is not valid JSON: {exc}") from exc
+        entries = payload if isinstance(payload, list) else payload.get("sources") if isinstance(payload, dict) else []
+        if not isinstance(entries, list):
+            raise DataGateError(f"{relative} must contain a list or an object with a sources list.")
+        for index, entry in enumerate(entries, start=1):
+            if not isinstance(entry, dict):
+                continue
+            sources.append({
+                "id": entry.get("id") or f"remote_source_{index}",
+                "kind": entry.get("kind") or entry.get("type") or "remote",
+                "access": entry.get("access") or entry.get("url") or entry.get("api") or entry.get("server") or "",
+                "description": entry.get("description") or entry.get("note") or "",
+                "processed_data": entry.get("processed_data") or entry.get("processed_files") or [],
+                "result_artifacts": entry.get("result_artifacts") or entry.get("results") or [],
+                "local_summary": entry.get("local_summary") or entry.get("summary") or "",
+                "download_policy": entry.get("download_policy") or "remote_or_large_data_not_downloaded",
+                "manifest_path": relative,
+            })
+    return sources
+
+
+def _inventory_existing_result_artifacts(project_path: Path) -> list[dict[str, Any]]:
+    artifacts = []
+    for base_relative in ["results/figures", "results/tables", "data/processed"]:
+        base = project_path / base_relative
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.name.startswith("."):
+                continue
+            artifacts.append({
+                "path": _project_relative(project_path, path),
+                "suffix": path.suffix.lower(),
+                "size_bytes": path.stat().st_size,
+                "kind": "figure" if "figures" in base_relative else "table_or_processed_data",
+            })
+    return artifacts
 
 
 def _load_json(project_path: Path, relative: str) -> dict[str, Any]:
@@ -138,8 +193,8 @@ def assess_data_quality(project: str | Path, *, required_columns: list[str] | No
     missing_required = sorted(set(required) - all_columns)
     missing_ratio = (total_missing / total_cells) if total_cells else 0.0
     issues = []
-    if not inventory.get("file_count"):
-        issues.append("No local data files were found under data/raw or data/processed.")
+    if not inventory.get("file_count") and not inventory.get("remote_source_count") and not inventory.get("result_artifacts"):
+        issues.append("No local data files, remote source manifests, or processed result artifacts were found.")
     if missing_required:
         issues.append("Missing required columns: " + ", ".join(missing_required))
     if missing_ratio > max_missing_ratio:
@@ -158,6 +213,8 @@ def assess_data_quality(project: str | Path, *, required_columns: list[str] | No
         "issues": issues,
         "total_rows": inventory.get("total_rows", 0),
         "file_count": inventory.get("file_count", 0),
+        "remote_source_count": inventory.get("remote_source_count", 0),
+        "result_artifact_count": len(inventory.get("result_artifacts") or []),
     }
     _write_json(state.path / DATA_QUALITY_OUTPUT, payload)
     _set_data_manifest(state.path)
@@ -213,9 +270,15 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
     issues: list[str] = []
     actions: list[str] = []
 
-    if total_rows < min_rows:
+    has_remote_or_processed_context = bool(quality.get("remote_source_count") or quality.get("result_artifact_count"))
+    has_claim_limited_context = bool(quality.get("remote_source_count") or (total_rows < min_rows and quality.get("result_artifact_count")))
+    if total_rows < min_rows and not has_remote_or_processed_context:
         issues.append(f"Total tabular row count {total_rows} is below the minimum threshold {min_rows}.")
         actions.append("Add more observations or reduce the scope to a small exploratory analysis.")
+    elif total_rows < min_rows and has_remote_or_processed_context:
+        actions.append(
+            "Raw data are not fully local; treat available remote-source manifests, processed tables, or result artifacts as the writing context and avoid claiming unverified raw-data access."
+        )
     if missing_required:
         issues.append("Required variables are missing: " + ", ".join(missing_required))
         actions.append("Provide data containing the missing variables or revise the research question.")
@@ -226,7 +289,12 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
         issues.append("Missingness exceeds the configured quality threshold.")
         actions.append("Impute, filter, or recollect data before model verification.")
 
-    if not issues and _plan_is_exploratory(plan_text):
+    if not issues and has_claim_limited_context:
+        decision = "conditional_pass"
+        scientific_goal_supported = True
+        claim_level = "claims must be limited to the provided processed data, remote-source description, or supplied result artifacts"
+        actions.append("Keep Data, Methods, and Results wording tied to the accessible processed artifacts rather than unverified raw-data access.")
+    elif not issues and _plan_is_exploratory(plan_text):
         decision = "conditional_pass"
         scientific_goal_supported = True
         claim_level = "exploratory or pilot claims only"
@@ -240,6 +308,10 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
         scientific_goal_supported = False
         claim_level = "exploratory or pilot claims only"
         actions.append("Lower conclusion strength and explicitly describe limitations in Results and Discussion.")
+    elif has_remote_or_processed_context:
+        decision = "conditional_pass"
+        scientific_goal_supported = True
+        claim_level = "claims must be limited to the provided processed data, remote-source description, or supplied result artifacts"
     elif total_rows >= max(3, min_rows // 2):
         decision = "revise_required"
         scientific_goal_supported = False
@@ -261,7 +333,7 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
         "observed_rows": total_rows,
         "blocking_issues": issues,
         "recommended_actions": actions,
-        "stale_if_goal_changes": ["research_plan", "introduction", "method_plan", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"],
+        "stale_if_goal_changes": ["research_plan", "introduction", "method_plan", "figure_plan", "code", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"],
     }
     _write_json(state.path / DATA_FEASIBILITY_JSON, report)
     (state.path / DATA_FEASIBILITY_MD).write_text(_render_feasibility_md(report), encoding="utf-8")
@@ -273,6 +345,7 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
         "decision": decision,
         "data_feasibility_report": str(state.path / DATA_FEASIBILITY_JSON),
         "scientific_goal_supported": scientific_goal_supported,
+        "supported_claim_level": claim_level,
     }
 
 

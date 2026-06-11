@@ -29,6 +29,7 @@ STAGE_COMMANDS = {
     "introduction": "write-introduction",
     "data": "inventory-data",
     "method_plan": "collect-method-plan",
+    "figure_plan": "plan-figures",
     "code": "generate-analysis-code",
     "methods": "verify-methods",
     "result_validity": "assess-result-validity",

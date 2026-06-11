@@ -70,28 +70,26 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
     analysis_manifest = _read_json(project_path / "methods" / "analysis_code_manifest.json")
     run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    figure_plan = _read_json(project_path / "results" / "figure_plan.json")
+    context: dict[str, dict[str, str]] = {}
+    for figure in figure_plan.get("figures") or []:
+        path = Path(str(figure.get("path") or ""))
+        if not path.name:
+            continue
+        context[path.name] = {
+            "caption": str(figure.get("caption_draft") or figure.get("title") or path.stem.replace("_", " ")),
+            "claim": str(
+                figure.get("result_claim_template")
+                or figure.get("scientific_question")
+                or "This result artifact should be interpreted according to the project-specific figure plan."
+            ),
+        }
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
     method_families = ", ".join(str(item).replace("_", " ") for item in (analysis_manifest.get("method_families") or []))
     primary_metric = analysis_manifest.get("primary_metric") or "primary metric"
     observed = (run_manifest.get("metrics") or {}).get(str(primary_metric))
     metric_text = f"{primary_metric}={observed}" if observed is not None else str(primary_metric)
-    return {
-        "data_analysis_flow.svg": {
-            "caption": "Data analysis workflow from local inventory to metric-ready artifacts.",
-            "claim": f"The data analysis workflow starts from {selected_input}, passes through quality and feasibility checks, and produces local artifacts for result assessment.",
-        },
-        "data_processing_flow.svg": {
-            "caption": "Data processing workflow used by the generated method pipeline.",
-            "claim": "The processing workflow shows how the selected tabular input is read, profiled, mapped to a label column, and converted into reproducible summary outputs.",
-        },
-        "method_analysis_flow.svg": {
-            "caption": "Method analysis workflow derived from the literature-informed method plan.",
-            "claim": f"The method analysis workflow links literature-derived method families ({method_families or 'method family pending confirmation'}) to a verified local run.",
-        },
-        "data_to_method_outputs.svg": {
-            "caption": "Data-to-method output workflow connecting inputs, generated code, and result artifacts.",
-            "claim": f"The data-to-method output workflow shows how the generated pipeline turns {selected_input} into metrics, summaries, and figures for Results writing.",
-        },
+    context.update({
         "metrics.csv": {
             "caption": "Parsed scalar metrics from the verified method run.",
             "claim": f"The metrics table records the observed method output used by the result validity gate, including {metric_text}.",
@@ -100,7 +98,13 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
             "caption": "Analysis summary produced by the generated method pipeline.",
             "claim": "The analysis summary records selected input data, detected label column, method families, and generation metadata for traceability.",
         },
-    }
+    })
+    if not context and selected_input:
+        context["analysis_summary.csv"] = {
+            "caption": "Analysis summary produced by the project workflow.",
+            "claim": f"The analysis summary records how {selected_input} was used to produce result artifacts.",
+        }
+    return context
 
 
 def _figure_entry(project_path: Path, path: Path, index: int, context: dict[str, dict[str, str]]) -> dict[str, str]:

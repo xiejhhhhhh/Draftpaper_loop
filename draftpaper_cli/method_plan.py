@@ -196,7 +196,7 @@ def collect_method_plan(
         "literature_methods": literature_methods,
         "data_feasibility_decision": feasibility.get("decision"),
         "method_data_fit": "proceed" if feasibility.get("decision") in {"pass", "conditional_pass"} else "needs_data_or_goal_revision",
-        "stale_if_changed": ["methods", "result_validity", "results", "discussion", "latex", "quality_checks"],
+        "stale_if_changed": ["figure_plan", "code", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"],
     }
     methods_dir = state.path / "methods"
     methods_dir.mkdir(parents=True, exist_ok=True)

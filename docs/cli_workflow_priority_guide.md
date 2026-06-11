@@ -110,6 +110,7 @@ research_paper_agent/data/projects/
       raw/
       processed/
     method_plan/
+    figure_plan/
     methods/
     code/
       src/
@@ -146,6 +147,7 @@ generate_research_plan
 write_introduction
 prepare_data_section
 collect_method_plan
+plan_figures
 generate_analysis_code
 verify_methods
 write_methods
@@ -248,6 +250,7 @@ references/literature_items.json
 references/search_queries.json
 references/citation_evidence.csv
 references/literature_review_notes.md
+references/literature_review_notes.html
 references/literature_summaries/index.html
 references/literature_summaries/*.html
 ```
@@ -319,6 +322,7 @@ idea/search_brief.md
 references/literature_items.json
 references/citation_evidence.csv
 references/literature_review_notes.md
+references/literature_review_notes.html
 journal_profile/journal_profile.json
 journal_profile/journal_guidelines.md
 ```
@@ -327,10 +331,13 @@ Expected outputs:
 
 ```text
 research_plan/research_plan.md
+research_plan/research_plan.html
 research_plan/research_questions.md
+research_plan/research_questions.html
 research_plan/target_journal_anchor_papers.json
 research_plan/novelty_overlap_report.json
 research_plan/novelty_overlap_report.md
+research_plan/novelty_overlap_report.html
 research_plan/stage_manifest.json
 ```
 
@@ -343,11 +350,11 @@ python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\
 python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\my_project --allow-high-similarity
 ```
 
-Current behavior is deterministic and offline: it reads `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.md`, and the journal profile, then writes a traceable first version of `research_plan.md` and `research_questions.md`. This keeps the workflow usable without an AI API. A later AI-enhanced writer should use the same inputs and preserve the citation-evidence constraints.
+Current behavior is deterministic and offline: it reads `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.md`, and the journal profile, then writes a traceable first version of `research_plan.md`/`.html` and `research_questions.md`/`.html`. HTML is the primary human-review format for summary-style artifacts; Markdown is retained for compatibility and downstream parsers. This keeps the workflow usable without an AI API. A later AI-enhanced writer should use the same inputs and preserve the citation-evidence constraints.
 
 Before writing the plan, the stage ranks target-journal anchor papers. These are papers from or close to the target journal that are highly relevant to the current idea, data, or method context. Their structure is a planning reference for the manuscript, but the workflow must not copy their wording, figures, claims, or unsupported assumptions.
 
-The same step also performs a novelty-overlap check. If a retrieved paper is highly similar to the current idea plus available data and method context, `generate-plan` stops with `blocked_high_similarity` and writes `research_plan/novelty_overlap_report.md`. The user must decide whether to continue, revise the research question, change the data/method route, or abandon/reposition the paper. `--allow-high-similarity` is only for cases where the user explicitly chooses to continue after seeing the report.
+The same step also performs a novelty-overlap check. If a retrieved paper is highly similar to the current idea plus available data and method context, `generate-plan` stops with `blocked_high_similarity` and writes `research_plan/novelty_overlap_report.md` plus `.html`. The user must decide whether to continue, revise the research question, change the data/method route, or abandon/reposition the paper. `--allow-high-similarity` is only for cases where the user explicitly chooses to continue after seeing the report.
 
 If references outputs are missing, `generate-plan` fails instead of creating an unsupported research plan.
 
@@ -401,10 +408,9 @@ code/src/generated_pipeline.py
 code/tests/test_generated_pipeline.py
 results/tables/metrics.csv
 results/tables/analysis_summary.csv
-results/figures/data_analysis_flow.svg
-results/figures/data_processing_flow.svg
-results/figures/method_analysis_flow.svg
-results/figures/data_to_method_outputs.svg
+results/figure_plan.json
+results/figure_plan.html
+results/figures/<project-specific-figure>.svg
 ```
 
 `methods/method_plan.md` records the user's method input from UI/CLI, literature-derived method patterns, inferred method families, data requirements implied by the method, and the expected result validity metric. `methods/method_requirements.json` is the machine-readable contract used by later gates.
@@ -417,14 +423,17 @@ Implemented Priority 6 CLI commands:
 
 ```powershell
 python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
+python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figures/data_analysis_flow.svg --output results/figures/data_processing_flow.svg --output results/figures/method_analysis_flow.svg --output results/figures/data_to_method_outputs.svg
+python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\my_project
 ```
 
 `collect-method-plan` reads the research plan, data feasibility report, and ranked literature notes. It does not replace user expertise; it creates a structured method contract that combines user-provided method intent with literature method synthesis.
 
-`generate-analysis-code` reads `references/literature_items.json`, `methods/method_plan.md`, `methods/method_requirements.json`, and `data/data_inventory.json`. It writes deterministic project-local baseline code under `code/`, records the generated command, selected input data, literature method sources, method families, and declared outputs in `methods/analysis_code_manifest.json`, and marks the `code` stage as draft so Methods and downstream stages become stale. The default generated run produces two tables plus four SVG figures: data analysis workflow, data processing workflow, method analysis workflow, and data-to-method output workflow. This is a reviewable scaffold for local analysis, not permission to skip code review or result validity checks.
+`plan-figures` observes the current project state and writes `results/figure_plan.json` plus `results/figure_plan.html`. The plan decides which scientific figures this specific paper needs from the idea, research plan, target journal, data inventory, method requirements, literature methods, and any supplied local figures/tables. The workflow must not hard-code a universal set of paper figures.
+
+`generate-analysis-code` reads `references/literature_items.json`, `methods/method_plan.md`, `methods/method_requirements.json`, `data/data_inventory.json`, and `results/figure_plan.json`. It writes deterministic project-local code under `code/`, records the generated command, selected input data, literature method sources, method families, figure plan, and declared outputs in `methods/analysis_code_manifest.json`, and marks the `code` stage as draft so Methods and downstream stages become stale. The generated run should emit only the figures declared by the current figure plan plus required metric/summary tables. This is a reviewable scaffold for local analysis, not permission to skip code review or result validity checks.
 
 `verify-methods` runs the provided command from the project directory and writes `methods/run_manifest.yaml` as JSON-compatible YAML. The manifest records command, return code, input data, declared output files, parsed CSV metrics, generated tables/figures, timestamps, stdout/stderr snippets, and missing outputs.
 
@@ -649,7 +658,7 @@ Every issue uses the same schema:
   "title": "Results do not support the planned claim strength",
   "reason": "Observed f1 is below the planned threshold.",
   "files_to_add_or_edit": ["methods/run_manifest.yaml", "methods/method_requirements.json"],
-  "recommended_commands": ["generate-analysis-code", "verify-methods", "assess-result-validity"],
+  "recommended_commands": ["plan-figures", "generate-analysis-code", "verify-methods", "assess-result-validity"],
   "required_user_input": "Decide whether to revise the method/data route or lower the manuscript claim strength.",
   "status": "pending"
 }
@@ -757,8 +766,9 @@ python -m draftpaper_cli.cli inventory-data --project C:\DraftPaper_CLI\projects
 python -m draftpaper_cli.cli assess-data-quality --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "..." --primary-metric f1 --minimum-primary-metric 0.75
+python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figures/data_analysis_flow.svg --output results/figures/data_processing_flow.svg --output results/figures/method_analysis_flow.svg --output results/figures/data_to_method_outputs.svg
+python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli assess-result-validity --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli write-results --project C:\DraftPaper_CLI\projects\my_project

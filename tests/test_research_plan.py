@@ -72,9 +72,12 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertEqual(result["status"], "written")
             self.assertEqual(result["citation_count"], 2)
             self.assertTrue((project.path / "research_plan" / "research_plan.md").exists())
+            self.assertTrue((project.path / "research_plan" / "research_plan.html").exists())
             self.assertTrue((project.path / "research_plan" / "research_questions.md").exists())
+            self.assertTrue((project.path / "research_plan" / "research_questions.html").exists())
             self.assertTrue((project.path / "research_plan" / "target_journal_anchor_papers.json").exists())
             self.assertTrue((project.path / "research_plan" / "novelty_overlap_report.md").exists())
+            self.assertTrue((project.path / "research_plan" / "novelty_overlap_report.html").exists())
 
             plan = (project.path / "research_plan" / "research_plan.md").read_text(encoding="utf-8")
             self.assertIn("Long-term AGN outburst prediction", plan)
@@ -96,6 +99,7 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertIn("references/citation_evidence.csv", manifest["input_files"])
             self.assertIn("research_plan/target_journal_anchor_papers.json", manifest["output_files"])
             self.assertIn("research_plan/research_plan.md", manifest["output_files"])
+            self.assertIn("research_plan/research_plan.html", manifest["output_files"])
 
             project_json = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project_json["stages"]["research_plan"]["status"], "draft")
@@ -123,6 +127,7 @@ class ResearchPlanTests(unittest.TestCase):
 
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "written")
+            self.assertTrue(payload["research_plan"].endswith(".html"))
             self.assertTrue(Path(payload["research_plan"]).exists())
             self.assertTrue(Path(payload["research_questions"]).exists())
 

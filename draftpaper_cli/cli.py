@@ -14,6 +14,7 @@ from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
+from .figure_plan import FigurePlanError, plan_figures
 from .methods import MethodsGateError, verify_methods, write_methods
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError
@@ -132,9 +133,13 @@ def build_parser() -> argparse.ArgumentParser:
     method_plan.add_argument("--primary-metric", default="f1", help="Primary metric expected for result validity.")
     method_plan.add_argument("--minimum-primary-metric", type=float, default=None, help="Minimum acceptable primary metric value.")
 
+    figures = subparsers.add_parser("plan-figures", help="Observe project state and plan project-specific scientific figures.")
+    figures.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     codegen = subparsers.add_parser("generate-analysis-code", help="Generate project-local analysis code from literature and method requirements.")
     codegen.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     codegen.add_argument("--output", action="append", default=[], help="Project-relative output file expected from generated code.")
+    codegen.add_argument("--auto-plan-figures", action="store_true", help="Generate results/figure_plan.json first if it is missing or stale.")
 
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -436,10 +441,22 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "plan-figures":
+        try:
+            result = plan_figures(args.project)
+        except (FigurePlanError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "generate-analysis-code":
         try:
-            result = generate_analysis_code(args.project, output_files=args.output)
-        except (AnalysisCodeGenerationError, ProjectStateError) as exc:
+            result = generate_analysis_code(args.project, output_files=args.output, auto_plan_figures=args.auto_plan_figures)
+        except (AnalysisCodeGenerationError, FigurePlanError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:

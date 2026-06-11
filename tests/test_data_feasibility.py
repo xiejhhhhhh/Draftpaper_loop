@@ -116,6 +116,42 @@ class DataFeasibilityGateTests(unittest.TestCase):
             methods_result = write_methods(project.path)
             self.assertEqual(methods_result["status"], "written")
 
+    def test_remote_source_and_supplied_artifacts_can_support_conditional_writing_context(self) -> None:
+        from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Server processed climate zoning", field="agronomy remote sensing")
+            (project.path / "research_plan" / "research_plan.md").write_text(
+                "# Plan\n\nThe raw climate and NDVI data are processed on a remote server; only derived outputs are local.\n",
+                encoding="utf-8",
+            )
+            (project.path / "data" / "remote_sources.json").write_text(
+                json.dumps({
+                    "sources": [{
+                        "id": "remote_climate_server",
+                        "kind": "api_server",
+                        "access": "internal API",
+                        "description": "Large climate raster archive processed remotely.",
+                        "processed_data": ["data/processed/zoning_summary.csv"],
+                        "result_artifacts": ["results/figures/suitability_map.svg"],
+                    }]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "data" / "processed" / "zoning_summary.csv").write_text("zone,area\nA,12\nB,18\n", encoding="utf-8")
+            (project.path / "results" / "figures" / "suitability_map.svg").write_text("<svg></svg>\n", encoding="utf-8")
+
+            inventory_data(project.path)
+            quality = assess_data_quality(project.path)
+            result = assess_data_feasibility(project.path, min_rows=30)
+
+            inventory = json.loads((project.path / "data" / "data_inventory.json").read_text(encoding="utf-8"))
+            self.assertEqual(inventory["remote_source_count"], 1)
+            self.assertGreaterEqual(len(inventory["result_artifacts"]), 2)
+            self.assertEqual(quality["overall_status"], "pass")
+            self.assertEqual(result["decision"], "conditional_pass")
+            self.assertIn("processed data", result["supported_claim_level"])
+
     def test_cli_data_feasibility_flow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI data gate", field="workflow engineering")

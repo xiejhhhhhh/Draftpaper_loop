@@ -53,6 +53,7 @@ class ReferencesTests(unittest.TestCase):
                 "references/literature_items.json",
                 "references/citation_evidence.csv",
                 "references/literature_review_notes.md",
+                "references/literature_review_notes.html",
             ]:
                 self.assertTrue((project.path / relative).exists(), relative)
 
@@ -179,8 +180,10 @@ class ReferencesTests(unittest.TestCase):
             self.assertIn("Journal authority", summary_text)
 
             notes = (project.path / "references" / "literature_review_notes.md").read_text(encoding="utf-8")
+            notes_html = (project.path / "references" / "literature_review_notes.html").read_text(encoding="utf-8")
             self.assertIn("Cross-Paper Synthesis", notes)
             self.assertIn("Data Patterns", notes)
+            self.assertIn("<html", notes_html.lower())
 
     def test_reference_selection_keeps_data_and_method_contexts_and_filters_weak_metadata(self) -> None:
         from draftpaper_cli.references import write_reference_outputs
