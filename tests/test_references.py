@@ -52,6 +52,7 @@ class ReferencesTests(unittest.TestCase):
                 "references/library.bib",
                 "references/literature_items.json",
                 "references/citation_evidence.csv",
+                "references/zotero_collection_manifest.json",
                 "references/literature_review_notes.md",
                 "references/literature_review_notes.html",
             ]:

@@ -12,6 +12,8 @@ from typing import Any
 from .paper_fetch_adapter import enrich_with_paper_fetch
 from .project_state import load_project
 from .references import normalize_reference_items, write_reference_outputs
+from .project_scaffold import _write_json
+from .zotero_adapter import fetch_zotero_collection_items
 
 
 def _read_text_if_exists(path: Path, limit: int = 4000) -> str:
@@ -364,10 +366,51 @@ def search_literature_for_project(
     query: str | None = None,
     limit: int = 30,
     from_json: str | Path | None = None,
+    zotero_collection: str | None = None,
+    zotero_context: str = "idea",
+    zotero_min_items: int = 20,
+    zotero_supplement: bool = True,
 ) -> dict[str, Any]:
     final_query = build_search_query(project, query)
     search_queries = build_context_search_queries(project, query)
-    if from_json:
+    state = load_project(project)
+    zotero_manifest: dict[str, Any] | None = None
+    if from_json and zotero_collection:
+        raise ValueError("Use either --from-json or --zotero-collection, not both.")
+    if zotero_collection:
+        items, zotero_manifest = fetch_zotero_collection_items(
+            zotero_collection,
+            limit=max(limit, zotero_min_items),
+            context=zotero_context,
+        )
+        search_queries["zotero_collection"] = zotero_manifest.get("matched_collection") or zotero_collection
+        search_queries["zotero_context"] = zotero_context
+        minimum = max(0, min(zotero_min_items, limit))
+        if zotero_supplement and len(items) < minimum:
+            needed = minimum - len(items)
+            supplemental = search_free_literature(final_query, limit=max(needed * 2, needed))
+            existing_keys = {
+                (str(item.get("doi") or "") or re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()).lower()
+                for item in items
+            }
+            added = []
+            for item in supplemental:
+                key = (str(item.get("doi") or "") or re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()).lower()
+                if key in existing_keys:
+                    continue
+                item["reference_origin"] = "supplemental_external"
+                item["search_context"] = "idea"
+                item["search_query"] = final_query
+                added.append(item)
+                existing_keys.add(key)
+                if len(added) >= needed:
+                    break
+            items.extend(added)
+            zotero_manifest["supplemental_item_count"] = len(added)
+            zotero_manifest["supplemental_query"] = final_query
+        else:
+            zotero_manifest["supplemental_item_count"] = 0
+    elif from_json:
         payload = json.loads(Path(from_json).read_text(encoding="utf-8-sig"))
         items = payload.get("items", payload) if isinstance(payload, dict) else payload
         if isinstance(payload, dict) and isinstance(payload.get("search_queries"), dict):
@@ -383,4 +426,13 @@ def search_literature_for_project(
                     item["search_query"] = context_query
                 items.extend(context_items)
         items, _manifest = enrich_with_paper_fetch(project, items)
-    return write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
+    result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
+    manifest_path = state.path / "references" / "zotero_collection_manifest.json"
+    if zotero_manifest is None:
+        zotero_manifest = {"status": "not_used"}
+    _write_json(manifest_path, zotero_manifest)
+    if zotero_manifest.get("status") == "loaded":
+        result["zotero_collection_manifest"] = str(manifest_path)
+        result["zotero_imported_count"] = zotero_manifest.get("usable_item_count", 0)
+        result["zotero_supplemental_count"] = zotero_manifest.get("supplemental_item_count", 0)
+    return result

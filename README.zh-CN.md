@@ -43,6 +43,7 @@ Draftpaper-loop 的外层逻辑是：
 - `status`、`run-pipeline`、`checkpoint`、`resume` 等 orchestrator 命令。
 - 基于 artifact hash 的 stale 检测和回退。
 - 面向 `idea`、`data`、`methods` 的上下文文献检索。
+- 支持从指定 Zotero collection 导入用户已经整理好的参考文献。
 - 可追溯的 `citation_evidence.csv`。
 - 目标期刊模板和 LaTeX 约束解析。
 - Data feasibility gate。
@@ -108,6 +109,8 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 .\.venv\Scripts\draftpaper status --project .\projects\your_project
 .\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
+.\.venv\Scripts\draftpaper list-zotero-collections
+.\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
 .\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
 .\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
@@ -118,6 +121,25 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 ```powershell
 python -m unittest discover -s tests
 ```
+
+### 通过 Codex 调用 Zotero collection
+
+Draftpaper-loop 可以在文献检索阶段读取指定 Zotero collection 中的参考文献。先在同一个 PowerShell 或 Codex terminal session 中配置环境变量：
+
+```powershell
+$env:ZOTERO_LIBRARY_ID="your_zotero_library_id"
+$env:ZOTERO_LIBRARY_TYPE="user"   # 或 "group"
+$env:ZOTERO_API_KEY="your_zotero_api_key"
+```
+
+然后可以让 Codex 调用 loop，或直接运行：
+
+```powershell
+python -m draftpaper_cli.cli list-zotero-collections
+python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+```
+
+`list-zotero-collections` 只返回 collection 名称和 key，不会输出 API key。`search-literature --zotero-collection` 只读取用户指定的 collection，并写入 `references/zotero_collection_manifest.json`，随后进入同一套 ranking、BibTeX、citation evidence 和 HTML literature summaries 流程。如果该 collection 中可用文献少于 `--zotero-min-items`，系统会按 MVP 的 Zotero-first 逻辑用免费外部检索补充，除非显式使用 `--no-zotero-supplement`。在 Codex 对话中可以这样说：“调用 Draftpaper-loop，先列出我的 Zotero collections，然后用 `My Paper References` 这个 collection 为当前项目检索文献。”
 
 ## 当前实现状态
 
@@ -134,6 +156,14 @@ python -m unittest discover -s tests
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.7.0 (2026-06-15) -- Zotero collection import for references
+
+- 新增 `list-zotero-collections`，方便 Codex 或本地 CLI 查看 Zotero collection 名称。
+- 新增 `search-literature --zotero-collection`，允许单篇论文项目从用户指定的 Zotero collection 导入参考文献。
+- 新增 `--zotero-context`、`--zotero-min-items` 和 `--no-zotero-supplement`，用于控制 citation evidence 章节归属和 Zotero-first 外部补充逻辑。
+- 新增 `references/zotero_collection_manifest.json`，记录请求的 collection、实际匹配的 collection、collection key、可用条目数量和补充文献数量。
+- 在 README 中补充 Codex 如何调用 Zotero collection 的方法，并说明 `ZOTERO_LIBRARY_ID`、`ZOTERO_LIBRARY_TYPE` 和 `ZOTERO_API_KEY` 只通过环境变量读取，不会在输出中暴露。
 
 ### v0.6.0 (2026-06-11) -- renamed and reframed as Draftpaper-loop
 
@@ -153,7 +183,7 @@ python -m unittest discover -s tests
 - 新增 `review/commitment_ledger.csv`，用于追踪多轮修订中的用户决策。
 - `status` 和 `run-pipeline` 在 integrity/quality 失败后推荐 `diagnose-gate-failures`。
 - 本地验证：`python -m unittest discover -s tests`。
-- 当前测试规模：92 tests。
+- 当前测试规模：95 tests。
 
 ### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
 

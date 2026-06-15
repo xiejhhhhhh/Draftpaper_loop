@@ -213,7 +213,7 @@ Semantic Scholar
 arXiv
 Crossref
 SerpApi optional
-Zotero optional
+Zotero collection import optional
 Consensus optional later
 ```
 
@@ -248,6 +248,7 @@ Expected outputs:
 references/library.bib
 references/literature_items.json
 references/search_queries.json
+references/zotero_collection_manifest.json
 references/citation_evidence.csv
 references/literature_review_notes.md
 references/literature_review_notes.html
@@ -261,11 +262,15 @@ Implemented Priority 3 CLI command:
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --query "active galactic nuclei machine learning variability"
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --from-json C:\path\literature_items.json
+python -m draftpaper_cli.cli list-zotero-collections
+python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
 The `--from-json` option is intended for offline runs, manual curation, Zotero exports, or future Codex-assisted literature selection. It accepts UTF-8 and UTF-8 BOM JSON files, which matters for Windows PowerShell-created files.
 
-Live search currently uses Semantic Scholar, arXiv, Crossref, and optional SerpApi when `SERPAPI_API_KEY` is configured. Zotero and Consensus remain later optional providers; the CLI output contract should not change when they are added.
+Live search currently uses Semantic Scholar, arXiv, Crossref, and optional SerpApi when `SERPAPI_API_KEY` is configured. Zotero is supported as a user-curated collection import source. Consensus remains a later optional provider; the CLI output contract should not change when it is added.
+
+Zotero collection import is supported as a user-curated reference source. Configure `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` in the local environment, call `list-zotero-collections` to inspect collection names, then run `search-literature --zotero-collection "<collection name>"`. The command reads only the selected collection, writes `references/zotero_collection_manifest.json`, and passes the imported items through the same ranking, BibTeX, citation evidence, and HTML summary pipeline. If the collection has fewer than `--zotero-min-items` usable records, the loop supplements with free external search unless `--no-zotero-supplement` is used. `--zotero-context` controls whether the imported collection evidence is assigned to `idea`, `data`, `methods`, or all three citation-evidence contexts.
 
 The reference stage now builds three separate query contexts before ranking: `idea`, `data`, and `methods`. The idea query comes from the user query or project idea. The data context builds three to five precise queries from project data signals in `idea/idea.md`, `data/data_inventory.json`, and `data/data_feasibility_report.json`. The methods context builds three to five precise queries from the user's method phrases in `methods/method_plan.md`, plus `methods/method_requirements.json` and `research_plan/research_plan.md` when available. Every data and methods query is crossed with the discipline/field name from `project.json`, rather than always forcing the full research direction or target journal into the query. This keeps broad terms such as `Transformer` or `dataset` inside the intended discipline without over-constraining retrieval. The resolved context queries are written to `references/search_queries.json` so that later review can see exactly how each literature subset was found.
 

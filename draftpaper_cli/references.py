@@ -19,6 +19,7 @@ REFERENCE_OUTPUTS = [
     "references/library.bib",
     "references/literature_items.json",
     "references/search_queries.json",
+    "references/zotero_collection_manifest.json",
     "references/citation_evidence.csv",
     "references/literature_review_notes.md",
     "references/literature_review_notes.html",
@@ -83,6 +84,9 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "publication": str(item.get("publication") or item.get("venue") or "").strip(),
         "citation_count": int(item.get("citation_count") or item.get("citationCount") or 0),
         "source": str(item.get("source") or "unknown").strip(),
+        "reference_origin": str(item.get("reference_origin") or "").strip(),
+        "zotero_key": str(item.get("zotero_key") or "").strip(),
+        "zotero_collection": str(item.get("zotero_collection") or "").strip(),
         "pdf_url": str(item.get("pdf_url") or item.get("openAccessPdf") or "").strip(),
         "pdf_path": str(item.get("pdf_path") or "").strip(),
         "pdf_text_excerpt": str(item.get("pdf_text_excerpt") or "").strip(),
@@ -195,6 +199,8 @@ def weight_literature_items(items: list[dict[str, Any]], idea: str = "", target_
 def has_sufficient_metadata_or_pdf(item: dict[str, Any]) -> bool:
     if item.get("pdf_url") or item.get("pdf_path"):
         return True
+    if item.get("source") == "zotero_collection" or item.get("reference_origin") == "existing_zotero":
+        return bool(item.get("title") and (item.get("authors") or item.get("doi") or item.get("url")))
     return bool(
         item.get("title")
         and item.get("authors")
@@ -683,6 +689,9 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
     normalized = [{**item, "deep_summary": analyze_reference_item(item)} for item in normalized]
     _write_json(references_dir / "literature_items.json", normalized)
     _write_json(references_dir / "search_queries.json", search_queries or {"idea": query})
+    zotero_manifest = references_dir / "zotero_collection_manifest.json"
+    if not zotero_manifest.exists():
+        _write_json(zotero_manifest, {"status": "not_used"})
     (references_dir / "library.bib").write_text(generate_bibtex(normalized), encoding="utf-8")
     _write_citation_evidence(references_dir / "citation_evidence.csv", citation_evidence_rows(normalized))
     review_notes = literature_review_notes(normalized, query=query)

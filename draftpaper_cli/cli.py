@@ -41,6 +41,7 @@ from .review_revision import (
 from .result_validity import ResultValidityError, assess_result_validity
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
+from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -100,6 +101,13 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--query", default=None, help="Optional explicit scholarly search query.")
     search.add_argument("--limit", type=int, default=30, help="Maximum number of ranked references to keep.")
     search.add_argument("--from-json", default=None, help="Use a local JSON list of literature items instead of live search.")
+    search.add_argument("--zotero-collection", default=None, help="Import references from a named Zotero collection.")
+    search.add_argument("--zotero-context", default="idea", choices=["idea", "data", "methods", "all"], help="Manuscript context assigned to Zotero collection references.")
+    search.add_argument("--zotero-min-items", type=int, default=20, help="Minimum Zotero-first reference count before optional external supplementation.")
+    search.add_argument("--no-zotero-supplement", action="store_true", help="Do not supplement a small Zotero collection with free external search.")
+
+    zotero_collections = subparsers.add_parser("list-zotero-collections", help="List Zotero collections available through ZOTERO_* environment variables.")
+    zotero_collections.add_argument("--project", default=None, help="Optional project path; accepted for Codex workflow symmetry.")
 
     journal = subparsers.add_parser("resolve-journal-template", help="Resolve target journal Overleaf/template formatting constraints.")
     journal.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -333,11 +341,31 @@ def main(argv: list[str] | None = None) -> int:
                 query=args.query,
                 limit=args.limit,
                 from_json=args.from_json,
+                zotero_collection=args.zotero_collection,
+                zotero_context=args.zotero_context,
+                zotero_min_items=args.zotero_min_items,
+                zotero_supplement=not args.no_zotero_supplement,
             )
+        except (ValueError, ZoteroAdapterError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
         except Exception as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "list-zotero-collections":
+        try:
+            collections = list_zotero_collections()
+        except ZoteroAdapterError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps({
+            "status": "listed",
+            "count": len(collections),
+            "collections": collections,
+        }, ensure_ascii=False))
         return 0
 
     if args.command == "resolve-journal-template":

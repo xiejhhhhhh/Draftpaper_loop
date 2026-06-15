@@ -51,6 +51,7 @@ The loop is designed around five engineering components:
 - Orchestrator commands for status, next action, checkpoint, resume, and pipeline execution.
 - Hash-based stale detection and backtracking when upstream artifacts change.
 - Context-aware literature retrieval for `idea`, `data`, and `methods`.
+- Zotero collection import for user-curated reference sets.
 - Traceable `citation_evidence.csv` for auditable manuscript claims.
 - Journal profile stage for target-journal LaTeX constraints.
 - Data feasibility gate before method planning.
@@ -139,6 +140,8 @@ python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli list-zotero-collections
+python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
 python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
@@ -150,6 +153,25 @@ Run tests:
 ```powershell
 python -m unittest discover -s tests
 ```
+
+### Zotero Collection Import Through Codex
+
+Draftpaper-loop can import references from a specific Zotero collection during the literature stage. Configure credentials as environment variables in the same shell or Codex terminal session:
+
+```powershell
+$env:ZOTERO_LIBRARY_ID="your_zotero_library_id"
+$env:ZOTERO_LIBRARY_TYPE="user"   # or "group"
+$env:ZOTERO_API_KEY="your_zotero_api_key"
+```
+
+Then ask Codex to call the loop, or run the CLI directly:
+
+```powershell
+python -m draftpaper_cli.cli list-zotero-collections
+python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+```
+
+`list-zotero-collections` returns collection names and keys without printing credentials. `search-literature --zotero-collection` reads only the selected collection, writes `references/zotero_collection_manifest.json`, and sends the imported items through the same ranking, BibTeX, citation evidence, and HTML literature-summary pipeline as external search results. If the collection has fewer than `--zotero-min-items` usable references, the loop supplements with free external search unless `--no-zotero-supplement` is set. In Codex chat, a good request is: "Call Draftpaper-loop, list my Zotero collections, then search literature for this project using the collection named `My Paper References`."
 
 ## Implementation Status
 
@@ -177,6 +199,14 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 
 ## Recent Updates
 
+### v0.7.0 (2026-06-15) -- Zotero collection import for references
+
+- Added `list-zotero-collections` for inspecting Zotero collection names from Codex or the local CLI.
+- Added `search-literature --zotero-collection` so a paper project can import user-curated references from one Zotero collection.
+- Added `--zotero-context`, `--zotero-min-items`, and `--no-zotero-supplement` to control citation-evidence context and MVP-style external supplementation.
+- Added `references/zotero_collection_manifest.json` to record the requested collection, matched collection, collection key, usable item count, and supplemental count.
+- Documented how to configure `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` for Codex-driven loop calls without exposing credentials in outputs.
+
 ### v0.6.0 (2026-06-11) -- renamed and reframed as Draftpaper-loop
 
 - Reframed the project from a CLI-first paper drafting tool to a loop-engineered research manuscript system.
@@ -196,7 +226,7 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Connected `status` and `run-pipeline` to failed integrity/quality reports so they recommend `diagnose-gate-failures` instead of repeated blind gate reruns.
 - Kept `apply-revision` intentionally conservative: it marks affected stages stale and does not rewrite scientific content automatically.
 - Local verification: `python -m unittest discover -s tests`
-- Current suite: 92 tests
+- Current suite: 95 tests
 
 ### v0.4.0 (2026-06-09) -- integrity gate and artifact traceability
 

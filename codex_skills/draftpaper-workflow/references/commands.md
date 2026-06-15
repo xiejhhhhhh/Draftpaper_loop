@@ -25,6 +25,8 @@ python -m draftpaper_cli.cli update-stage-status --project C:\DraftPaper_CLI\pro
 ```powershell
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --query "topic keywords"
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --from-json C:\path\literature_items.json
+python -m draftpaper_cli.cli list-zotero-collections
+python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --target-journal APJS
 python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --overleaf-url "https://www.overleaf.com/latex/templates/..."
 python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --guideline-url "https://journal.example/author-guidelines"
