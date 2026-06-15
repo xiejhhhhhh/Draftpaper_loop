@@ -139,7 +139,7 @@ python -m draftpaper_cli.cli list-zotero-collections
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
-`list-zotero-collections` 只返回 collection 名称和 key，不会输出 API key。`search-literature --zotero-collection` 只读取用户指定的 collection，并写入 `references/zotero_collection_manifest.json`，随后进入同一套 ranking、BibTeX、citation evidence 和 HTML literature summaries 流程。如果该 collection 中可用文献少于 `--zotero-min-items`，系统会按 MVP 的 Zotero-first 逻辑用免费外部检索补充，除非显式使用 `--no-zotero-supplement`。在 Codex 对话中可以这样说：“调用 Draftpaper-loop，先列出我的 Zotero collections，然后用 `My Paper References` 这个 collection 为当前项目检索文献。”
+`list-zotero-collections` 只返回 collection 名称和 key，不会输出 API key。`search-literature --zotero-collection` 只读取用户指定的 collection，并写入 `references/zotero_collection_manifest.json`。从 Zotero 导入的文献会被视为用户精选证据：即使缺少 abstract/PDF、不满足近年文献偏好，或超过外部检索默认 30 篇 ranking 上限，也会完整保留。系统仍会把这些文献写入与检索文献相同的输出，包括 `references/library.bib`、`references/literature_items.json`、`references/citation_evidence.csv`、`references/literature_review_notes.html`、每篇文献的 HTML summary，以及 `references/literature_summaries/index.html`。这部分文献会标记 `source=zotero_collection`、`reference_origin=existing_zotero` 和 `selection_policy=zotero_collection_preserved`，方便后续审阅时区分 Zotero 精选文献和外部检索排名文献。如果该 collection 中可用文献少于 `--zotero-min-items`，系统会按 MVP 的 Zotero-first 逻辑用免费外部检索补充，除非显式使用 `--no-zotero-supplement`。在 Codex 对话中可以这样说：“调用 Draftpaper-loop，先列出我的 Zotero collections，然后用 `My Paper References` 这个 collection 为当前项目检索文献。”
 
 ## 当前实现状态
 
@@ -156,6 +156,12 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.7.1 (2026-06-15) -- preserved Zotero evidence in literature summaries
+
+- 将 Zotero 导入文献作为用户精选证据完整保留，不再受外部检索 ranking、近年文献偏好、abstract/PDF 过滤和默认 30 篇外部文献上限约束。
+- 在 literature review notes、每篇文献 HTML summary 和 `references/literature_summaries/index.html` 中加入 Zotero source、origin、collection 和 selection policy 信息。
+- 增加测试，确认 Zotero 文献会与检索文献一起出现在 HTML index 中，同时保持来源可区分。
 
 ### v0.7.0 (2026-06-15) -- Zotero collection import for references
 

@@ -91,6 +91,72 @@ class ZoteroAdapterTests(unittest.TestCase):
             self.assertEqual(zotero_manifest["matched_collection"], "AGN curated")
             search_queries = json.loads((project.path / "references" / "search_queries.json").read_text(encoding="utf-8"))
             self.assertEqual(search_queries["zotero_collection"], "AGN curated")
+            index_html = (project.path / "references" / "literature_summaries" / "index.html").read_text(encoding="utf-8")
+            self.assertIn("zotero_collection", index_html)
+            self.assertIn("AGN curated", index_html)
+
+    def test_zotero_references_are_preserved_outside_external_ranking_limits(self) -> None:
+        from draftpaper_cli.references import write_reference_outputs
+
+        zotero_items = [
+            {
+                "title": "User curated Zotero paper without abstract",
+                "authors": ["Curated Author"],
+                "year": "1998",
+                "doi": "10.1000/zotero.keep",
+                "publication": "Local Zotero Library",
+                "abstract": "",
+                "source": "zotero_collection",
+                "reference_origin": "existing_zotero",
+                "zotero_collection": "My Curated Folder",
+                "search_context": "idea",
+                "search_query": "Zotero collection: My Curated Folder",
+            },
+            {
+                "title": "Second user curated Zotero paper",
+                "authors": ["Second Author"],
+                "year": "2001",
+                "url": "https://example.org/zotero-second",
+                "publication": "Local Zotero Library",
+                "abstract": "",
+                "source": "zotero_collection",
+                "reference_origin": "existing_zotero",
+                "zotero_collection": "My Curated Folder",
+                "search_context": "methods",
+                "search_query": "Zotero collection: My Curated Folder",
+            },
+        ]
+        external_items = [
+            {
+                "title": f"External ranked paper {index}",
+                "authors": [f"External Author {index}"],
+                "year": "2024",
+                "doi": f"10.1000/external.{index}",
+                "abstract": "Relevant external search paper about AGN classification and validation.",
+                "publication": "Astrophysical Journal",
+                "citation_count": index,
+                "source": "semantic_scholar",
+                "search_context": "idea",
+                "search_query": "AGN classification",
+            }
+            for index in range(35)
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="AGN classification", field="machine learning astronomy")
+            result = write_reference_outputs(project.path, [*zotero_items, *external_items], query="AGN classification")
+
+            literature_items = json.loads((project.path / "references" / "literature_items.json").read_text(encoding="utf-8"))
+            titles = [item["title"] for item in literature_items]
+            self.assertEqual(result["item_count"], 32)
+            self.assertIn("User curated Zotero paper without abstract", titles)
+            self.assertIn("Second user curated Zotero paper", titles)
+            self.assertEqual(sum(1 for item in literature_items if item["source"] == "zotero_collection"), 2)
+            self.assertEqual(sum(1 for item in literature_items if item["source"] == "semantic_scholar"), 30)
+            index_html = (project.path / "references" / "literature_summaries" / "index.html").read_text(encoding="utf-8")
+            self.assertIn("User curated Zotero paper without abstract", index_html)
+            self.assertIn("zotero_collection", index_html)
+            self.assertIn("semantic_scholar", index_html)
 
     def test_search_literature_parser_accepts_zotero_collection_options(self) -> None:
         from draftpaper_cli.cli import build_parser

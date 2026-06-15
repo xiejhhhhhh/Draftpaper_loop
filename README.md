@@ -171,7 +171,7 @@ python -m draftpaper_cli.cli list-zotero-collections
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
-`list-zotero-collections` returns collection names and keys without printing credentials. `search-literature --zotero-collection` reads only the selected collection, writes `references/zotero_collection_manifest.json`, and sends the imported items through the same ranking, BibTeX, citation evidence, and HTML literature-summary pipeline as external search results. If the collection has fewer than `--zotero-min-items` usable references, the loop supplements with free external search unless `--no-zotero-supplement` is set. In Codex chat, a good request is: "Call Draftpaper-loop, list my Zotero collections, then search literature for this project using the collection named `My Paper References`."
+`list-zotero-collections` returns collection names and keys without printing credentials. `search-literature --zotero-collection` reads only the selected collection and writes `references/zotero_collection_manifest.json`. Zotero-imported references are treated as user-curated evidence: they are preserved even when they lack an abstract/PDF, fall outside the recency preference, or exceed the external-search 30-paper ranking cap. The loop still writes them into the same outputs as searched papers, including `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.html`, per-paper HTML summaries, and `references/literature_summaries/index.html`. They are marked with `source=zotero_collection`, `reference_origin=existing_zotero`, and `selection_policy=zotero_collection_preserved` so later review can distinguish them from ranked external search results. If the collection has fewer than `--zotero-min-items` usable references, the loop supplements with free external search unless `--no-zotero-supplement` is set. In Codex chat, a good request is: "Call Draftpaper-loop, list my Zotero collections, then search literature for this project using the collection named `My Paper References`."
 
 ## Implementation Status
 
@@ -198,6 +198,12 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.7.1 (2026-06-15) -- preserved Zotero evidence in literature summaries
+
+- Preserved Zotero-imported references as user-curated evidence outside external-search ranking, recency, abstract/PDF filtering, and the default 30-paper external cap.
+- Added Zotero source/origin/collection/selection-policy metadata to literature review notes, per-paper HTML summaries, and `references/literature_summaries/index.html`.
+- Added tests confirming Zotero references appear together with searched literature while remaining distinguishable.
 
 ### v0.7.0 (2026-06-15) -- Zotero collection import for references
 
