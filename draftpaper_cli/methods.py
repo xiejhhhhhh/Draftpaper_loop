@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from .data_feasibility import DataGateError, validate_data_feasibility_for_methods
+from .html_utils import write_html_report
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
+from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 
@@ -15,9 +18,12 @@ METHOD_INPUTS = [
     "methods/method_plan.md",
     "methods/method_requirements.json",
     "methods/run_manifest.yaml",
+    "methods/method_writing_context.json",
 ]
 
 METHOD_OUTPUTS = [
+    "methods/method_writing_context.json",
+    "methods/method_writing_context.html",
     "methods/methods.tex",
 ]
 
@@ -35,6 +41,15 @@ def _read_manifest(path: Path) -> dict[str, Any]:
 
 def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
     _write_json(path, payload)
+
+
+def _read_json(path: Path, fallback: Any) -> Any:
+    if not path.exists():
+        return fallback
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return fallback
 
 
 def _ensure_method_plan(project_path: Path) -> Path:
@@ -155,6 +170,132 @@ def _safe_latex_text(text: Any) -> str:
     return "".join(replacements.get(char, char) for char in str(text or ""))
 
 
+def _clean_sentence(text: Any) -> str:
+    return re.sub(r"\s+", " ", str(text or "")).strip()
+
+
+def _strip_forbidden_paths(text: str) -> str:
+    text = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "the verified local workflow", text)
+    text = re.sub(r"\b(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/[^\s,.;)]+", "the verified local workflow", text)
+    text = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b", "the verified local workflow", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _method_family_text(requirements: dict[str, Any]) -> str:
+    families = [str(item).replace("_", " ") for item in requirements.get("method_families") or []]
+    if not families or families == ["method family requires user confirmation"]:
+        return "The method family requires user confirmation and should be described conservatively."
+    return "The planned method family is " + ", ".join(families) + "."
+
+
+def _metrics_text(manifest: dict[str, Any], requirements: dict[str, Any]) -> str:
+    metrics = manifest.get("metrics") or {}
+    primary = requirements.get("primary_metric") or next(iter(metrics.keys()), "primary metric")
+    observed = metrics.get(primary)
+    threshold = requirements.get("minimum_primary_metric")
+    if observed is not None and threshold is not None:
+        return f"The verification run reports {primary}={observed} against a configured minimum value of {threshold}."
+    if observed is not None:
+        return f"The verification run reports {primary}={observed}; interpretation should remain conditional because no explicit threshold was configured."
+    if metrics:
+        compact = ", ".join(f"{key}={value}" for key, value in list(metrics.items())[:5])
+        return "The verification run reports scalar outputs including " + compact + "."
+    return "The verification run completed without parsed scalar metrics, so the method narrative should focus on the validated workflow rather than performance magnitude."
+
+
+def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[str, Any]], analysis_manifest: dict[str, Any]) -> str:
+    observed = " ".join(_clean_sentence(item.get("text")) for item in observations if item.get("kind") in {"method_rationale", "agent_analysis", "code_design", "method_summary"})
+    user_method = _clean_sentence(requirements.get("user_method"))
+    if observed and user_method:
+        return (user_method + " " + observed)[:1600]
+    if observed:
+        return observed[:1400]
+    if user_method:
+        return user_method
+    method_excerpt = _clean_sentence(analysis_manifest.get("method_plan_excerpt"))
+    if method_excerpt:
+        return method_excerpt[:1000]
+    return "The method should be described as a verified local analytical workflow whose steps are constrained by the method plan and available data."
+
+
+def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any]) -> str:
+    selected = analysis_manifest.get("selected_input_profile") or {}
+    columns = selected.get("columns") or []
+    column_text = ", ".join(str(column) for column in columns[:8])
+    if column_text:
+        return "The verified workflow uses the analysis-ready data variables " + column_text + " to connect the data evidence with the planned analysis."
+    inputs = manifest.get("input_data") or []
+    if inputs:
+        return "The verified workflow uses user-specified analysis-ready input data rather than unverified raw-data access."
+    return "The verified workflow uses the data artifacts approved by the data feasibility gate."
+
+
+def _render_method_context_md(context: dict[str, Any]) -> str:
+    lines = [
+        "# Method Writing Context",
+        "",
+        "## Narrative Summary",
+        "",
+        context.get("narrative_summary", ""),
+        "",
+        "## Analysis Steps",
+        "",
+        context.get("analysis_steps", ""),
+        "",
+        "## Data Role",
+        "",
+        context.get("data_role", ""),
+        "",
+        "## Verification",
+        "",
+        context.get("verification_summary", ""),
+        "",
+        "## Claim Boundary",
+        "",
+        context.get("claim_boundary", ""),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def build_method_writing_context(project: str | Path) -> dict[str, Any]:
+    """Build a manuscript-facing Methods context from method plan, code manifests, and observations."""
+    state = load_project(project)
+    manifest = _validate_successful_manifest(state.path)
+    requirements = validate_method_plan_for_methods(state.path)
+    feasibility = validate_data_feasibility_for_methods(state.path)
+    observations = load_observations(state.path, stage="methods")
+    analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
+    family_summary = _method_family_text(requirements)
+    analysis_steps = _strip_forbidden_paths(_analysis_steps_text(requirements, observations, analysis_manifest))
+    data_role = _strip_forbidden_paths(_data_role_text(manifest, analysis_manifest))
+    verification_summary = _strip_forbidden_paths(_metrics_text(manifest, requirements))
+    claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
+    if claim_boundary:
+        claim_boundary = "Interpretation is bounded by the data feasibility gate: " + claim_boundary + "."
+    else:
+        claim_boundary = "Interpretation should remain aligned with the current data and result-validity gates."
+    narrative_summary = " ".join([family_summary, data_role, analysis_steps, verification_summary, claim_boundary]).strip()
+    context = {
+        "project_id": state.metadata.get("project_id"),
+        "method_family_summary": family_summary,
+        "data_role": data_role,
+        "analysis_steps": analysis_steps,
+        "verification_summary": verification_summary,
+        "claim_boundary": claim_boundary,
+        "observation_count": len(observations),
+        "observations": observations,
+        "narrative_summary": narrative_summary,
+        "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
+    }
+    context_path = state.path / "methods" / "method_writing_context.json"
+    _write_json(context_path, context)
+    write_html_report(state.path / "methods" / "method_writing_context.html", _render_method_context_md(context), title="Method Writing Context")
+    _set_methods_manifest(state.path)
+    return context
+
+
 def _validate_successful_manifest(project_path: Path) -> dict[str, Any]:
     _ensure_method_plan(project_path)
     try:
@@ -177,20 +318,17 @@ def _validate_successful_manifest(project_path: Path) -> dict[str, Any]:
     return manifest
 
 
-def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any]) -> str:
-    metrics = manifest.get("metrics") or {}
-    outputs = manifest.get("output_files") or []
-    output_text = ", ".join(_safe_latex_text(output) for output in outputs) if outputs else "no explicit output files were declared"
-    metric_text = ", ".join(f"{_safe_latex_text(key)}={_safe_latex_text(value)}" for key, value in metrics.items()) if metrics else "no scalar metrics were parsed"
-    command = _safe_latex_text(manifest.get("command") or "manual verification")
-    idea = _safe_latex_text(project_meta.get("idea"))
+def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], context: dict[str, Any]) -> str:
+    data_role = _safe_latex_text(_strip_forbidden_paths(context.get("data_role", "")))
+    analysis_steps = _safe_latex_text(_strip_forbidden_paths(context.get("analysis_steps", "")))
+    verification = _safe_latex_text(_strip_forbidden_paths(context.get("verification_summary", "")))
+    boundary = _safe_latex_text(_strip_forbidden_paths(context.get("claim_boundary", "")))
+    family = _safe_latex_text(_strip_forbidden_paths(context.get("method_family_summary", "")))
     return (
         "\\section{Methods}\n"
-        f"The method workflow for {idea} was written only after the local verification command completed successfully. "
-        f"The recorded command was \\texttt{{{command}}}, and the verification manifest declares the following reproducible outputs: {output_text}. "
-        "This gate ensures that the method description is tied to executable code and observed artifacts rather than to an unsupported methodological narrative.\n\n"
-        f"The verified workflow reports {metric_text}. These values should be treated as implementation evidence for drafting the Methods section and should be updated whenever the code, input data, or validation design changes. "
-        "The final manuscript should describe data preprocessing, model construction, validation protocol, and uncertainty handling in the same order as the verified pipeline.\n"
+        f"{family} {data_role}\n\n"
+        f"{analysis_steps}\n\n"
+        f"{verification} {boundary} The method description is therefore tied to verified local execution while the manuscript wording remains focused on the scientific analysis rather than on commands, filenames, or manifest internals.\n"
     )
 
 
@@ -206,9 +344,10 @@ def write_methods(project: str | Path) -> dict[str, Any]:
     """Write methods.tex only if methods/run_manifest.yaml proves a successful run."""
     state = load_project(project)
     manifest = _validate_successful_manifest(state.path)
+    context = build_method_writing_context(state.path)
     methods_dir = state.path / "methods"
     output_path = methods_dir / "methods.tex"
-    output_path.write_text(_render_methods_tex(state.metadata, manifest), encoding="utf-8")
+    output_path.write_text(_render_methods_tex(state.metadata, manifest, context), encoding="utf-8")
     update_stage_status(state.path, "methods", "draft")
     _set_methods_manifest(state.path)
     return {

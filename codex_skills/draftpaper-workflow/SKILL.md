@@ -41,33 +41,38 @@ Run stages in this order unless the user asks for a focused rerun:
 6. `inventory-data`
 7. `assess-data-quality`
 8. `assess-data-feasibility`
-9. `collect-method-plan`
-10. `plan-figures`
-11. `generate-analysis-code`
-12. `verify-methods`
-13. `write-methods`
-14. `assess-result-validity`
-15. `inventory-results`
-16. `write-results`
-17. `write-discussion`
-18. `assemble-latex`
-19. `run-integrity-gate`
-20. `quality-check`
-21. `diagnose-gate-failures`
-22. `review-draft`
-23. `generate-revision-plan`
-24. `apply-revision` when the user accepts a revision route
-25. `re-review`
+9. `record-observation --stage data` after Codex has visibly summarized data source/content/processing
+10. `build-data-context`
+11. `write-data`
+12. `collect-method-plan`
+13. `plan-figures`
+14. `generate-analysis-code`
+15. `verify-methods`
+16. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
+17. `build-method-context`
+18. `write-methods`
+19. `assess-result-validity`
+20. `inventory-results`
+21. `write-results`
+22. `write-discussion`
+23. `assemble-latex`
+24. `run-integrity-gate`
+25. `quality-check`
+26. `diagnose-gate-failures`
+27. `review-draft`
+28. `generate-revision-plan`
+29. `apply-revision` when the user accepts a revision route
+30. `re-review`
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
 ## Rerun Rules
 
-If upstream artifacts change, rerun from the earliest affected stage through downstream writing, `assemble-latex`, `run-integrity-gate`, and `quality-check`. If references change, rerun plan, Introduction, Discussion, assembly, integrity, and quality. Journal profile affects all writing and assembly; data affects method plan, code, methods, results, discussion, and assembly; code or method changes affect method verification onward. If results change, rerun result validity onward. If only LaTeX template files change, rerun assembly, integrity, and quality.
+If upstream artifacts change, rerun from the earliest affected stage through downstream writing, assembly, integrity, and quality. If references change, rerun plan, Introduction, Discussion, assembly, integrity, and quality. Journal profile affects all writing and assembly; data affects method plan onward; code or method changes affect method verification onward. If results change, rerun result validity onward. Template-only changes affect assembly, integrity, and quality.
 
 ## Gates
 
-Never generate the research plan or writing stages before `resolve-journal-template` has produced a current journal profile. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json` rather than a fixed plotting template. Run `generate-analysis-code` before `verify-methods` when generated code is used. If raw data are remote/private/too large and only processed tables or final figures are local, use those artifacts through `inventory-results`/`write-results` and keep claims limited to the supplied evidence. Never write Results before result validity passes or conditionally passes; always run `inventory-results` before `write-results`. Results must contain no citations. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`; route failures back to references, section citations, result manifest, or artifacts.
+Never generate the research plan or writing stages before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`, and generated code must follow `results/figure_plan.json`. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity and `inventory-results`; Results contain no citations. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if Data/Methods contain local filenames, paths, commands, or manifest dumps.
 
 For Zotero-backed references, first call `list-zotero-collections` after confirming `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` are configured in the local environment. Then call `search-literature --zotero-collection "<collection name>"`; do not fall back to the full Zotero library. Treat imported Zotero records as user-curated references: they are preserved outside external-search ranking, recency, abstract/PDF filtering, and the external 30-reference cap, but must still appear in `literature_summaries/index.html` together with searched references and remain distinguishable by their Zotero source/origin metadata. Use `--zotero-context all` only when the user intends the selected collection to support Introduction, Data, and Methods evidence.
 

@@ -146,6 +146,14 @@ class OrchestratorPassportTests(unittest.TestCase):
                 "latex",
             ]:
                 update_stage_status(project.path, stage, "completed")
+            _write_json(project.path / "data" / "data_writing_context.json", {"narrative_summary": "ready"})
+            (project.path / "data" / "data.tex").write_text("\\section{Data}\nReady.\n", encoding="utf-8")
+            (project.path / "data" / "data_inventory.json").write_text("{}", encoding="utf-8")
+            (project.path / "data" / "data_quality_report.json").write_text("{}", encoding="utf-8")
+            (project.path / "data" / "data_feasibility_report.json").write_text('{"decision":"pass"}', encoding="utf-8")
+            _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
+            (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
             refresh_project_passport(project.path, event="test_status_ready")
 
             status = status_project(project.path)

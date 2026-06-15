@@ -109,10 +109,15 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 .\.venv\Scripts\draftpaper status --project .\projects\your_project
 .\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
+.\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage data --kind agent_analysis --text "Codex 已展示给用户的数据分析摘要..."
+.\.venv\Scripts\draftpaper build-data-context --project .\projects\your_project
+.\.venv\Scripts\draftpaper write-data --project .\projects\your_project
 .\.venv\Scripts\draftpaper list-zotero-collections
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
 .\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
 .\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
+.\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage methods --kind method_rationale --text "Codex 已展示给用户的方法设计摘要..."
+.\.venv\Scripts\draftpaper build-method-context --project .\projects\your_project
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
 ```
 
@@ -143,11 +148,13 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 
 ## 当前实现状态
 
-当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、Introduction、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、Methods、result validity、result inventory、Results、Discussion、LaTeX assembly、PDF compilation、integrity gate、review/revision routing 和 final quality check。
+当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、Introduction、observation 记录、Data writing context、Data 写作、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、Methods writing context、Methods 写作、result validity、result inventory、Results、Discussion、LaTeX assembly、PDF compilation、integrity gate、review/revision routing 和 final quality check。
 
 每个项目都有 `project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、用户确认点和完整性事件，方便跨电脑迁移和后续审计。
 
 `plan-figures` 会观察当前 idea、research plan、target journal、data inventory、method requirements、literature metadata 和用户已经提供的本地图表，生成 `results/figure_plan.json` 与 `results/figure_plan.html`。`generate-analysis-code` 只根据这份 figure plan 生成代码，不再固定输出某几张通用流程图。如果原始数据在服务器/API/云端，或由于隐私和体量无法下载到本地，可以只提供本地处理后表格、结果图或结果表，再通过 `inventory-results` 和 `write-results` 继续写作，但 claim 必须限制在这些可访问 artifact 支持的范围内。
+
+`record-observation` 用于把 Codex 已经展示给用户的阶段性分析摘要保存到 `observations/observations.jsonl`，不会保存隐藏推理链。`build-data-context` 和 `build-method-context` 会把这些 observation、数据清单、可行性门、方法计划和验证结果合成为面向论文写作的 context。`write-data` 和 `write-methods` 只根据这些 context 写作，因此 Data 和 Methods 会描述数据来源、数据内容、变量组、处理流程、方法设计、验证和 claim boundary，而不是把本地文件名、路径、命令或 manifest 字段写进论文。
 
 ## Paper Fetch 集成
 
@@ -156,6 +163,14 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.8.0 (2026-06-15) -- observation-driven Data and Methods loop
+
+- 新增 `record-observation`，用于保存 Codex/用户已公开确认的分析摘要，不保存隐藏推理链。
+- 新增 `build-data-context` 和 `write-data`，让 Data 部分从数据来源、内容、处理和 claim boundary context 写作，而不是从文件路径写作。
+- 新增 `build-method-context`，并升级 `write-methods`，让 Methods 从方法意图、数据角色、验证摘要和 claim boundary 写作，而不是直接写命令或 manifest。
+- 升级 `run-pipeline`，Data 和 Methods 这类多子步骤 stage 只有在 context 和 manuscript 输出都存在后才会被视为完成。
+- 升级 quality gate，如果 Data/Methods 正文包含本地文件名、路径、执行命令或 manifest 式输出文本，会直接失败。
 
 ### v0.7.1 (2026-06-15) -- preserved Zotero evidence in literature summaries
 

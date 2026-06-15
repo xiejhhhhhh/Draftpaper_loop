@@ -76,7 +76,9 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertEqual(write_result["status"], "written")
             methods_tex = (project.path / "methods" / "methods.tex").read_text(encoding="utf-8")
             self.assertIn("\\section{Methods}", methods_tex)
-            self.assertIn("results/tables/metrics.csv", methods_tex)
+            self.assertNotIn("results/tables/metrics.csv", methods_tex)
+            self.assertNotIn("code/scripts", methods_tex)
+            self.assertNotIn("\\texttt", methods_tex)
             self.assertIn("accuracy", methods_tex)
 
             manifest = json.loads((project.path / "methods" / "stage_manifest.json").read_text(encoding="utf-8"))
@@ -128,7 +130,7 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "written")
             self.assertTrue(Path(payload["methods"]).exists())
 
-    def test_write_methods_escapes_windows_command_text_for_latex(self) -> None:
+    def test_write_methods_excludes_windows_command_text_from_latex(self) -> None:
         from draftpaper_cli.methods import write_methods
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -155,8 +157,10 @@ class MethodsHardGateTests(unittest.TestCase):
             tex = (project.path / "methods" / "methods.tex").read_text(encoding="utf-8")
             self.assertNotIn("`", tex)
             self.assertNotIn(r"C:\download", tex)
-            self.assertIn(r"\textbackslash{}", tex)
-            self.assertIn(r"50\%", tex)
+            self.assertNotIn(r"\textbackslash{}", tex)
+            self.assertNotIn(r"50\%", tex)
+            self.assertNotIn("run_method.py", tex)
+            self.assertIn("f1\\_score", tex)
 
 
 if __name__ == "__main__":

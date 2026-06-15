@@ -39,13 +39,50 @@ STAGE_COMMANDS = {
     "quality_checks": "quality-check",
 }
 
+MINIMUM_STAGE_OUTPUTS = {
+    "data": [
+        "data/data_inventory.json",
+        "data/data_quality_report.json",
+        "data/data_feasibility_report.json",
+        "data/data_writing_context.json",
+        "data/data.tex",
+    ],
+    "methods": [
+        "methods/run_manifest.yaml",
+        "methods/method_writing_context.json",
+        "methods/methods.tex",
+    ],
+}
+
 
 class OrchestratorError(RuntimeError):
     """Raised when the pipeline orchestrator cannot resolve a legal next action."""
 
 
-def _stage_is_current(stage_meta: dict[str, Any]) -> bool:
-    return stage_meta.get("status") in COMPLETE_STATUSES and not stage_meta.get("stale")
+def _stage_declared_outputs_current(project_path: Path, stage: str) -> bool:
+    manifest_path = project_path / stage / "stage_manifest.json"
+    if not manifest_path.exists():
+        return False
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return False
+    output_files = list(manifest.get("output_files") or [])
+    for relative in MINIMUM_STAGE_OUTPUTS.get(stage, []):
+        if relative not in output_files:
+            output_files.append(relative)
+    for relative in output_files:
+        if not (project_path / str(relative)).exists():
+            return False
+    return True
+
+
+def _stage_is_current(project_path: Path, stage: str, stage_meta: dict[str, Any]) -> bool:
+    return (
+        stage_meta.get("status") in COMPLETE_STATUSES
+        and not stage_meta.get("stale")
+        and _stage_declared_outputs_current(project_path, stage)
+    )
 
 
 def _quote(path: Path) -> str:
@@ -99,21 +136,54 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     return None
 
 
-def _next_stage(metadata: dict[str, Any]) -> str | None:
+def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
     stages = metadata.get("stages") or {}
     for stage in STAGE_ORDER:
         if stage == "idea":
             continue
         stage_meta = stages.get(stage) or {}
-        if not _stage_is_current(stage_meta):
+        if not _stage_is_current(project_path, stage, stage_meta):
             return stage
     return None
 
 
+def _data_stage_command(project_path: Path) -> str:
+    checks = [
+        ("data/data_inventory.json", "inventory-data"),
+        ("data/data_quality_report.json", "assess-data-quality"),
+        ("data/data_feasibility_report.json", "assess-data-feasibility"),
+        ("data/data_writing_context.json", "build-data-context"),
+        ("data/data.tex", "write-data"),
+    ]
+    for relative, command in checks:
+        if not (project_path / relative).exists():
+            return command
+    return "write-data"
+
+
+def _methods_stage_command(project_path: Path) -> str:
+    manifest = _read_report(project_path, "methods/run_manifest.yaml")
+    if manifest.get("status") != "success":
+        return "verify-methods"
+    if not (project_path / "methods" / "method_writing_context.json").exists():
+        return "build-method-context"
+    if not (project_path / "methods" / "methods.tex").exists():
+        return "write-methods"
+    return "write-methods"
+
+
+def _stage_command(project_path: Path, stage: str) -> str | None:
+    if stage == "data":
+        return _data_stage_command(project_path)
+    if stage == "methods":
+        return _methods_stage_command(project_path)
+    return STAGE_COMMANDS.get(stage)
+
+
 def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
-    stage = _next_stage(metadata)
+    stage = _next_stage(project_path, metadata)
     failure_action = _gate_failure_action(project_path)
-    if failure_action and (stage is None or stage == "quality_checks"):
+    if failure_action:
         return failure_action
     if stage is None:
         return {
@@ -122,7 +192,7 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
             "cli": None,
             "reason": "All declared stages are current.",
         }
-    command = STAGE_COMMANDS.get(stage)
+    command = _stage_command(project_path, stage)
     if stage == "quality_checks" and not _integrity_is_current(project_path):
         command = "run-integrity-gate"
     if not command:

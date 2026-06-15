@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
-from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
+from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
 from .integrity_gate import IntegrityGateError, run_integrity_gate
@@ -15,7 +15,8 @@ from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pd
 from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
 from .figure_plan import FigurePlanError, plan_figures
-from .methods import MethodsGateError, verify_methods, write_methods
+from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
+from .observations import ObservationError, record_observation
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError
 from .project_scaffold import ProjectAlreadyExistsError, create_project
@@ -123,6 +124,13 @@ def build_parser() -> argparse.ArgumentParser:
     intro = subparsers.add_parser("write-introduction", help="Write a traceable LaTeX Introduction section.")
     intro.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    observation = subparsers.add_parser("record-observation", help="Record visible user/Codex analysis for staged writing context.")
+    observation.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    observation.add_argument("--stage", required=True, help="Stage this observation supports, for example data or methods.")
+    observation.add_argument("--kind", required=True, help="Observation kind, for example agent_analysis, data_summary, or method_rationale.")
+    observation.add_argument("--text", required=True, help="Visible analysis summary to preserve in the local project.")
+    observation.add_argument("--source", default="codex_visible_analysis", help="Observation source label.")
+
     data_inventory = subparsers.add_parser("inventory-data", help="Inventory local data files.")
     data_inventory.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -134,6 +142,12 @@ def build_parser() -> argparse.ArgumentParser:
     data_feasibility = subparsers.add_parser("assess-data-feasibility", help="Assess whether data can support the research plan.")
     data_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     data_feasibility.add_argument("--min-rows", type=int, default=30, help="Minimum tabular row count expected for the planned study.")
+
+    data_context = subparsers.add_parser("build-data-context", help="Build manuscript-facing Data writing context from inventory, gates, and observations.")
+    data_context.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    data_writer = subparsers.add_parser("write-data", help="Write data/data.tex from manuscript-facing Data context.")
+    data_writer.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     method_plan = subparsers.add_parser("collect-method-plan", help="Collect user method intent and synthesize literature-informed method requirements.")
     method_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -157,6 +171,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     methods = subparsers.add_parser("write-methods", help="Write methods.tex after successful method verification.")
     methods.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    method_context = subparsers.add_parser("build-method-context", help="Build manuscript-facing Methods writing context from method plan, code verification, and observations.")
+    method_context.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     inventory = subparsers.add_parser("inventory-results", help="Inventory local result figures and tables.")
     inventory.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -417,6 +434,18 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "record-observation":
+        try:
+            result = record_observation(args.project, stage=args.stage, kind=args.kind, text=args.text, source=args.source)
+        except (ObservationError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "inventory-data":
         try:
             result = inventory_data(args.project)
@@ -456,6 +485,35 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("decision") in {"pass", "conditional_pass"} else 1
+
+    if args.command == "build-data-context":
+        try:
+            context = build_data_writing_context(args.project)
+        except DataGateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps({
+            "status": "written",
+            "project_id": context.get("project_id"),
+            "data_writing_context": "data/data_writing_context.json",
+            "observation_count": context.get("observation_count", 0),
+        }, ensure_ascii=False))
+        return 0
+
+    if args.command == "write-data":
+        try:
+            result = write_data(args.project)
+        except DataGateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
 
     if args.command == "verify-methods":
         try:
@@ -520,6 +578,23 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "build-method-context":
+        try:
+            context = build_method_writing_context(args.project)
+        except MethodsGateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps({
+            "status": "written",
+            "project_id": context.get("project_id"),
+            "method_writing_context": "methods/method_writing_context.json",
+            "observation_count": context.get("observation_count", 0),
+        }, ensure_ascii=False))
         return 0
 
     if args.command == "inventory-results":

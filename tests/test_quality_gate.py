@@ -7,13 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
+from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data, write_data
 from draftpaper_cli.discussion import write_discussion
 from draftpaper_cli.introduction import write_introduction
 from draftpaper_cli.journal_profile import resolve_journal_template
 from draftpaper_cli.latex_assembly import assemble_latex
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import verify_methods, write_methods
+from draftpaper_cli.observations import record_observation
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import update_stage_status
 from draftpaper_cli.references import write_reference_outputs
@@ -59,16 +60,13 @@ def prepared_assembled_project(tmp: str) -> Path:
     resolve_journal_template(project.path, target_journal="APJS", from_html=_write_aas_html(Path(tmp)))
     generate_research_plan(project.path)
     write_introduction(project.path)
-    (project.path / "data" / "data.tex").write_text(
-        "\\section{Data}\nThe study uses locally prepared multimodal survey data.\n",
-        encoding="utf-8",
-    )
     rows = "\n".join(f"{i},{i % 2},0.{i % 10}" for i in range(1, 41))
     (project.path / "data" / "raw" / "sample.csv").write_text("id,target,value\n" + rows + "\n", encoding="utf-8")
     inventory_data(project.path)
     assess_data_quality(project.path, required_columns=["id", "target"])
     assess_data_feasibility(project.path, min_rows=30)
-    update_stage_status(project.path, "data", "draft")
+    record_observation(project.path, stage="data", kind="agent_analysis", text="The data consist of locally prepared multimodal survey observations with target labels and numeric predictors.")
+    write_data(project.path)
     collect_method_plan(project.path, user_method="Use supervised multimodal classification.", primary_metric="f1", minimum_primary_metric=0.7)
     output = project.path / "results" / "tables" / "metrics.csv"
     figure = project.path / "results" / "figures" / "risk_curve.png"
@@ -188,6 +186,27 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertIn("data_context_references_not_cited", codes)
             self.assertIn("methods_context_references_not_cited", codes)
             self.assertEqual(report["bibliography"]["section_context_citations"]["data"]["matched_citation_count"], 0)
+
+    def test_quality_check_fails_data_or_methods_with_filesystem_narrative(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            (project_path / "data" / "data.tex").write_text(
+                "\\section{Data}\nThe study uses data/processed/sample.csv from D:\\\\secret\\\\sample.xlsx.\n",
+                encoding="utf-8",
+            )
+            (project_path / "methods" / "methods.tex").write_text(
+                "\\section{Methods}\nThe recorded command was \\texttt{python code/scripts/run_analysis.py} and output file results/tables/metrics.csv was declared.\n",
+                encoding="utf-8",
+            )
+
+            report = run_quality_check(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertIn("data_contains_filesystem_reference", codes)
+            self.assertIn("methods_contains_execution_or_filesystem_reference", codes)
 
     def test_cli_quality_check_writes_report_and_uses_exit_code_for_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

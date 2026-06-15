@@ -136,6 +136,32 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue((project.path / "results" / "figure_plan.json").exists())
             self.assertTrue(Path(payload["analysis_code_manifest"]).exists())
 
+    def test_generate_analysis_code_prefers_user_named_processed_table(self) -> None:
+        from draftpaper_cli.analysis_code import generate_analysis_code
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Wheat NDVI proxy analysis", field="remote sensing agronomy")
+            (project.path / "research_plan" / "research_plan.md").write_text("# Plan\n\nExploratory wheat NDVI analysis.\n", encoding="utf-8")
+            raw_rows = "\n".join(f"{i},{i % 3}" for i in range(1, 101))
+            processed_rows = "\n".join(f"{i},{0.2 + i / 1000:.3f},{i % 8}" for i in range(1, 41))
+            (project.path / "data" / "raw" / "large_cluster_table.csv").write_text("id,cluster\n" + raw_rows + "\n", encoding="utf-8")
+            (project.path / "data" / "processed" / "wheat_ndvi_yield_proxy.csv").write_text("sample_id,ndvi,yield\n" + processed_rows + "\n", encoding="utf-8")
+            inventory_data(project.path)
+            assess_data_quality(project.path, required_columns=["ndvi", "yield"])
+            assess_data_feasibility(project.path, min_rows=30)
+            collect_method_plan(
+                project.path,
+                user_method="Use data/processed/wheat_ndvi_yield_proxy.csv as the main analysis table for NDVI and yield association.",
+                primary_metric="r2",
+                minimum_primary_metric=0.05,
+            )
+            plan_figures(project.path)
+
+            generate_analysis_code(project.path)
+
+            manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["selected_input_data"], "data/processed/wheat_ndvi_yield_proxy.csv")
+
 
 if __name__ == "__main__":
     unittest.main()

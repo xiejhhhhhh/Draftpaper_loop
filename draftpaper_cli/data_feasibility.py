@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any
 
+from .html_utils import write_html_report
+from .observations import load_observations
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 
@@ -13,6 +16,9 @@ DATA_INVENTORY_OUTPUT = "data/data_inventory.json"
 DATA_QUALITY_OUTPUT = "data/data_quality_report.json"
 DATA_FEASIBILITY_JSON = "data/data_feasibility_report.json"
 DATA_FEASIBILITY_MD = "data/data_feasibility_report.md"
+DATA_WRITING_CONTEXT_JSON = "data/data_writing_context.json"
+DATA_WRITING_CONTEXT_HTML = "data/data_writing_context.html"
+DATA_TEX = "data/data.tex"
 REMOTE_SOURCE_FILES = ["data/remote_sources.json", "data/source_manifest.json"]
 
 DATA_OUTPUTS = [
@@ -20,6 +26,9 @@ DATA_OUTPUTS = [
     DATA_QUALITY_OUTPUT,
     DATA_FEASIBILITY_JSON,
     DATA_FEASIBILITY_MD,
+    DATA_WRITING_CONTEXT_JSON,
+    DATA_WRITING_CONTEXT_HTML,
+    DATA_TEX,
 ]
 
 TABULAR_EXTENSIONS = {".csv", ".tsv"}
@@ -257,6 +266,210 @@ def _render_feasibility_md(report: dict[str, Any]) -> str:
         lines.append(f"- {action}")
     lines.append("")
     return "\n".join(lines)
+
+
+def _safe_latex_text(text: Any) -> str:
+    replacements = {
+        "\\": r"\textbackslash{}",
+        "&": r"\&",
+        "%": r"\%",
+        "$": r"\$",
+        "#": r"\#",
+        "_": r"\_",
+        "{": r"\{",
+        "}": r"\}",
+        "~": r"\textasciitilde{}",
+        "^": r"\textasciicircum{}",
+    }
+    return "".join(replacements.get(char, char) for char in str(text or ""))
+
+
+def _clean_sentence(text: Any) -> str:
+    return re.sub(r"\s+", " ", str(text or "")).strip()
+
+
+def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
+    groups: dict[str, list[str]] = {
+        "remote_sensing_indicators": [],
+        "response_variables": [],
+        "nitrogen_related_proxies": [],
+        "environmental_covariates": [],
+        "identifiers_or_metadata": [],
+    }
+    for item in files:
+        for column in item.get("columns") or []:
+            name = str(column)
+            lowered = name.lower()
+            if any(token in lowered for token in ["ndvi", "evi", "savi", "vegetation", "lai"]):
+                target = "remote_sensing_indicators"
+            elif any(token in lowered for token in ["yield", "biomass", "production", "response", "target"]):
+                target = "response_variables"
+            elif any(token in lowered for token in ["nitrogen", "tnc", "no2", "n2o", "nitrate", "ammonium"]):
+                target = "nitrogen_related_proxies"
+            elif any(token in lowered for token in ["temperature", "precip", "soil", "clay", "sand", "carbon", "ph", "density", "evapotranspiration"]):
+                target = "environmental_covariates"
+            elif any(token in lowered for token in ["id", "source", "sheet", "file", "date", "time", "month", "crop"]):
+                target = "identifiers_or_metadata"
+            else:
+                continue
+            if name not in groups[target]:
+                groups[target].append(name)
+    return {key: values[:12] for key, values in groups.items() if values}
+
+
+def _data_source_summary(inventory: dict[str, Any]) -> str:
+    local_files = inventory.get("files") or []
+    processed = [item for item in local_files if item.get("kind") == "processed"]
+    raw = [item for item in local_files if item.get("kind") == "raw"]
+    remote = inventory.get("remote_sources") or []
+    if remote:
+        descriptions = [_clean_sentence(item.get("description") or item.get("local_summary")) for item in remote]
+        descriptions = [item for item in descriptions if item]
+        if descriptions:
+            return "The data source is represented by remote or server-side resources summarized for local manuscript writing: " + " ".join(descriptions[:2])
+        return "The data source includes remote or server-side resources, with locally available processed artifacts used for manuscript writing."
+    if processed and raw:
+        return "The study uses locally prepared processed tables derived from user-supplied raw research data."
+    if processed:
+        return "The study uses locally supplied processed tables as the accessible evidence base."
+    if raw:
+        return "The study uses locally supplied raw research data that have been inventoried for analysis readiness."
+    return "The current project does not yet contain a clear local or remote data source description."
+
+
+def _data_content_summary(inventory: dict[str, Any], groups: dict[str, list[str]]) -> str:
+    rows = int(inventory.get("total_rows") or 0)
+    readable = [item for item in inventory.get("files") or [] if item.get("readable") is True]
+    parts = []
+    if rows:
+        parts.append(f"The local tabular evidence contains {rows} inventoried rows across {len(readable)} readable table(s).")
+    if groups.get("remote_sensing_indicators"):
+        parts.append("Remote-sensing indicators include " + ", ".join(groups["remote_sensing_indicators"][:5]) + ".")
+    if groups.get("response_variables"):
+        parts.append("The response or outcome variables include " + ", ".join(groups["response_variables"][:5]) + ".")
+    if groups.get("nitrogen_related_proxies"):
+        parts.append("Nitrogen-related proxy variables include " + ", ".join(groups["nitrogen_related_proxies"][:5]) + ".")
+    if groups.get("environmental_covariates"):
+        parts.append("Environmental covariates include " + ", ".join(groups["environmental_covariates"][:6]) + ".")
+    return " ".join(parts) or "The available metadata are insufficient to describe the data content without additional user notes."
+
+
+def _processing_summary(inventory: dict[str, Any], observations: list[dict[str, Any]]) -> str:
+    notes = " ".join(_clean_sentence(item.get("text")) for item in observations if item.get("kind") in {"processing_note", "agent_analysis", "data_summary"})
+    if notes:
+        return notes[:1200]
+    processed_count = sum(1 for item in inventory.get("files") or [] if item.get("kind") == "processed")
+    if processed_count:
+        return "Processed local artifacts are available and should be described as analysis-ready tables rather than as filesystem objects."
+    return "No explicit preprocessing narrative has been recorded; omit detailed processing claims unless the user provides them."
+
+
+def _render_data_context_md(context: dict[str, Any]) -> str:
+    lines = [
+        "# Data Writing Context",
+        "",
+        "## Narrative Summary",
+        "",
+        context.get("narrative_summary", ""),
+        "",
+        "## Source",
+        "",
+        context.get("source_summary", ""),
+        "",
+        "## Content",
+        "",
+        context.get("content_summary", ""),
+        "",
+        "## Processing and Claim Boundary",
+        "",
+        context.get("processing_summary", ""),
+        "",
+        context.get("claim_boundary", ""),
+        "",
+        "## Variable Groups",
+        "",
+    ]
+    for group, values in (context.get("variable_groups") or {}).items():
+        lines.append(f"- {group}: {', '.join(values)}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def build_data_writing_context(project: str | Path) -> dict[str, Any]:
+    """Build a manuscript-facing Data context from inventory, gates, and visible observations."""
+    state = load_project(project)
+    inventory = _load_json(state.path, DATA_INVENTORY_OUTPUT)
+    feasibility = _load_json(state.path, DATA_FEASIBILITY_JSON)
+    observations = load_observations(state.path, stage="data")
+    groups = _variable_groups(list(inventory.get("files") or []))
+    source_summary = _data_source_summary(inventory)
+    content_summary = _data_content_summary(inventory, groups)
+    processing_summary = _processing_summary(inventory, observations)
+    claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
+    if claim_boundary:
+        claim_boundary = "The data support level is bounded as follows: " + claim_boundary + "."
+    else:
+        claim_boundary = "The claim boundary should be kept aligned with the current data feasibility decision."
+    narrative_summary = " ".join([
+        source_summary,
+        content_summary,
+        processing_summary,
+        claim_boundary,
+    ]).strip()
+    context = {
+        "project_id": state.metadata.get("project_id"),
+        "source_summary": source_summary,
+        "content_summary": content_summary,
+        "processing_summary": processing_summary,
+        "claim_boundary": claim_boundary,
+        "variable_groups": groups,
+        "observation_count": len(observations),
+        "observations": observations,
+        "narrative_summary": narrative_summary,
+        "forbidden_in_manuscript": ["local filesystem paths", "raw filenames", "processed filenames", "execution commands"],
+    }
+    _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
+    write_html_report(state.path / DATA_WRITING_CONTEXT_HTML, _render_data_context_md(context), title="Data Writing Context")
+    _set_data_manifest(state.path)
+    return context
+
+
+def _strip_forbidden_paths(text: str) -> str:
+    text = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "local project artifact", text)
+    text = re.sub(r"\b(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/[^\s,.;)]+", "local project artifact", text)
+    text = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b", "local project artifact", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def render_data_tex(context: dict[str, Any]) -> str:
+    source = _strip_forbidden_paths(context.get("source_summary", ""))
+    content = _strip_forbidden_paths(context.get("content_summary", ""))
+    processing = _strip_forbidden_paths(context.get("processing_summary", ""))
+    boundary = _strip_forbidden_paths(context.get("claim_boundary", ""))
+    return (
+        "\\section{Data}\n"
+        f"{_safe_latex_text(source)} {_safe_latex_text(content)}\n\n"
+        f"{_safe_latex_text(processing)} {_safe_latex_text(boundary)}\n"
+    )
+
+
+def write_data(project: str | Path) -> dict[str, Any]:
+    """Write data.tex from the manuscript-facing data context."""
+    state = load_project(project)
+    context_path = state.path / DATA_WRITING_CONTEXT_JSON
+    context = _load_json(state.path, DATA_WRITING_CONTEXT_JSON) if context_path.exists() else build_data_writing_context(state.path)
+    output_path = state.path / DATA_TEX
+    output_path.write_text(render_data_tex(context), encoding="utf-8")
+    update_stage_status(state.path, "data", "draft")
+    _set_data_manifest(state.path)
+    return {
+        "status": "written",
+        "project_path": str(state.path),
+        "data": str(output_path),
+        "data_writing_context": str(state.path / DATA_WRITING_CONTEXT_JSON),
+        "outputs": DATA_OUTPUTS,
+    }
 
 
 def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[str, Any]:

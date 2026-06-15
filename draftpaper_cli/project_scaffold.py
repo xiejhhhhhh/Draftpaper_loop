@@ -28,6 +28,7 @@ PROJECT_DIRECTORIES = [
     "introduction",
     "data/raw",
     "data/processed",
+    "observations",
     "method_plan",
     "figure_plan",
     "methods",

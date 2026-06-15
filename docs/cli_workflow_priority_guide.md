@@ -406,6 +406,8 @@ methods/method_plan.md
 methods/method_requirements.json
 methods/analysis_code_manifest.json
 methods/run_manifest.yaml
+methods/method_writing_context.json
+methods/method_writing_context.html
 methods/methods.tex
 code/stage_manifest.json
 code/scripts/run_analysis.py
@@ -420,9 +422,9 @@ results/figures/<project-specific-figure>.svg
 
 `methods/method_plan.md` records the user's method input from UI/CLI, literature-derived method patterns, inferred method families, data requirements implied by the method, and the expected result validity metric. `methods/method_requirements.json` is the machine-readable contract used by later gates.
 
-`run_manifest.yaml` must record command, input data, output files, metrics, figures generated, tables generated, timestamps, and `status: success`.
+`run_manifest.yaml` must record command, input data, output files, metrics, figures generated, tables generated, timestamps, and `status: success`. This is an audit artifact, not manuscript prose.
 
-If `method_requirements.json` is missing, `method_plan` is stale, or `run_manifest.yaml` is missing/not successful, the workflow must not write final `methods.tex`.
+If `method_requirements.json` is missing, `method_plan` is stale, or `run_manifest.yaml` is missing/not successful, the workflow must not write final `methods.tex`. After verification, Codex should record any visible method/code rationale with `record-observation --stage methods`, then run `build-method-context`. `write-methods` must use `methods/method_writing_context.json` and must not paste local commands, filenames, output file lists, or manifest field dumps into the manuscript.
 
 Implemented Priority 6 CLI commands:
 
@@ -431,6 +433,8 @@ python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\pro
 python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
+python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\my_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
+python -m draftpaper_cli.cli build-method-context --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\my_project
 ```
 
@@ -442,7 +446,7 @@ python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\
 
 `verify-methods` runs the provided command from the project directory and writes `methods/run_manifest.yaml` as JSON-compatible YAML. The manifest records command, return code, input data, declared output files, parsed CSV metrics, generated tables/figures, timestamps, stdout/stderr snippets, and missing outputs.
 
-`write-methods` is blocked unless the method plan is current, data feasibility is `pass` or `conditional_pass`, `methods/run_manifest.yaml` has `status: success`, and every declared output file exists inside the project directory.
+`write-methods` is blocked unless the method plan is current, data feasibility is `pass` or `conditional_pass`, `methods/run_manifest.yaml` has `status: success`, and every declared output file exists inside the project directory. The generated Methods text should describe the scientific workflow: data role, preprocessing or feature construction, statistical/modeling route, validation metric, and claim boundary. It should not expose project paths or implementation commands.
 
 ## Priority 8: Results Manifest and Writer
 
@@ -691,6 +695,9 @@ Implemented Priority 12 CLI commands:
 python -m draftpaper_cli.cli inventory-data --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assess-data-quality --project C:\DraftPaper_CLI\projects\my_project --required-column id --required-column target
 python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI\projects\my_project --min-rows 30
+python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\my_project --stage data --kind agent_analysis --text "Visible Codex data source/content/processing summary..."
+python -m draftpaper_cli.cli build-data-context --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli write-data --project C:\DraftPaper_CLI\projects\my_project
 ```
 
 Outputs:
@@ -700,6 +707,9 @@ data/data_inventory.json
 data/data_quality_report.json
 data/data_feasibility_report.json
 data/data_feasibility_report.md
+data/data_writing_context.json
+data/data_writing_context.html
+data/data.tex
 ```
 
 Decision levels:
@@ -712,6 +722,8 @@ blocked
 ```
 
 `pass` means the current data gate supports the planned claim level. `conditional_pass` means the workflow may continue, but manuscript claims must be lowered to exploratory or pilot strength. `revise_required` means the research question, data, or method route must be revised before Methods. `blocked` means the current data cannot support the stated scientific goal.
+
+`data_inventory.json` is an audit file and may contain local filenames and paths. It should not be used directly as manuscript prose. `build-data-context` converts the inventory, feasibility decision, remote/source manifests, and visible Codex/user observations into a manuscript-facing context describing data source, content, variable groups, processing, and claim boundary. `write-data` writes `data/data.tex` from that context and should not expose local paths, raw filenames, processed filenames, or command details.
 
 `collect-method-plan`, `verify-methods`, and `write-methods` are blocked in practice unless `data/data_feasibility_report.json` has decision `pass` or `conditional_pass`. This prevents the system from producing a formal Methods section after data quality or data sufficiency has already invalidated the scientific objective.
 

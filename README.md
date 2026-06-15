@@ -140,10 +140,15 @@ python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
+python -m draftpaper_cli.cli build-data-context --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli write-data --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli list-zotero-collections
 python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
 python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
+python -m draftpaper_cli.cli build-method-context --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
 ```
@@ -175,7 +180,7 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 
 ## Implementation Status
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
@@ -186,6 +191,8 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 `run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
 
 `diagnose-gate-failures`, `review-draft`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. When integrity or final quality reports failed, `status` and `run-pipeline` automatically recommend `diagnose-gate-failures`.
+
+`record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
 
 ## Paper Fetch Integration
 
@@ -198,6 +205,14 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.8.0 (2026-06-15) -- observation-driven Data and Methods loop
+
+- Added `record-observation` so visible Codex/user analysis summaries can be preserved locally without storing hidden reasoning.
+- Added `build-data-context` and `write-data` so the Data section is written from source/content/processing/claim-boundary context rather than file paths.
+- Added `build-method-context` and upgraded `write-methods` so Methods is written from method rationale, data role, verification summary, and claim boundary rather than commands or manifest dumps.
+- Upgraded `run-pipeline` so multi-step Data and Methods stages are not marked complete until required context and manuscript outputs exist.
+- Added quality-gate lint that fails Data/Methods sections containing local filenames, filesystem paths, execution commands, or manifest-style output text.
 
 ### v0.7.1 (2026-06-15) -- preserved Zotero evidence in literature summaries
 

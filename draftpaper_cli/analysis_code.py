@@ -61,7 +61,7 @@ def _project_relative_path(project_path: Path, relative: str) -> Path:
     return candidate
 
 
-def _select_tabular_input(inventory: dict[str, Any]) -> dict[str, Any]:
+def _select_tabular_input(inventory: dict[str, Any], *, method_text: str = "", required_features: list[str] | None = None) -> dict[str, Any]:
     files = [
         item for item in inventory.get("files") or []
         if str(item.get("suffix") or "").lower() in TABULAR_SUFFIXES and item.get("readable") is not False
@@ -72,7 +72,22 @@ def _select_tabular_input(inventory: dict[str, Any]) -> dict[str, Any]:
             "If the raw data are remote or confidential, provide a processed CSV/TSV under data/processed, "
             "or put supplied figures/tables under results/ and use inventory-results/write-results without code generation."
         )
-    files.sort(key=lambda item: (int(item.get("row_count") or 0), int(item.get("column_count") or 0)), reverse=True)
+    lowered_method = method_text.lower()
+    feature_terms = [str(item).lower() for item in (required_features or [])]
+
+    def score(item: dict[str, Any]) -> tuple[int, int, int, int, int]:
+        path = str(item.get("path") or "")
+        lowered_path = path.lower()
+        name = Path(path).name.lower()
+        columns = " ".join(str(column).lower() for column in item.get("columns") or [])
+        mentioned = int(bool(lowered_path and lowered_path in lowered_method) or bool(name and name in lowered_method))
+        processed = int(str(item.get("kind") or "") == "processed")
+        feature_match = sum(1 for term in feature_terms if term and (term in columns or term.replace("_", " ") in columns))
+        row_count = int(item.get("row_count") or 0)
+        column_count = int(item.get("column_count") or 0)
+        return (mentioned, processed, feature_match, row_count, column_count)
+
+    files.sort(key=score, reverse=True)
     return files[0]
 
 
@@ -488,12 +503,15 @@ def generate_analysis_code(
         raise AnalysisCodeGenerationError(
             "The current figure plan contains no generated_code figures. Use supplied results with inventory-results/write-results, or revise the figure plan."
         )
-    selected_input = _select_tabular_input(inventory)
-
     literature_items = _read_json(state.path / "references" / "literature_items.json", [])
     if not isinstance(literature_items, list):
         raise AnalysisCodeGenerationError("references/literature_items.json must contain a list.")
     method_plan_text = _read_text(state.path / "methods" / "method_plan.md")
+    selected_input = _select_tabular_input(
+        inventory,
+        method_text=" ".join([method_plan_text, str(requirements.get("user_method") or "")]),
+        required_features=list(requirements.get("required_data_features") or []),
+    )
     declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_TABLE_OUTPUTS + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
     method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]

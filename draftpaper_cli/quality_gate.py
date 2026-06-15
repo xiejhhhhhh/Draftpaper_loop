@@ -25,9 +25,11 @@ QUALITY_INPUTS = [
     "data/data_inventory.json",
     "data/data_quality_report.json",
     "data/data_feasibility_report.json",
+    "data/data_writing_context.json",
     "methods/method_plan.md",
     "methods/method_requirements.json",
     "methods/run_manifest.yaml",
+    "methods/method_writing_context.json",
     "results/result_validity_report.json",
     "results/result_manifest.yaml",
     "results/results.tex",
@@ -41,6 +43,11 @@ QUALITY_OUTPUTS = [
 FINAL_INPUT_STAGES = ["references", "journal_profile", "introduction", "data", "method_plan", "methods", "result_validity", "results", "discussion", "latex"]
 RESULT_CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{", re.IGNORECASE)
 CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{([^{}]+)\}", re.IGNORECASE)
+FILESYSTEM_PATTERN = re.compile(
+    r"([A-Za-z]:\\|(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/|\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b)",
+    re.IGNORECASE,
+)
+METHOD_EXECUTION_PATTERN = re.compile(r"(\\texttt\{|recorded command|output files?|run_manifest|code/scripts|python\s+code/)", re.IGNORECASE)
 
 
 @dataclass
@@ -209,6 +216,33 @@ def _check_data_feasibility(project_path: Path, issues: list[QualityIssue]) -> d
         "scientific_goal_supported": report.get("scientific_goal_supported"),
         "supported_claim_level": report.get("supported_claim_level"),
         "blocking_issue_count": len(report.get("blocking_issues") or []),
+    }
+
+
+def _check_manuscript_narrative_hygiene(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    data_tex = _read_text(project_path / "data" / "data.tex")
+    methods_tex = _read_text(project_path / "methods" / "methods.tex")
+    data_matches = FILESYSTEM_PATTERN.findall(data_tex)
+    method_filesystem_matches = FILESYSTEM_PATTERN.findall(methods_tex)
+    method_execution_matches = METHOD_EXECUTION_PATTERN.findall(methods_tex)
+    if data_matches:
+        issues.append(QualityIssue(
+            "error",
+            "data_contains_filesystem_reference",
+            "Data section should describe source, content, variables, processing, and claim boundaries rather than local filenames or paths.",
+            "data/data.tex",
+        ))
+    if method_filesystem_matches or method_execution_matches:
+        issues.append(QualityIssue(
+            "error",
+            "methods_contains_execution_or_filesystem_reference",
+            "Methods section should describe the scientific workflow rather than local commands, paths, filenames, or manifest internals.",
+            "methods/methods.tex",
+        ))
+    return {
+        "data_filesystem_reference_count": len(data_matches),
+        "methods_filesystem_reference_count": len(method_filesystem_matches),
+        "methods_execution_reference_count": len(method_execution_matches),
     }
 
 
@@ -385,6 +419,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     methods_report = _check_methods(state.path, issues)
     result_validity_report = _check_result_validity(state.path, issues)
     results_report = _check_results(state.path, issues)
+    manuscript_hygiene_report = _check_manuscript_narrative_hygiene(state.path, issues)
     bibliography_report = _check_bibliography(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
     pdf_report = _check_pdf(state.path, issues)
@@ -409,6 +444,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "methods": methods_report,
         "result_validity": result_validity_report,
         "results": results_report,
+        "manuscript_hygiene": manuscript_hygiene_report,
         "bibliography": bibliography_report,
         "latex": latex_report,
         "pdf": pdf_report,
