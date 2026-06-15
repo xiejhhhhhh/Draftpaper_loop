@@ -93,17 +93,18 @@ def _artifact_figures(inventory: dict[str, Any]) -> list[dict[str, Any]]:
         path = str(artifact.get("path") or "")
         if not path or not path.lower().startswith("results/figures/"):
             continue
+        normalized_path = path.replace("\\", "/")
         figures.append({
             "id": _safe_id(Path(path).stem, f"provided_figure_{len(figures) + 1}"),
             "title": Path(path).stem.replace("_", " ").title(),
-            "path": path.replace("\\", "/"),
+            "path": normalized_path,
             "generation_mode": "provided_artifact",
             "visualization_type": "provided_figure",
-            "required_inputs": [path.replace("\\", "/")],
+            "required_inputs": [normalized_path],
             "scientific_question": "What result is already supported by the user-provided figure artifact?",
             "caption_draft": f"User-provided result artifact: {Path(path).stem.replace('_', ' ')}.",
             "result_claim_template": (
-                f"The supplied figure {path.replace('\\', '/')} provides direct visual evidence; "
+                f"The supplied figure {normalized_path} provides direct visual evidence; "
                 "the Results text must interpret only what is visible in this artifact."
             ),
         })
