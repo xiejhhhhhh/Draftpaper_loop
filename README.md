@@ -8,7 +8,9 @@
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#license-commercial-use-and-contact)
 
-                                             [中文](README.zh-CN.md) | English
+
+[English](./README.md) | [中文](./README.zh-CN.md)
+</div>
 
 Draftpaper-loop is a local-first research paper loop engine. It is not just a one-shot draft generator and not merely a command-line utility. The CLI is the stable tool surface, while the product concept is a repeatable loop: read project state, retrieve evidence, plan the paper, run methods, validate results, assemble LaTeX, review failures, mark stale stages, and rerun only the necessary upstream work until the manuscript is scientifically auditable.
 
