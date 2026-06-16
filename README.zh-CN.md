@@ -1,4 +1,4 @@
-# Draftpaper-loop
+<div align="center">
 
 [![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#功能概览)
 [![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-模型)
@@ -8,7 +8,13 @@
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#许可证商业使用和联系方式)
 
-中文 | [English](README.md)
+# Draftpaper-loop
+
+**本地优先的科研论文 loop 引擎，用于生成可审计、可追溯的论文初稿。**
+
+[English](./README.md) | [中文](./README.zh-CN.md)
+
+</div>
 
 Draftpaper-loop 是一个本地优先的科研论文 loop 引擎。它不是一次性 draft 生成器，也不仅仅是命令行工具。CLI 是稳定的工具调用面，而产品概念是一个可重复执行的 loop：读取项目状态、检索证据、规划论文、运行方法、验证结果、组装 LaTeX、诊断失败、标记 stale 阶段，并只回退重跑必要的上游工作，直到论文初稿具备可审阅和可追溯性。
 
