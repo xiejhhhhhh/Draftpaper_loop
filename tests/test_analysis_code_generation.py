@@ -86,6 +86,8 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue((project.path / "code" / "tests" / "test_generated_pipeline.py").exists())
             self.assertIn("results/tables/metrics.csv", result["declared_outputs"])
             self.assertIn("results/tables/analysis_summary.csv", result["declared_outputs"])
+            self.assertIn("results/figure_metadata.json", result["declared_outputs"])
+            self.assertIn("results/figure_quality_report.json", result["declared_outputs"])
             self.assertTrue(any(path.startswith("results/figures/") for path in result["declared_outputs"]))
             state = load_project(project.path)
             self.assertEqual(state.metadata["stages"]["code"]["status"], "draft")
@@ -109,6 +111,12 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertIn("row_count", metrics)
             for output in result["declared_outputs"]:
                 self.assertTrue((project.path / output).exists())
+            metadata = json.loads((project.path / "results" / "figure_metadata.json").read_text(encoding="utf-8"))
+            self.assertGreaterEqual(len(metadata["figures"]), 1)
+            self.assertFalse(metadata["figures"][0]["is_placeholder"])
+            self.assertTrue(metadata["figures"][0]["interpretation_summary"])
+            quality = json.loads((project.path / "results" / "figure_quality_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(quality["status"], "passed")
 
     def test_cli_generate_analysis_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -161,6 +169,11 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
 
             manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["selected_input_data"], "data/processed/wheat_ndvi_yield_proxy.csv")
+
+            figure_plan = json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))
+            figure_specs = figure_plan["figures"]
+            self.assertTrue(any(item.get("figure_type") == "scatter_regression" for item in figure_specs))
+            self.assertTrue(all(item.get("no_flowchart_fallback") is True for item in figure_specs if item.get("generation_mode") == "generated_code"))
 
 
 if __name__ == "__main__":

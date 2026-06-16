@@ -22,6 +22,7 @@ ANALYSIS_CODE_INPUTS = [
 
 ANALYSIS_CODE_OUTPUTS = [
     "code/scripts/run_analysis.py",
+    "code/src/scientific_plotting.py",
     "code/src/generated_pipeline.py",
     "code/tests/test_generated_pipeline.py",
     "methods/analysis_code_manifest.json",
@@ -30,6 +31,11 @@ ANALYSIS_CODE_OUTPUTS = [
 BASE_TABLE_OUTPUTS = [
     "results/tables/metrics.csv",
     "results/tables/analysis_summary.csv",
+]
+
+BASE_RESULT_OUTPUTS = BASE_TABLE_OUTPUTS + [
+    "results/figure_metadata.json",
+    "results/figure_quality_report.json",
 ]
 
 TABULAR_SUFFIXES = {".csv", ".tsv"}
@@ -148,6 +154,8 @@ from collections import Counter
 from html import escape
 from pathlib import Path
 from typing import Any
+
+from scientific_plotting import render_scientific_figure, write_figure_metadata_report
 
 
 PIPELINE_MANIFEST: dict[str, Any] = json.loads({manifest_literal!r})
@@ -365,22 +373,10 @@ def _write_metric_summary(path: Path, figure: dict[str, Any], metrics: dict[str,
 
 
 def write_planned_figure(root: Path, figure: dict[str, Any], rows: list[dict[str, str]], metrics: dict[str, float], numeric: list[str], label_column: str | None) -> str | None:
-    if figure.get("generation_mode") != "generated_code":
+    metadata = render_scientific_figure(root, figure, rows, metrics, numeric, label_column)
+    if not metadata:
         return None
-    path = root / str(figure.get("path") or "")
-    columns = _planned_columns(figure, numeric, label_column)
-    kind = str(figure.get("visualization_type") or "").lower()
-    if kind in {{"class_balance"}}:
-        _write_class_balance(path, figure, rows, label_column)
-    elif kind in {{"feature_distribution", "feature_response", "spatial_or_ranked_scatter"}} and len(columns) < 2:
-        _write_feature_distribution(path, figure, rows, columns[0] if columns else (numeric[0] if numeric else None))
-    elif kind in {{"feature_relationship", "feature_response", "spatial_or_ranked_scatter", "correlation_heatmap"}}:
-        _write_feature_relationship(path, figure, rows, columns)
-    elif kind in {{"metric_summary", "performance", "model_performance"}}:
-        _write_metric_summary(path, figure, metrics)
-    else:
-        _write_data_overview(path, figure, rows, numeric, label_column)
-    return str(path)
+    return metadata.get("path")
 
 
 def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
@@ -405,10 +401,21 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
         ("key", "value"),
     )
     outputs = [str(metrics_path), str(summary_path)]
+    figure_metadata = []
+    figure_errors = []
     for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
-        generated = write_planned_figure(root, figure, rows, metrics, numeric, label_column)
-        if generated:
-            outputs.append(generated)
+        try:
+            metadata = render_scientific_figure(root, figure, rows, metrics, numeric, label_column)
+        except Exception as exc:
+            figure_errors.append(str(exc))
+            continue
+        if metadata:
+            figure_metadata.append(metadata)
+            outputs.append(str(root / metadata["path"]))
+    metadata_path, quality_path = write_figure_metadata_report(root, figure_metadata, figure_errors)
+    outputs.extend([metadata_path, quality_path])
+    if figure_errors:
+        raise RuntimeError("Scientific figure rendering failed: " + "; ".join(figure_errors))
     return {{"metrics": metrics, "outputs": outputs}}
 '''
 
@@ -512,7 +519,7 @@ def generate_analysis_code(
         method_text=" ".join([method_plan_text, str(requirements.get("user_method") or "")]),
         required_features=list(requirements.get("required_data_features") or []),
     )
-    declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_TABLE_OUTPUTS + generated_figure_outputs)))
+    declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_RESULT_OUTPUTS + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
     method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]
 
@@ -547,6 +554,8 @@ def generate_analysis_code(
         directory.mkdir(parents=True, exist_ok=True)
 
     (src_dir / "generated_pipeline.py").write_text(_render_generated_pipeline(manifest), encoding="utf-8")
+    plotting_runtime = (Path(__file__).resolve().parent / "plotting" / "scientific_svg.py").read_text(encoding="utf-8")
+    (src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
     (scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
     (tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
     _set_analysis_manifest(state.path, manifest)

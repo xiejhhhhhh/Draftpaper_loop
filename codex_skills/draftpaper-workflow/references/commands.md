@@ -52,13 +52,15 @@ python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI
 python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
 python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
+python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figure_metadata.json --output results/figure_quality_report.json --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli assess-result-validity --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli write-results --project C:\DraftPaper_CLI\projects\my_project
 python -m draftpaper_cli.cli write-discussion --project C:\DraftPaper_CLI\projects\my_project
 ```
+
+`generate-analysis-code` writes a project-local plotting runtime to `code/src/scientific_plotting.py`. Generated empirical figures should produce `results/figure_metadata.json` and `results/figure_quality_report.json`; pass those files to `verify-methods` as declared outputs. `inventory-results` uses the metadata to turn real plot statistics into result claims. If a planned generated figure cannot produce metadata or falls back to a placeholder/workflow diagram, rerun from `plan-figures` or revise the data/method plan instead of writing Results.
 
 ## Assembly and Review
 

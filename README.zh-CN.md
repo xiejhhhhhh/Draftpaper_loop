@@ -1,4 +1,4 @@
-<div align="center">
+# Draftpaper-loop
 
 [![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#功能概览)
 [![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-模型)
@@ -8,13 +8,7 @@
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#许可证商业使用和联系方式)
 
-# Draftpaper-loop
-
-**本地优先的科研论文 loop 引擎，用于生成可审计、可追溯的论文初稿。**
-
-[English](./README.md) | [中文](./README.zh-CN.md)
-
-</div>
+中文 | [English](README.md)
 
 Draftpaper-loop 是一个本地优先的科研论文 loop 引擎。它不是一次性 draft 生成器，也不仅仅是命令行工具。CLI 是稳定的工具调用面，而产品概念是一个可重复执行的 loop：读取项目状态、检索证据、规划论文、运行方法、验证结果、组装 LaTeX、诊断失败、标记 stale 阶段，并只回退重跑必要的上游工作，直到论文初稿具备可审阅和可追溯性。
 
@@ -99,7 +93,7 @@ python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\
 ### 本地一键安装
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .[plotting]; .\.venv\Scripts\draftpaper --help"
 ```
 
 可选安装全文抓取运行时：
@@ -169,6 +163,18 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.9.0 (2026-06-16) -- scientific figure loop and plotting dependencies
+
+- 新增绘图依赖分层：真实科研项目推荐使用 `.[plotting]`，高级图像和报告场景可使用 `.[plotting-full]`。
+- 新增项目本地科研绘图 runtime，`generate-analysis-code` 会把 `scientific_plotting.py` 写入单篇论文项目的 `code/src/`，方便迁移和复现。
+- 升级 `plan-figures`，图像规划不再只是图名和类型，而是包含 `figure_type`、变量、统计变换、后端偏好和 `no_flowchart_fallback` 的 FigureSpec。
+- 升级 `generate-analysis-code`，生成的分析流程会输出真实科研 SVG 图、`results/figure_metadata.json` 和 `results/figure_quality_report.json`。
+- 新增 numpy/stdlib 兼容的科研 SVG 图：散点回归图、直方分布图、类别支持图、相关热图和指标汇总图。
+- 升级 `inventory-results` 和 `write-results`，结果段落优先使用图像 metadata 中的样本量、相关方向、R/R2、类别支持和指标摘要，而不是泛泛复述 artifact。
+- 升级 quality gate，生成式经验结果图必须具备科学 metadata、坐标/尺度证据和解释摘要，workflow 图不能再静默替代 Results 里的科研图。
+- 本地验证：`python -m unittest discover -s tests`
+- 当前测试规模：103 tests
 
 ### v0.8.0 (2026-06-15) -- observation-driven Data and Methods loop
 

@@ -253,6 +253,23 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
         issues.append(QualityIssue("error", "results_contains_citation", "Results section must not contain citation commands.", "results/results.tex"))
 
     manifest = _read_json(project_path / "results" / "result_manifest.yaml")
+    figure_plan = _read_json(project_path / "results" / "figure_plan.json")
+    figure_metadata = _read_json(project_path / "results" / "figure_metadata.json")
+    figure_quality = _read_json(project_path / "results" / "figure_quality_report.json")
+    metadata_by_path = {
+        str(item.get("path") or ""): item
+        for item in figure_metadata.get("figures") or []
+        if item.get("path")
+    }
+    generated_figure_paths = {
+        str(item.get("path") or "")
+        for item in figure_plan.get("figures") or []
+        if item.get("generation_mode") == "generated_code" and item.get("path")
+    }
+    if generated_figure_paths and figure_quality.get("status") == "failed":
+        issues.append(QualityIssue("error", "scientific_figure_quality_failed", "Scientific figure quality report failed.", "results/figure_quality_report.json"))
+    if generated_figure_paths and not metadata_by_path:
+        issues.append(QualityIssue("error", "figure_metadata_missing", "Generated empirical result figures require results/figure_metadata.json.", "results/figure_metadata.json"))
     entries = []
     for item in manifest.get("figures") or []:
         entries.append(("figure", item))
@@ -272,6 +289,12 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
         if path and not path.exists():
             missing.append(relative)
             issues.append(QualityIssue("error", "result_artifact_missing", f"Declared result artifact is missing: {relative}", relative))
+        if kind == "figure" and relative in generated_figure_paths:
+            metadata = metadata_by_path.get(relative)
+            if not metadata:
+                issues.append(QualityIssue("error", "figure_metadata_entry_missing", f"Figure lacks scientific metadata: {relative}", "results/figure_metadata.json"))
+            elif metadata.get("is_placeholder") or not metadata.get("has_axes") or not metadata.get("interpretation_summary"):
+                issues.append(QualityIssue("error", "figure_metadata_not_scientific", f"Figure metadata does not satisfy scientific-result requirements: {relative}", "results/figure_metadata.json"))
         text = " ".join(str(entry.get(key) or "") for key in ("caption_draft", "result_claim"))
         if RESULT_CITATION_PATTERN.search(text):
             issues.append(QualityIssue("error", "result_manifest_contains_citation", "Results manifest contains a citation command.", "results/result_manifest.yaml"))
@@ -280,6 +303,8 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
         "missing_artifacts": missing,
         "citation_command_count": citation_count,
         "path_escape_count": len(escaping),
+        "figure_metadata_count": len(metadata_by_path),
+        "figure_quality_status": figure_quality.get("status"),
     }
 
 

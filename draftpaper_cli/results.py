@@ -71,15 +71,28 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
     analysis_manifest = _read_json(project_path / "methods" / "analysis_code_manifest.json")
     run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
     figure_plan = _read_json(project_path / "results" / "figure_plan.json")
+    figure_metadata = _read_json(project_path / "results" / "figure_metadata.json")
+    metadata_by_path = {
+        str(item.get("path") or ""): item
+        for item in figure_metadata.get("figures") or []
+        if item.get("path")
+    }
     context: dict[str, dict[str, str]] = {}
     for figure in figure_plan.get("figures") or []:
         path = Path(str(figure.get("path") or ""))
         if not path.name:
             continue
+        metadata = metadata_by_path.get(path.as_posix()) or metadata_by_path.get(str(figure.get("path") or ""))
+        interpretation = str((metadata or {}).get("interpretation_summary") or "")
+        n_value = (metadata or {}).get("n")
+        caption = str(figure.get("caption_draft") or figure.get("title") or path.stem.replace("_", " "))
+        if n_value:
+            caption = f"{caption} The plotted evidence uses n={n_value} usable observations."
         context[path.name] = {
-            "caption": str(figure.get("caption_draft") or figure.get("title") or path.stem.replace("_", " ")),
+            "caption": caption,
             "claim": str(
-                figure.get("result_claim_template")
+                interpretation
+                or figure.get("result_claim_template")
                 or figure.get("scientific_question")
                 or "This result artifact should be interpreted according to the project-specific figure plan."
             ),
@@ -240,10 +253,9 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
     for index, (kind, entry) in enumerate(entries, start=1):
         title = _safe_latex_text(str(entry.get("caption_draft") or f"Result {index}"))
         claim = _safe_latex_text(str(entry.get("result_claim") or "This artifact supports one result from the verified workflow."))
-        path = _safe_latex_text(str(entry.get("path")))
         lines.extend([
             f"\\subsection{{Result {index}: {title}}}",
-            f"{claim} The interpretation is limited to the local artifact at \\texttt{{{path}}}, and the claim should be revised if that artifact changes.",
+            f"{claim} The interpretation is limited to the verified result artifact registered in the local manifest and should be revised if that artifact changes.",
             "",
             _render_figure(entry) if kind == "figure" else _render_table(entry),
             "",

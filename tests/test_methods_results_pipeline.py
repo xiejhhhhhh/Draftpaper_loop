@@ -36,8 +36,9 @@ class MethodsResultsPipelineTests(unittest.TestCase):
             self.assertEqual(inventory["table_count"], 2)
             manifest = json.loads((project.path / "results" / "result_manifest.yaml").read_text(encoding="utf-8"))
             figure_claims = " ".join(entry["result_claim"] for entry in manifest["figures"])
-            self.assertIn("classification", figure_claims.lower())
-            self.assertIn("verified metric", figure_claims.lower())
+            self.assertIn("observed classes", figure_claims.lower())
+            self.assertIn("observ", figure_claims.lower())
+            self.assertTrue("r=" in figure_claims or "support ratio" in figure_claims or "metric summary" in figure_claims.lower())
 
             state_after_inventory = load_project(project.path)
             self.assertEqual(state_after_inventory.metadata["stages"]["results"]["status"], "draft")
@@ -48,6 +49,7 @@ class MethodsResultsPipelineTests(unittest.TestCase):
             results_tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
             self.assertIn("\\includegraphics", results_tex)
             self.assertIn("figure", results_tex.lower())
+            self.assertIn("usable observations", results_tex)
             self.assertNotIn("\\cite", results_tex)
 
 

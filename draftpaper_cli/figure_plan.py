@@ -61,6 +61,23 @@ def _numeric_columns(inventory: dict[str, Any]) -> list[str]:
     return columns[:8]
 
 
+def _column_lookup(inventory: dict[str, Any]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for item in inventory.get("files") or []:
+        for column in item.get("columns") or []:
+            text = str(column)
+            lookup[text.lower()] = text
+    return lookup
+
+
+def _match_column(lookup: dict[str, str], tokens: list[str], fallback: str | None = None) -> str | None:
+    for key, original in lookup.items():
+        normalized = key.replace("_", " ").replace("-", " ")
+        if any(token in normalized for token in tokens):
+            return original
+    return fallback
+
+
 def _label_columns(inventory: dict[str, Any]) -> list[str]:
     labels: list[str] = []
     for item in inventory.get("files") or []:
@@ -129,6 +146,7 @@ def _planned_figures(
     numeric = _numeric_columns(inventory)
     labels = _label_columns(inventory)
     selected_data = _selected_data(inventory)
+    lookup = _column_lookup(inventory)
     figures = _artifact_figures(inventory)
     generated_index = 1
 
@@ -139,6 +157,10 @@ def _planned_figures(
         question: str,
         claim: str,
         required_columns: list[str] | None = None,
+        x: str | None = None,
+        y: str | None = None,
+        group: str | None = None,
+        statistical_transform: list[str] | None = None,
     ) -> None:
         nonlocal generated_index
         figure_id = _safe_id(title, f"figure_{generated_index}")
@@ -148,29 +170,64 @@ def _planned_figures(
             "title": title,
             "path": f"results/figures/{figure_id}.svg",
             "generation_mode": "generated_code",
+            "figure_type": visualization_type,
             "visualization_type": visualization_type,
             "required_inputs": [selected_data],
             "required_columns": required_columns or [],
+            "x": x,
+            "y": y,
+            "group": group,
+            "statistical_transform": statistical_transform or [],
+            "backend_preference": ["matplotlib_scienceplots", "svg_numpy"],
+            "no_flowchart_fallback": True,
             "scientific_question": question,
             "caption_draft": f"{title}.",
             "result_claim_template": claim,
         })
 
     if any(term in blob for term in ["ndvi", "climate", "suitability", "zoning", "wheat", "yield"]):
+        ndvi_col = _match_column(lookup, ["ndvi", "vegetation"], numeric[0] if numeric else None)
+        yield_col = _match_column(lookup, ["yield", "production", "potential"], numeric[1] if len(numeric) > 1 else None)
+        climate_col = _match_column(lookup, ["temp", "precip", "climate", "rain"], numeric[2] if len(numeric) > 2 else None)
         generated(
-            title="Climate suitability zoning summary",
-            visualization_type="spatial_or_ranked_scatter",
-            question="How does the predicted suitability or production potential vary across the study units?",
-            claim="The zoning figure shows the spatial or ranked distribution of the estimated suitability classes and highlights the areas supporting the main production-potential conclusion.",
-            required_columns=numeric[:3],
+            title="NDVI and production-potential relationship",
+            visualization_type="scatter_regression",
+            question="How is the vegetation index associated with the production-potential or yield proxy across the study units?",
+            claim="The relationship figure quantifies the observed association between the vegetation indicator and the production-potential outcome, supporting the direction and strength of the main result.",
+            required_columns=[column for column in [ndvi_col, yield_col] if column],
+            x=ndvi_col,
+            y=yield_col,
+            statistical_transform=["pearson_r", "linear_fit", "r2"],
         )
         generated(
             title="Environmental driver response",
-            visualization_type="feature_response",
+            visualization_type="scatter_regression",
             question="Which environmental gradient most strongly explains the suitability or production-potential pattern?",
             claim="The response figure links the leading environmental predictor to the modeled suitability outcome, supporting the interpretation of dominant climatic constraints.",
-            required_columns=numeric[:2],
+            required_columns=[column for column in [climate_col, yield_col or ndvi_col] if column],
+            x=climate_col,
+            y=yield_col or ndvi_col,
+            statistical_transform=["pearson_r", "linear_fit", "r2"],
         )
+        if len(numeric) >= 3:
+            generated(
+                title="Predictor correlation structure",
+                visualization_type="correlation_heatmap",
+                question="Are the main predictor variables redundant or complementary before model interpretation?",
+                claim="The correlation heatmap reports the dependence structure among the main predictors and helps constrain interpretation of variable effects.",
+                required_columns=numeric[:6],
+                statistical_transform=["pearson_correlation_matrix"],
+            )
+        elif numeric:
+            generated(
+                title="Primary variable distribution",
+                visualization_type="histogram",
+                question="What is the empirical distribution of the main measured variable?",
+                claim="The distribution figure shows the support and range of the primary variable used in the downstream analysis.",
+                required_columns=numeric[:1],
+                x=numeric[0],
+                statistical_transform=["mean", "range", "histogram"],
+            )
     elif any(term in blob for term in ["classification", "classifier", "cnn", "transformer", "tcn", "multimodal", "random forest", "xgboost"]):
         generated(
             title="Class distribution and sample support",
@@ -178,13 +235,19 @@ def _planned_figures(
             question="Are the available labeled samples sufficient and balanced enough to support the classification task?",
             claim="The class-support figure reports the observed sample distribution for the classification task and identifies whether result interpretation should be limited by class imbalance.",
             required_columns=labels[:1],
+            group=labels[0] if labels else None,
+            statistical_transform=["class_counts", "imbalance_ratio"],
         )
         generated(
             title="Feature space structure",
-            visualization_type="feature_relationship",
+            visualization_type="scatter_regression",
             question="Do the available features show separable structure relevant to the planned classification method?",
             claim="The feature-structure figure visualizes the leading numeric feature relationships used by the method and supports the interpretation of model-ready signal in the data.",
             required_columns=numeric[:2] + labels[:1],
+            x=numeric[0] if numeric else None,
+            y=numeric[1] if len(numeric) > 1 else None,
+            group=labels[0] if labels else None,
+            statistical_transform=["pearson_r", "linear_fit", "r2"],
         )
         generated(
             title="Verified method performance",
@@ -192,22 +255,29 @@ def _planned_figures(
             question="Does the verified local method run satisfy the expected performance threshold?",
             claim="The performance figure summarizes the verified metric outputs and connects the observed result to the configured result-validity threshold.",
             required_columns=[],
+            statistical_transform=["metric_summary"],
         )
     else:
         generated(
             title="Data evidence overview",
-            visualization_type="data_overview",
+            visualization_type="histogram" if numeric else "class_balance",
             question="What local or processed data evidence is available for the planned study?",
             claim="The data-evidence overview summarizes the available observations, variables, and local artifacts that bound the strength of downstream claims.",
             required_columns=numeric[:2] + labels[:1],
+            x=numeric[0] if numeric else None,
+            group=labels[0] if labels else None,
+            statistical_transform=["distribution_summary"],
         )
         if len(numeric) >= 2:
             generated(
                 title="Primary feature relationship",
-                visualization_type="feature_relationship",
+                visualization_type="scatter_regression",
                 question="What relationship among the main measured variables is visible before formal model interpretation?",
                 claim="The primary feature relationship figure shows whether the available data contain visible structure relevant to the research question.",
                 required_columns=numeric[:2],
+                x=numeric[0],
+                y=numeric[1],
+                statistical_transform=["pearson_r", "linear_fit", "r2"],
             )
 
     if literature_items and not figures:
@@ -242,7 +312,10 @@ def _render_plan_html_markdown(plan: dict[str, Any]) -> str:
             "",
             f"- Path: `{item.get('path')}`",
             f"- Mode: `{item.get('generation_mode')}`",
-            f"- Visualization type: `{item.get('visualization_type')}`",
+            f"- Figure type: `{item.get('figure_type') or item.get('visualization_type')}`",
+            f"- Variables: x=`{item.get('x') or ''}`, y=`{item.get('y') or ''}`, group=`{item.get('group') or ''}`",
+            f"- Statistical transforms: `{', '.join(item.get('statistical_transform') or [])}`",
+            f"- Backend preference: `{', '.join(item.get('backend_preference') or [])}`",
             f"- Scientific question: {item.get('scientific_question')}",
             f"- Claim boundary: {item.get('result_claim_template')}",
             "",

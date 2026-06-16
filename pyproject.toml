@@ -10,6 +10,29 @@ authors = [
 ]
 keywords = ["research", "latex", "paper-writing", "cli", "codex-skills"]
 
+[project.optional-dependencies]
+plotting = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "SciencePlots",
+  "scipy",
+  "seaborn",
+  "scikit-learn",
+]
+plotting-full = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "SciencePlots",
+  "scipy",
+  "seaborn",
+  "scikit-learn",
+  "marsilea",
+  "reportlab",
+  "scikit-plot",
+]
+
 [project.scripts]
 draftpaper = "draftpaper_cli.cli:main"
 

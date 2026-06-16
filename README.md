@@ -1,4 +1,4 @@
-<div align="center">
+# Draftpaper-loop
 
 [![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#what-it-does)
 [![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-model)
@@ -8,13 +8,7 @@
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#license-commercial-use-and-contact)
 
-# Draftpaper-loop
-
-**A local-first research paper loop engine for auditable manuscript generation.**
-
-[English](./README.md) | [中文](./README.zh-CN.md)
-
-</div>
+[中文](README.zh-CN.md) | English
 
 Draftpaper-loop is a local-first research paper loop engine. It is not just a one-shot draft generator and not merely a command-line utility. The CLI is the stable tool surface, while the product concept is a repeatable loop: read project state, retrieve evidence, plan the paper, run methods, validate results, assemble LaTeX, review failures, mark stale stages, and rerun only the necessary upstream work until the manuscript is scientifically auditable.
 
@@ -112,7 +106,7 @@ python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\
 Run this from the directory where you want to place the repository. The command clones the repository, creates a local virtual environment, installs the Draftpaper-loop CLI surface, and prints the CLI help. The paper-fetch runtime is vendored in `third_party/paper-fetch-skill`; install it separately only when full-text fetching is needed.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .; .\.venv\Scripts\draftpaper --help"
+powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .[plotting]; .\.venv\Scripts\draftpaper --help"
 ```
 
 Optional full-text fetch runtime:
@@ -141,7 +135,7 @@ For a quick local smoke test without live literature search, create and validate
 ### Editable Install
 
 ```powershell
-python -m pip install -e .
+python -m pip install -e .[plotting]
 python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
@@ -164,6 +158,8 @@ Run tests:
 ```powershell
 python -m unittest discover -s tests
 ```
+
+For lightweight CI or metadata-only testing, `python -m pip install -e .` still installs the minimal CLI. Real paper projects should use `.[plotting]` so Matplotlib, SciencePlots, pandas, scipy, seaborn, and scikit-learn are available for publication-grade figure generation. `.[plotting-full]` additionally installs Marsilea, reportlab, and scikit-plot for complex figure layouts and optional reporting workflows.
 
 ### Zotero Collection Import Through Codex
 
@@ -211,6 +207,18 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.9.0 (2026-06-16) -- scientific figure loop and plotting dependencies
+
+- Added plotting dependency extras: `.[plotting]` for the recommended research environment and `.[plotting-full]` for advanced figure/report backends.
+- Added a project-local scientific plotting runtime copied into generated projects under `code/src/scientific_plotting.py`, improving portability across machines.
+- Upgraded `plan-figures` from simple visualization labels to figure specifications with `figure_type`, variables, statistical transforms, backend preferences, and `no_flowchart_fallback`.
+- Upgraded `generate-analysis-code` so generated pipelines produce empirical SVG figures, `results/figure_metadata.json`, and `results/figure_quality_report.json`.
+- Added numpy/stdlib-compatible scientific SVG plots for scatter-regression, histogram, class-support, correlation heatmap, and metric-summary outputs.
+- Upgraded Results inventory/writing so result claims use figure metadata such as sample size, association direction, R/R2, class support, and metric summaries instead of generic artifact text.
+- Upgraded quality checks so generated empirical figures must have scientific metadata, axes/scale evidence, and interpretation summaries; workflow diagrams can no longer silently replace Results figures.
+- Local verification: `python -m unittest discover -s tests`
+- Current suite: 103 tests
 
 ### v0.8.0 (2026-06-15) -- observation-driven Data and Methods loop
 
