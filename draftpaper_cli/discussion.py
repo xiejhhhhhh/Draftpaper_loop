@@ -111,6 +111,31 @@ def _evidence(row: dict[str, str]) -> str:
     return _compact(row.get("evidence_summary", ""))
 
 
+def _manuscript_context_text(text: str) -> str:
+    cleaned = str(text or "")
+    replacements = {
+        "an auditable Draftpaper-loop workflow": "a reproducible empirical design",
+        "auditable Draftpaper-loop workflow": "reproducible empirical design",
+        "Draftpaper-loop workflow": "reproducible empirical design",
+        "Draftpaper-loop": "the drafting tool",
+        "publication-ready PNG figure generation": "scientific figure production",
+        "figure-level metadata": "figure interpretation records",
+        "data inventory": "data characterization",
+        "method verification": "method evaluation",
+        "manuscript writing": "manuscript interpretation",
+        "method verification manifest": "method outputs",
+        "Results manifest": "result figures and tables",
+        "citation-evidence table": "citation evidence",
+        "project artifacts": "empirical evidence",
+        "result artifacts": "result figures and tables",
+        "result files": "result figures and tables",
+        "generated project outputs": "generated empirical outputs",
+    }
+    for old, new in replacements.items():
+        cleaned = cleaned.replace(old, new)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def _result_signal(results_text: str) -> str:
     subsection_match = re.search(r"\\subsection\{([^{}]+)\}", results_text)
     if subsection_match:
@@ -124,14 +149,14 @@ def _result_signal(results_text: str) -> str:
 def _expected_contribution(plan_text: str) -> str:
     match = re.search(r"## Expected Contribution\s+(.*?)(?:\n## |\Z)", plan_text, flags=re.S)
     if match:
-        return _compact(match.group(1), 360)
+        return _compact(_manuscript_context_text(match.group(1)), 360)
     return "the traceable connection between the research gap, local evidence, verified methods, and result interpretation"
 
 
 def _method_route(plan_text: str) -> str:
     match = re.search(r"## Method Route\s+(.*?)(?:\n## |\Z)", plan_text, flags=re.S)
     if match:
-        return _compact(match.group(1), 360)
+        return _compact(_manuscript_context_text(match.group(1)), 360)
     return "the planned method route"
 
 
@@ -156,13 +181,13 @@ def render_discussion_tex(
     paragraphs = [
         "\\section{Discussion}",
         (
-            f"The findings should be interpreted as evidence for a reproducible workflow around {idea} rather than as an isolated modelling result. "
+            f"The findings should be interpreted as evidence for a reproducible empirical design for {idea} rather than as an isolated modelling result. "
             f"In {field}, the literature basis identified a concrete gap: {_evidence(gap)} {_cite(gap)} The local results, especially {result_signal}, "
-            f"therefore matter because they connect the planned research question to artifacts produced inside the project rather than to unsupported narrative claims."
+            f"therefore matter because they connect the planned research question to evidence generated from the current analysis rather than to unsupported narrative claims."
         ),
         (
             f"The main contribution is consistent with the research plan: {contribution} This contribution extends the Introduction rather than repeating it, "
-            f"because the Discussion can now relate the retrieved literature to what the result files actually show. The Introduction used {intro_citation_count} "
+            f"because the Discussion can now relate the retrieved literature to what the result figures and tables actually show. The Introduction used {intro_citation_count} "
             f"citation-backed statements to establish the study frame, and the present section uses those same evidence records to explain why the results are meaningful."
         ),
         (
@@ -172,15 +197,15 @@ def render_discussion_tex(
         ),
         (
             f"\\subsection{{Limitations and Future Work}}\n"
-            f"The principal limitation is that the present Discussion remains constrained by the available project artifacts. If the local results are preliminary, sparse, "
+            f"The principal limitation is that the present Discussion remains constrained by the available empirical evidence. If the local results are preliminary, sparse, "
             f"or generated from a narrow validation setting, the manuscript should state that limitation directly and avoid converting an observed pattern into a general conclusion. "
-            f"The method route also requires continued checking: {method_route} Future revisions should update this section whenever the Results manifest, method verification manifest, "
-            f"or citation-evidence table changes, because those files define the defensible boundary of the paper."
+            f"The method route also requires continued checking: {method_route} Future revisions should update this section whenever the result figures and tables, method outputs, "
+            f"or citation evidence changes, because those sources define the defensible boundary of the paper."
         ),
         (
             f"Overall, the study is best presented as a literature-informed and locally reproducible answer to the gap identified above. Background evidence shows why the topic is relevant "
-            f"{_cite(background)}, while the result artifacts determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
-            f"paper's evidence trail and avoids adding claims that are not supported by either the retrieved literature or the generated project outputs."
+            f"{_cite(background)}, while the result figures and tables determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
+            f"paper's evidence trail and avoids adding claims that are not supported by either the retrieved literature or the generated empirical outputs."
         ),
     ]
     return "\n\n".join(_paragraph(paragraph) if not paragraph.startswith("\\section") else paragraph for paragraph in paragraphs) + "\n"

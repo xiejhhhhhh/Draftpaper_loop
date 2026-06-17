@@ -64,9 +64,11 @@ The loop is designed around five engineering components:
 - Project-specific figure planning before analysis-code generation.
 - Methods hard gate requiring successful local code execution.
 - Result validity gate before Results writing.
-- Results no-citation enforcement.
+- Results no-citation enforcement with explicit `Figure~\ref{...}` and `Table~\ref{...}` references in result prose.
 - LaTeX assembly with optional local PDF compilation.
+- Default acknowledgments noting Draftpaper-loop assistance and linking to the project repository.
 - Independent integrity gate for BibTeX existence, citation evidence, and result artifact binding.
+- Manuscript writing-quality gates for section length, paragraph structure, citation placement, Methods formulas, Results figure count, and non-bulleted natural prose.
 - Review-revise-re-review loop with gate-failure routing and commitment ledger.
 - Codex skill wrapper that remains only a calling layer.
 
@@ -196,6 +198,8 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 
 `plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, and any supplied local result artifacts, then writes `results/figure_plan.json` and `results/figure_plan.html`. This is where the loop decides which figures the current paper actually needs. `generate-analysis-code` then reads that figure plan and writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`; it does not emit a fixed set of default workflow diagrams. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output exists.
 
+`write-results` now writes result prose that explicitly points readers to the supporting figures and tables through LaTeX labels such as `Figure~\ref{...}` and `Table~\ref{...}`. Internal loop vocabulary, local-path safeguards, gate names, and project-management wording are kept out of the manuscript body and reserved for logs, reports, or acknowledgments. `assemble-latex` inserts a default acknowledgment before the bibliography noting that Draftpaper-loop assisted staged literature organization, analysis traceability, figure inventory, and manuscript drafting.
+
 `run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
 
 `diagnose-gate-failures`, `review-draft`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. When integrity or final quality reports failed, `status` and `run-pipeline` automatically recommend `diagnose-gate-failures`.
@@ -213,6 +217,17 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.10.0 (2026-06-18) -- manuscript-quality gates and clean Results/acknowledgment writing
+
+- Added manuscript writing-quality checks for minimum section length, substantive paragraph counts, non-bulleted natural prose, arbitrary bold avoidance, Introduction/Discussion citation presence, Methods formula presence, and Results figure-count requirements.
+- Upgraded `write-results` so result paragraphs cite their supporting figures and tables with LaTeX labels, for example `Figure~\ref{...}` and `Table~\ref{...}`.
+- Cleaned manuscript-facing Results and Discussion prose so internal loop terms, gate names, local-file safeguards, manifest references, and Draftpaper-loop implementation wording are not written into the scientific body text.
+- Added default LaTeX acknowledgments that disclose Draftpaper-loop assistance and include the project link `https://github.com/xiejhhhhhh/Draftpaper_loop`.
+- Strengthened Methods outputs with formula manifests and `methods/method_formulas.tex`, then connected quality checks so Methods drafts cannot silently omit mathematical expressions.
+- Expanded scientific-figure verification so generated figures must provide PNG/publication metadata, axis labels, text elements, statistics, interpretation summaries, and publication-ready backend evidence.
+- Local verification: `python -m unittest discover -s tests`
+- Current suite: 111 tests
 
 ### v0.9.0 (2026-06-16) -- scientific figure loop and plotting dependencies
 

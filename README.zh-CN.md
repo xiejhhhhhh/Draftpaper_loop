@@ -57,9 +57,11 @@ Draftpaper-loop 的外层逻辑是：
 - `generate-analysis-code` 按 `results/figure_plan.json` 生成分析代码，不再固定输出通用流程图。
 - Methods hard gate，要求本地方法代码成功运行。
 - Result validity gate，结果不支撑结论时回退 data/method/research plan。
-- Results 禁止文献引用，且必须绑定真实图表或表格。
+- Results 禁止文献引用，且必须绑定真实图表或表格；结果正文会显式引用 `Figure~\ref{...}` 和 `Table~\ref{...}`。
 - LaTeX 组装和可选本地 PDF 编译。
+- 默认在致谢中说明本研究使用 Draftpaper-loop 辅助生成，并附项目仓库链接。
 - 独立 integrity gate 和 review-revise-re-review 闭环。
+- 论文写作质量门会检查章节篇幅、自然段结构、引用位置、Methods 公式、Results 图表数量以及是否使用自然正文而非列表式文本。
 - Codex skill wrapper 仅作为调用层，核心能力仍是 Python package + CLI + 本地项目结构。
 
 ## 项目结构
@@ -162,6 +164,8 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 
 `record-observation` 用于把 Codex 已经展示给用户的阶段性分析摘要保存到 `observations/observations.jsonl`，不会保存隐藏推理链。`build-data-context` 和 `build-method-context` 会把这些 observation、数据清单、可行性门、方法计划和验证结果合成为面向论文写作的 context。`write-data` 和 `write-methods` 只根据这些 context 写作，因此 Data 和 Methods 会描述数据来源、数据内容、变量组、处理流程、方法设计、验证和 claim boundary，而不是把本地文件名、路径、命令或 manifest 字段写进论文。
 
+`write-results` 现在会在结果正文中通过 LaTeX 标签显式指向对应图表，例如 `Figure~\ref{...}` 和 `Table~\ref{...}`。内部 loop 术语、本地路径约束、gate 名称、manifest 信息和项目管理式措辞不会写入论文正文，而是保留在日志、报告或致谢中。`assemble-latex` 会在参考文献之前默认加入致谢，说明 Draftpaper-loop 参与了分阶段文献组织、分析可追溯性、图表清单和论文初稿生成。
+
 ## Paper Fetch 集成
 
 本仓库将 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。adapter 会优先使用 `PATH` 中的 `paper-fetch` 命令；如果不可用，则可使用 vendored runtime source。
@@ -169,6 +173,17 @@ python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\proje
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.10.0 (2026-06-18) -- manuscript-quality gates and clean Results/acknowledgment writing
+
+- 新增论文写作质量门：检查章节最低篇幅、实质性自然段数量、禁止列表式正文、避免随意加粗、Introduction/Discussion 引用存在性、Methods 公式存在性，以及 Results 主图数量要求。
+- 升级 `write-results`，结果段落会用 LaTeX 标签引用对应图表，例如 `Figure~\ref{...}` 和 `Table~\ref{...}`。
+- 清理 Results 和 Discussion 的论文正文表达，避免把内部 loop 术语、gate 名称、本地文件保护规则、manifest 引用和 Draftpaper-loop 实现说明写进科学正文。
+- LaTeX 组装默认加入致谢，说明本研究使用 Draftpaper-loop 辅助完成分阶段文献组织、分析可追溯性、图表清单和论文初稿生成，并附项目链接 `https://github.com/xiejhhhhhh/Draftpaper_loop`。
+- 强化 Methods 输出，新增公式清单和 `methods/method_formulas.tex`，并接入 quality gate，防止 Methods 初稿缺少数学表达。
+- 强化科研图验证，生成图必须提供 PNG/出版级 metadata、坐标轴标签、文字元素、统计量、解释摘要和 publication-ready 后端证据。
+- 本地验证：`python -m unittest discover -s tests`
+- 当前测试规模：111 tests
 
 ### v0.9.0 (2026-06-16) -- scientific figure loop and plotting dependencies
 

@@ -9,6 +9,7 @@ from typing import Any
 
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status, validate_project
+from .writing_quality import evaluate_section_quality
 
 
 QUALITY_INPUTS = [
@@ -293,7 +294,17 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
             metadata = metadata_by_path.get(relative)
             if not metadata:
                 issues.append(QualityIssue("error", "figure_metadata_entry_missing", f"Figure lacks scientific metadata: {relative}", "results/figure_metadata.json"))
-            elif metadata.get("is_placeholder") or not metadata.get("has_axes") or not metadata.get("interpretation_summary"):
+            elif (
+                metadata.get("is_placeholder")
+                or metadata.get("file_format") != "png"
+                or not metadata.get("has_axes")
+                or not metadata.get("axis_labels")
+                or not metadata.get("text_elements")
+                or not metadata.get("figure_size_inches")
+                or not metadata.get("publication_ready")
+                or not metadata.get("statistics")
+                or not metadata.get("interpretation_summary")
+            ):
                 issues.append(QualityIssue("error", "figure_metadata_not_scientific", f"Figure metadata does not satisfy scientific-result requirements: {relative}", "results/figure_metadata.json"))
         text = " ".join(str(entry.get(key) or "") for key in ("caption_draft", "result_claim"))
         if RESULT_CITATION_PATTERN.search(text):
@@ -302,10 +313,38 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
         "artifact_count": len(entries),
         "missing_artifacts": missing,
         "citation_command_count": citation_count,
+        "subsection_count": results_tex.count("\\subsection"),
         "path_escape_count": len(escaping),
         "figure_metadata_count": len(metadata_by_path),
         "figure_quality_status": figure_quality.get("status"),
     }
+
+
+def _check_manuscript_writing_quality(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    section_files = {
+        "introduction": project_path / "introduction" / "introduction.tex",
+        "data": project_path / "data" / "data.tex",
+        "methods": project_path / "methods" / "methods.tex",
+        "results": project_path / "results" / "results.tex",
+        "discussion": project_path / "discussion" / "discussion.tex",
+    }
+    manifest = _read_json(project_path / "results" / "result_manifest.yaml")
+    figure_count = len(manifest.get("figures") or [])
+    report: dict[str, Any] = {}
+    for section, path in section_files.items():
+        tex = _read_text(path)
+        section_issues = evaluate_section_quality(
+            section,
+            tex,
+            figure_count=figure_count if section == "results" else None,
+        )
+        report[section] = {
+            "issue_count": len(section_issues),
+            "issue_codes": [issue.code for issue in section_issues],
+        }
+        for issue in section_issues:
+            issues.append(QualityIssue(issue.severity, issue.code, issue.message, str(path.relative_to(project_path))))
+    return report
 
 
 def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
@@ -445,6 +484,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     result_validity_report = _check_result_validity(state.path, issues)
     results_report = _check_results(state.path, issues)
     manuscript_hygiene_report = _check_manuscript_narrative_hygiene(state.path, issues)
+    writing_quality_report = _check_manuscript_writing_quality(state.path, issues)
     bibliography_report = _check_bibliography(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
     pdf_report = _check_pdf(state.path, issues)
@@ -470,6 +510,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "result_validity": result_validity_report,
         "results": results_report,
         "manuscript_hygiene": manuscript_hygiene_report,
+        "writing_quality": writing_quality_report,
         "bibliography": bibliography_report,
         "latex": latex_report,
         "pdf": pdf_report,

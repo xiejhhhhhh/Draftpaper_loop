@@ -48,6 +48,31 @@ def _safe_id(text: str, fallback: str) -> str:
     return cleaned[:48] or fallback
 
 
+def _scoped_inventory(inventory: dict[str, Any], requirements: dict[str, Any]) -> dict[str, Any]:
+    files = list(inventory.get("files") or [])
+    if not files:
+        return inventory
+    user_method = str(requirements.get("user_method") or "").replace("\\", "/").lower()
+    mentioned = [
+        item for item in files
+        if str(item.get("path") or "").replace("\\", "/").lower() in user_method
+    ]
+    if mentioned:
+        scoped = dict(inventory)
+        scoped["files"] = mentioned
+        return scoped
+    processed = [item for item in files if "/processed/" in str(item.get("path") or "").replace("\\", "/").lower()]
+    if processed:
+        processed.sort(key=lambda item: (int(item.get("row_count") or 0), int(item.get("column_count") or 0)), reverse=True)
+        scoped = dict(inventory)
+        scoped["files"] = processed[:1]
+        return scoped
+    files.sort(key=lambda item: (int(item.get("row_count") or 0), int(item.get("column_count") or 0)), reverse=True)
+    scoped = dict(inventory)
+    scoped["files"] = files[:1]
+    return scoped
+
+
 def _numeric_columns(inventory: dict[str, Any]) -> list[str]:
     columns: list[str] = []
     for item in inventory.get("files") or []:
@@ -143,10 +168,11 @@ def _planned_figures(
     literature_items: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     blob = _method_blob(requirements, research_plan, project_meta)
-    numeric = _numeric_columns(inventory)
-    labels = _label_columns(inventory)
-    selected_data = _selected_data(inventory)
-    lookup = _column_lookup(inventory)
+    figure_inventory = _scoped_inventory(inventory, requirements)
+    numeric = _numeric_columns(figure_inventory)
+    labels = _label_columns(figure_inventory)
+    selected_data = _selected_data(figure_inventory)
+    lookup = _column_lookup(figure_inventory)
     figures = _artifact_figures(inventory)
     generated_index = 1
 
@@ -168,7 +194,7 @@ def _planned_figures(
         _add_unique(figures, {
             "id": figure_id,
             "title": title,
-            "path": f"results/figures/{figure_id}.svg",
+            "path": f"results/figures/{figure_id}.png",
             "generation_mode": "generated_code",
             "figure_type": visualization_type,
             "visualization_type": visualization_type,
@@ -178,7 +204,7 @@ def _planned_figures(
             "y": y,
             "group": group,
             "statistical_transform": statistical_transform or [],
-            "backend_preference": ["matplotlib_scienceplots", "svg_numpy"],
+            "backend_preference": ["matplotlib_scienceplots", "matplotlib", "png_stdlib_fallback"],
             "no_flowchart_fallback": True,
             "scientific_question": question,
             "caption_draft": f"{title}.",

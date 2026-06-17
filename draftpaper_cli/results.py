@@ -43,6 +43,28 @@ def _safe_latex_text(text: str) -> str:
     return "".join(replacements.get(char, char) for char in str(text or ""))
 
 
+def _manuscript_result_text(text: str) -> str:
+    replacements = {
+        "the result validity gate": "the quantitative validation summary",
+        "result validity gate": "quantitative validation summary",
+        "the project workflow": "the analysis",
+        "project workflow": "analysis",
+        "the verified workflow": "the current analysis",
+        "verified workflow": "current analysis",
+        "the verified analysis": "the current analysis",
+        "verified analysis": "current analysis",
+        "local filenames": "administrative artifact names",
+        "storage paths": "administrative storage details",
+        "Draftpaper-loop": "the drafting tool",
+        "DraftPaper": "the drafting tool",
+        "Draftpaper": "the drafting tool",
+    }
+    cleaned = str(text or "")
+    for old, new in replacements.items():
+        cleaned = cleaned.replace(old, new)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def _project_relative_path(project_path: Path, relative: str) -> Path:
     candidate = (project_path / relative).resolve()
     try:
@@ -94,7 +116,7 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
                 interpretation
                 or figure.get("result_claim_template")
                 or figure.get("scientific_question")
-                or "This result artifact should be interpreted according to the project-specific figure plan."
+            or "This figure shows an empirical pattern from the current analysis and should be interpreted in relation to the plotted variables."
             ),
         }
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
@@ -104,17 +126,17 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
     metric_text = f"{primary_metric}={observed}" if observed is not None else str(primary_metric)
     context.update({
         "metrics.csv": {
-            "caption": "Parsed scalar metrics from the verified method run.",
-            "claim": f"The metrics table records the observed method output used by the result validity gate, including {metric_text}.",
+            "caption": "Scalar metrics from the method run.",
+            "claim": f"The metrics table records the observed method output used in the quantitative validation summary, including {metric_text}.",
         },
         "analysis_summary.csv": {
-            "caption": "Analysis summary produced by the generated method pipeline.",
+            "caption": "Analysis summary produced by the method pipeline.",
             "claim": "The analysis summary records selected input data, detected label column, method families, and generation metadata for traceability.",
         },
     })
     if not context and selected_input:
         context["analysis_summary.csv"] = {
-            "caption": "Analysis summary produced by the project workflow.",
+            "caption": "Analysis summary produced by the project analysis.",
             "claim": f"The analysis summary records how {selected_input} was used to produce result artifacts.",
         }
     return context
@@ -126,8 +148,8 @@ def _figure_entry(project_path: Path, path: Path, index: int, context: dict[str,
     return {
         "id": _artifact_id("fig", index, path),
         "path": relative,
-        "caption_draft": details.get("caption") or f"Result figure {index}: {path.stem.replace('_', ' ')}.",
-        "result_claim": details.get("claim") or f"The artifact {relative} provides visual evidence for one result that should be interpreted directly from the generated output.",
+        "caption_draft": _manuscript_result_text(details.get("caption") or f"Result figure {index}: {path.stem.replace('_', ' ')}."),
+        "result_claim": _manuscript_result_text(details.get("claim") or "The figure provides visual evidence for one result and should be interpreted directly from the plotted empirical pattern."),
     }
 
 
@@ -137,8 +159,8 @@ def _table_entry(project_path: Path, path: Path, index: int, context: dict[str, 
     return {
         "id": _artifact_id("table", index, path),
         "path": relative,
-        "caption_draft": details.get("caption") or f"Result table {index}: {path.stem.replace('_', ' ')}.",
-        "result_claim": details.get("claim") or f"The artifact {relative} provides tabular evidence for one result that should be interpreted directly from the generated output.",
+        "caption_draft": _manuscript_result_text(details.get("caption") or f"Result table {index}: {path.stem.replace('_', ' ')}."),
+        "result_claim": _manuscript_result_text(details.get("claim") or "The table provides quantitative support for one result and should be interpreted alongside the corresponding figures."),
     }
 
 
@@ -241,25 +263,80 @@ def _safe_label(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9:-]+", "-", text).strip("-") or "result"
 
 
+def _entry_label(kind: str, entry: dict[str, Any]) -> str:
+    path = str(entry.get("path") or "")
+    identifier = str(entry.get("id") or Path(path).stem or "result")
+    prefix = "fig" if kind == "figure" else "tab"
+    return f"{prefix}:{_safe_label(identifier)}"
+
+
+def _entry_reference(kind: str, entry: dict[str, Any]) -> str:
+    name = "Figure" if kind == "figure" else "Table"
+    return f"{name}~\\ref{{{_entry_label(kind, entry)}}}"
+
+
+def _result_heading(index: int) -> str:
+    headings = [
+        "Primary Empirical Pattern",
+        "Model Response and Diagnostic Evidence",
+        "Spatial or Temporal Structure",
+        "Sensitivity and Supporting Evidence",
+        "Integrated Result Summary",
+    ]
+    return headings[(index - 1) % len(headings)]
+
+
+def _entry_groups(entries: list[tuple[str, dict[str, Any]]]) -> list[list[tuple[str, dict[str, Any]]]]:
+    groups: list[list[tuple[str, dict[str, Any]]]] = []
+    current: list[tuple[str, dict[str, Any]]] = []
+    figure_count = 0
+    for kind, entry in entries:
+        current.append((kind, entry))
+        if kind == "figure":
+            figure_count += 1
+        if figure_count >= 2 or (kind == "table" and current):
+            groups.append(current)
+            current = []
+            figure_count = 0
+    if current:
+        groups.append(current)
+    return groups
+
+
 def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, dict[str, Any]]]) -> str:
     lines = [
         "\\section{Results}",
         (
-            "The results are reported only from local artifacts registered in the result manifest. "
-            "No literature citations are used in this section, so each interpretation is tied directly to a figure or table generated by the project workflow."
+            "The results are reported from the figures and tables generated for the present analysis. "
+            "Each interpretation is tied directly to the empirical evidence and remains bounded by the current data, method design, and validation setting."
         ),
         "",
     ]
-    for index, (kind, entry) in enumerate(entries, start=1):
-        title = _safe_latex_text(str(entry.get("caption_draft") or f"Result {index}"))
-        claim = _safe_latex_text(str(entry.get("result_claim") or "This artifact supports one result from the verified workflow."))
+    for group_index, group in enumerate(_entry_groups(entries), start=1):
+        lines.extend([f"\\subsection{{{_safe_latex_text(_result_heading(group_index))}}}", ""])
+        claims = [
+            _safe_latex_text(_manuscript_result_text(str(entry.get("result_claim") or "This artifact supports one result from the current analysis.")))
+            for _kind, entry in group
+        ]
+        if len(claims) == 1:
+            refs = _entry_reference(group[0][0], group[0][1])
+            paragraph = (
+                f"{claims[0]} The corresponding evidence is shown in {refs}. "
+                "The result should be read as an empirical pattern from the current data and method setting, not as a broader claim beyond the available evidence."
+            )
+        else:
+            second_claim = claims[1][0].lower() + claims[1][1:] if claims[1] else claims[1]
+            refs = " and ".join(_entry_reference(kind, entry) for kind, entry in group)
+            paragraph = (
+                f"{claims[0]} In the same result block, {second_claim} The corresponding evidence is shown in {refs}. "
+                "Reading these artifacts together is useful because the first establishes the main empirical pattern while the second checks whether the same conclusion is stable across a complementary diagnostic view."
+            )
         lines.extend([
-            f"\\subsection{{Result {index}: {title}}}",
-            f"{claim} The interpretation is limited to the verified result artifact registered in the local manifest and should be revised if that artifact changes.",
-            "",
-            _render_figure(entry) if kind == "figure" else _render_table(entry),
+            paragraph,
             "",
         ])
+        for kind, entry in group:
+            lines.extend([_render_figure(entry) if kind == "figure" else _render_table(entry), ""])
     tex = "\n".join(lines)
     if CITATION_PATTERN.search(tex):
         raise ResultsGateError("Generated results.tex contains a citation command, which is forbidden.")

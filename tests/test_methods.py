@@ -162,6 +162,45 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertNotIn("run_method.py", tex)
             self.assertIn("f1\\_score", tex)
 
+    def test_verify_methods_fails_generated_png_without_metadata(self) -> None:
+        from draftpaper_cli.methods import verify_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Generated figure metadata gate", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            (project.path / "results" / "figure_plan.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "fig1",
+                            "path": "results/figures/generated.png",
+                            "generation_mode": "generated_code",
+                            "figure_type": "scatter_regression",
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            output = project.path / "results" / "tables" / "metrics.csv"
+            figure = project.path / "results" / "figures" / "generated.png"
+            command = (
+                f"{sys.executable} -c \"from pathlib import Path; "
+                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
+                f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
+                f"Path(r'{figure}').parent.mkdir(parents=True, exist_ok=True); "
+                f"Path(r'{figure}').write_bytes(b'fake image')\""
+            )
+
+            result = verify_methods(
+                project.path,
+                command=command,
+                output_files=["results/tables/metrics.csv", "results/figures/generated.png"],
+            )
+
+            self.assertEqual(result["status"], "failed")
+            manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertTrue(manifest["figure_quality_issues"])
+
 
 if __name__ == "__main__":
     unittest.main()

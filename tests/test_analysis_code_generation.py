@@ -83,12 +83,16 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue((project.path / "results" / "figure_plan.html").exists())
             self.assertTrue((project.path / "code" / "scripts" / "run_analysis.py").exists())
             self.assertTrue((project.path / "code" / "src" / "generated_pipeline.py").exists())
+            self.assertTrue((project.path / "code" / "requirements-publication.txt").exists())
             self.assertTrue((project.path / "code" / "tests" / "test_generated_pipeline.py").exists())
             self.assertIn("results/tables/metrics.csv", result["declared_outputs"])
             self.assertIn("results/tables/analysis_summary.csv", result["declared_outputs"])
             self.assertIn("results/figure_metadata.json", result["declared_outputs"])
             self.assertIn("results/figure_quality_report.json", result["declared_outputs"])
             self.assertTrue(any(path.startswith("results/figures/") for path in result["declared_outputs"]))
+            generated_figures = [path for path in result["declared_outputs"] if path.startswith("results/figures/")]
+            self.assertTrue(generated_figures)
+            self.assertTrue(all(path.endswith(".png") for path in generated_figures))
             state = load_project(project.path)
             self.assertEqual(state.metadata["stages"]["code"]["status"], "draft")
             self.assertTrue(state.metadata["stages"]["methods"]["stale"])
@@ -98,6 +102,12 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertIn("multimodal_learning", manifest["method_families"])
             self.assertEqual(manifest["selected_input_data"], "data/raw/sources.csv")
             self.assertGreaterEqual(manifest["literature_method_count"], 1)
+            requirements_text = (project.path / "code" / "requirements-publication.txt").read_text(encoding="utf-8")
+            self.assertIn("matplotlib", requirements_text)
+            self.assertIn("SciencePlots", requirements_text)
+            self.assertIn("scikit-learn", requirements_text)
+            self.assertIn("scikit-plot", requirements_text)
+            self.assertIn("astropy", requirements_text)
 
             verify_result = verify_methods(
                 project.path,
@@ -109,12 +119,31 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             metrics = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))["metrics"]
             self.assertIn("f1", metrics)
             self.assertIn("row_count", metrics)
+            self.assertTrue((project.path / "methods" / "method_formula_manifest.json").exists())
+            self.assertTrue((project.path / "methods" / "method_formulas.tex").exists())
             for output in result["declared_outputs"]:
                 self.assertTrue((project.path / output).exists())
             metadata = json.loads((project.path / "results" / "figure_metadata.json").read_text(encoding="utf-8"))
             self.assertGreaterEqual(len(metadata["figures"]), 1)
+            generated_plan = [
+                item for item in json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))["figures"]
+                if item.get("generation_mode") == "generated_code"
+            ]
+            self.assertEqual(len(metadata["figures"]), len(generated_plan))
             self.assertFalse(metadata["figures"][0]["is_placeholder"])
+            self.assertEqual(metadata["figures"][0]["file_format"], "png")
+            self.assertIn("statistics", metadata["figures"][0])
+            self.assertTrue(metadata["figures"][0]["statistics"])
+            self.assertIn(metadata["figures"][0]["backend"], {"matplotlib_scienceplots", "matplotlib_publication", "png_stdlib_fallback"})
+            self.assertTrue(metadata["figures"][0]["publication_ready"])
+            self.assertTrue(metadata["figures"][0]["axis_labels"])
+            self.assertTrue(metadata["figures"][0]["text_elements"])
+            self.assertIn("figure_size_inches", metadata["figures"][0])
             self.assertTrue(metadata["figures"][0]["interpretation_summary"])
+            for figure in metadata["figures"]:
+                figure_path = project.path / figure["path"]
+                self.assertEqual(figure_path.suffix.lower(), ".png")
+                self.assertEqual(figure_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
             quality = json.loads((project.path / "results" / "figure_quality_report.json").read_text(encoding="utf-8"))
             self.assertEqual(quality["status"], "passed")
 
@@ -173,7 +202,32 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             figure_plan = json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))
             figure_specs = figure_plan["figures"]
             self.assertTrue(any(item.get("figure_type") == "scatter_regression" for item in figure_specs))
+            self.assertTrue(all(item.get("path", "").endswith(".png") for item in figure_specs if item.get("generation_mode") == "generated_code"))
+            for item in figure_specs:
+                if item.get("generation_mode") == "generated_code":
+                    self.assertEqual(item["required_inputs"], ["data/processed/wheat_ndvi_yield_proxy.csv"])
+                    self.assertNotIn("cluster", " ".join(item.get("required_columns") or []).lower())
             self.assertTrue(all(item.get("no_flowchart_fallback") is True for item in figure_specs if item.get("generation_mode") == "generated_code"))
+
+            codegen = generate_analysis_code(project.path)
+            requirements_text = (project.path / "code" / "requirements-publication.txt").read_text(encoding="utf-8")
+            self.assertIn("geopandas", requirements_text)
+            self.assertIn("rasterio", requirements_text)
+            self.assertIn("cartopy", requirements_text)
+            codegen_manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
+            self.assertIn("plotting_requirements", codegen_manifest)
+            self.assertIn("geospatial_remote_sensing", codegen_manifest["plotting_requirements"]["matched_rules"])
+            verify_methods(
+                project.path,
+                command=codegen["verify_command"],
+                output_files=codegen["declared_outputs"],
+                input_data=[codegen["selected_input_data"]],
+            )
+            run_manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertIn("r2", run_manifest["metrics"])
+            self.assertGreaterEqual(float(run_manifest["metrics"]["r2"]), 0.0)
+            formulas = (project.path / "methods" / "method_formulas.tex").read_text(encoding="utf-8")
+            self.assertIn("R^2", formulas)
 
 
 if __name__ == "__main__":

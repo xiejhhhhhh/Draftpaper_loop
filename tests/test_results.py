@@ -77,7 +77,7 @@ class ResultsManifestWriterTests(unittest.TestCase):
             with self.assertRaises(ResultsGateError):
                 write_results(project.path)
 
-    def test_write_results_creates_latex_without_citations_and_inserts_figures_at_subsection_end(self) -> None:
+    def test_write_results_creates_latex_without_citations_and_inserts_figures_at_result_subsection_end(self) -> None:
         from draftpaper_cli.results import inventory_results, write_results
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -97,7 +97,18 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertIn("results/figures/risk_curve.png", tex)
             self.assertIn("results/tables/metrics.csv", tex)
             self.assertNotIn("\\cite", tex)
+            self.assertIn("\\subsection{Primary Empirical Pattern}", tex)
+            self.assertRegex(tex, r"Figure~\\ref\{fig:[^{}]+\}")
+            self.assertLess(tex.index("The figure provides visual evidence"), tex.index("\\includegraphics"))
             self.assertLess(tex.index("risk_curve.png"), tex.index("\\end{figure}"))
+            self.assertTrue(tex.rstrip().endswith("\\end{table}"))
+            self.assertNotIn("This section does not use literature citations", tex)
+            self.assertNotIn("local filenames", tex)
+            self.assertNotIn("storage paths", tex)
+            self.assertNotIn("Draftpaper", tex)
+            self.assertNotIn("result validity gate", tex)
+            self.assertNotIn("project workflow", tex)
+            self.assertNotIn("verified workflow", tex)
 
             manifest = json.loads((project.path / "results" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")

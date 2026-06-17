@@ -24,6 +24,8 @@ METHOD_INPUTS = [
 METHOD_OUTPUTS = [
     "methods/method_writing_context.json",
     "methods/method_writing_context.html",
+    "methods/method_formula_manifest.json",
+    "methods/method_formulas.tex",
     "methods/methods.tex",
 ]
 
@@ -50,6 +52,10 @@ def _read_json(path: Path, fallback: Any) -> Any:
         return json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError:
         return fallback
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
 
 
 def _ensure_method_plan(project_path: Path) -> Path:
@@ -105,14 +111,16 @@ def verify_methods(
     finished_at = utc_now()
     declared_outputs = output_files or []
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
-    status = "success" if completed.returncode == 0 and not missing_outputs else "failed"
+    figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
+    status = "success" if completed.returncode == 0 and not missing_outputs and not figure_quality_issues else "failed"
+    parsed_metrics = _read_metrics_from_outputs(state.path, declared_outputs)
     manifest = {
         "status": status,
         "command": command,
         "returncode": completed.returncode,
         "input_data": input_data or [],
         "output_files": declared_outputs,
-        "metrics": _read_metrics_from_outputs(state.path, declared_outputs),
+        "metrics": parsed_metrics,
         "figures_generated": [item for item in declared_outputs if item.lower().endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg"))],
         "tables_generated": [item for item in declared_outputs if item.lower().endswith((".csv", ".tsv", ".xlsx", ".json"))],
         "started_at": started_at,
@@ -120,8 +128,11 @@ def verify_methods(
         "stdout": completed.stdout[-4000:],
         "stderr": completed.stderr[-4000:],
         "missing_outputs": missing_outputs,
+        "figure_quality_issues": figure_quality_issues,
     }
     _write_manifest(methods_dir / "run_manifest.yaml", manifest)
+    if status == "success":
+        _write_method_formulas(state.path, manifest)
     update_stage_status(state.path, "methods", "approved" if status == "success" else "failed")
     return {
         "status": status,
@@ -129,6 +140,7 @@ def verify_methods(
         "run_manifest": str(methods_dir / "run_manifest.yaml"),
         "returncode": completed.returncode,
         "missing_outputs": missing_outputs,
+        "figure_quality_issues": figure_quality_issues,
     }
 
 
@@ -152,6 +164,138 @@ def _read_metrics_from_outputs(project_path: Path, output_files: list[str]) -> d
             if len(parts) == 2 and parts[0]:
                 metrics[parts[0]] = parts[1]
     return metrics
+
+
+def _valid_png(path: Path) -> bool:
+    try:
+        return path.exists() and path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n" and path.stat().st_size > 100
+    except OSError:
+        return False
+
+
+def _validate_generated_figure_outputs(project_path: Path, output_files: list[str]) -> list[str]:
+    figure_plan = _read_json(project_path / "results" / "figure_plan.json", {})
+    generated_paths = {
+        str(item.get("path") or "").replace("\\", "/")
+        for item in figure_plan.get("figures") or []
+        if item.get("generation_mode") == "generated_code" and item.get("path")
+    }
+    if not generated_paths:
+        return []
+    declared = {str(item).replace("\\", "/") for item in output_files}
+    metadata = _read_json(project_path / "results" / "figure_metadata.json", {})
+    quality = _read_json(project_path / "results" / "figure_quality_report.json", {})
+    metadata_by_path = {
+        str(item.get("path") or "").replace("\\", "/"): item
+        for item in metadata.get("figures") or []
+        if item.get("path")
+    }
+    issues: list[str] = []
+    if quality.get("status") != "passed":
+        issues.append("results/figure_quality_report.json must exist with status=passed for generated figures.")
+    for relative in sorted(generated_paths & declared):
+        path = _project_relative_path(project_path, relative)
+        if not _valid_png(path):
+            issues.append(f"{relative} is not a valid non-empty PNG.")
+        item = metadata_by_path.get(relative)
+        if not item:
+            issues.append(f"{relative} is missing from results/figure_metadata.json.")
+            continue
+        if item.get("file_format") != "png":
+            issues.append(f"{relative} metadata must declare file_format=png.")
+        if item.get("is_placeholder"):
+            issues.append(f"{relative} metadata marks the figure as placeholder.")
+        if not item.get("has_axes"):
+            issues.append(f"{relative} metadata must confirm axes or scale.")
+        if not item.get("axis_labels"):
+            issues.append(f"{relative} metadata must include axis labels.")
+        if not item.get("text_elements"):
+            issues.append(f"{relative} metadata must include title, label, legend, or annotation text elements.")
+        if not item.get("figure_size_inches"):
+            issues.append(f"{relative} metadata must include publication figure size.")
+        if not item.get("publication_ready"):
+            issues.append(f"{relative} must be rendered with a publication plotting backend.")
+        if not item.get("statistics"):
+            issues.append(f"{relative} metadata must include statistics.")
+        if not item.get("interpretation_summary"):
+            issues.append(f"{relative} metadata must include an interpretation summary.")
+    return issues
+
+
+def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any]) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    metrics = {str(key).lower(): value for key, value in (manifest.get("metrics") or {}).items()}
+    if "f1" in metrics or "f1_score" in metrics:
+        entries.append({
+            "id": "f1_score",
+            "name": "F1 score",
+            "latex": r"\begin{equation}F_1 = 2\cdot \frac{\mathrm{precision}\cdot \mathrm{recall}}{\mathrm{precision}+\mathrm{recall}}.\end{equation}",
+            "source": "verified metric output",
+        })
+    if "baseline_accuracy" in metrics:
+        entries.append({
+            "id": "majority_baseline",
+            "name": "Majority-class baseline",
+            "latex": r"\begin{equation}\mathrm{Acc}_{\mathrm{baseline}} = \max_k \frac{n_k}{N}.\end{equation}",
+            "source": "verified metric output",
+        })
+    for item in figure_metadata.get("figures") or []:
+        statistics = item.get("statistics") or {}
+        figure_id = str(item.get("figure_id") or item.get("path") or "figure")
+        if "pearson_r" in statistics:
+            entries.append({
+                "id": f"{figure_id}_pearson_r",
+                "name": "Pearson correlation",
+                "latex": r"\begin{equation}r = \frac{\sum_i (x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_i (x_i-\bar{x})^2}\sqrt{\sum_i (y_i-\bar{y})^2}}.\end{equation}",
+                "source": figure_id,
+            })
+        if "r2" in statistics:
+            entries.append({
+                "id": f"{figure_id}_linear_r2",
+                "name": "Linear response and coefficient of determination",
+                "latex": r"\begin{equation}y_i = \beta_0+\beta_1x_i+\epsilon_i,\qquad R^2 = 1-\frac{\sum_i (y_i-\hat{y}_i)^2}{\sum_i (y_i-\bar{y})^2}.\end{equation}",
+                "source": figure_id,
+            })
+        if "correlation_matrix" in statistics:
+            entries.append({
+                "id": f"{figure_id}_correlation_matrix",
+                "name": "Pairwise correlation matrix",
+                "latex": r"\begin{equation}\mathbf{R}_{jk} = \mathrm{corr}(X_j, X_k).\end{equation}",
+                "source": figure_id,
+            })
+        if "counts" in statistics:
+            entries.append({
+                "id": f"{figure_id}_class_support",
+                "name": "Class-support ratio",
+                "latex": r"\begin{equation}\rho_{\mathrm{imbalance}} = \frac{\max_k n_k}{\min_k n_k}.\end{equation}",
+                "source": figure_id,
+            })
+    seen: set[str] = set()
+    unique = []
+    for entry in entries:
+        if entry["id"] in seen:
+            continue
+        seen.add(entry["id"])
+        unique.append(entry)
+    return unique
+
+
+def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None:
+    figure_metadata = _read_json(project_path / "results" / "figure_metadata.json", {})
+    entries = _formula_entries(manifest, figure_metadata)
+    payload = {
+        "status": "written",
+        "generated_at": utc_now(),
+        "formula_count": len(entries),
+        "formulas": entries,
+    }
+    _write_json(project_path / "methods" / "method_formula_manifest.json", payload)
+    lines = ["% Auto-generated from verified method metrics and figure metadata.", ""]
+    for entry in entries:
+        lines.extend([f"% {entry['name']} ({entry['source']})", entry["latex"], ""])
+    if not entries:
+        lines.append("% No explicit mathematical formula was inferred from the verified outputs.")
+    (project_path / "methods" / "method_formulas.tex").write_text("\n".join(lines), encoding="utf-8")
 
 
 def _safe_latex_text(text: Any) -> str:
@@ -279,6 +423,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     narrative_summary = " ".join([family_summary, data_role, analysis_steps, verification_summary, claim_boundary]).strip()
     context = {
         "project_id": state.metadata.get("project_id"),
+        "project_path": str(state.path),
         "method_family_summary": family_summary,
         "data_role": data_role,
         "analysis_steps": analysis_steps,
@@ -324,11 +469,17 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     verification = _safe_latex_text(_strip_forbidden_paths(context.get("verification_summary", "")))
     boundary = _safe_latex_text(_strip_forbidden_paths(context.get("claim_boundary", "")))
     family = _safe_latex_text(_strip_forbidden_paths(context.get("method_family_summary", "")))
+    formulas = ""
+    project_path = context.get("project_path")
+    if project_path:
+        formulas = _read_text(Path(str(project_path)) / "methods" / "method_formulas.tex").strip()
+    formula_block = f"\n\n{formulas}\n" if formulas else "\n"
     return (
         "\\section{Methods}\n"
-        f"{family} {data_role}\n\n"
-        f"{analysis_steps}\n\n"
-        f"{verification} {boundary} The method description is therefore tied to verified local execution while the manuscript wording remains focused on the scientific analysis rather than on commands, filenames, or manifest internals.\n"
+        f"{family} {data_role} The methodological description is written from the verified analytical design rather than from local execution details, so the section should explain why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a purely procedural account of software operations.\n\n"
+        f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. If later verification changes the input data, validation split, model family, or primary metric, this section should be regenerated before the Results and Discussion are revised.\n\n"
+        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands, filenames, or manifest internals. The mathematical expressions below summarize the measurable quantities inferred from the verified outputs and should be expanded when the project uses additional estimators, loss functions, sampling assumptions, or domain-specific indices."
+        f"{formula_block}"
     )
 
 

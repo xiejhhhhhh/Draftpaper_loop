@@ -447,10 +447,22 @@ def render_data_tex(context: dict[str, Any]) -> str:
     content = _strip_forbidden_paths(context.get("content_summary", ""))
     processing = _strip_forbidden_paths(context.get("processing_summary", ""))
     boundary = _strip_forbidden_paths(context.get("claim_boundary", ""))
+    observations = [
+        _strip_forbidden_paths(_clean_sentence(item.get("text")))
+        for item in context.get("observations") or []
+        if item.get("text")
+    ]
+    observation_text = " ".join(observations[:3]).strip()
+    if not observation_text:
+        observation_text = (
+            "The data description should therefore be read as a manuscript-facing synthesis of the accessible evidence, "
+            "not as a listing of local artifacts."
+        )
     return (
         "\\section{Data}\n"
-        f"{_safe_latex_text(source)} {_safe_latex_text(content)}\n\n"
-        f"{_safe_latex_text(processing)} {_safe_latex_text(boundary)}\n"
+        f"{_safe_latex_text(source)} {_safe_latex_text(content)} The manuscript should describe these materials by their scientific role, source context, measured content, temporal or spatial coverage when available, and relationship to the stated research question rather than by local storage names.\n\n"
+        f"{_safe_latex_text(processing)} This construction step is important because the subsequent methods section can only make claims that are supported by analysis-ready variables and documented preprocessing decisions. When raw access is incomplete or the working material is a processed export, the text should state that boundary directly while still explaining what the processed records represent scientifically.\n\n"
+        f"{_safe_latex_text(observation_text)} {_safe_latex_text(boundary)} These constraints define the scope of the empirical claims: the data section should make clear what evidence is available, how it was made usable, and which conclusions would require additional observations, external validation data, or more complete provenance before they could be stated more strongly.\n"
     )
 
 

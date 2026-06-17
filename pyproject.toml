@@ -9,6 +9,13 @@ authors = [
   { name = "xiejhhhhhh", email = "xiejinhui22@mails.ucas.ac.cn" }
 ]
 keywords = ["research", "latex", "paper-writing", "cli", "codex-skills"]
+dependencies = [
+  "matplotlib>=3.8",
+  "SciencePlots>=2.1",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "seaborn>=0.13",
+]
 
 [project.optional-dependencies]
 plotting = [

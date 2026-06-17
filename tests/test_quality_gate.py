@@ -69,16 +69,17 @@ def prepared_assembled_project(tmp: str) -> Path:
     write_data(project.path)
     collect_method_plan(project.path, user_method="Use supervised multimodal classification.", primary_metric="f1", minimum_primary_metric=0.7)
     output = project.path / "results" / "tables" / "metrics.csv"
-    figure = project.path / "results" / "figures" / "risk_curve.png"
+    figures = [project.path / "results" / "figures" / f"result_figure_{index}.png" for index in range(1, 6)]
+    figure_writes = "; ".join(f"Path(r'{figure}').write_bytes(b'fake image {index}')" for index, figure in enumerate(figures, start=1))
     command = (
         f"{sys.executable} -c \"from pathlib import Path; "
         f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
-        f"Path(r'{figure}').write_bytes(b'fake image')\""
+        f"{figure_writes}\""
     )
     verify_methods(
         project.path,
         command=command,
-        output_files=["results/tables/metrics.csv", "results/figures/risk_curve.png"],
+        output_files=["results/tables/metrics.csv"] + [f"results/figures/result_figure_{index}.png" for index in range(1, 6)],
     )
     write_methods(project.path)
     assess_result_validity(project.path)
@@ -141,7 +142,7 @@ class QualityGateUpgradeTests(unittest.TestCase):
             project_path = prepared_assembled_project(tmp)
             results_tex = project_path / "results" / "results.tex"
             results_tex.write_text(results_tex.read_text(encoding="utf-8") + "\nUnsupported citation \\citep{Smith2024Transformer1}.\n", encoding="utf-8")
-            (project_path / "results" / "figures" / "risk_curve.png").unlink()
+            (project_path / "results" / "figures" / "result_figure_1.png").unlink()
 
             report = run_quality_check(project_path)
 
@@ -149,6 +150,47 @@ class QualityGateUpgradeTests(unittest.TestCase):
             codes = {issue["code"] for issue in report["issues"]}
             self.assertIn("results_contains_citation", codes)
             self.assertIn("result_artifact_missing", codes)
+
+    def test_quality_check_fails_generated_figure_metadata_regressions_and_unsupported_result_subsections(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            (project_path / "results" / "figure_plan.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "risk_curve",
+                            "path": "results/figures/result_figure_1.png",
+                            "generation_mode": "generated_code",
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            (project_path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "path": "results/figures/result_figure_1.png",
+                            "file_format": "svg",
+                            "is_placeholder": False,
+                            "has_axes": True,
+                            "interpretation_summary": "A weak generated figure summary.",
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            results_tex = project_path / "results" / "results.tex"
+            results_tex.write_text(results_tex.read_text(encoding="utf-8") + "\n\\subsection{Old per-figure heading}\n", encoding="utf-8")
+
+            report = run_quality_check(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertIn("figure_metadata_not_scientific", codes)
+            self.assertIn("result_subsection_missing_figure", codes)
 
     def test_quality_check_fails_missing_bibtex_key_and_untraced_citation(self) -> None:
         from draftpaper_cli.quality_gate import run_quality_check

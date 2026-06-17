@@ -160,7 +160,10 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertIn("\\documentclass", content)
             self.assertIn("\\graphicspath{{../}}", content)
             self.assertIn("\\input{sections/introduction}", content)
+            self.assertIn("Draftpaper-loop", content)
+            self.assertIn("https://github.com/xiejhhhhhh/Draftpaper\\_loop", content)
             self.assertIn("\\bibliography{library}", content)
+            self.assertLess(content.index("Draftpaper-loop"), content.index("\\bibliography{library}"))
             self.assertIn("Long-term AGN outburst prediction", content)
 
             manifest = json.loads((project_path / "latex" / "stage_manifest.json").read_text(encoding="utf-8"))

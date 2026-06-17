@@ -8,6 +8,7 @@ from typing import Any
 
 from .figure_plan import FigurePlanError, plan_figures, validate_figure_plan_for_codegen
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
+from .plotting_requirements import plan_plotting_requirements, render_requirements_txt
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 
@@ -22,6 +23,8 @@ ANALYSIS_CODE_INPUTS = [
 
 ANALYSIS_CODE_OUTPUTS = [
     "code/scripts/run_analysis.py",
+    "code/scripts/install_plotting_requirements.py",
+    "code/requirements-publication.txt",
     "code/src/scientific_plotting.py",
     "code/src/generated_pipeline.py",
     "code/tests/test_generated_pipeline.py",
@@ -412,6 +415,22 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
         if metadata:
             figure_metadata.append(metadata)
             outputs.append(str(root / metadata["path"]))
+    primary_metric = str(PIPELINE_MANIFEST.get("primary_metric") or "").lower()
+    if primary_metric == "r2":
+        r2_values = []
+        for item in figure_metadata:
+            statistics = item.get("statistics") or {{}}
+            try:
+                value = float(statistics.get("r2"))
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(value):
+                r2_values.append((item.get("figure_id") or item.get("path") or "figure", value))
+        if r2_values:
+            best_id, best_value = max(r2_values, key=lambda pair: pair[1])
+            metrics["r2"] = round(best_value, 6)
+            metrics["best_r2_figure"] = best_id
+            write_key_value_csv(metrics_path, list(metrics.items()), ("metric", "value"))
     metadata_path, quality_path = write_figure_metadata_report(root, figure_metadata, figure_errors)
     outputs.extend([metadata_path, quality_path])
     if figure_errors:
@@ -437,6 +456,25 @@ from generated_pipeline import run_pipeline
 
 if __name__ == "__main__":
     run_pipeline(PROJECT_ROOT)
+'''
+
+
+def _render_install_plotting_script() -> str:
+    return '''from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+REQUIREMENTS = PROJECT_ROOT / "code" / "requirements-publication.txt"
+
+
+if __name__ == "__main__":
+    if not REQUIREMENTS.exists():
+        raise SystemExit(f"Missing plotting requirements file: {REQUIREMENTS}")
+    raise SystemExit(subprocess.call([sys.executable, "-m", "pip", "install", "-r", str(REQUIREMENTS)]))
 '''
 
 
@@ -522,6 +560,12 @@ def generate_analysis_code(
     declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_RESULT_OUTPUTS + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
     method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]
+    plotting_requirements = plan_plotting_requirements(
+        figure_plan=figure_plan,
+        project_meta=state.metadata,
+        method_requirements=requirements,
+        method_text=method_plan_text,
+    )
 
     manifest = {
         "status": "written",
@@ -538,6 +582,7 @@ def generate_analysis_code(
         "literature_sources": literature_sources,
         "method_plan_excerpt": re.sub(r"\s+", " ", method_plan_text).strip()[:1000],
         "figure_plan": figure_plan,
+        "plotting_requirements": plotting_requirements,
         "declared_outputs": declared_outputs,
         "generated_files": ANALYSIS_CODE_OUTPUTS,
         "notes": [
@@ -556,7 +601,9 @@ def generate_analysis_code(
     (src_dir / "generated_pipeline.py").write_text(_render_generated_pipeline(manifest), encoding="utf-8")
     plotting_runtime = (Path(__file__).resolve().parent / "plotting" / "scientific_svg.py").read_text(encoding="utf-8")
     (src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
+    (state.path / "code" / "requirements-publication.txt").write_text(render_requirements_txt(plotting_requirements), encoding="utf-8")
     (scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
+    (scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
     (tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
     _set_analysis_manifest(state.path, manifest)
     _set_code_stage_manifest(state.path)
@@ -572,6 +619,8 @@ def generate_analysis_code(
         "selected_input_data": selected_input.get("path"),
         "declared_outputs": declared_outputs,
         "verify_command": verify_command,
+        "plotting_requirements": plotting_requirements,
+        "install_plotting_command": f"{_quote_command(sys.executable)} code/scripts/install_plotting_requirements.py",
         "next_command": (
             f'{_quote_command(sys.executable)} -m draftpaper_cli.cli verify-methods '
             f'--project "{state.path}" --command "{verify_command}" '

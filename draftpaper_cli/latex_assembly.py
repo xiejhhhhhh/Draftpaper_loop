@@ -83,6 +83,28 @@ def _safe_latex_text(text: str) -> str:
     return "".join(replacements.get(char, char) for char in str(text or ""))
 
 
+def _draftpaper_acknowledgments(*, aastex: bool = False) -> str:
+    text = (
+        "This study used Draftpaper-loop as an assistive tool for staged literature organization, "
+        "analysis traceability, figure inventory, and manuscript drafting. The project is available at "
+        r"\texttt{https://github.com/xiejhhhhhh/Draftpaper\_loop}."
+    )
+    if aastex:
+        return "\\acknowledgments\n" + text
+    return "\\section*{Acknowledgments}\n" + text
+
+
+def _insert_acknowledgments(main_tex: str, acknowledgments: str) -> str:
+    if "Draftpaper-loop" in main_tex:
+        return main_tex
+    match = re.search(r"\\bibliography(?:style)?\{", main_tex)
+    if match:
+        return main_tex[:match.start()].rstrip() + "\n\n" + acknowledgments + "\n\n" + main_tex[match.start():].lstrip()
+    if "\\end{document}" in main_tex:
+        return main_tex.replace("\\end{document}", acknowledgments + "\n\n\\end{document}", 1)
+    return main_tex.rstrip() + "\n\n" + acknowledgments + "\n"
+
+
 def _require_inputs(project_path: Path) -> None:
     missing = [relative for relative in LATEX_INPUTS if not (project_path / relative).exists()]
     if missing:
@@ -141,6 +163,7 @@ def _copy_bibtex(project_path: Path) -> None:
 
 def _render_default_main(project_meta: dict[str, Any]) -> str:
     title = _safe_latex_text(project_meta.get("title") or project_meta.get("idea") or "Draft Paper")
+    acknowledgments = _draftpaper_acknowledgments()
     return "\n".join([
         r"\documentclass[11pt]{article}",
         r"\usepackage[margin=1in]{geometry}",
@@ -164,6 +187,8 @@ def _render_default_main(project_meta: dict[str, Any]) -> str:
         r"\input{sections/methods}",
         r"\input{sections/results}",
         r"\input{sections/discussion}",
+        "",
+        acknowledgments,
         "",
         r"\bibliographystyle{plainnat}",
         r"\bibliography{library}",
@@ -201,6 +226,8 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         rendered = rendered.rstrip() + "\n\n" + bibliography + "\n"
     if "\\graphicspath" not in rendered:
         rendered = rendered.replace("\\begin{document}", "\\graphicspath{{../}}\n\\begin{document}", 1)
+    acknowledgments = _draftpaper_acknowledgments(aastex="aastex" in str(journal_profile.get("documentclass") or "").lower())
+    rendered = _insert_acknowledgments(rendered, acknowledgments)
     return rendered.rstrip() + "\n"
 
 

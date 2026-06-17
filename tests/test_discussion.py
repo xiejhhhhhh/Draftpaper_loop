@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -111,6 +112,9 @@ class DiscussionWriterTests(unittest.TestCase):
             self.assertNotIn("\\textbf", tex)
             self.assertNotIn("\\begin{itemize}", tex)
             self.assertNotIn("As an AI", tex)
+            self.assertNotIn("Draftpaper-loop", tex)
+            self.assertNotIn("auditable Draftpaper", tex)
+            self.assertNotIn("method verification manifest", tex)
 
             manifest = json.loads((project_path / "discussion" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")
@@ -123,6 +127,30 @@ class DiscussionWriterTests(unittest.TestCase):
             project_json = json.loads((project_path / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project_json["stages"]["discussion"]["status"], "draft")
             self.assertEqual(project_json["stages"]["latex"]["status"], "stale")
+
+    def test_write_discussion_sanitizes_internal_loop_terms_from_plan_text(self) -> None:
+        from draftpaper_cli.discussion import write_discussion
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_project(tmp)
+            plan = project_path / "research_plan" / "research_plan.md"
+            plan_text = plan.read_text(encoding="utf-8")
+            internal_text = (
+                "## Expected Contribution\n"
+                "Instead, the contribution is an auditable Draftpaper-loop workflow that connects data inventory, method verification, publication-ready PNG figure generation, figure-level metadata, and manuscript writing under an exploratory claim boundary.\n"
+            )
+            plan.write_text(
+                re.sub(r"## Expected Contribution\s+.*?(?=\n## |\Z)", internal_text, plan_text, flags=re.S),
+                encoding="utf-8",
+            )
+
+            write_discussion(project_path)
+
+            tex = (project_path / "discussion" / "discussion.tex").read_text(encoding="utf-8")
+            self.assertNotIn("Draftpaper-loop", tex)
+            self.assertNotIn("publication-ready PNG figure generation", tex)
+            self.assertNotIn("figure-level metadata", tex)
+            self.assertIn("reproducible empirical design", tex)
 
     def test_write_discussion_rejects_evidence_keys_missing_from_bibtex(self) -> None:
         from draftpaper_cli.discussion import DiscussionCitationIntegrityError, write_discussion
