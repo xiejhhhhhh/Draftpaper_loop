@@ -72,7 +72,6 @@ codex_skills/draftpaper-workflow # 可选 Codex skill wrapper
 docs/                           # workflow 设计和优先级指南
 tests/                          # 单元测试
 third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
-github_submit/                  # GitHub 提交资料和说明
 ```
 
 生成的论文项目通常位于本地 `projects/` 下，并默认不提交到 git，避免上传研究数据、生成草稿、全文文献缓存和结果图表。
@@ -84,18 +83,18 @@ github_submit/                  # GitHub 提交资料和说明
 推荐方式是让 Codex 读取本仓库并替你调用 Draftpaper-loop CLI。克隆仓库后，在 Codex 中指向仓库目录，然后用自然语言提出任务，例如：
 
 ```text
-使用 C:\Draftpaper-loop 中的 Draftpaper-loop，为这个 idea 创建论文项目，检索文献，写 research plan，并告诉我当前 loop 卡在哪个阶段。
+使用 <repo> 中的 Draftpaper-loop，为这个 idea 创建论文项目，检索文献，写 research plan，并告诉我当前 loop 卡在哪个阶段。
 ```
 
 Codex 应先调用 orchestrator：
 
 ```powershell
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli status --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
+python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
+python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
 ```
 
 ### 本地一键安装
@@ -149,7 +148,7 @@ $env:ZOTERO_API_KEY="your_zotero_api_key"
 
 ```powershell
 python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
 `list-zotero-collections` 只返回 collection 名称和 key，不会输出 API key。`search-literature --zotero-collection` 只读取用户指定的 collection，并写入 `references/zotero_collection_manifest.json`。从 Zotero 导入的文献会被视为用户精选证据：即使缺少 abstract/PDF、不满足近年文献偏好，或超过外部检索默认 30 篇 ranking 上限，也会完整保留。系统仍会把这些文献写入与检索文献相同的输出，包括 `references/library.bib`、`references/literature_items.json`、`references/citation_evidence.csv`、`references/literature_review_notes.html`、每篇文献的 HTML summary，以及 `references/literature_summaries/index.html`。这部分文献会标记 `source=zotero_collection`、`reference_origin=existing_zotero` 和 `selection_policy=zotero_collection_preserved`，方便后续审阅时区分 Zotero 精选文献和外部检索排名文献。如果该 collection 中可用文献少于 `--zotero-min-items`，系统会按 MVP 的 Zotero-first 逻辑用免费外部检索补充，除非显式使用 `--no-zotero-supplement`。在 Codex 对话中可以这样说：“调用 Draftpaper-loop，先列出我的 Zotero collections，然后用 `My Paper References` 这个 collection 为当前项目检索文献。”

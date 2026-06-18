@@ -242,7 +242,7 @@ def _extract_pdf_text_from_url(url: str, *, timeout: int = 8, max_bytes: int = 8
     if not url.lower().startswith(("http://", "https://")):
         return ""
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": "DraftPaper CLI literature metadata reader"})
+        request = urllib.request.Request(url, headers={"User-Agent": "Draftpaper-loop literature metadata reader"})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             content = response.read(max_bytes + 1)
     except Exception:

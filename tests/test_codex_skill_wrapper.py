@@ -22,7 +22,7 @@ class CodexSkillWrapperTests(unittest.TestCase):
         content = SKILL_MD.read_text(encoding="utf-8")
         self.assertTrue(content.startswith("---\n"))
         self.assertIn("name: draftpaper-workflow", content)
-        self.assertRegex(content, r"description: Use when .*DraftPaper")
+        self.assertRegex(content, r"description: Use when .*Draftpaper-loop")
         self.assertLess(len(content.split()), 900)
 
     def test_skill_only_calls_cli_and_does_not_reimplement_core_logic(self) -> None:

@@ -109,6 +109,7 @@ class DiscussionWriterTests(unittest.TestCase):
             self.assertIn("\\citep{Lee2023Multimodal2}", tex)
             self.assertIn("external validation", tex)
             self.assertIn("Limitations", tex)
+            self.assertNotIn("\\subsection", tex)
             self.assertNotIn("\\textbf", tex)
             self.assertNotIn("\\begin{itemize}", tex)
             self.assertNotIn("As an AI", tex)

@@ -45,7 +45,7 @@ draftpaper = "draftpaper_cli.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["draftpaper_cli*"]
-exclude = ["codex_skills*", "github_submit*", "third_party*", "tests*"]
+exclude = ["codex_skills*", "third_party*", "tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

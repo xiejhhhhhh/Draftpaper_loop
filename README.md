@@ -80,7 +80,6 @@ codex_skills/draftpaper-workflow # Optional Codex skill wrapper
 docs/                           # Workflow design and priority guide
 tests/                          # Unit tests
 third_party/paper-fetch-skill/   # Vendored MIT paper-fetch runtime
-github_submit/                  # GitHub submission package and notes
 ```
 
 Generated paper projects are stored under `projects/` locally and are intentionally ignored by git to avoid uploading research data, generated drafts, full-text paper caches, and result artifacts.
@@ -92,7 +91,7 @@ Generated paper projects are stored under `projects/` locally and are intentiona
 The intended workflow is to let Codex read this repository and call the Draftpaper-loop CLI surface for you. After cloning the repository locally, open or point Codex to the repository directory and ask in natural language, for example:
 
 ```text
-Use Draftpaper-loop in C:\Draftpaper-loop to create a paper project for this idea, search literature, write the research plan, and tell me which loop stage is blocked.
+Use Draftpaper-loop in <repo> to create a paper project for this idea, search literature, write the research plan, and tell me which loop stage is blocked.
 ```
 
 Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next safe stage. The raw `draftpaper` commands below are the underlying loop interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
@@ -100,13 +99,13 @@ Codex should then run the appropriate CLI commands, inspect the generated local 
 For staged work, Codex should first call the orchestrator layer:
 
 ```powershell
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli status --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
+python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
+python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
+python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\your_project
 ```
 
 ### One-Command Local Setup
@@ -144,21 +143,21 @@ For a quick local smoke test without live literature search, create and validate
 
 ```powershell
 python -m pip install -e .[plotting]
-python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --query "topic keywords"
-python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
-python -m draftpaper_cli.cli build-data-context --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli write-data --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli create-project --root <repo>\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+python -m draftpaper_cli.cli status --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
+python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_project
+python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
-python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
-python -m draftpaper_cli.cli build-method-context --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\your_project
-python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\your_project
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
+python -m draftpaper_cli.cli plan-figures --project <repo>\projects\your_project
+python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\your_project
+python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
+python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli validate-project --project <repo>\projects\your_project
 ```
 
 Run tests:
@@ -183,7 +182,7 @@ Then ask Codex to call the loop, or run the CLI directly:
 
 ```powershell
 python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
 `list-zotero-collections` returns collection names and keys without printing credentials. `search-literature --zotero-collection` reads only the selected collection and writes `references/zotero_collection_manifest.json`. Zotero-imported references are treated as user-curated evidence: they are preserved even when they lack an abstract/PDF, fall outside the recency preference, or exceed the external-search 30-paper ranking cap. The loop still writes them into the same outputs as searched papers, including `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.html`, per-paper HTML summaries, and `references/literature_summaries/index.html`. They are marked with `source=zotero_collection`, `reference_origin=existing_zotero`, and `selection_policy=zotero_collection_preserved` so later review can distinguish them from ranked external search results. If the collection has fewer than `--zotero-min-items` usable references, the loop supplements with free external search unless `--no-zotero-supplement` is set. In Codex chat, a good request is: "Call Draftpaper-loop, list my Zotero collections, then search literature for this project using the collection named `My Paper References`."

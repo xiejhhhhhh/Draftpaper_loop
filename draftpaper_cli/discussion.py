@@ -196,8 +196,7 @@ def render_discussion_tex(
             f"The present results should therefore be discussed through data construction, validation design, and method behavior rather than through a broad claim of novelty."
         ),
         (
-            f"\\subsection{{Limitations and Future Work}}\n"
-            f"The principal limitation is that the present Discussion remains constrained by the available empirical evidence. If the local results are preliminary, sparse, "
+            f"Limitations and future work should be interpreted through the same evidence boundary. The principal limitation is that the present Discussion remains constrained by the available empirical evidence. If the local results are preliminary, sparse, "
             f"or generated from a narrow validation setting, the manuscript should state that limitation directly and avoid converting an observed pattern into a general conclusion. "
             f"The method route also requires continued checking: {method_route} Future revisions should update this section whenever the result figures and tables, method outputs, "
             f"or citation evidence changes, because those sources define the defensible boundary of the paper."

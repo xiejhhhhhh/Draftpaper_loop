@@ -33,7 +33,7 @@ class JournalProfileError(RuntimeError):
 
 
 def _fetch_text(url: str, timeout: int = 30) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "DraftPaper CLI local workflow"})
+    request = urllib.request.Request(url, headers={"User-Agent": "Draftpaper-loop local workflow"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8", errors="replace")
 

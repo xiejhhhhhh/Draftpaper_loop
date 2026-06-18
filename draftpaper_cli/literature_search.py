@@ -280,7 +280,7 @@ def search_crossref(query: str, limit: int = 30) -> list[dict[str, Any]]:
                 "rows": min(limit, 20),
                 "select": "DOI,title,author,container-title,published-print,published-online,issued,URL,is-referenced-by-count,abstract",
             },
-            headers={"User-Agent": "DraftPaper CLI local workflow (mailto:local@example.com)"},
+            headers={"User-Agent": "Draftpaper-loop local workflow (mailto:local@example.com)"},
         )
     except Exception:
         return []

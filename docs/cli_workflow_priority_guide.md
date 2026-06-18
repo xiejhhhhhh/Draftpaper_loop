@@ -1,4 +1,4 @@
-# DraftPaper CLI Workflow Priority Guide
+# Draftpaper-loop Workflow Priority Guide
 
 This guide is the planning reference for turning the existing `D:\DraftAI_agent` MVP into a callable, local-first paper-writing workflow. The MVP already contains reusable literature search, Zotero, BibTeX, LaTeX, PDF, prompt, and quality-gate utilities. Before adding new logic in this CLI project, check whether `D:\DraftAI_agent` already has a reusable implementation.
 
@@ -22,10 +22,10 @@ The workflow now has a thin orchestrator layer above the individual stage comman
 Implemented orchestrator commands:
 
 ```powershell
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli checkpoint --project C:\DraftPaper_CLI\projects\my_project --stage research_plan --note "User approved the research plan"
-python -m draftpaper_cli.cli resume --project C:\DraftPaper_CLI\projects\my_project --checkpoint-hash abc123def456
+python -m draftpaper_cli.cli status --project <repo>\projects\my_project
+python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\my_project
+python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage research_plan --note "User approved the research plan"
+python -m draftpaper_cli.cli resume --project <repo>\projects\my_project --checkpoint-hash abc123def456
 ```
 
 Each project also carries a DraftPaper Passport:
@@ -48,8 +48,8 @@ The workflow should not rely only on manually maintained `stale` flags. DraftPap
 Implemented Priority C CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\my_project
+python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\my_project
 ```
 
 `detect-artifact-drift` is read-only. It reports changed, missing, or newly tracked artifacts and maps each path back to a source stage. `sync-artifact-stale` is mutating. It marks downstream dependent stages stale, appends an `artifact_drift` event to `integrity_ledger.jsonl`, and refreshes the passport hash baseline. `status` and `run-pipeline` surface `pipeline_state=drift_detected` before continuing, so Codex/Web/Desktop wrappers should run `sync-artifact-stale` first whenever drift is reported.
@@ -61,7 +61,7 @@ The workflow now has an independent integrity gate between LaTeX assembly and th
 Implemented Priority D CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_project
 ```
 
 Outputs:
@@ -179,10 +179,10 @@ If an earlier stage changes, later dependent stages should be marked stale inste
 Implemented Priority 2 CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli load-project --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli validate-project --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli update-stage-status --project C:\DraftPaper_CLI\projects\my_project --stage research_plan --status approved
-python -m draftpaper_cli.cli mark-stage-stale --project C:\DraftPaper_CLI\projects\my_project --stage research_plan
+python -m draftpaper_cli.cli load-project --project <repo>\projects\my_project
+python -m draftpaper_cli.cli validate-project --project <repo>\projects\my_project
+python -m draftpaper_cli.cli update-stage-status --project <repo>\projects\my_project --stage research_plan --status approved
+python -m draftpaper_cli.cli mark-stage-stale --project <repo>\projects\my_project --stage research_plan
 ```
 
 Supported stage statuses:
@@ -259,11 +259,11 @@ references/literature_summaries/*.html
 Implemented Priority 3 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --query "active galactic nuclei machine learning variability"
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --from-json C:\path\literature_items.json
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_project
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_project --query "active galactic nuclei machine learning variability"
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_project --from-json C:\path\literature_items.json
 python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
 The `--from-json` option is intended for offline runs, manual curation, Zotero exports, or future Codex-assisted literature selection. It accepts UTF-8 and UTF-8 BOM JSON files, which matters for Windows PowerShell-created files.
@@ -308,9 +308,9 @@ latex/template/main.tex
 Implemented Priority 4 CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --target-journal APJS
-python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --overleaf-url "https://www.overleaf.com/latex/templates/..."
-python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --guideline-url "https://journal.example/author-guidelines"
+python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --target-journal APJS
+python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --overleaf-url "https://www.overleaf.com/latex/templates/..."
+python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --guideline-url "https://journal.example/author-guidelines"
 ```
 
 The resolver first tries known Overleaf template mappings and Overleaf search. For APJS and other AAS journals it resolves to the AASTeX template family and writes an `aastex701` template with `\submitjournal{ApJS}`, `aasjournal` bibliography style, AAS keywords, and AAS-specific formatting rules. If the target journal has no Overleaf template, the user should provide a journal author-guidelines URL; the workflow stores the guideline page and converts its rules into `journal_profile.json` and `journal_guidelines.md`.
@@ -351,8 +351,8 @@ The research plan should include background, research questions, hypotheses, dat
 Implemented Priority 4 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\my_project --allow-high-similarity
+python -m draftpaper_cli.cli generate-plan --project <repo>\projects\my_project
+python -m draftpaper_cli.cli generate-plan --project <repo>\projects\my_project --allow-high-similarity
 ```
 
 Current behavior is deterministic and offline: it reads `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.md`, and the journal profile, then writes a traceable first version of `research_plan.md`/`.html` and `research_questions.md`/`.html`. HTML is the primary human-review format for summary-style artifacts; Markdown is retained for compatibility and downstream parsers. This keeps the workflow usable without an AI API. A later AI-enhanced writer should use the same inputs and preserve the citation-evidence constraints.
@@ -387,7 +387,7 @@ Rules: natural academic prose, no arbitrary bullet lists, no casual bolding, and
 Implemented Priority 5 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli write-introduction --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli write-introduction --project <repo>\projects\my_project
 ```
 
 Current behavior is deterministic and offline. It reads the formal research plan plus `library.bib` and `citation_evidence.csv`, then writes `introduction/introduction.tex` as natural paragraph-style LaTeX. Citation commands are generated only from keys that appear in both the BibTeX library and the citation-evidence table. If the required inputs are missing, or if evidence keys are absent from `library.bib`, the command fails instead of writing an unsupported Introduction.
@@ -429,13 +429,13 @@ If `method_requirements.json` is missing, `method_plan` is stale, or `run_manife
 Implemented Priority 6 CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
-python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
-python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\my_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
-python -m draftpaper_cli.cli build-method-context --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-methods --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli collect-method-plan --project <repo>\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
+python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project
+python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project
+python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
+python -m draftpaper_cli.cli record-observation --project <repo>\projects\my_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
+python -m draftpaper_cli.cli build-method-context --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 ```
 
 `collect-method-plan` reads the research plan, data feasibility report, and ranked literature notes. It does not replace user expertise; it creates a structured method contract that combines user-provided method intent with literature method synthesis.
@@ -465,9 +465,9 @@ Rules: Results must not contain citations, every result subsection must bind to 
 Implemented Priority 7 CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli assess-result-validity --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-results --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
+python -m draftpaper_cli.cli inventory-results --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-results --project <repo>\projects\my_project
 ```
 
 `assess-result-validity` reads `methods/method_requirements.json`, `methods/run_manifest.yaml`, and `data/data_feasibility_report.json`. It checks whether observed metrics satisfy the configured expectation. If results fail, it writes a diagnosis that points back to data, method, or research plan revision. This gate is where the workflow decides whether the current result can support the expected conclusion.
@@ -499,7 +499,7 @@ Discussion may cite literature, but citations must come from `library.bib` and s
 Implemented Priority 8 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli write-discussion --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli write-discussion --project <repo>\projects\my_project
 ```
 
 `write-discussion` is blocked unless the formal research plan, Introduction, Results, `citation_evidence.csv`, and `library.bib` all exist. It verifies that every citation-evidence key is present in the BibTeX library before writing `discussion/discussion.tex`. The generated Discussion is paragraph-style LaTeX, may use literature citations, and is structured around research significance, comparison with existing literature, limitations, and future work. Because it depends on both Results and references, it should be rerun whenever result artifacts, method verification, or citation evidence changes.
@@ -536,9 +536,9 @@ Target-journal templates are resolved by `resolve-journal-template` and stored u
 Implemented Priority 9 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project --compile-pdf
-python -m draftpaper_cli.cli compile-latex-pdf --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project --compile-pdf
+python -m draftpaper_cli.cli compile-latex-pdf --project <repo>\projects\my_project
 ```
 
 `assemble-latex` is blocked unless all required section files, `references/library.bib`, and `journal_profile/journal_profile.json` exist. It also blocks assembly when any input stage is stale or not ready, so stale upstream drafts are not silently included in `latex/main.tex`. The command copies staged sections into `latex/sections/`, copies `references/library.bib` into `latex/library.bib`, and writes `latex/main.tex` using the journal template contract.
@@ -576,7 +576,7 @@ BibTeX entries can be traced to Introduction or Discussion usage
 Implemented Priority 10 CLI command:
 
 ```powershell
-python -m draftpaper_cli.cli quality-check --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 ```
 
 Output:
@@ -632,11 +632,11 @@ After the hard gates exist, the workflow needs a review-revise-re-review loop. T
 Implemented Priority E CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli review-draft --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli apply-revision --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli re-review --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
+python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
+python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
+python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
+python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
 ```
 
 Outputs:
@@ -692,12 +692,12 @@ Data feasibility is a core scientific hard gate before method planning and Metho
 Implemented Priority 12 CLI commands:
 
 ```powershell
-python -m draftpaper_cli.cli inventory-data --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli assess-data-quality --project C:\DraftPaper_CLI\projects\my_project --required-column id --required-column target
-python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI\projects\my_project --min-rows 30
-python -m draftpaper_cli.cli record-observation --project C:\DraftPaper_CLI\projects\my_project --stage data --kind agent_analysis --text "Visible Codex data source/content/processing summary..."
-python -m draftpaper_cli.cli build-data-context --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-data --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli inventory-data --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-data-quality --project <repo>\projects\my_project --required-column id --required-column target
+python -m draftpaper_cli.cli assess-data-feasibility --project <repo>\projects\my_project --min-rows 30
+python -m draftpaper_cli.cli record-observation --project <repo>\projects\my_project --stage data --kind agent_analysis --text "Visible Codex data source/content/processing summary..."
+python -m draftpaper_cli.cli build-data-context --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-data --project <repo>\projects\my_project
 ```
 
 Outputs:
@@ -770,34 +770,34 @@ quality_checks
 ## Target CLI Shape
 
 ```powershell
-python -m draftpaper_cli.cli create-project --root C:\DraftPaper_CLI\projects --idea "..." --field "..."
-python -m draftpaper_cli.cli status --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli run-pipeline --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli detect-artifact-drift --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli sync-artifact-stale --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli search-literature --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli resolve-journal-template --project C:\DraftPaper_CLI\projects\my_project --target-journal APJS
-python -m draftpaper_cli.cli generate-plan --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-introduction --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli inventory-data --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli assess-data-quality --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli assess-data-feasibility --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli collect-method-plan --project C:\DraftPaper_CLI\projects\my_project --method-note "..." --primary-metric f1 --minimum-primary-metric 0.75
-python -m draftpaper_cli.cli plan-figures --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli generate-analysis-code --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli verify-methods --project C:\DraftPaper_CLI\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
-python -m draftpaper_cli.cli assess-result-validity --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli inventory-results --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-results --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli write-discussion --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli assemble-latex --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli run-integrity-gate --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli quality-check --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli diagnose-gate-failures --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli review-draft --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli generate-revision-plan --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli apply-revision --project C:\DraftPaper_CLI\projects\my_project
-python -m draftpaper_cli.cli re-review --project C:\DraftPaper_CLI\projects\my_project
+python -m draftpaper_cli.cli create-project --root <repo>\projects --idea "..." --field "..."
+python -m draftpaper_cli.cli status --project <repo>\projects\my_project
+python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\my_project
+python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\my_project
+python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\my_project
+python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_project
+python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --target-journal APJS
+python -m draftpaper_cli.cli generate-plan --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-introduction --project <repo>\projects\my_project
+python -m draftpaper_cli.cli inventory-data --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-data-quality --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-data-feasibility --project <repo>\projects\my_project
+python -m draftpaper_cli.cli collect-method-plan --project <repo>\projects\my_project --method-note "..." --primary-metric f1 --minimum-primary-metric 0.75
+python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project
+python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project
+python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
+python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
+python -m draftpaper_cli.cli inventory-results --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-results --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-discussion --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project
+python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_project
+python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
+python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
+python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
+python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
+python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
+python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
 ```
 
 ## Implementation Rule

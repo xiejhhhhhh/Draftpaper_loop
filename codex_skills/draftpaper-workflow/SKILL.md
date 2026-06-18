@@ -1,11 +1,11 @@
 ---
 name: draftpaper-workflow
-description: Use when a user wants Codex to operate DraftPaper CLI projects, staged research-paper workflows, LaTeX drafts, citation evidence, results manifests, quality gates, or local review PDFs.
+description: Use when a user wants Codex to operate Draftpaper-loop projects, staged research-paper workflows, LaTeX drafts, citation evidence, results manifests, quality gates, or local review PDFs.
 ---
 
-# DraftPaper Workflow
+# Draftpaper-loop Workflow
 
-Use this skill as a thin Codex calling layer for `C:\DraftPaper_CLI`. The core capability is the Python package, CLI, and local project directory model. Codex must translate user intent into CLI calls and explain results; it must not reimplement workflow logic.
+Use this skill as a thin Codex calling layer for the active Draftpaper-loop repository. The core capability is the Python package, CLI, and local project directory model. Codex must translate user intent into CLI calls and explain results; it must not reimplement workflow logic.
 
 ## Boundary
 
