@@ -127,6 +127,29 @@ class ReviewRevisionTests(unittest.TestCase):
             self.assertGreaterEqual(len(rows), 1)
             self.assertIn("issue_id", rows[0])
             self.assertIn("target_stage", rows[0])
+            sources = {issue["source"] for issue in plan["issues"]}
+            self.assertIn("publication_readiness", sources)
+            self.assertIn("statistical_rescue", sources)
+
+    def test_publication_readiness_and_statistical_rescue_write_review_artifacts(self) -> None:
+        from draftpaper_cli.review_revision import assess_publication_readiness, recommend_statistical_revision
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Weak data rescue", field="environmental statistics")
+            write_failed_gate_reports(project.path)
+
+            readiness = assess_publication_readiness(project.path)
+            rescue = recommend_statistical_revision(project.path)
+
+            self.assertLess(readiness["readiness_score"], 65)
+            self.assertIn(readiness["readiness_band"], {"major_revision_needed", "not_ready_for_submission"})
+            self.assertEqual(rescue["status"], "rescue_recommended")
+            self.assertGreaterEqual(rescue["issue_count"], 1)
+            self.assertTrue((project.path / "review" / "publication_readiness_report.json").exists())
+            self.assertTrue((project.path / "review" / "publication_readiness_report.html").exists())
+            self.assertTrue((project.path / "review" / "statistical_rescue_plan.json").exists())
+            self.assertTrue((project.path / "review" / "statistical_rescue_plan.html").exists())
+            self.assertTrue((project.path / "review" / "claim_evidence_matrix.csv").exists())
 
     def test_apply_revision_marks_target_and_downstream_stages_stale(self) -> None:
         from draftpaper_cli.project_state import update_stage_status
@@ -154,6 +177,8 @@ class ReviewRevisionTests(unittest.TestCase):
             for command in [
                 "diagnose-gate-failures",
                 "review-draft",
+                "assess-publication-readiness",
+                "recommend-statistical-revision",
                 "generate-revision-plan",
                 "apply-revision",
                 "re-review",

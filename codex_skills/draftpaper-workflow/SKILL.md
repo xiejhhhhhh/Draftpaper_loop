@@ -68,9 +68,11 @@ Run stages in this order unless the user asks for a focused rerun:
 25. `quality-check`
 26. `diagnose-gate-failures`
 27. `review-draft`
-28. `generate-revision-plan`
-29. `apply-revision` when the user accepts a revision route
-30. `re-review`
+28. `assess-publication-readiness`
+29. `recommend-statistical-revision`
+30. `generate-revision-plan`
+31. `apply-revision` when the user accepts a revision route
+32. `re-review`
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
@@ -88,11 +90,11 @@ Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_
 
 ## Review and Revision Loop
 
-When any gate fails, run `diagnose-gate-failures` before giving broad advice. `status` and `run-pipeline` recommend it automatically when integrity or final quality reports failed. After an assembled draft exists, run `review-draft`, then `generate-revision-plan`. Do not let `apply-revision` rewrite scientific content; it only marks affected stages stale. If the plan requires adding data, changing methods, or lowering claims, ask the user to confirm the scientific choice. After reruns, use `re-review`.
+When any gate fails, run `diagnose-gate-failures` before broad advice. After an assembled draft exists, run `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, then `generate-revision-plan`. Do not let `apply-revision` rewrite scientific content; it only marks affected stages stale. If revisions require data, methods, statistical processing, or weaker claims, ask the user to confirm. After reruns, use `re-review`.
 
 ## Skill Reuse
 
-Before building new data-analysis or method-code workflows, search for existing reusable skills or GitHub skill repositories. Reuse or install a suitable skill before creating a new one. If a new reusable workflow is created during implementation, summarize it as a future skill candidate with inputs, commands, outputs, validation checks, and failure modes. For PDF or full-text literature fetching, prefer the GitHub skill `Dictation354/paper-fetch-skill` when that need arises; install it with the system `skill-installer` flow and tell the user to restart Codex.
+Before building new analysis/method workflows, search for reusable skills or GitHub skill repositories. Reuse suitable skills before creating new ones. If a reusable workflow is created, summarize it as a future skill candidate. For PDF/full-text literature fetching, prefer `Dictation354/paper-fetch-skill`.
 
 ## Reporting
 

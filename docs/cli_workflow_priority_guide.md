@@ -627,13 +627,15 @@ Future Web UI / desktop app / API service
 
 ## Priority E: Review, Revision Routing, and Re-review Loop
 
-After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has two layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass and feeds those issues into the same revision plan.
+After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has four layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass. The third layer estimates target-journal publication readiness from saved loop artifacts. The fourth layer recommends statistical rescue routes when weak data or weak results might be made publishable through robust statistics, missingness analysis, method revision, explicit thresholds, or claim reframing.
 
 Implemented Priority E CLI commands:
 
 ```powershell
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
@@ -646,6 +648,12 @@ review/gate_failure_diagnosis.json
 review/gate_failure_diagnosis.md
 review/review_report.md
 review/reviewer_issues.json
+review/publication_readiness_report.json
+review/publication_readiness_report.html
+review/statistical_rescue_plan.json
+review/statistical_rescue_plan.html
+review/journal_fit_report.html
+review/claim_evidence_matrix.csv
 review/revision_plan.json
 review/revision_plan.md
 review/commitment_ledger.csv
@@ -679,11 +687,15 @@ Every issue uses the same schema:
 
 `review-draft` is a deterministic reviewer-style pass. It checks whether the assembled manuscript exists, whether Methods are reproducible from a successful run manifest, whether result claim strength matches the result validity decision, and whether Discussion exists after Results. This is intentionally conservative and does not replace human review.
 
-`generate-revision-plan` merges gate diagnosis and reviewer issues into `review/revision_plan.json` and `review/commitment_ledger.csv`. The commitment ledger records issue id, source, target stage, decision, status, and the user's revision commitment so later re-review can audit what was supposed to change.
+`assess-publication-readiness` reads saved data, method, result, figure, integrity, quality, LaTeX, and journal-profile artifacts, then writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. It reports a readiness score, readiness band, reviewer-style decision, evidence signals, and major risks. This is an internal triage estimate, not a guaranteed journal acceptance probability.
+
+`recommend-statistical-revision` reads the same saved loop artifacts plus the readiness report, then writes `review/statistical_rescue_plan.json` and `review/statistical_rescue_plan.html`. It recommends routes such as small-sample robustness checks, missingness/imputation audits, method/result validity rebuilding, explicit success thresholds, or claim reframing. It does not modify the data or manuscript automatically.
+
+`generate-revision-plan` merges gate diagnosis, reviewer issues, publication-readiness issues, and statistical-rescue issues into `review/revision_plan.json` and `review/commitment_ledger.csv`. The commitment ledger records issue id, source, target stage, decision, status, and the user's revision commitment so later re-review can audit what was supposed to change.
 
 `apply-revision` currently applies only the safe part of revision: it marks affected target stages and their downstream dependents stale. It does not rewrite scientific content automatically. This is deliberate: adding data, changing methods, or lowering conclusions requires user confirmation and a normal rerun of the staged CLI commands.
 
-`re-review` reruns gate diagnosis, reviewer pass, and revision planning after revisions. It writes a compact report showing remaining gate issues, reviewer issues, and total revision issues.
+`re-review` reruns gate diagnosis, reviewer pass, publication readiness, statistical rescue, and revision planning after revisions. It writes a compact report showing remaining gate issues, reviewer issues, statistical-rescue issues, readiness score, and total revision issues.
 
 ## Priority 13: Data Feasibility Gate
 
@@ -795,6 +807,8 @@ python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_pro
 python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project

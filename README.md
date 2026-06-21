@@ -70,6 +70,7 @@ The loop is designed around five engineering components:
 - Independent integrity gate for BibTeX existence, citation evidence, and result artifact binding.
 - Manuscript writing-quality gates for section length, paragraph structure, citation placement, Methods formulas, Results figure count, and non-bulleted natural prose.
 - Review-revise-re-review loop with gate-failure routing and commitment ledger.
+- Publication-readiness reviewer layer with journal-fit risk, submission-readiness scoring, statistical rescue planning, and claim-evidence matrix outputs.
 - Codex skill wrapper that remains only a calling layer.
 
 ## Project Layout
@@ -105,6 +106,8 @@ python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\you
 python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\your_project
 ```
 
@@ -157,6 +160,8 @@ python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\yo
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
 python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
 python -m draftpaper_cli.cli validate-project --project <repo>\projects\your_project
 ```
 
@@ -189,7 +194,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## Implementation Status
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, statistical rescue planning, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
@@ -201,7 +206,7 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 
 `run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
 
-`diagnose-gate-failures`, `review-draft`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. When integrity or final quality reports failed, `status` and `run-pipeline` automatically recommend `diagnose-gate-failures`.
+`diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. The publication-readiness layer estimates target-journal submission risk from saved data, methods, result, figure, integrity, quality, and journal-profile artifacts. The statistical rescue layer recommends robust statistics, missingness audits, method rebuilding, explicit success thresholds, or claim reframing when weak data or weak results might still support a defensible exploratory paper. When integrity or final quality reports failed, `status` and `run-pipeline` automatically recommend `diagnose-gate-failures`.
 
 `record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
 
@@ -216,6 +221,15 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
+
+- Added `assess-publication-readiness` to score target-journal submission readiness from saved loop artifacts, including data feasibility, method verification, result validity, figure metadata, integrity, quality, and journal profile state.
+- Added `recommend-statistical-revision` to generate a statistical rescue plan when weak data or unsupported results may be improved through robust statistics, missingness analysis, method rebuilding, explicit success thresholds, or claim reframing.
+- Added review outputs: `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/statistical_rescue_plan.json`, `review/statistical_rescue_plan.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`.
+- Upgraded `generate-revision-plan` and `re-review` so gate, reviewer, publication-readiness, and statistical-rescue issues share the same revision schema and stale-stage rerun path.
+- Local verification: `python -m unittest discover -s tests`
+- Current suite: 112 tests
 
 ### v0.10.0 (2026-06-18) -- manuscript-quality gates and clean Results/acknowledgment writing
 

@@ -62,6 +62,7 @@ Draftpaper-loop 的外层逻辑是：
 - 默认在致谢中说明本研究使用 Draftpaper-loop 辅助生成，并附项目仓库链接。
 - 独立 integrity gate 和 review-revise-re-review 闭环。
 - 论文写作质量门会检查章节篇幅、自然段结构、引用位置、Methods 公式、Results 图表数量以及是否使用自然正文而非列表式文本。
+- 审稿人式投稿就绪度评估，输出目标期刊适配风险、投稿就绪度评分、统计增强修订方案和 claim-evidence matrix。
 - Codex skill wrapper 仅作为调用层，核心能力仍是 Python package + CLI + 本地项目结构。
 
 ## 项目结构
@@ -95,6 +96,8 @@ python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\you
 python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
 ```
 
 ### 本地一键安装
@@ -155,7 +158,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## 当前实现状态
 
-当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、Introduction、observation 记录、Data writing context、Data 写作、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、Methods writing context、Methods 写作、result validity、result inventory、Results、Discussion、LaTeX assembly、PDF compilation、integrity gate、review/revision routing 和 final quality check。
+当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、Introduction、observation 记录、Data writing context、Data 写作、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、Methods writing context、Methods 写作、result validity、result inventory、Results、Discussion、LaTeX assembly、PDF compilation、integrity gate、review/revision routing、publication readiness assessment、statistical rescue planning 和 final quality check。
 
 每个项目都有 `project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、用户确认点和完整性事件，方便跨电脑迁移和后续审计。
 
@@ -172,6 +175,15 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
+
+- 新增 `assess-publication-readiness`，根据 data feasibility、method verification、result validity、figure metadata、integrity、quality 和 journal profile 等本地归档产物评估目标期刊投稿就绪度。
+- 新增 `recommend-statistical-revision`，当数据质量较弱或结果不足以支撑结论时，生成统计增强修订方案，包括稳健统计、缺失值分析、方法重构、显式成功阈值和 claim reframing。
+- 新增审稿输出：`review/publication_readiness_report.json`、`review/publication_readiness_report.html`、`review/statistical_rescue_plan.json`、`review/statistical_rescue_plan.html`、`review/journal_fit_report.html` 和 `review/claim_evidence_matrix.csv`。
+- 升级 `generate-revision-plan` 和 `re-review`，让 gate、reviewer、publication-readiness 和 statistical-rescue issues 共用同一套 revision schema 和 stale-stage 回退路径。
+- 本地验证：`python -m unittest discover -s tests`
+- 当前测试规模：112 tests
 
 ### v0.10.0 (2026-06-18) -- manuscript-quality gates and clean Results/acknowledgment writing
 

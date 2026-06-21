@@ -34,9 +34,11 @@ from .research_plan import MissingReferencesError, NoveltyOverlapError, generate
 from .review_revision import (
     ReviewRevisionError,
     apply_revision,
+    assess_publication_readiness,
     diagnose_gate_failures,
     generate_revision_plan,
     re_review,
+    recommend_statistical_revision,
     review_draft,
 )
 from .result_validity import ResultValidityError, assess_result_validity
@@ -208,7 +210,13 @@ def build_parser() -> argparse.ArgumentParser:
     review = subparsers.add_parser("review-draft", help="Run a reviewer-style manuscript pass and write review artifacts.")
     review.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
-    revision_plan = subparsers.add_parser("generate-revision-plan", help="Merge gate diagnosis and reviewer issues into a revision plan.")
+    readiness = subparsers.add_parser("assess-publication-readiness", help="Assess target-journal publication readiness and reviewer-style risk.")
+    readiness.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    statistical_rescue = subparsers.add_parser("recommend-statistical-revision", help="Recommend statistical rescue routes for weak data or unsupported results.")
+    statistical_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    revision_plan = subparsers.add_parser("generate-revision-plan", help="Merge gate, reviewer, readiness, and statistical-rescue issues into a revision plan.")
     revision_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     apply = subparsers.add_parser("apply-revision", help="Safely apply a revision plan by marking affected stages stale.")
@@ -709,6 +717,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "review-draft":
         try:
             result = review_draft(args.project)
+        except ReviewRevisionError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "assess-publication-readiness":
+        try:
+            result = assess_publication_readiness(args.project)
+        except ReviewRevisionError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "recommend-statistical-revision":
+        try:
+            result = recommend_statistical_revision(args.project)
         except ReviewRevisionError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

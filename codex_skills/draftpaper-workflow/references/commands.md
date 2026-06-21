@@ -72,6 +72,8 @@ python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_pro
 python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
@@ -81,4 +83,4 @@ python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
 
 `quality-check` returns exit code `0` for passed and `1` for failed. It still writes `quality_checks/quality_report.json` on failure.
 
-`diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `generate-revision-plan` writes `review/revision_plan.json`, `review/revision_plan.md`, and `review/commitment_ledger.csv`. `apply-revision` marks affected stages stale but does not rewrite scientific content. `re-review` reruns diagnosis, review, and planning and writes `review/re_review_report.md`.
+`diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `assess-publication-readiness` writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. `recommend-statistical-revision` writes `review/statistical_rescue_plan.json` and `.html`, then updates the claim-evidence matrix. `generate-revision-plan` merges gate, reviewer, publication-readiness, and statistical-rescue issues into `review/revision_plan.json`, `review/revision_plan.md`, and `review/commitment_ledger.csv`. `apply-revision` marks affected stages stale but does not rewrite scientific content. `re-review` reruns diagnosis, review, readiness, statistical rescue, and planning and writes `review/re_review_report.md`.

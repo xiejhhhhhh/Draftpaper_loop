@@ -27,7 +27,16 @@ from .project_state import (
 from .quality_gate import QualityGateError, run_quality_check
 from .references import write_reference_outputs
 from .research_plan import MissingReferencesError, generate_research_plan
-from .review_revision import ReviewRevisionError, apply_revision, diagnose_gate_failures, generate_revision_plan, re_review, review_draft
+from .review_revision import (
+    ReviewRevisionError,
+    apply_revision,
+    assess_publication_readiness,
+    diagnose_gate_failures,
+    generate_revision_plan,
+    re_review,
+    recommend_statistical_revision,
+    review_draft,
+)
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 
@@ -87,6 +96,8 @@ __all__ = [
     "generate_research_plan",
     "diagnose_gate_failures",
     "review_draft",
+    "assess_publication_readiness",
+    "recommend_statistical_revision",
     "generate_revision_plan",
     "apply_revision",
     "re_review",

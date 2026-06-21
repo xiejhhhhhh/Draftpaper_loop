@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stage_stale
 
@@ -16,6 +17,12 @@ GATE_DIAGNOSIS_JSON = "review/gate_failure_diagnosis.json"
 GATE_DIAGNOSIS_MD = "review/gate_failure_diagnosis.md"
 REVIEW_REPORT_MD = "review/review_report.md"
 REVIEWER_ISSUES_JSON = "review/reviewer_issues.json"
+PUBLICATION_READINESS_JSON = "review/publication_readiness_report.json"
+PUBLICATION_READINESS_HTML = "review/publication_readiness_report.html"
+STATISTICAL_RESCUE_JSON = "review/statistical_rescue_plan.json"
+STATISTICAL_RESCUE_HTML = "review/statistical_rescue_plan.html"
+CLAIM_EVIDENCE_MATRIX_CSV = "review/claim_evidence_matrix.csv"
+JOURNAL_FIT_HTML = "review/journal_fit_report.html"
 REVISION_PLAN_JSON = "review/revision_plan.json"
 REVISION_PLAN_MD = "review/revision_plan.md"
 COMMITMENT_LEDGER_CSV = "review/commitment_ledger.csv"
@@ -71,6 +78,8 @@ def _issue_id(source: str, code: str, target_stage: str, reason: str) -> str:
     digest = hashlib.sha256(f"{source}|{code}|{target_stage}|{reason}".encode("utf-8")).hexdigest()[:8]
     prefix = {
         "reviewer": "R",
+        "publication_readiness": "P",
+        "statistical_rescue": "S",
         "data_feasibility": "D",
         "methods": "M",
         "result_validity": "V",
@@ -180,6 +189,488 @@ def _render_issue_md(title: str, issues: list[RevisionIssue]) -> str:
             "",
         ])
     return "\n".join(lines)
+
+
+def _numeric(value: Any) -> float | None:
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _bounded_score(score: int) -> int:
+    return max(0, min(100, int(score)))
+
+
+def _read_list_payload(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return []
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in ["figures", "items", "records"]:
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def _readiness_band(score: int) -> str:
+    if score >= 80:
+        return "near_submission_ready"
+    if score >= 65:
+        return "promising_with_major_checks"
+    if score >= 50:
+        return "major_revision_needed"
+    return "not_ready_for_submission"
+
+
+def _publication_recommendation(score: int) -> str:
+    if score >= 80:
+        return "The draft is close to a reviewable submission package after normal polishing and journal-format checks."
+    if score >= 65:
+        return "The draft has publication potential, but the current evidence chain should be strengthened before submission."
+    if score >= 50:
+        return "The draft should be treated as a major-revision candidate rather than a submission-ready paper."
+    return "The draft should not be submitted in its current state; revise data, methods, or claim strength first."
+
+
+def _score_to_reviewer_decision(score: int) -> str:
+    if score >= 80:
+        return "minor_revision_or_submit_after_polish"
+    if score >= 65:
+        return "major_revision_likely"
+    if score >= 50:
+        return "major_revision_required"
+    return "reject_or_rebuild_before_submission"
+
+
+def _target_from_validity(validity: dict[str, Any]) -> str:
+    causes = {str(item) for item in validity.get("failure_causes") or []}
+    if "data" in causes:
+        return "data"
+    if "method" in causes or "methods" in causes:
+        return "methods"
+    return "research_plan"
+
+
+def _route_commands(target_stage: str) -> list[str]:
+    return _commands_from_stage(target_stage)
+
+
+def _render_publication_readiness_md(report: dict[str, Any]) -> str:
+    lines = [
+        "# Publication Readiness Report",
+        "",
+        f"Generated at: {report['generated_at']}",
+        "",
+        f"Readiness score: {report['readiness_score']}/100",
+        "",
+        f"Readiness band: {report['readiness_band']}",
+        "",
+        f"Reviewer-style decision: {report['reviewer_style_decision']}",
+        "",
+        f"Recommendation: {report['recommendation']}",
+        "",
+        "## Journal Fit",
+        "",
+        report.get("journal_fit_summary", ""),
+        "",
+        "## Evidence Signals",
+        "",
+    ]
+    for signal in report.get("evidence_signals") or []:
+        lines.append(f"- {signal}")
+    lines.extend(["", "## Major Risks", ""])
+    for issue in report.get("issues") or []:
+        lines.append(f"- {issue['title']}: {issue['reason']}")
+    if not report.get("issues"):
+        lines.append("- No major deterministic readiness issues were detected.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_statistical_rescue_md(plan: dict[str, Any]) -> str:
+    lines = [
+        "# Statistical Rescue Plan",
+        "",
+        f"Generated at: {plan['generated_at']}",
+        "",
+        f"Diagnosis: {plan['diagnosis']}",
+        "",
+        f"Status: {plan['status']}",
+        "",
+        "## Likely Failure Sources",
+        "",
+    ]
+    for source in plan.get("likely_failure_sources") or ["none"]:
+        lines.append(f"- {source}")
+    lines.extend(["", "## Recommended Routes", ""])
+    for route in plan.get("recommended_routes") or []:
+        lines.extend([
+            f"### {route['route_id']}: {route['title']}",
+            "",
+            f"- Target stage: {route['target_stage']}",
+            f"- Rationale: {route['rationale']}",
+            f"- Actions: {', '.join(route['actions'])}",
+            f"- Rerun commands: {', '.join(route['rerun_commands'])}",
+            "",
+        ])
+    lines.extend(["", "## Revision Issues", ""])
+    for issue in plan.get("issues") or []:
+        lines.append(f"- {issue['issue_id']}: {issue['title']} ({issue['target_stage']})")
+    if not plan.get("issues"):
+        lines.append("- No statistical rescue issue was generated.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_claim_evidence_matrix(project_path: Path, report: dict[str, Any], rescue_plan: dict[str, Any] | None = None) -> None:
+    path = project_path / CLAIM_EVIDENCE_MATRIX_CSV
+    fieldnames = ["claim_area", "evidence_source", "decision", "risk", "recommended_action"]
+    rows = []
+    for signal in report.get("evidence_signals") or []:
+        rows.append({
+            "claim_area": "publication_readiness",
+            "evidence_source": "deterministic_review",
+            "decision": report.get("readiness_band", ""),
+            "risk": signal,
+            "recommended_action": report.get("recommendation", ""),
+        })
+    if rescue_plan:
+        for route in rescue_plan.get("recommended_routes") or []:
+            rows.append({
+                "claim_area": "statistical_rescue",
+                "evidence_source": route.get("target_stage", ""),
+                "decision": rescue_plan.get("status", ""),
+                "risk": route.get("rationale", ""),
+                "recommended_action": "; ".join(route.get("actions") or []),
+            })
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def assess_publication_readiness(project: str | Path) -> dict[str, Any]:
+    """Assess journal-facing submission readiness from saved loop artifacts."""
+    try:
+        state = load_project(project)
+    except Exception as exc:
+        raise ReviewRevisionError(str(exc)) from exc
+    project_path = state.path
+    metadata = state.metadata
+    data_quality = _read_json(project_path / "data" / "data_quality_report.json")
+    data_report = _read_json(project_path / "data" / "data_feasibility_report.json")
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    validity = _read_json(project_path / "results" / "result_validity_report.json")
+    quality = _read_json(project_path / "quality_checks" / "quality_report.json")
+    integrity = _read_json(project_path / "integrity" / "integrity_report.json")
+    journal = _read_json(project_path / "journal_profile" / "journal_profile.json")
+    figure_quality = _read_json(project_path / "results" / "figure_quality_report.json")
+    figures = _read_list_payload(project_path / "results" / "figure_metadata.json")
+    main_tex = _read_text(project_path / "latex" / "main.tex")
+
+    score = 100
+    signals: list[str] = []
+    issues: list[RevisionIssue] = []
+
+    data_decision = data_report.get("decision")
+    observed_rows = int(data_report.get("observed_rows") or data_quality.get("total_rows") or 0)
+    missing_ratio = _numeric(data_quality.get("overall_missing_cell_ratio")) or 0.0
+    if data_decision in {"blocked", "revise_required"}:
+        score -= 35
+        issues.append(_issue(
+            source="publication_readiness",
+            code="data_not_submission_ready",
+            severity="blocking",
+            target_stage="data",
+            title="Data evidence is not submission-ready",
+            reason="The data feasibility gate does not support the current scientific goal.",
+            files=["data/data_feasibility_report.json", "data/data_quality_report.json"],
+            user_input="Decide whether to add data, change variables, or reframe the study before submission.",
+        ))
+    elif data_decision == "conditional_pass":
+        score -= 12
+        issues.append(_issue(
+            source="publication_readiness",
+            code="data_claim_boundary_conditional",
+            severity="major",
+            target_stage="research_plan",
+            title="Data support is conditional",
+            reason="The manuscript should be framed as exploratory or claim-limited unless stronger data are added.",
+            files=["data/data_feasibility_report.json", "research_plan/research_plan.md"],
+            user_input="Confirm the acceptable claim boundary for the target journal.",
+        ))
+    if observed_rows and observed_rows < int(data_report.get("min_rows") or 30):
+        score -= 8
+        signals.append(f"Observed rows are below the configured minimum ({observed_rows} observed).")
+    if missing_ratio > 0.2:
+        score -= 10
+        signals.append(f"Missing-cell ratio is high ({missing_ratio:.3f}).")
+
+    if run_manifest.get("status") != "success":
+        score -= 25
+        issues.append(_issue(
+            source="publication_readiness",
+            code="methods_not_reproducible_for_review",
+            severity="blocking",
+            target_stage="methods",
+            title="Method verification is not reproducible",
+            reason="A submission-quality draft needs a successful local method run manifest.",
+            files=["methods/run_manifest.yaml", "code/scripts/run_analysis.py"],
+            user_input="Fix method execution or revise the method plan before submission.",
+        ))
+
+    validity_decision = validity.get("decision")
+    if validity_decision == "revise_required":
+        score -= 35
+        target = _target_from_validity(validity)
+        issues.append(_issue(
+            source="publication_readiness",
+            code="result_claim_not_supported",
+            severity="blocking",
+            target_stage=target,
+            title="Result evidence does not support submission claims",
+            reason="The result validity gate requires revision, so reviewer rejection risk is high.",
+            files=["results/result_validity_report.json", "methods/run_manifest.yaml"],
+            user_input="Choose between statistical/method revision, additional data, or weaker claims.",
+        ))
+    elif validity_decision == "conditional_pass":
+        score -= 15
+        issues.append(_issue(
+            source="publication_readiness",
+            code="result_claim_conditional",
+            severity="major",
+            target_stage="results",
+            title="Result claims need exploratory framing",
+            reason="Result validity is conditional rather than confirmatory.",
+            files=["results/result_validity_report.json", "results/results.tex", "discussion/discussion.tex"],
+            user_input="Confirm whether the paper should be submitted as an exploratory study.",
+        ))
+
+    if figure_quality and figure_quality.get("status") not in {"passed", "pass"}:
+        score -= 12
+        signals.append("Figure quality report is not passed.")
+    if figures and len(figures) < 5:
+        score -= 8
+        signals.append(f"Only {len(figures)} figure metadata record(s) were found; many journal drafts need 5-6 substantive figures.")
+    if integrity and integrity.get("status") != "passed":
+        score -= 15
+        signals.append("Integrity gate is not passed.")
+    if quality and quality.get("status") != "passed":
+        score -= 18
+        signals.append("Final quality gate is not passed.")
+    if not main_tex.strip():
+        score -= 12
+        signals.append("No assembled LaTeX manuscript was found.")
+
+    journal_name = journal.get("target_journal") or metadata.get("target_journal") or "the target journal"
+    journal_fit_summary = (
+        f"The readiness estimate is calibrated against {journal_name}. "
+        "A journal-specific profile is available." if journal else
+        f"The readiness estimate is provisional because no journal profile was found for {journal_name}."
+    )
+    if not journal:
+        score -= 8
+
+    score = _bounded_score(score)
+    report = {
+        "status": "reviewed",
+        "generated_at": utc_now(),
+        "project_path": str(project_path),
+        "target_journal": journal_name,
+        "readiness_score": score,
+        "readiness_band": _readiness_band(score),
+        "reviewer_style_decision": _score_to_reviewer_decision(score),
+        "recommendation": _publication_recommendation(score),
+        "journal_fit_summary": journal_fit_summary,
+        "evidence_signals": signals,
+        "issue_count": len(issues),
+        "issues": [asdict(issue) for issue in _dedupe_issues(issues)],
+        "inputs": [
+            "data/data_quality_report.json",
+            "data/data_feasibility_report.json",
+            "methods/run_manifest.yaml",
+            "results/result_validity_report.json",
+            "results/figure_metadata.json",
+            "results/figure_quality_report.json",
+            "journal_profile/journal_profile.json",
+            "quality_checks/quality_report.json",
+        ],
+    }
+    review_dir = _review_dir(project_path)
+    _write_json(review_dir / "publication_readiness_report.json", report)
+    markdown = _render_publication_readiness_md(report)
+    write_html_report(review_dir / "publication_readiness_report.html", markdown, title="Publication Readiness Report")
+    write_html_report(review_dir / "journal_fit_report.html", "## Journal Fit\n\n" + journal_fit_summary + "\n", title="Journal Fit Report")
+    _write_claim_evidence_matrix(project_path, report)
+    return report
+
+
+def _rescue_route(route_id: str, title: str, target_stage: str, rationale: str, actions: list[str]) -> dict[str, Any]:
+    return {
+        "route_id": route_id,
+        "title": title,
+        "target_stage": target_stage,
+        "rationale": rationale,
+        "actions": actions,
+        "rerun_commands": _route_commands(target_stage),
+    }
+
+
+def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
+    """Recommend statistical rescue routes when data or results are weak."""
+    try:
+        state = load_project(project)
+    except Exception as exc:
+        raise ReviewRevisionError(str(exc)) from exc
+    project_path = state.path
+    data_quality = _read_json(project_path / "data" / "data_quality_report.json")
+    data_report = _read_json(project_path / "data" / "data_feasibility_report.json")
+    validity = _read_json(project_path / "results" / "result_validity_report.json")
+    method_requirements = _read_json(project_path / "methods" / "method_requirements.json")
+    readiness = _read_json(project_path / PUBLICATION_READINESS_JSON)
+    if not readiness:
+        readiness = assess_publication_readiness(project_path)
+
+    routes: list[dict[str, Any]] = []
+    issues: list[RevisionIssue] = []
+    likely_sources: list[str] = []
+    observed_rows = int(data_report.get("observed_rows") or data_quality.get("total_rows") or 0)
+    min_rows = int(data_report.get("min_rows") or 30)
+    missing_ratio = _numeric(data_quality.get("overall_missing_cell_ratio")) or 0.0
+    validity_decision = validity.get("decision")
+    data_decision = data_report.get("decision")
+
+    if observed_rows and observed_rows < min_rows:
+        likely_sources.append("limited_sample_size")
+        routes.append(_rescue_route(
+            "small_sample_robustness",
+            "Use small-sample and uncertainty-aware statistics",
+            "methods",
+            "The available table has fewer observations than the configured data gate expects.",
+            [
+                "report effect sizes with confidence intervals",
+                "use bootstrap uncertainty estimates where appropriate",
+                "avoid confirmatory language and emphasize exploratory evidence",
+                "add sensitivity analysis for influential observations",
+            ],
+        ))
+    if missing_ratio > 0.0:
+        likely_sources.append("missing_data")
+        routes.append(_rescue_route(
+            "missingness_and_imputation_audit",
+            "Audit missingness before strengthening claims",
+            "data",
+            "Missing values can change the interpretation of weak associations and model outputs.",
+            [
+                "summarize missingness by variable and subgroup",
+                "compare complete-case and imputed analyses",
+                "state whether missingness is plausibly random or structurally biased",
+            ],
+        ))
+    if validity_decision == "revise_required":
+        likely_sources.extend(str(item) for item in validity.get("failure_causes") or ["result_validity"])
+        target = _target_from_validity(validity)
+        routes.append(_rescue_route(
+            "result_validity_rebuild",
+            "Rebuild the analysis around result validity failure",
+            target,
+            "The observed method outputs do not currently support the expected claim strength.",
+            [
+                "inspect feature construction, validation split, and primary metric definition",
+                "compare baseline, robust, and simplified models",
+                "rerun figure planning after changing the analysis route",
+                "lower the research claim if stronger evidence cannot be produced",
+            ],
+        ))
+    elif validity_decision == "conditional_pass" or data_decision == "conditional_pass":
+        likely_sources.append("claim_overreach")
+        routes.append(_rescue_route(
+            "claim_reframing",
+            "Reframe the manuscript around a defensible exploratory claim",
+            "research_plan",
+            "The current evidence is usable only if the manuscript avoids stronger-than-supported conclusions.",
+            [
+                "rewrite the research objective as exploratory or hypothesis-generating",
+                "remove causal or generalizable language unless external validation is added",
+                "align Introduction, Results, and Discussion with the supported claim boundary",
+            ],
+        ))
+    if method_requirements and not method_requirements.get("minimum_primary_metric"):
+        likely_sources.append("unclear_success_threshold")
+        routes.append(_rescue_route(
+            "explicit_success_threshold",
+            "Define statistical success thresholds before rerunning results",
+            "method_plan",
+            "The method contract does not define a minimum primary metric, making result validity hard to judge.",
+            [
+                "set a primary metric and minimum acceptable value",
+                "justify the threshold from literature or target-journal expectations",
+                "rerun result validity after regenerating method outputs",
+            ],
+        ))
+
+    if not routes:
+        routes.append(_rescue_route(
+            "normal_revision",
+            "Proceed with normal reviewer-driven refinement",
+            "results",
+            "No deterministic statistical rescue trigger was detected.",
+            [
+                "keep figure interpretation aligned with metadata",
+                "use reviewer feedback to decide whether additional robustness analysis is needed",
+            ],
+        ))
+
+    for route in routes:
+        if route["route_id"] == "normal_revision":
+            continue
+        severity = "blocking" if route["target_stage"] in {"data", "methods"} and validity_decision == "revise_required" else "major"
+        issues.append(_issue(
+            source="statistical_rescue",
+            code=route["route_id"],
+            severity=severity,
+            target_stage=route["target_stage"],
+            title=route["title"],
+            reason=route["rationale"],
+            files=[
+                "data/data_quality_report.json",
+                "data/data_feasibility_report.json",
+                "methods/method_requirements.json",
+                "results/result_validity_report.json",
+            ],
+            user_input="Choose whether to revise data, revise methods, add robustness analysis, or lower the manuscript claim strength.",
+        ))
+
+    status = "rescue_recommended" if issues else "no_rescue_needed"
+    diagnosis = (
+        "The current evidence chain has data/result weaknesses that may be improved through statistical processing, method revision, or claim reframing."
+        if issues else
+        "No deterministic statistical-rescue trigger was found; continue normal reviewer-guided revision."
+    )
+    plan = {
+        "status": status,
+        "generated_at": utc_now(),
+        "project_path": str(project_path),
+        "diagnosis": diagnosis,
+        "likely_failure_sources": sorted(set(likely_sources)),
+        "recommended_routes": routes,
+        "issue_count": len(issues),
+        "issues": [asdict(issue) for issue in _dedupe_issues(issues)],
+        "readiness_score": readiness.get("readiness_score"),
+        "readiness_band": readiness.get("readiness_band"),
+    }
+    review_dir = _review_dir(project_path)
+    _write_json(review_dir / "statistical_rescue_plan.json", plan)
+    write_html_report(review_dir / "statistical_rescue_plan.html", _render_statistical_rescue_md(plan), title="Statistical Rescue Plan")
+    _write_claim_evidence_matrix(project_path, readiness, plan)
+    return plan
 
 
 def diagnose_gate_failures(project: str | Path) -> dict[str, Any]:
@@ -401,7 +892,7 @@ def _write_commitment_ledger(path: Path, issues: list[RevisionIssue]) -> None:
 
 
 def generate_revision_plan(project: str | Path) -> dict[str, Any]:
-    """Merge gate diagnosis and reviewer issues into a staged revision plan."""
+    """Merge gate diagnosis, reviewer issues, readiness issues, and statistical rescue issues."""
     try:
         state = load_project(project)
     except Exception as exc:
@@ -410,10 +901,16 @@ def generate_revision_plan(project: str | Path) -> dict[str, Any]:
     review_dir = _review_dir(project_path)
     if not (review_dir / "gate_failure_diagnosis.json").exists():
         diagnose_gate_failures(project_path)
+    if not (review_dir / "publication_readiness_report.json").exists():
+        assess_publication_readiness(project_path)
+    if not (review_dir / "statistical_rescue_plan.json").exists():
+        recommend_statistical_revision(project_path)
 
     issues = []
     issues.extend(_load_issue_payload(review_dir / "gate_failure_diagnosis.json"))
     issues.extend(_load_issue_payload(review_dir / "reviewer_issues.json"))
+    issues.extend(_load_issue_payload(review_dir / "publication_readiness_report.json"))
+    issues.extend(_load_issue_payload(review_dir / "statistical_rescue_plan.json"))
     issues = _dedupe_issues(issues)
     by_stage: dict[str, list[dict[str, Any]]] = {}
     for issue in issues:
@@ -434,7 +931,7 @@ def generate_revision_plan(project: str | Path) -> dict[str, Any]:
 
 
 def _recommended_stage_order(issues: list[RevisionIssue]) -> list[str]:
-    order = ["references", "research_plan", "data", "method_plan", "code", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"]
+    order = ["references", "research_plan", "data", "method_plan", "figure_plan", "code", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"]
     present = {issue.target_stage for issue in issues}
     return [stage for stage in order if stage in present]
 
@@ -494,6 +991,8 @@ def re_review(project: str | Path) -> dict[str, Any]:
     """Rerun gate diagnosis, reviewer pass, and revision planning after revisions."""
     diagnosis = diagnose_gate_failures(project)
     review = review_draft(project)
+    readiness = assess_publication_readiness(project)
+    rescue = recommend_statistical_revision(project)
     plan = generate_revision_plan(project)
     project_path = Path(plan["project_path"])
     report = {
@@ -502,6 +1001,9 @@ def re_review(project: str | Path) -> dict[str, Any]:
         "project_path": str(project_path),
         "gate_issue_count": diagnosis.get("issue_count", 0),
         "reviewer_issue_count": review.get("issue_count", 0),
+        "publication_readiness_score": readiness.get("readiness_score"),
+        "publication_readiness_band": readiness.get("readiness_band"),
+        "statistical_rescue_issue_count": rescue.get("issue_count", 0),
         "revision_issue_count": plan.get("issue_count", 0),
         "revision_plan": REVISION_PLAN_JSON,
     }
@@ -517,6 +1019,8 @@ def _render_re_review_md(report: dict[str, Any]) -> str:
         f"Status: {report['status']}\n\n"
         f"Gate issues: {report['gate_issue_count']}\n\n"
         f"Reviewer issues: {report['reviewer_issue_count']}\n\n"
+        f"Publication readiness: {report.get('publication_readiness_score')} ({report.get('publication_readiness_band')})\n\n"
+        f"Statistical rescue issues: {report['statistical_rescue_issue_count']}\n\n"
         f"Revision issues: {report['revision_issue_count']}\n\n"
         f"Revision plan: {report['revision_plan']}\n"
     )
