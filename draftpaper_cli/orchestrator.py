@@ -119,21 +119,35 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     integrity = _read_report(project_path, "integrity/integrity_report.json")
     if integrity and integrity.get("status") not in {"passed", "pass"}:
-        return {
-            "stage": "review",
-            "command": "diagnose-gate-failures",
-            "cli": _cli_for(project_path, "diagnose-gate-failures"),
-            "reason": "The integrity gate failed; run gate failure diagnosis before rerunning downstream manuscript stages.",
-        }
+        return _review_sequence_action(project_path, "The integrity gate failed")
     quality = _read_report(project_path, "quality_checks/quality_report.json")
     if quality and quality.get("status") not in {"passed", "pass"}:
-        return {
-            "stage": "review",
-            "command": "diagnose-gate-failures",
-            "cli": _cli_for(project_path, "diagnose-gate-failures"),
-            "reason": "The final quality gate failed; run gate failure diagnosis to map issues to revision stages.",
-        }
+        return _review_sequence_action(project_path, "The final quality gate failed")
     return None
+
+
+def _review_sequence_action(project_path: Path, prefix: str) -> dict[str, Any]:
+    sequence = [
+        ("review/gate_failure_diagnosis.json", "diagnose-gate-failures", "map failed gates to revision stages"),
+        ("review/reviewer_issues.json", "review-draft", "run a reviewer-style draft pass"),
+        ("review/publication_readiness_report.json", "assess-publication-readiness", "estimate target-journal submission risk"),
+        ("review/statistical_rescue_plan.json", "recommend-statistical-revision", "recommend statistical rescue or claim reframing routes"),
+        ("review/revision_plan.json", "generate-revision-plan", "merge review issues into a staged revision plan"),
+    ]
+    for relative, command, reason in sequence:
+        if not (project_path / relative).exists():
+            return {
+                "stage": "review",
+                "command": command,
+                "cli": _cli_for(project_path, command),
+                "reason": f"{prefix}; {reason}.",
+            }
+    return {
+        "stage": "review",
+        "command": "generate-revision-plan",
+        "cli": _cli_for(project_path, "generate-revision-plan"),
+        "reason": f"{prefix}; review artifacts already exist, refresh the unified revision plan before applying revisions.",
+    }
 
 
 def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:

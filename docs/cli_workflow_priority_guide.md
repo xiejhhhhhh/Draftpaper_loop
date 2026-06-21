@@ -627,7 +627,7 @@ Future Web UI / desktop app / API service
 
 ## Priority E: Review, Revision Routing, and Re-review Loop
 
-After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has four layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass. The third layer estimates target-journal publication readiness from saved loop artifacts. The fourth layer recommends statistical rescue routes when weak data or weak results might be made publishable through robust statistics, missingness analysis, method revision, explicit thresholds, or claim reframing.
+After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has four layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass. The third layer estimates target-journal publication readiness from saved loop artifacts and writes a Codex-readable archived review context. The fourth layer recommends statistical rescue routes when weak data or weak results might be made publishable through robust statistics, missingness analysis, method revision, explicit thresholds, or claim reframing.
 
 Implemented Priority E CLI commands:
 
@@ -650,6 +650,8 @@ review/review_report.md
 review/reviewer_issues.json
 review/publication_readiness_report.json
 review/publication_readiness_report.html
+review/codex_archive_review_context.json
+review/codex_archive_review_context.html
 review/statistical_rescue_plan.json
 review/statistical_rescue_plan.html
 review/journal_fit_report.html
@@ -683,11 +685,11 @@ Every issue uses the same schema:
 
 `diagnose-gate-failures` reads the data feasibility report, method run manifest, result validity report, integrity report, and quality report. It does not merely say a gate failed; it maps each failure to a target stage, files to inspect, required user decision, and the CLI commands that should be rerun.
 
-`status` and `run-pipeline` also route into this layer. If `integrity/integrity_report.json` or `quality_checks/quality_report.json` exists with a failed status while the project is at the final quality stage, the next action becomes `diagnose-gate-failures`. This prevents the user from getting trapped in repeated gate reruns without a concrete backtracking plan.
+`status` and `run-pipeline` also route into this layer. If `integrity/integrity_report.json` or `quality_checks/quality_report.json` exists with a failed status while the project is at the final quality stage, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, and `generate-revision-plan` as each review artifact appears. This prevents the user from getting trapped in repeated gate reruns without a concrete backtracking plan.
 
 `review-draft` is a deterministic reviewer-style pass. It checks whether the assembled manuscript exists, whether Methods are reproducible from a successful run manifest, whether result claim strength matches the result validity decision, and whether Discussion exists after Results. This is intentionally conservative and does not replace human review.
 
-`assess-publication-readiness` reads saved data, method, result, figure, integrity, quality, LaTeX, and journal-profile artifacts, then writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. It reports a readiness score, readiness band, reviewer-style decision, evidence signals, and major risks. This is an internal triage estimate, not a guaranteed journal acceptance probability.
+`assess-publication-readiness` reads saved data, method, result, figure, integrity, quality, LaTeX, and journal-profile artifacts, then writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/codex_archive_review_context.json`, `review/codex_archive_review_context.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. It reports a readiness score, readiness band, reviewer-style decision, evidence signals, major risks, and a natural-language reviewer narrative. This is an internal triage estimate, not a guaranteed journal acceptance probability.
 
 `recommend-statistical-revision` reads the same saved loop artifacts plus the readiness report, then writes `review/statistical_rescue_plan.json` and `review/statistical_rescue_plan.html`. It recommends routes such as small-sample robustness checks, missingness/imputation audits, method/result validity rebuilding, explicit success thresholds, or claim reframing. It does not modify the data or manuscript automatically.
 

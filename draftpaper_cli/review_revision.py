@@ -19,6 +19,8 @@ REVIEW_REPORT_MD = "review/review_report.md"
 REVIEWER_ISSUES_JSON = "review/reviewer_issues.json"
 PUBLICATION_READINESS_JSON = "review/publication_readiness_report.json"
 PUBLICATION_READINESS_HTML = "review/publication_readiness_report.html"
+CODEX_ARCHIVE_REVIEW_CONTEXT_JSON = "review/codex_archive_review_context.json"
+CODEX_ARCHIVE_REVIEW_CONTEXT_HTML = "review/codex_archive_review_context.html"
 STATISTICAL_RESCUE_JSON = "review/statistical_rescue_plan.json"
 STATISTICAL_RESCUE_HTML = "review/statistical_rescue_plan.html"
 CLAIM_EVIDENCE_MATRIX_CSV = "review/claim_evidence_matrix.csv"
@@ -276,6 +278,10 @@ def _render_publication_readiness_md(report: dict[str, Any]) -> str:
         "",
         f"Recommendation: {report['recommendation']}",
         "",
+        "## Reviewer Narrative",
+        "",
+        report.get("reviewer_narrative", ""),
+        "",
         "## Journal Fit",
         "",
         report.get("journal_fit_summary", ""),
@@ -292,6 +298,112 @@ def _render_publication_readiness_md(report: dict[str, Any]) -> str:
         lines.append("- No major deterministic readiness issues were detected.")
     lines.append("")
     return "\n".join(lines)
+
+
+def _trim_text(text: str, limit: int = 1800) -> str:
+    text = " ".join(str(text or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _artifact_text(project_path: Path, relative: str, limit: int = 1800) -> str:
+    return _trim_text(_read_text(project_path / relative), limit=limit)
+
+
+def _compact_json(value: Any, limit: int = 1800) -> str:
+    try:
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    except TypeError:
+        text = str(value)
+    return _trim_text(text, limit=limit)
+
+
+def _collect_codex_archive_context(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Collect a bounded, explicit project-archive packet for Codex/LLM review."""
+    artifacts = {
+        "project_metadata": {
+            "project_id": metadata.get("project_id"),
+            "project_slug": metadata.get("project_slug"),
+            "idea": metadata.get("idea"),
+            "field": metadata.get("field"),
+            "target_journal": metadata.get("target_journal"),
+        },
+        "research_plan": _artifact_text(project_path, "research_plan/research_plan.md", 2400),
+        "literature_review_notes": _artifact_text(project_path, "references/literature_review_notes.html", 2200),
+        "data_context": _compact_json(_read_json(project_path / "data" / "data_writing_context.json"), 2200),
+        "data_quality": _compact_json(_read_json(project_path / "data" / "data_quality_report.json"), 1400),
+        "data_feasibility": _compact_json(_read_json(project_path / "data" / "data_feasibility_report.json"), 1600),
+        "method_context": _compact_json(_read_json(project_path / "methods" / "method_writing_context.json"), 2200),
+        "method_requirements": _compact_json(_read_json(project_path / "methods" / "method_requirements.json"), 1600),
+        "method_run_manifest": _compact_json(_read_json(project_path / "methods" / "run_manifest.yaml"), 1600),
+        "result_validity": _compact_json(_read_json(project_path / "results" / "result_validity_report.json"), 1600),
+        "figure_metadata": _compact_json(_read_list_payload(project_path / "results" / "figure_metadata.json"), 2200),
+        "figure_quality": _compact_json(_read_json(project_path / "results" / "figure_quality_report.json"), 1600),
+        "results_text": _artifact_text(project_path, "results/results.tex", 2200),
+        "discussion_text": _artifact_text(project_path, "discussion/discussion.tex", 2200),
+        "journal_profile": _compact_json(_read_json(project_path / "journal_profile" / "journal_profile.json"), 1600),
+        "integrity_report": _compact_json(_read_json(project_path / "integrity" / "integrity_report.json"), 1600),
+        "quality_report": _compact_json(_read_json(project_path / "quality_checks" / "quality_report.json"), 1600),
+    }
+    present = [key for key, value in artifacts.items() if value]
+    missing = [key for key, value in artifacts.items() if not value]
+    return {
+        "generated_at": utc_now(),
+        "project_path": str(project_path),
+        "purpose": "Codex/LLM reviewer context assembled only from explicit project files, not hidden reasoning.",
+        "present_sections": present,
+        "missing_sections": missing,
+        "artifacts": artifacts,
+        "reviewer_prompt": (
+            "Act as a target-journal reviewer. Use only this archived project context. "
+            "Assess publication readiness, data/method/result weaknesses, statistical rescue options, "
+            "claim strength, and required upstream reruns."
+        ),
+    }
+
+
+def _render_codex_context_md(context: dict[str, Any]) -> str:
+    lines = [
+        "# Codex Archive Review Context",
+        "",
+        context.get("purpose", ""),
+        "",
+        "## Reviewer Prompt",
+        "",
+        context.get("reviewer_prompt", ""),
+        "",
+        "## Present Sections",
+        "",
+    ]
+    for key in context.get("present_sections") or []:
+        lines.append(f"- {key}")
+    lines.extend(["", "## Archive Excerpts", ""])
+    for key, value in (context.get("artifacts") or {}).items():
+        if not value:
+            continue
+        lines.extend([f"### {key}", "", str(value), ""])
+    return "\n".join(lines)
+
+
+def _reviewer_narrative(report: dict[str, Any], context: dict[str, Any]) -> str:
+    artifacts = context.get("artifacts") or {}
+    field = (artifacts.get("project_metadata") or {}).get("field") or "the stated field"
+    journal = report.get("target_journal") or "the target journal"
+    band = report.get("readiness_band")
+    score = report.get("readiness_score")
+    decision = report.get("reviewer_style_decision")
+    signals = report.get("evidence_signals") or []
+    issue_titles = [issue.get("title", "") for issue in report.get("issues") or [] if issue.get("title")]
+    main_risk = issue_titles[0] if issue_titles else (signals[0] if signals else "the evidence chain needs normal reviewer scrutiny")
+    return (
+        f"From a reviewer perspective for {journal}, this draft currently reads as {band} with a readiness score of {score}/100 "
+        f"and a likely editorial posture of {decision}. The assessment is based on the archived project files rather than a fresh chat-only impression. "
+        f"For {field}, the main risk is {main_risk}. "
+        "If the authors want to preserve the current study direction, the next revision should first repair the data-method-result evidence chain, "
+        "then rerun figure planning, method verification, result validity, Results writing, Discussion writing, LaTeX assembly, integrity, and quality checks. "
+        "If stronger evidence cannot be produced, the safer route is to reframe the work as exploratory and make that claim boundary explicit throughout the manuscript."
+    )
 
 
 def _render_statistical_rescue_md(plan: dict[str, Any]) -> str:
@@ -479,6 +591,7 @@ def assess_publication_readiness(project: str | Path) -> dict[str, Any]:
         score -= 8
 
     score = _bounded_score(score)
+    archive_context = _collect_codex_archive_context(project_path, metadata)
     report = {
         "status": "reviewed",
         "generated_at": utc_now(),
@@ -489,6 +602,8 @@ def assess_publication_readiness(project: str | Path) -> dict[str, Any]:
         "reviewer_style_decision": _score_to_reviewer_decision(score),
         "recommendation": _publication_recommendation(score),
         "journal_fit_summary": journal_fit_summary,
+        "reviewer_narrative": "",
+        "codex_archive_review_context": CODEX_ARCHIVE_REVIEW_CONTEXT_JSON,
         "evidence_signals": signals,
         "issue_count": len(issues),
         "issues": [asdict(issue) for issue in _dedupe_issues(issues)],
@@ -503,7 +618,14 @@ def assess_publication_readiness(project: str | Path) -> dict[str, Any]:
             "quality_checks/quality_report.json",
         ],
     }
+    report["reviewer_narrative"] = _reviewer_narrative(report, archive_context)
     review_dir = _review_dir(project_path)
+    _write_json(review_dir / "codex_archive_review_context.json", archive_context)
+    write_html_report(
+        review_dir / "codex_archive_review_context.html",
+        _render_codex_context_md(archive_context),
+        title="Codex Archive Review Context",
+    )
     _write_json(review_dir / "publication_readiness_report.json", report)
     markdown = _render_publication_readiness_md(report)
     write_html_report(review_dir / "publication_readiness_report.html", markdown, title="Publication Readiness Report")
@@ -523,6 +645,98 @@ def _rescue_route(route_id: str, title: str, target_stage: str, rationale: str, 
     }
 
 
+def _domain_context_text(metadata: dict[str, Any], archive_context: dict[str, Any]) -> str:
+    artifacts = archive_context.get("artifacts") or {}
+    chunks = [
+        str(metadata.get("idea") or ""),
+        str(metadata.get("field") or ""),
+        str(metadata.get("target_journal") or ""),
+    ]
+    for key in (
+        "research_plan",
+        "data_context",
+        "method_context",
+        "method_requirements",
+        "result_validity",
+        "figure_metadata",
+        "results_text",
+    ):
+        value = artifacts.get(key)
+        if value:
+            chunks.append(str(value))
+    return " ".join(chunks).lower()
+
+
+def _domain_statistical_routes(metadata: dict[str, Any], archive_context: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Build discipline-aware rescue routes from saved project artifacts."""
+    text = _domain_context_text(metadata, archive_context)
+    routes: list[dict[str, Any]] = []
+    sources: list[str] = []
+
+    if any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
+        sources.append("agricultural_remote_sensing_signal")
+        routes.append(_rescue_route(
+            "agricultural_remote_sensing_feature_rebuild",
+            "Rebuild crop and remote-sensing features before strengthening claims",
+            "methods",
+            "The archived project context points to crop, NDVI, yield, or remote-sensing evidence; weak conclusions may improve after agronomic feature construction and stratified validation.",
+            [
+                "derive phenology-aware NDVI indicators such as seasonal maximum, seasonal integral, early-season slope, and key growth-stage summaries",
+                "join or stratify observations by year, agro-climatic zone, cultivar group, irrigation status, soil class, or management region when such metadata are available",
+                "test yield or suitability relationships with climate and soil covariates rather than relying on raw vegetation-index correlations alone",
+                "use spatial or temporal blocked validation to check whether patterns generalize beyond nearby fields or adjacent dates",
+                "regenerate figure plans around agronomic evidence: NDVI time-series profiles, feature-response curves, spatial residual maps, and robustness panels",
+            ],
+        ))
+
+    if any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
+        sources.append("spatial_or_ecological_signal")
+        routes.append(_rescue_route(
+            "spatial_ecological_validation",
+            "Add spatial structure and ecological validation checks",
+            "methods",
+            "The project context contains spatial, GIS, or ecological signals, so ordinary random splits and unstratified summaries may overstate evidence strength.",
+            [
+                "check spatial autocorrelation in predictors, residuals, or classification errors",
+                "prefer spatial block, regional holdout, or time-sliced validation over purely random validation when coordinates or regions are available",
+                "summarize effects by ecological zone or spatial stratum before claiming broad generality",
+                "add maps or stratified response plots that show where the result is stable and where it fails",
+            ],
+        ))
+
+    if any(token in text for token in ("light curve", "x-ray", "flare", "astronom", "source classification", "catalog", "photometric", "spectral")):
+        sources.append("astronomy_time_series_signal")
+        routes.append(_rescue_route(
+            "astronomy_time_series_feature_rebuild",
+            "Rebuild astronomical source features and validation",
+            "methods",
+            "The project context suggests astronomical source or time-series classification, where result quality often depends on variability features, catalog cross-matching, and leakage-aware validation.",
+            [
+                "derive variability descriptors, hardness or color ratios, flux percentiles, and uncertainty-aware summary features",
+                "separate training and validation by survey field, source family, or observation campaign when possible",
+                "audit class imbalance and report macro metrics, calibrated probabilities, and confusion structure",
+                "cross-match with trusted catalogs or external labels before making strong source-population claims",
+            ],
+        ))
+
+    if any(token in text for token in ("machine learning", "deep learning", "cnn", "transformer", "random forest", "classifier", "classification", "regression model")):
+        sources.append("machine_learning_validation_signal")
+        routes.append(_rescue_route(
+            "machine_learning_validation_rebuild",
+            "Strengthen model validation and baseline comparison",
+            "methods",
+            "The project context contains machine-learning methods, so weak results should be diagnosed through baseline, leakage, metric, and ablation checks before manuscript claims are strengthened.",
+            [
+                "compare the proposed model with simple baselines and domain-standard models on the same split",
+                "audit leakage from duplicated samples, spatial proximity, temporal adjacency, or preprocessing fitted before splitting",
+                "report uncertainty across repeated splits or cross-validation folds",
+                "add ablation analysis for the main data modalities or feature groups",
+            ],
+        ))
+
+    return routes, sources
+
+
 def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
     """Recommend statistical rescue routes when data or results are weak."""
     try:
@@ -530,6 +744,7 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
     except Exception as exc:
         raise ReviewRevisionError(str(exc)) from exc
     project_path = state.path
+    metadata = state.metadata
     data_quality = _read_json(project_path / "data" / "data_quality_report.json")
     data_report = _read_json(project_path / "data" / "data_feasibility_report.json")
     validity = _read_json(project_path / "results" / "result_validity_report.json")
@@ -537,6 +752,7 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
     readiness = _read_json(project_path / PUBLICATION_READINESS_JSON)
     if not readiness:
         readiness = assess_publication_readiness(project_path)
+    archive_context = _collect_codex_archive_context(project_path, metadata)
 
     routes: list[dict[str, Any]] = []
     issues: list[RevisionIssue] = []
@@ -615,6 +831,12 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
                 "rerun result validity after regenerating method outputs",
             ],
         ))
+
+    domain_routes, domain_sources = _domain_statistical_routes(metadata, archive_context)
+    if domain_routes and (issues or validity_decision in {"revise_required", "conditional_pass"} or data_decision in {"revise_required", "conditional_pass"}):
+        likely_sources.extend(domain_sources)
+        existing_route_ids = {route["route_id"] for route in routes}
+        routes.extend(route for route in domain_routes if route["route_id"] not in existing_route_ids)
 
     if not routes:
         routes.append(_rescue_route(

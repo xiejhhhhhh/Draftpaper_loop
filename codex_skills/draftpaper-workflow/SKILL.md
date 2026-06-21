@@ -90,7 +90,7 @@ Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_
 
 ## Review and Revision Loop
 
-When any gate fails, run `diagnose-gate-failures` before broad advice. After an assembled draft exists, run `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, then `generate-revision-plan`. Do not let `apply-revision` rewrite scientific content; it only marks affected stages stale. If revisions require data, methods, statistical processing, or weaker claims, ask the user to confirm. After reruns, use `re-review`.
+When any gate fails, use `status` or `run-pipeline` to follow the review sequence: `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, then `generate-revision-plan`. Read `review/codex_archive_review_context.html` when Codex needs the full archived reviewer context. Do not let `apply-revision` rewrite scientific content; it only marks affected stages stale. If revisions require data, methods, statistical processing, or weaker claims, ask the user to confirm. After reruns, use `re-review`.
 
 ## Skill Reuse
 

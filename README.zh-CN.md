@@ -179,9 +179,11 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 ### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
 
 - 新增 `assess-publication-readiness`，根据 data feasibility、method verification、result validity、figure metadata、integrity、quality 和 journal profile 等本地归档产物评估目标期刊投稿就绪度。
-- 新增 `recommend-statistical-revision`，当数据质量较弱或结果不足以支撑结论时，生成统计增强修订方案，包括稳健统计、缺失值分析、方法重构、显式成功阈值和 claim reframing。
-- 新增审稿输出：`review/publication_readiness_report.json`、`review/publication_readiness_report.html`、`review/statistical_rescue_plan.json`、`review/statistical_rescue_plan.html`、`review/journal_fit_report.html` 和 `review/claim_evidence_matrix.csv`。
-- 升级 `generate-revision-plan` 和 `re-review`，让 gate、reviewer、publication-readiness 和 statistical-rescue issues 共用同一套 revision schema 和 stale-stage 回退路径。
+- 新增 `recommend-statistical-revision`，当数据质量较弱或结果不足以支撑结论时，生成统计增强修订方案，包括稳健统计、缺失值分析、方法重构、显式成功阈值、领域化特征重构、空间验证、模型验证检查和 claim reframing。
+- 新增审稿输出：`review/publication_readiness_report.json`、`review/publication_readiness_report.html`、`review/codex_archive_review_context.json`、`review/codex_archive_review_context.html`、`review/statistical_rescue_plan.json`、`review/statistical_rescue_plan.html`、`review/journal_fit_report.html` 和 `review/claim_evidence_matrix.csv`。
+- 新增项目归档审稿上下文层，让 publication readiness report 可以基于 research plan、文献、数据、方法、结果、图表、期刊、integrity 和 quality 等本地归档产物生成更接近真实审稿意见的自然语言评审。
+- 新增学科化统计增强路线，当项目归档中出现农业遥感、空间/生态、天文时间序列或机器学习验证信号时，自动给出更贴近对应学科的特征工程、分层验证、外部验证和重绘建议。
+- 升级 `status`、`run-pipeline`、`generate-revision-plan` 和 `re-review`，让 quality/integrity 失败后依次进入 gate diagnosis、reviewer pass、publication readiness、statistical rescue 和统一 stale-stage 回退路径。
 - 本地验证：`python -m unittest discover -s tests`
 - 当前测试规模：112 tests
 

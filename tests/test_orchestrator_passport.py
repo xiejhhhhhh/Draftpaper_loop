@@ -203,7 +203,7 @@ class OrchestratorPassportTests(unittest.TestCase):
             self.assertEqual(status["next_action"]["command"], "diagnose-gate-failures")
             self.assertIn("diagnose-gate-failures", status["next_action"]["cli"])
 
-    def test_run_pipeline_recommends_gate_failure_diagnosis_after_quality_failure(self) -> None:
+    def test_run_pipeline_recommends_review_sequence_after_quality_failure(self) -> None:
         from draftpaper_cli.orchestrator import run_pipeline
         from draftpaper_cli.passport import refresh_project_passport
         from draftpaper_cli.project_scaffold import _write_json
@@ -239,6 +239,22 @@ class OrchestratorPassportTests(unittest.TestCase):
 
             self.assertEqual(plan["next_action"]["stage"], "review")
             self.assertEqual(plan["next_action"]["command"], "diagnose-gate-failures")
+
+            _write_json(project.path / "review" / "gate_failure_diagnosis.json", {"status": "issues_found"})
+            refresh_project_passport(project.path, event="test_review_diagnosis_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "review-draft")
+
+            _write_json(project.path / "review" / "reviewer_issues.json", {"status": "reviewed"})
+            refresh_project_passport(project.path, event="test_reviewer_issues_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "assess-publication-readiness")
+
+            _write_json(project.path / "review" / "publication_readiness_report.json", {"status": "reviewed"})
+            refresh_project_passport(project.path, event="test_readiness_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "recommend-statistical-revision")
+
+            _write_json(project.path / "review" / "statistical_rescue_plan.json", {"status": "rescue_recommended"})
+            refresh_project_passport(project.path, event="test_rescue_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "generate-revision-plan")
 
 
 if __name__ == "__main__":

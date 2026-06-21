@@ -147,9 +147,13 @@ class ReviewRevisionTests(unittest.TestCase):
             self.assertGreaterEqual(rescue["issue_count"], 1)
             self.assertTrue((project.path / "review" / "publication_readiness_report.json").exists())
             self.assertTrue((project.path / "review" / "publication_readiness_report.html").exists())
+            self.assertTrue((project.path / "review" / "codex_archive_review_context.json").exists())
+            self.assertTrue((project.path / "review" / "codex_archive_review_context.html").exists())
             self.assertTrue((project.path / "review" / "statistical_rescue_plan.json").exists())
             self.assertTrue((project.path / "review" / "statistical_rescue_plan.html").exists())
             self.assertTrue((project.path / "review" / "claim_evidence_matrix.csv").exists())
+            self.assertIn("reviewer_narrative", readiness)
+            self.assertIn("reviewer perspective", readiness["reviewer_narrative"])
 
     def test_apply_revision_marks_target_and_downstream_stages_stale(self) -> None:
         from draftpaper_cli.project_state import update_stage_status
