@@ -86,6 +86,53 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
             self.assertIn("Inspect model design", " ".join(report["recommended_actions"]))
 
+    def test_result_validity_does_not_treat_r2_point_05_as_significance_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Weak regression evidence", field="remote sensing agronomy")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="r2", minimum_primary_metric=0.05)
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nr2,0.053129\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "output_files": ["results/tables/metrics.csv"],
+                    "metrics": {"r2": 0.053129},
+                }),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+
+            self.assertEqual(result["decision"], "revise_required")
+            report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["metric_semantics"], "goodness_of_fit")
+            self.assertEqual(report["evidence_strength"], "very_weak_fit")
+            self.assertTrue(any("not a p-value" in issue for issue in report["issues"]))
+            self.assertTrue(any("data quality" in action.lower() for action in report["recommended_actions"]))
+
+    def test_result_validity_uses_point_05_as_default_p_value_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Significance test", field="environmental statistics")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="p_value")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\np_value,0.031\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "output_files": ["results/tables/metrics.csv"],
+                    "metrics": {"p_value": 0.031},
+                }),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+            report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["metric_semantics"], "statistical_significance")
+            self.assertEqual(report["minimum_value"], 0.05)
+            self.assertEqual(report["evidence_strength"], "statistically_significant")
+
     def test_cli_collect_method_plan_and_assess_result_validity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI validity", field="workflow engineering")

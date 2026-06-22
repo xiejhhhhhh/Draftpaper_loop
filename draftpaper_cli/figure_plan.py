@@ -317,6 +317,65 @@ def _planned_figures(
     return figures
 
 
+def _review_task_figures(
+    *,
+    tasks_report: dict[str, Any],
+    inventory: dict[str, Any],
+    selected_data: str,
+) -> list[dict[str, Any]]:
+    figure_inventory = _scoped_inventory(inventory, {})
+    numeric = _numeric_columns(figure_inventory)
+    labels = _label_columns(figure_inventory)
+    lookup = _column_lookup(figure_inventory)
+    ndvi_col = _match_column(lookup, ["ndvi", "vegetation"], numeric[0] if numeric else None)
+    yield_col = _match_column(lookup, ["yield", "production", "potential"], numeric[1] if len(numeric) > 1 else None)
+    climate_col = _match_column(lookup, ["temp", "precip", "climate", "rain"], numeric[2] if len(numeric) > 2 else None)
+    group_col = _match_column(lookup, ["region", "zone", "field", "plot", "county", "province"], labels[0] if labels else None)
+    figures: list[dict[str, Any]] = []
+
+    def add(task: dict[str, Any], *, title: str, figure_type: str, columns: list[str], x: str | None = None, y: str | None = None, group: str | None = None, transforms: list[str] | None = None) -> None:
+        figure_id = _safe_id(title, f"review_{len(figures) + 1}")
+        figures.append({
+            "id": figure_id,
+            "title": title,
+            "path": f"results/figures/{figure_id}.png",
+            "generation_mode": "generated_code",
+            "source": "review_task",
+            "review_task_id": task.get("task_id"),
+            "operation_family": task.get("operation_family"),
+            "figure_type": figure_type,
+            "visualization_type": figure_type,
+            "required_inputs": [selected_data],
+            "required_columns": [column for column in columns if column],
+            "x": x,
+            "y": y,
+            "group": group,
+            "statistical_transform": transforms or [],
+            "backend_preference": ["matplotlib_scienceplots", "matplotlib", "png_stdlib_fallback"],
+            "no_flowchart_fallback": True,
+            "scientific_question": f"How does the reviewer-requested {task.get('operation_family')} change the empirical evidence?",
+            "caption_draft": f"{title}.",
+            "result_claim_template": "This reviewer-driven figure reports whether the revised analysis changes the strength, stability, or interpretation of the empirical result.",
+        })
+
+    for task in tasks_report.get("tasks") or []:
+        status = ((task.get("feasibility") or {}).get("status") or "")
+        if status == "blocked_missing_data":
+            continue
+        family = task.get("operation_family")
+        if family == "agricultural_remote_sensing_feature_rebuild":
+            add(task, title="Reviewer-driven remote-sensing feature response", figure_type="scatter_regression", columns=[ndvi_col, yield_col], x=ndvi_col, y=yield_col, transforms=["pearson_r", "linear_fit", "r2", "review_task_feature_rebuild"])
+        elif family == "agricultural_remote_sensing_qc_rebuild":
+            add(task, title="Reviewer-driven raw versus QC remote-sensing evidence", figure_type="histogram", columns=[ndvi_col or yield_col], x=ndvi_col or yield_col, transforms=["missingness", "range_check", "outlier_screen"])
+        elif family == "baseline_ablation":
+            add(task, title="Reviewer-driven baseline and ablation comparison", figure_type="metric_summary", columns=[ndvi_col, yield_col, climate_col], transforms=["baseline_metric", "ablation_metric", "review_task_coverage"])
+        elif family == "spatial_block_validation":
+            add(task, title="Reviewer-driven random versus spatial-block validation", figure_type="metric_summary", columns=[yield_col, ndvi_col, group_col], group=group_col, transforms=["random_split_metric", "blocked_validation_metric"])
+        elif family == "stratified_heterogeneity_analysis":
+            add(task, title="Reviewer-driven stratified heterogeneity analysis", figure_type="class_balance", columns=[group_col or labels[0] if labels else "", yield_col], group=group_col or (labels[0] if labels else None), transforms=["stratified_summary", "pooled_vs_stratified_effect"])
+    return figures
+
+
 def _render_plan_html_markdown(plan: dict[str, Any]) -> str:
     lines = [
         "# Project-Specific Figure Plan",
@@ -365,7 +424,7 @@ def _set_figure_plan_stage_manifest(project_path: Path) -> None:
     _write_json(manifest_path, manifest)
 
 
-def plan_figures(project: str | Path) -> dict[str, Any]:
+def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict[str, Any]:
     """Observe project state and write a project-specific figure plan."""
     state = load_project(project)
     try:
@@ -381,6 +440,9 @@ def plan_figures(project: str | Path) -> dict[str, Any]:
         literature_items = []
     research_plan = _read_text(state.path / "research_plan" / "research_plan.md")
     journal_profile = _read_json(state.path / "journal_profile" / "journal_profile.json", {})
+    review_task_context = {}
+    if use_review_tasks:
+        review_task_context = _read_json(state.path / "results" / "revision_figure_plan_delta.json", {})
     figures = _planned_figures(
         project_meta=state.metadata,
         research_plan=research_plan,
@@ -388,6 +450,11 @@ def plan_figures(project: str | Path) -> dict[str, Any]:
         inventory=inventory,
         literature_items=literature_items,
     )
+    if use_review_tasks:
+        task_report = _read_json(state.path / "review" / "actionable_analysis_tasks.json", {})
+        selected_data = _selected_data(_scoped_inventory(inventory, requirements))
+        for item in _review_task_figures(tasks_report=task_report, inventory=inventory, selected_data=selected_data):
+            _add_unique(figures, item)
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
     provided_count = sum(1 for item in figures if item.get("generation_mode") == "provided_artifact")
     next_action = "Run generate-analysis-code, then verify-methods, inventory-results, and write-results."
@@ -403,6 +470,8 @@ def plan_figures(project: str | Path) -> dict[str, Any]:
         "loop_decision": (
             "The agent observed the current project state and selected figures from the research question, available data, method requirements, literature methods, and supplied artifacts."
         ),
+        "review_task_context": review_task_context,
+        "used_review_tasks": bool(use_review_tasks and review_task_context),
         "figures": figures,
         "generated_figure_count": generated_count,
         "provided_figure_count": provided_count,

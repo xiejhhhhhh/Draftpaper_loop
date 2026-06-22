@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
+from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
@@ -41,6 +42,7 @@ from .review_revision import (
     recommend_statistical_revision,
     review_draft,
 )
+from .review_engines import ReviewEngineError, discover_review_workflow_gaps, propose_review_engineering_plan
 from .result_validity import ResultValidityError, assess_result_validity
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
@@ -159,11 +161,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     figures = subparsers.add_parser("plan-figures", help="Observe project state and plan project-specific scientific figures.")
     figures.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    figures.add_argument("--use-review-tasks", action="store_true", help="Include review/actionable_analysis_tasks.json hints when planning figures.")
 
     codegen = subparsers.add_parser("generate-analysis-code", help="Generate project-local analysis code from literature and method requirements.")
     codegen.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     codegen.add_argument("--output", action="append", default=[], help="Project-relative output file expected from generated code.")
     codegen.add_argument("--auto-plan-figures", action="store_true", help="Generate results/figure_plan.json first if it is missing or stale.")
+    codegen.add_argument("--use-review-tasks", action="store_true", help="Include review/actionable_analysis_tasks.json in generated analysis code.")
 
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -213,8 +217,17 @@ def build_parser() -> argparse.ArgumentParser:
     readiness = subparsers.add_parser("assess-publication-readiness", help="Assess target-journal publication readiness and reviewer-style risk.")
     readiness.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    review_gaps = subparsers.add_parser("discover-review-workflow-gaps", help="Discover discipline-specific reviewer-engineering workflow gaps.")
+    review_gaps.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    review_engineering = subparsers.add_parser("propose-review-engineering-plan", help="Propose a discipline-specific reviewer-engineering plan.")
+    review_engineering.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     statistical_rescue = subparsers.add_parser("recommend-statistical-revision", help="Recommend statistical rescue routes for weak data or unsupported results.")
     statistical_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    analysis_revision = subparsers.add_parser("prepare-analysis-revision", help="Convert review/rescue advice into executable analysis tasks and data-feasibility checks.")
+    analysis_revision.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     revision_plan = subparsers.add_parser("generate-revision-plan", help="Merge gate, reviewer, readiness, and statistical-rescue issues into a revision plan.")
     revision_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -230,6 +243,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -537,7 +555,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "plan-figures":
         try:
-            result = plan_figures(args.project)
+            result = plan_figures(args.project, use_review_tasks=args.use_review_tasks)
         except (FigurePlanError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
@@ -549,7 +567,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "generate-analysis-code":
         try:
-            result = generate_analysis_code(args.project, output_files=args.output, auto_plan_figures=args.auto_plan_figures)
+            result = generate_analysis_code(args.project, output_files=args.output, auto_plan_figures=args.auto_plan_figures, use_review_tasks=args.use_review_tasks)
         except (AnalysisCodeGenerationError, FigurePlanError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
@@ -732,10 +750,37 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "discover-review-workflow-gaps":
+        try:
+            result = discover_review_workflow_gaps(args.project)
+        except (ReviewEngineError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "propose-review-engineering-plan":
+        try:
+            result = propose_review_engineering_plan(args.project)
+        except (ReviewEngineError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "recommend-statistical-revision":
         try:
             result = recommend_statistical_revision(args.project)
         except ReviewRevisionError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "prepare-analysis-revision":
+        try:
+            result = prepare_analysis_revision(args.project)
+        except (AnalysisRevisionError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

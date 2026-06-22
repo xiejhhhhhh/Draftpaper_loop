@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 import subprocess
@@ -112,7 +113,8 @@ def verify_methods(
     declared_outputs = output_files or []
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
     figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
-    status = "success" if completed.returncode == 0 and not missing_outputs and not figure_quality_issues else "failed"
+    review_task_coverage_issues = _review_task_coverage_issues(state.path)
+    status = "success" if completed.returncode == 0 and not missing_outputs and not figure_quality_issues and not review_task_coverage_issues else "failed"
     parsed_metrics = _read_metrics_from_outputs(state.path, declared_outputs)
     manifest = {
         "status": status,
@@ -129,6 +131,7 @@ def verify_methods(
         "stderr": completed.stderr[-4000:],
         "missing_outputs": missing_outputs,
         "figure_quality_issues": figure_quality_issues,
+        "review_task_coverage_issues": review_task_coverage_issues,
     }
     _write_manifest(methods_dir / "run_manifest.yaml", manifest)
     if status == "success":
@@ -141,6 +144,7 @@ def verify_methods(
         "returncode": completed.returncode,
         "missing_outputs": missing_outputs,
         "figure_quality_issues": figure_quality_issues,
+        "review_task_coverage_issues": review_task_coverage_issues,
     }
 
 
@@ -164,6 +168,43 @@ def _read_metrics_from_outputs(project_path: Path, output_files: list[str]) -> d
             if len(parts) == 2 and parts[0]:
                 metrics[parts[0]] = parts[1]
     return metrics
+
+
+def _review_task_coverage_issues(project_path: Path) -> list[str]:
+    tasks_path = project_path / "review" / "actionable_analysis_tasks.json"
+    if not tasks_path.exists():
+        return []
+    try:
+        tasks_payload = json.loads(tasks_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return ["review/actionable_analysis_tasks.json is not valid JSON."]
+    required = []
+    for task in tasks_payload.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        status = ((task.get("feasibility") or {}).get("status") or "")
+        task_id = str(task.get("task_id") or "")
+        if status in {"executable", "partial"} and task_id:
+            required.append(task_id)
+    if not required:
+        return []
+    coverage_path = project_path / "results" / "tables" / "review_task_coverage.csv"
+    if not coverage_path.exists():
+        return ["Missing results/tables/review_task_coverage.csv for executable or partial review tasks."]
+    try:
+        with coverage_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            covered = {
+                str(row.get("task_id") or "")
+                for row in reader
+                if str(row.get("coverage_status") or "").strip().lower() == "covered"
+            }
+    except OSError as exc:
+        return [f"Could not read review task coverage table: {exc}"]
+    missing = [task_id for task_id in required if task_id not in covered]
+    if missing:
+        return ["Review task coverage is missing required task ids: " + ", ".join(missing)]
+    return []
 
 
 def _valid_png(path: Path) -> bool:

@@ -10,6 +10,7 @@ from typing import Any
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stage_stale
+from .review_engines import propose_review_engineering_plan
 
 
 REVIEW_DIR = "review"
@@ -82,6 +83,7 @@ def _issue_id(source: str, code: str, target_stage: str, reason: str) -> str:
         "reviewer": "R",
         "publication_readiness": "P",
         "statistical_rescue": "S",
+        "review_engineering": "E",
         "data_feasibility": "D",
         "methods": "M",
         "result_validity": "V",
@@ -219,6 +221,55 @@ def _read_list_payload(path: Path) -> list[dict[str, Any]]:
             if isinstance(value, list):
                 return [item for item in value if isinstance(item, dict)]
     return []
+
+
+def _weak_effect_records(figures: list[dict[str, Any]], *, r2_threshold: float = 0.10, abs_r_threshold: float = 0.30) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for figure in figures:
+        statistics = figure.get("statistics") or {}
+        if not isinstance(statistics, dict):
+            continue
+        r2 = _numeric(statistics.get("r2"))
+        pearson_r = _numeric(statistics.get("pearson_r"))
+        if r2 is None and pearson_r is None:
+            continue
+        weak_reasons: list[str] = []
+        if r2 is not None and r2 < r2_threshold:
+            weak_reasons.append(f"R2={r2:.4g} is below {r2_threshold:.2f}")
+        if pearson_r is not None and abs(pearson_r) < abs_r_threshold:
+            weak_reasons.append(f"|r|={abs(pearson_r):.4g} is below {abs_r_threshold:.2f}")
+        if not weak_reasons:
+            continue
+        variables = figure.get("variables") if isinstance(figure.get("variables"), dict) else {}
+        records.append({
+            "figure_id": figure.get("figure_id") or figure.get("id") or figure.get("path") or "unknown_figure",
+            "title": figure.get("title") or figure.get("caption_draft") or "Untitled figure",
+            "figure_type": figure.get("figure_type") or figure.get("type") or "",
+            "variables": variables,
+            "n": figure.get("n"),
+            "pearson_r": pearson_r,
+            "r2": r2,
+            "weak_reasons": weak_reasons,
+            "interpretation_summary": figure.get("interpretation_summary") or "",
+        })
+    return records
+
+
+def _weak_effect_summary(records: list[dict[str, Any]], limit: int = 3) -> str:
+    parts: list[str] = []
+    for record in records[:limit]:
+        variables = record.get("variables") or {}
+        variable_text = ", ".join(f"{key}={value}" for key, value in variables.items()) if variables else "variables not declared"
+        metrics = []
+        if record.get("pearson_r") is not None:
+            metrics.append(f"r={record['pearson_r']:.3g}")
+        if record.get("r2") is not None:
+            metrics.append(f"R2={record['r2']:.3g}")
+        parts.append(f"{record.get('title')} ({variable_text}; {', '.join(metrics)})")
+    if not parts:
+        return "weak figure-level statistical effects"
+    suffix = "" if len(records) <= limit else f"; {len(records) - limit} additional weak-effect figure(s)"
+    return "; ".join(parts) + suffix
 
 
 def _readiness_band(score: int) -> str:
@@ -395,7 +446,8 @@ def _reviewer_narrative(report: dict[str, Any], context: dict[str, Any]) -> str:
     decision = report.get("reviewer_style_decision")
     signals = report.get("evidence_signals") or []
     issue_titles = [issue.get("title", "") for issue in report.get("issues") or [] if issue.get("title")]
-    main_risk = issue_titles[0] if issue_titles else (signals[0] if signals else "the evidence chain needs normal reviewer scrutiny")
+    weak_signal = next((signal for signal in signals if "weak explanatory effects" in str(signal).lower()), None)
+    main_risk = weak_signal or (issue_titles[0] if issue_titles else (signals[0] if signals else "the evidence chain needs normal reviewer scrutiny"))
     return (
         f"From a reviewer perspective for {journal}, this draft currently reads as {band} with a readiness score of {score}/100 "
         f"and a likely editorial posture of {decision}. The assessment is based on the archived project files rather than a fresh chat-only impression. "
@@ -571,6 +623,25 @@ def assess_publication_readiness(project: str | Path) -> dict[str, Any]:
     if figures and len(figures) < 5:
         score -= 8
         signals.append(f"Only {len(figures)} figure metadata record(s) were found; many journal drafts need 5-6 substantive figures.")
+    weak_effects = _weak_effect_records(figures)
+    if weak_effects:
+        score -= min(18, 6 + 4 * len(weak_effects))
+        summary = _weak_effect_summary(weak_effects)
+        signals.append(f"Figure-level statistics show weak explanatory effects: {summary}.")
+        issues.append(_issue(
+            source="publication_readiness",
+            code="weak_statistical_effect_needs_qc",
+            severity="major",
+            target_stage="data",
+            title="Weak statistical effects need data-quality and modeling audit",
+            reason=(
+                "One or more manuscript figures report low explanatory power or weak correlations. "
+                "A reviewer is likely to ask whether these weak effects reflect true scientific signal, "
+                "data-quality problems, unsuitable proxy variables, scale mismatch, outliers, or insufficient feature engineering."
+            ),
+            files=["results/figure_metadata.json", "data/data_quality_report.json", "data/data_feasibility_report.json"],
+            user_input="Decide whether to clean data, revise proxy variables, rebuild features, add robustness analysis, or lower the claim strength.",
+        ))
     if integrity and integrity.get("status") != "passed":
         score -= 15
         signals.append("Integrity gate is not passed.")
@@ -737,6 +808,85 @@ def _domain_statistical_routes(metadata: dict[str, Any], archive_context: dict[s
     return routes, sources
 
 
+def _weak_effect_rescue_routes(
+    metadata: dict[str, Any],
+    archive_context: dict[str, Any],
+    weak_effects: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    if not weak_effects:
+        return [], []
+    text = _domain_context_text(metadata, archive_context)
+    summary = _weak_effect_summary(weak_effects)
+    routes = [
+        _rescue_route(
+            "weak_effect_data_quality_audit",
+            "Audit data quality before using weak statistical effects as evidence",
+            "data",
+            (
+                "Figure-level statistics show weak explanatory effects "
+                f"({summary}). Before accepting the weak result as a scientific conclusion, "
+                "the loop should test whether it is caused by data-quality problems, proxy mismatch, outliers, aggregation choices, or unsuitable preprocessing."
+            ),
+            [
+                "inspect outliers and high-leverage observations for the variables used in weak-effect figures",
+                "check units, value ranges, transformations, and impossible values before rerunning the analysis",
+                "compare raw, cleaned, winsorized, and robust-regression variants where the discipline permits it",
+                "stratify or group the analysis by scientifically meaningful subsets instead of relying only on one pooled correlation",
+                "rerun figure planning, generated analysis code, method verification, result validity, and Results writing after the data-quality audit",
+            ],
+        )
+    ]
+    sources = ["weak_effect_statistics"]
+
+    if any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
+        sources.append("agricultural_remote_sensing_qc_signal")
+        routes.append(_rescue_route(
+            "agricultural_remote_sensing_qc_rebuild",
+            "Clean and re-derive agricultural remote-sensing variables",
+            "data",
+            "Weak NDVI, yield, or environmental-driver effects are common when crop data mix phenological stages, cloud-contaminated observations, incompatible spatial scales, management heterogeneity, or proxy variables that are not aligned with the response.",
+            [
+                "screen NDVI or vegetation-index values for cloud contamination, saturation, sensor artifacts, and phenological-window mismatch",
+                "check yield, nitrogen, climate, and environmental proxies for unit consistency, impossible values, and extreme observations before modeling",
+                "aggregate or align predictors by crop growth stage, year, region, field, or agro-climatic zone when those identifiers are available",
+                "test whether temperature or climate proxies need lagged, seasonal, cumulative, or threshold features rather than a single pooled linear term",
+                "rerun the weak-effect figures after QC and report whether r, R2, confidence intervals, and residual structure improve enough to support the claim",
+            ],
+        ))
+
+    if any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
+        sources.append("spatial_qc_signal")
+        routes.append(_rescue_route(
+            "spatial_data_quality_audit",
+            "Audit spatial alignment and sampling structure",
+            "data",
+            "Weak spatial or ecological associations may reflect coordinate mismatch, raster resampling artifacts, spatial autocorrelation, or uneven sampling coverage rather than absence of scientific signal.",
+            [
+                "verify coordinate reference systems, raster-vector alignment, cell resolution, and temporal matching",
+                "summarize sampling density and missing coverage by region or ecological stratum",
+                "check whether spatial autocorrelation or clustered samples make pooled correlations misleading",
+                "rerun spatially stratified or blocked analyses after correcting alignment issues",
+            ],
+        ))
+
+    if any(token in text for token in ("light curve", "x-ray", "flare", "astronom", "source classification", "catalog", "photometric", "spectral")):
+        sources.append("astronomy_qc_signal")
+        routes.append(_rescue_route(
+            "astronomy_measurement_qc_rebuild",
+            "Audit astronomical measurement quality and source matching",
+            "data",
+            "Weak astronomical associations can arise from uncertain cross-matches, flux calibration differences, low signal-to-noise measurements, cadence gaps, or mixed source populations.",
+            [
+                "check source matching radius, duplicate matches, photometric or spectral quality flags, and signal-to-noise thresholds",
+                "separate analyses by source class, observation campaign, cadence, or instrument where possible",
+                "derive uncertainty-aware variability or spectral features before judging the scientific signal",
+                "rerun figures with quality-filtered and unfiltered samples to expose sensitivity",
+            ],
+        ))
+
+    return routes, sources
+
+
 def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
     """Recommend statistical rescue routes when data or results are weak."""
     try:
@@ -753,6 +903,8 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
     if not readiness:
         readiness = assess_publication_readiness(project_path)
     archive_context = _collect_codex_archive_context(project_path, metadata)
+    figures = _read_list_payload(project_path / "results" / "figure_metadata.json")
+    weak_effects = _weak_effect_records(figures)
 
     routes: list[dict[str, Any]] = []
     issues: list[RevisionIssue] = []
@@ -832,8 +984,14 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
             ],
         ))
 
+    weak_routes, weak_sources = _weak_effect_rescue_routes(metadata, archive_context, weak_effects)
+    if weak_routes:
+        likely_sources.extend(weak_sources)
+        existing_route_ids = {route["route_id"] for route in routes}
+        routes.extend(route for route in weak_routes if route["route_id"] not in existing_route_ids)
+
     domain_routes, domain_sources = _domain_statistical_routes(metadata, archive_context)
-    if domain_routes and (issues or validity_decision in {"revise_required", "conditional_pass"} or data_decision in {"revise_required", "conditional_pass"}):
+    if domain_routes and (routes or issues or validity_decision in {"revise_required", "conditional_pass"} or data_decision in {"revise_required", "conditional_pass"}):
         likely_sources.extend(domain_sources)
         existing_route_ids = {route["route_id"] for route in routes}
         routes.extend(route for route in domain_routes if route["route_id"] not in existing_route_ids)
@@ -1125,6 +1283,8 @@ def generate_revision_plan(project: str | Path) -> dict[str, Any]:
         diagnose_gate_failures(project_path)
     if not (review_dir / "publication_readiness_report.json").exists():
         assess_publication_readiness(project_path)
+    if not (review_dir / "review_engineering_plan.json").exists():
+        propose_review_engineering_plan(project_path)
     if not (review_dir / "statistical_rescue_plan.json").exists():
         recommend_statistical_revision(project_path)
 
@@ -1132,6 +1292,7 @@ def generate_revision_plan(project: str | Path) -> dict[str, Any]:
     issues.extend(_load_issue_payload(review_dir / "gate_failure_diagnosis.json"))
     issues.extend(_load_issue_payload(review_dir / "reviewer_issues.json"))
     issues.extend(_load_issue_payload(review_dir / "publication_readiness_report.json"))
+    issues.extend(_load_issue_payload(review_dir / "review_engineering_plan.json"))
     issues.extend(_load_issue_payload(review_dir / "statistical_rescue_plan.json"))
     issues = _dedupe_issues(issues)
     by_stage: dict[str, list[dict[str, Any]]] = {}

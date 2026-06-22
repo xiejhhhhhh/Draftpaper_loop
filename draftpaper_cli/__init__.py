@@ -5,6 +5,7 @@ Commercial use requires written authorization from the developer.
 """
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
+from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
@@ -37,6 +38,7 @@ from .review_revision import (
     recommend_statistical_revision,
     review_draft,
 )
+from .review_engines import ReviewEngineError, discover_review_workflow_gaps, infer_review_discipline, propose_review_engineering_plan
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 
@@ -48,6 +50,7 @@ __all__ = [
     "DiscussionCitationIntegrityError",
     "DataGateError",
     "AnalysisCodeGenerationError",
+    "AnalysisRevisionError",
     "ArtifactDriftError",
     "LatexAssemblyError",
     "LatexCitationError",
@@ -62,6 +65,7 @@ __all__ = [
     "QualityGateError",
     "IntegrityGateError",
     "ReviewRevisionError",
+    "ReviewEngineError",
     "UnknownStageError",
     "create_project",
     "load_project",
@@ -80,6 +84,7 @@ __all__ = [
     "detect_artifact_drift",
     "sync_artifact_stale",
     "generate_analysis_code",
+    "prepare_analysis_revision",
     "write_introduction",
     "inventory_data",
     "assess_data_quality",
@@ -97,6 +102,9 @@ __all__ = [
     "diagnose_gate_failures",
     "review_draft",
     "assess_publication_readiness",
+    "infer_review_discipline",
+    "discover_review_workflow_gaps",
+    "propose_review_engineering_plan",
     "recommend_statistical_revision",
     "generate_revision_plan",
     "apply_revision",

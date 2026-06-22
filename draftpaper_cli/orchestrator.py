@@ -94,6 +94,51 @@ def _cli_for(project_path: Path, command: str) -> str:
     return f"python -m draftpaper_cli.cli {command} --project {_quote(project_path)}"
 
 
+def _review_execution_action(project_path: Path, prefix: str) -> dict[str, Any] | None:
+    if not (project_path / "review" / "actionable_analysis_tasks.json").exists():
+        return None
+    figure_plan = _read_report(project_path, "results/figure_plan.json")
+    if not figure_plan.get("used_review_tasks"):
+        return {
+            "stage": "figure_plan",
+            "command": "plan-figures",
+            "cli": _cli_for(project_path, "plan-figures") + " --use-review-tasks",
+            "reason": f"{prefix}; reviewer/rescue tasks exist and need a revised figure plan.",
+        }
+    analysis_manifest = _read_report(project_path, "methods/analysis_code_manifest.json")
+    coverage = analysis_manifest.get("review_task_coverage") or {}
+    if not coverage.get("enabled"):
+        return {
+            "stage": "code",
+            "command": "generate-analysis-code",
+            "cli": _cli_for(project_path, "generate-analysis-code") + " --use-review-tasks",
+            "reason": f"{prefix}; the revised figure plan needs review-task-aware analysis code.",
+        }
+    run_manifest = _read_report(project_path, "methods/run_manifest.yaml")
+    if "review_task_coverage_issues" not in run_manifest:
+        outputs = " ".join(f"--output {relative}" for relative in analysis_manifest.get("declared_outputs") or [])
+        cli = (
+            _cli_for(project_path, "verify-methods")
+            + ' --command "python code/scripts/run_analysis.py"'
+            + (f" {outputs}" if outputs else "")
+        )
+        return {
+            "stage": "methods",
+            "command": "verify-methods",
+            "cli": cli,
+            "reason": f"{prefix}; generated reviewer-rescue analysis code must be run and checked for task coverage.",
+        }
+    validity = _read_report(project_path, "results/result_validity_report.json")
+    if "review_task_coverage_issues" not in validity:
+        return {
+            "stage": "result_validity",
+            "command": "assess-result-validity",
+            "cli": _cli_for(project_path, "assess-result-validity"),
+            "reason": f"{prefix}; verified review-task-aware outputs need result-validity assessment.",
+        }
+    return None
+
+
 def _integrity_is_current(project_path: Path) -> bool:
     report_path = project_path / "integrity" / "integrity_report.json"
     if not report_path.exists():
@@ -131,8 +176,10 @@ def _review_sequence_action(project_path: Path, prefix: str) -> dict[str, Any]:
         ("review/gate_failure_diagnosis.json", "diagnose-gate-failures", "map failed gates to revision stages"),
         ("review/reviewer_issues.json", "review-draft", "run a reviewer-style draft pass"),
         ("review/publication_readiness_report.json", "assess-publication-readiness", "estimate target-journal submission risk"),
+        ("review/review_workflow_gap_report.json", "discover-review-workflow-gaps", "discover discipline-specific review workflow gaps"),
+        ("review/review_engineering_plan.json", "propose-review-engineering-plan", "propose discipline-specific review-engineering actions"),
         ("review/statistical_rescue_plan.json", "recommend-statistical-revision", "recommend statistical rescue or claim reframing routes"),
-        ("review/revision_plan.json", "generate-revision-plan", "merge review issues into a staged revision plan"),
+        ("review/actionable_analysis_tasks.json", "prepare-analysis-revision", "convert review/rescue advice into executable analysis tasks and data-feasibility checks"),
     ]
     for relative, command, reason in sequence:
         if not (project_path / relative).exists():
@@ -142,6 +189,16 @@ def _review_sequence_action(project_path: Path, prefix: str) -> dict[str, Any]:
                 "cli": _cli_for(project_path, command),
                 "reason": f"{prefix}; {reason}.",
             }
+    execution_action = _review_execution_action(project_path, prefix)
+    if execution_action:
+        return execution_action
+    if not (project_path / "review" / "revision_plan.json").exists():
+        return {
+            "stage": "review",
+            "command": "generate-revision-plan",
+            "cli": _cli_for(project_path, "generate-revision-plan"),
+            "reason": f"{prefix}; merge review issues into a staged revision plan.",
+        }
     return {
         "stage": "review",
         "command": "generate-revision-plan",

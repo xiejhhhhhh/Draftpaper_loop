@@ -62,7 +62,7 @@ Draftpaper-loop 的外层逻辑是：
 - 默认在致谢中说明本研究使用 Draftpaper-loop 辅助生成，并附项目仓库链接。
 - 独立 integrity gate 和 review-revise-re-review 闭环。
 - 论文写作质量门会检查章节篇幅、自然段结构、引用位置、Methods 公式、Results 图表数量以及是否使用自然正文而非列表式文本。
-- 审稿人式投稿就绪度评估，输出目标期刊适配风险、投稿就绪度评分、统计增强修订方案和 claim-evidence matrix。
+- 审稿人式投稿就绪度评估，输出目标期刊适配风险、投稿就绪度评分、统计增强修订方案和 claim-evidence matrix，并支持 geography、astronomy、machine_learning 与 default fallback 的审稿工程分支。
 - Codex skill wrapper 仅作为调用层，核心能力仍是 Python package + CLI + 本地项目结构。
 
 ## 项目结构
@@ -97,6 +97,8 @@ python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
+python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\your_project
+python -m draftpaper_cli.cli propose-review-engineering-plan --project <repo>\projects\your_project
 python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
 ```
 
@@ -162,7 +164,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 每个项目都有 `project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、用户确认点和完整性事件，方便跨电脑迁移和后续审计。
 
-`plan-figures` 会观察当前 idea、research plan、target journal、data inventory、method requirements、literature metadata 和用户已经提供的本地图表，生成 `results/figure_plan.json` 与 `results/figure_plan.html`。`generate-analysis-code` 只根据这份 figure plan 生成代码，不再固定输出某几张通用流程图。如果原始数据在服务器/API/云端，或由于隐私和体量无法下载到本地，可以只提供本地处理后表格、结果图或结果表，再通过 `inventory-results` 和 `write-results` 继续写作，但 claim 必须限制在这些可访问 artifact 支持的范围内。
+`plan-figures` 会观察当前 idea、research plan、target journal、data inventory、method requirements、literature metadata 和用户已经提供的本地图表，生成 `results/figure_plan.json` 与 `results/figure_plan.html`。使用 `--use-review-tasks` 时，它会把 executable/partial 的审稿救援任务转成修订图表计划，同时跳过 blocked 任务。`generate-analysis-code` 只根据这份 figure plan 生成代码，不再固定输出某几张通用流程图；使用 `--use-review-tasks` 时还会输出 `results/tables/review_task_coverage.csv` 和 `results/tables/review_task_metrics.csv`，用于记录清洗/QC、特征重构、baseline/ablation 和验证覆盖情况。如果原始数据在服务器/API/云端，或由于隐私和体量无法下载到本地，可以只提供本地处理后表格、结果图或结果表，再通过 `inventory-results` 和 `write-results` 继续写作，但 claim 必须限制在这些可访问 artifact 支持的范围内。
 
 `record-observation` 用于把 Codex 已经展示给用户的阶段性分析摘要保存到 `observations/observations.jsonl`，不会保存隐藏推理链。`build-data-context` 和 `build-method-context` 会把这些 observation、数据清单、可行性门、方法计划和验证结果合成为面向论文写作的 context。`write-data` 和 `write-methods` 只根据这些 context 写作，因此 Data 和 Methods 会描述数据来源、数据内容、变量组、处理流程、方法设计、验证和 claim boundary，而不是把本地文件名、路径、命令或 manifest 字段写进论文。
 
@@ -178,14 +180,19 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
 
+- 新增 `discover-review-workflow-gaps` 和 `propose-review-engineering-plan`，用于学科分支审稿工程。第一版确定性 engine 是 geography，覆盖遥感、农业地理、空间尺度匹配、遥感质量控制、空间自相关、分层异质性和弱拟合回退；同时预留并实装 astronomy 与 machine_learning 的基础审稿规则，分别覆盖天文目录交叉匹配、光变曲线采样、源分类验证，以及机器学习数据泄漏、baseline/ablation、验证拆分、校准和类别不平衡；无法识别学科时使用 default fallback。
+- 新增审稿工程输出：`review/review_discipline_profile.json`、`review/review_workflow_gap_report.json`、`review/review_workflow_gap_report.html`、`review/review_engineering_plan.json`、`review/review_engineering_plan.html` 和 `review/user_confirmation_requests.json`。`codex_enhancement_context` 作为 C 层接口，供 Codex 基于文献、学科和已写稿件补充差异化审稿建议。
+- 新增 `prepare-analysis-revision`，把 reviewer/rescue 建议转换成统一的可执行分析任务，先检查目标变量、预测变量、时间、空间分组/坐标、质量标记等数据角色是否完备，再输出 `review/actionable_analysis_tasks.json`、`review/analysis_revision_feasibility.json`、`review/analysis_revision_feasibility.html`、`methods/analysis_revision_requirements.json` 和 `results/revision_figure_plan_delta.json`。
+- 接入 `plan-figures --use-review-tasks` 和 `generate-analysis-code --use-review-tasks`，让 executable/partial 审稿任务自动进入修订图表计划、review task coverage 表和 review task metrics 表；blocked 任务继续作为缺失数据提示，不生成假代码。
 - 新增 `assess-publication-readiness`，根据 data feasibility、method verification、result validity、figure metadata、integrity、quality 和 journal profile 等本地归档产物评估目标期刊投稿就绪度。
 - 新增 `recommend-statistical-revision`，当数据质量较弱或结果不足以支撑结论时，生成统计增强修订方案，包括稳健统计、缺失值分析、方法重构、显式成功阈值、领域化特征重构、空间验证、模型验证检查和 claim reframing。
 - 新增审稿输出：`review/publication_readiness_report.json`、`review/publication_readiness_report.html`、`review/codex_archive_review_context.json`、`review/codex_archive_review_context.html`、`review/statistical_rescue_plan.json`、`review/statistical_rescue_plan.html`、`review/journal_fit_report.html` 和 `review/claim_evidence_matrix.csv`。
 - 新增项目归档审稿上下文层，让 publication readiness report 可以基于 research plan、文献、数据、方法、结果、图表、期刊、integrity 和 quality 等本地归档产物生成更接近真实审稿意见的自然语言评审。
 - 新增学科化统计增强路线，当项目归档中出现农业遥感、空间/生态、天文时间序列或机器学习验证信号时，自动给出更贴近对应学科的特征工程、分层验证、外部验证和重绘建议。
+- 新增统计指标语义识别：p-value 按 alpha 阈值如 0.05 判断显著性，R2 按拟合优度/解释度判断，相关系数按效应量判断；当方法和图表实际产生这些统计输出时，低 R2 或弱相关会触发数据质量、代理变量、异常值、空间对齐和方法重构建议，而不会再把 R2=0.05 误当成显著性阈值。
 - 升级 `status`、`run-pipeline`、`generate-revision-plan` 和 `re-review`，让 quality/integrity 失败后依次进入 gate diagnosis、reviewer pass、publication readiness、statistical rescue 和统一 stale-stage 回退路径。
 - 本地验证：`python -m unittest discover -s tests`
-- 当前测试规模：112 tests
+- 当前测试规模：127 tests
 
 ### v0.10.0 (2026-06-18) -- manuscript-quality gates and clean Results/acknowledgment writing
 

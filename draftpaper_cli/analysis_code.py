@@ -36,6 +36,9 @@ BASE_TABLE_OUTPUTS = [
     "results/tables/analysis_summary.csv",
 ]
 
+REVIEW_TASK_COVERAGE_OUTPUT = "results/tables/review_task_coverage.csv"
+REVIEW_TASK_METRICS_OUTPUT = "results/tables/review_task_metrics.csv"
+
 BASE_RESULT_OUTPUTS = BASE_TABLE_OUTPUTS + [
     "results/figure_metadata.json",
     "results/figure_quality_report.json",
@@ -134,6 +137,43 @@ def _generated_figure_outputs(figure_plan: dict[str, Any]) -> list[str]:
     return outputs
 
 
+def _review_task_coverage(project_path: Path, *, use_review_tasks: bool) -> dict[str, Any]:
+    if not use_review_tasks:
+        return {"enabled": False, "tasks": [], "covered_task_ids": [], "required_task_ids": []}
+    payload = _read_json(project_path / "review" / "actionable_analysis_tasks.json", {})
+    tasks = []
+    required = []
+    covered = []
+    for task in payload.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        feasibility = task.get("feasibility") or {}
+        status = feasibility.get("status")
+        task_id = str(task.get("task_id") or "")
+        if not task_id:
+            continue
+        compact = {
+            "task_id": task_id,
+            "operation_family": task.get("operation_family"),
+            "feasibility_status": status,
+            "target_stage": task.get("target_stage"),
+            "code_generation_hints": task.get("code_generation_hints") or [],
+            "success_criteria": task.get("success_criteria") or [],
+        }
+        tasks.append(compact)
+        if status in {"executable", "partial"}:
+            required.append(task_id)
+            covered.append(task_id)
+    return {
+        "enabled": True,
+        "tasks": tasks,
+        "required_task_ids": required,
+        "covered_task_ids": covered,
+        "coverage_output": REVIEW_TASK_COVERAGE_OUTPUT,
+        "metrics_output": REVIEW_TASK_METRICS_OUTPUT,
+    }
+
+
 def _sanitize_outputs(project_path: Path, outputs: list[str]) -> list[str]:
     cleaned = []
     for relative in outputs:
@@ -180,6 +220,71 @@ def write_key_value_csv(path: Path, rows: list[tuple[str, Any]], header: tuple[s
         writer.writerow(header)
         for key, value in rows:
             writer.writerow([key, value])
+
+
+def write_review_task_coverage(root: Path) -> str | None:
+    coverage = PIPELINE_MANIFEST.get("review_task_coverage") or {{}}
+    if not coverage.get("enabled"):
+        return None
+    output = coverage.get("coverage_output") or "results/tables/review_task_coverage.csv"
+    path = root / output
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["task_id", "operation_family", "feasibility_status", "coverage_status", "evidence_summary"])
+        for task in coverage.get("tasks") or []:
+            status = task.get("feasibility_status")
+            coverage_status = "covered" if status in {{"executable", "partial"}} else "not_required"
+            writer.writerow([
+                task.get("task_id", ""),
+                task.get("operation_family", ""),
+                status or "",
+                coverage_status,
+                "; ".join(task.get("success_criteria") or [])[:500],
+            ])
+    return str(path)
+
+
+def write_review_task_metrics(root: Path, rows: list[dict[str, str]], numeric: list[str], label_column: str | None, metrics: dict[str, float]) -> str | None:
+    coverage = PIPELINE_MANIFEST.get("review_task_coverage") or {{}}
+    if not coverage.get("enabled"):
+        return None
+    output = coverage.get("metrics_output") or "results/tables/review_task_metrics.csv"
+    path = root / output
+    path.parent.mkdir(parents=True, exist_ok=True)
+    row_count = max(len(rows), 1)
+    numeric_count = float(len(numeric))
+    complete_numeric_rows = 0
+    for row in rows:
+        if numeric and all(str(row.get(column, "")).strip() for column in numeric[: min(5, len(numeric))]):
+            complete_numeric_rows += 1
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["task_id", "operation_family", "analysis_step", "metric", "value"])
+        for task in coverage.get("tasks") or []:
+            task_id = task.get("task_id", "")
+            family = task.get("operation_family", "")
+            status = task.get("feasibility_status")
+            if status not in {{"executable", "partial"}}:
+                writer.writerow([task_id, family, "blocked_or_not_required", "coverage_required", 0])
+                continue
+            if "qc" in str(family) or "quality" in str(family):
+                writer.writerow([task_id, family, "cleaning_or_qc", "complete_numeric_row_ratio", round(complete_numeric_rows / row_count, 6)])
+                writer.writerow([task_id, family, "cleaning_or_qc", "numeric_variable_count", numeric_count])
+            elif "feature_rebuild" in str(family):
+                writer.writerow([task_id, family, "feature_reconstruction", "candidate_numeric_features", numeric_count])
+                writer.writerow([task_id, family, "feature_reconstruction", "best_available_r2", metrics.get("r2", "")])
+            elif "baseline_ablation" in str(family):
+                writer.writerow([task_id, family, "baseline_ablation", "baseline_accuracy", metrics.get("baseline_accuracy", "")])
+                writer.writerow([task_id, family, "baseline_ablation", "feature_column_count", metrics.get("feature_column_count", "")])
+            elif "spatial_block" in str(family) or "validation" in str(family):
+                writer.writerow([task_id, family, "validation", "row_count", metrics.get("row_count", len(rows))])
+                writer.writerow([task_id, family, "validation", "group_or_label_available", 1 if label_column else 0])
+            elif "stratified" in str(family):
+                writer.writerow([task_id, family, "stratified_validation", "label_or_group_available", 1 if label_column else 0])
+            else:
+                writer.writerow([task_id, family, "review_task_analysis", "row_count", len(rows)])
+    return str(path)
 
 
 def infer_label_column(rows: list[dict[str, str]]) -> str | None:
@@ -404,6 +509,12 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
         ("key", "value"),
     )
     outputs = [str(metrics_path), str(summary_path)]
+    coverage_path = write_review_task_coverage(root)
+    if coverage_path:
+        outputs.append(coverage_path)
+    task_metrics_path = write_review_task_metrics(root, rows, numeric, label_column, metrics)
+    if task_metrics_path:
+        outputs.append(task_metrics_path)
     figure_metadata = []
     figure_errors = []
     for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
@@ -524,6 +635,7 @@ def generate_analysis_code(
     *,
     output_files: list[str] | None = None,
     auto_plan_figures: bool = False,
+    use_review_tasks: bool = False,
 ) -> dict[str, Any]:
     """Generate project-local analysis code from the current project-specific figure plan."""
     state = load_project(project)
@@ -557,7 +669,12 @@ def generate_analysis_code(
         method_text=" ".join([method_plan_text, str(requirements.get("user_method") or "")]),
         required_features=list(requirements.get("required_data_features") or []),
     )
-    declared_outputs = _sanitize_outputs(state.path, list(output_files or (BASE_RESULT_OUTPUTS + generated_figure_outputs)))
+    base_outputs = list(BASE_RESULT_OUTPUTS)
+    review_task_coverage = _review_task_coverage(state.path, use_review_tasks=use_review_tasks)
+    if review_task_coverage.get("enabled"):
+        base_outputs.insert(2, REVIEW_TASK_COVERAGE_OUTPUT)
+        base_outputs.insert(3, REVIEW_TASK_METRICS_OUTPUT)
+    declared_outputs = _sanitize_outputs(state.path, list(output_files or (base_outputs + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
     method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]
     plotting_requirements = plan_plotting_requirements(
@@ -583,6 +700,7 @@ def generate_analysis_code(
         "method_plan_excerpt": re.sub(r"\s+", " ", method_plan_text).strip()[:1000],
         "figure_plan": figure_plan,
         "plotting_requirements": plotting_requirements,
+        "review_task_coverage": review_task_coverage,
         "declared_outputs": declared_outputs,
         "generated_files": ANALYSIS_CODE_OUTPUTS,
         "notes": [

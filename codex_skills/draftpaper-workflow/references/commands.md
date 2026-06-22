@@ -18,7 +18,7 @@ python -m draftpaper_cli.cli mark-stage-stale --project <repo>\projects\my_proje
 python -m draftpaper_cli.cli update-stage-status --project <repo>\projects\my_project --stage data --status draft
 ```
 
-`status` and `run-pipeline` are the orchestrator layer. They inspect `project.json`, stage manifests, `project_passport.yaml`, and append-only ledgers to report the next safe action. If `status` returns `pipeline_state=drift_detected`, run `sync-artifact-stale` before any downstream stage. If integrity or final quality reports failed at the final gate, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, and `generate-revision-plan` as each artifact appears. `detect-artifact-drift` is read-only; `sync-artifact-stale` maps hash drift to downstream stale stages, writes an integrity ledger event, and refreshes the passport baseline. `checkpoint` records an explicit human confirmation boundary in `checkpoint_ledger.jsonl`; `resume` consumes it by appending a resume event, never by deleting or rewriting the checkpoint.
+`status` and `run-pipeline` are the orchestrator layer. They inspect `project.json`, stage manifests, `project_passport.yaml`, and append-only ledgers to report the next safe action. If `status` returns `pipeline_state=drift_detected`, run `sync-artifact-stale` before any downstream stage. If integrity or final quality reports failed at the final gate, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, `prepare-analysis-revision`, and `generate-revision-plan` as each artifact appears. `detect-artifact-drift` is read-only; `sync-artifact-stale` maps hash drift to downstream stale stages, writes an integrity ledger event, and refreshes the passport baseline. `checkpoint` records an explicit human confirmation boundary in `checkpoint_ledger.jsonl`; `resume` consumes it by appending a resume event, never by deleting or rewriting the checkpoint.
 
 ## Literature and Plan
 
@@ -52,6 +52,8 @@ python -m draftpaper_cli.cli assess-data-feasibility --project <repo>\projects\m
 python -m draftpaper_cli.cli collect-method-plan --project <repo>\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project
+python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project --use-review-tasks
+python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project --use-review-tasks
 python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figure_metadata.json --output results/figure_quality_report.json --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
@@ -60,7 +62,7 @@ python -m draftpaper_cli.cli write-results --project <repo>\projects\my_project
 python -m draftpaper_cli.cli write-discussion --project <repo>\projects\my_project
 ```
 
-`generate-analysis-code` writes a project-local plotting runtime to `code/src/scientific_plotting.py`. Generated empirical figures should produce `results/figure_metadata.json` and `results/figure_quality_report.json`; pass those files to `verify-methods` as declared outputs. `inventory-results` uses the metadata to turn real plot statistics into result claims. If a planned generated figure cannot produce metadata or falls back to a placeholder/workflow diagram, rerun from `plan-figures` or revise the data/method plan instead of writing Results.
+`generate-analysis-code` writes a project-local plotting runtime to `code/src/scientific_plotting.py`. Generated empirical figures should produce `results/figure_metadata.json` and `results/figure_quality_report.json`; pass those files to `verify-methods` as declared outputs. With `--use-review-tasks`, also pass `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv`. `assess-result-validity` interprets the primary metric by statistical semantics: p-values use alpha-style thresholds such as 0.05, R2 is goodness of fit rather than a p-value, correlations are effect sizes, error metrics are lower-is-better, and classification metrics are higher-is-better. Low R2 or weak correlation outputs trigger data-quality and method-rebuild recommendations only when the method or generated figures actually produce those statistics. `inventory-results` uses the metadata to turn real plot statistics into result claims. If a planned generated figure cannot produce metadata or falls back to a placeholder/workflow diagram, rerun from `plan-figures` or revise the data/method plan instead of writing Results.
 
 ## Assembly and Review
 
@@ -73,7 +75,10 @@ python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\my_project
+python -m draftpaper_cli.cli propose-review-engineering-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\my_project
+python -m draftpaper_cli.cli prepare-analysis-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
@@ -83,4 +88,4 @@ python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
 
 `quality-check` returns exit code `0` for passed and `1` for failed. It still writes `quality_checks/quality_report.json` on failure.
 
-`diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `assess-publication-readiness` writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/codex_archive_review_context.json`, `review/codex_archive_review_context.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. `recommend-statistical-revision` writes `review/statistical_rescue_plan.json` and `.html`, then updates the claim-evidence matrix. `generate-revision-plan` merges gate, reviewer, publication-readiness, and statistical-rescue issues into `review/revision_plan.json`, `review/revision_plan.md`, and `review/commitment_ledger.csv`. `apply-revision` marks affected stages stale but does not rewrite scientific content. `re-review` reruns diagnosis, review, readiness, statistical rescue, and planning and writes `review/re_review_report.md`.
+`diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `assess-publication-readiness` writes readiness, archive-review, journal-fit, and claim-evidence artifacts. `discover-review-workflow-gaps` infers geography, astronomy, machine_learning, or default. `propose-review-engineering-plan` writes review-engineering plans and user-confirmation requests. `recommend-statistical-revision` writes `review/statistical_rescue_plan.json` and `.html`. `prepare-analysis-revision` writes `review/actionable_analysis_tasks.json`, `review/analysis_revision_feasibility.json`, `.html`, `methods/analysis_revision_requirements.json`, and `results/revision_figure_plan_delta.json`; blocked tasks ask for missing data roles instead of generating fake code. After this, use `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity` before `generate-revision-plan`. `apply-revision` marks affected stages stale only. `re-review` reruns diagnosis, review, readiness, statistical rescue, and planning.

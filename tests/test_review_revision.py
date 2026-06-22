@@ -155,6 +155,78 @@ class ReviewRevisionTests(unittest.TestCase):
             self.assertIn("reviewer_narrative", readiness)
             self.assertIn("reviewer perspective", readiness["reviewer_narrative"])
 
+    def test_statistical_rescue_flags_weak_effect_statistics_as_data_qc(self) -> None:
+        from draftpaper_cli.review_revision import assess_publication_readiness, recommend_statistical_revision
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Assess wheat yield response using NDVI and environmental drivers.",
+                field="remote sensing agronomy wheat yield NDVI",
+            )
+            (project.path / "data" / "data_quality_report.json").write_text(
+                json.dumps({
+                    "overall_status": "pass",
+                    "overall_missing_cell_ratio": 0.0,
+                    "total_rows": 842,
+                    "required_columns": ["ndvi", "yield", "air_temperature_proxy"],
+                    "missing_required_columns": [],
+                }, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (project.path / "data" / "data_feasibility_report.json").write_text(
+                json.dumps({"decision": "pass", "observed_rows": 842, "min_rows": 30}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "r2", "minimum_primary_metric": 0.05}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "metrics": {"r2": 0.085081}}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "result_validity_report.json").write_text(
+                json.dumps({
+                    "decision": "pass",
+                    "primary_metric": "r2",
+                    "observed_value": 0.085081,
+                    "minimum_value": 0.05,
+                    "issues": [],
+                    "failure_causes": [],
+                }, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "figure_id": "environmental_driver_response",
+                            "title": "Environmental driver response",
+                            "figure_type": "scatter_regression",
+                            "variables": {"x": "air_temperature_proxy", "y": "yield"},
+                            "statistics": {"pearson_r": -0.2304975730964553, "r2": 0.05312913120335572},
+                            "interpretation_summary": "air_temperature_proxy and yield show a weak negative association.",
+                        }
+                    ]
+                }, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            readiness = assess_publication_readiness(project.path)
+            rescue = recommend_statistical_revision(project.path)
+
+            route_ids = {route["route_id"] for route in rescue["recommended_routes"]}
+            self.assertTrue(any("weak explanatory effects" in signal for signal in readiness["evidence_signals"]))
+            self.assertIn("weak explanatory effects", readiness["reviewer_narrative"])
+            self.assertEqual(rescue["status"], "rescue_recommended")
+            self.assertIn("weak_effect_data_quality_audit", route_ids)
+            self.assertIn("agricultural_remote_sensing_qc_rebuild", route_ids)
+            self.assertIn("weak_effect_statistics", rescue["likely_failure_sources"])
+            weak_route = next(route for route in rescue["recommended_routes"] if route["route_id"] == "weak_effect_data_quality_audit")
+            self.assertEqual(weak_route["target_stage"], "data")
+            self.assertTrue(any("outlier" in action.lower() for action in weak_route["actions"]))
+
     def test_apply_revision_marks_target_and_downstream_stages_stale(self) -> None:
         from draftpaper_cli.project_state import update_stage_status
         from draftpaper_cli.review_revision import apply_revision, generate_revision_plan

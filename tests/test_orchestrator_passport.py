@@ -250,10 +250,52 @@ class OrchestratorPassportTests(unittest.TestCase):
 
             _write_json(project.path / "review" / "publication_readiness_report.json", {"status": "reviewed"})
             refresh_project_passport(project.path, event="test_readiness_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "discover-review-workflow-gaps")
+
+            _write_json(project.path / "review" / "review_workflow_gap_report.json", {"status": "review_workflow_gaps_found"})
+            refresh_project_passport(project.path, event="test_review_gaps_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "propose-review-engineering-plan")
+
+            _write_json(project.path / "review" / "review_engineering_plan.json", {"status": "review_engineering_plan_written"})
+            refresh_project_passport(project.path, event="test_review_engineering_written")
             self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "recommend-statistical-revision")
 
             _write_json(project.path / "review" / "statistical_rescue_plan.json", {"status": "rescue_recommended"})
             refresh_project_passport(project.path, event="test_rescue_written")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "prepare-analysis-revision")
+
+            _write_json(project.path / "review" / "actionable_analysis_tasks.json", {"status": "analysis_revision_prepared"})
+            refresh_project_passport(project.path, event="test_analysis_revision_written")
+            plan_after_tasks = run_pipeline(project.path)
+            self.assertEqual(plan_after_tasks["next_action"]["command"], "plan-figures")
+            self.assertIn("--use-review-tasks", plan_after_tasks["next_action"]["cli"])
+
+            _write_json(project.path / "results" / "figure_plan.json", {"status": "written", "used_review_tasks": True, "figures": []})
+            refresh_project_passport(project.path, event="test_review_figure_plan_written")
+            code_after_figures = run_pipeline(project.path)
+            self.assertEqual(code_after_figures["next_action"]["command"], "generate-analysis-code")
+            self.assertIn("--use-review-tasks", code_after_figures["next_action"]["cli"])
+
+            _write_json(project.path / "methods" / "analysis_code_manifest.json", {
+                "status": "written",
+                "declared_outputs": ["results/tables/metrics.csv", "results/tables/review_task_coverage.csv"],
+                "review_task_coverage": {"enabled": True},
+            })
+            refresh_project_passport(project.path, event="test_review_codegen_written")
+            verify_after_codegen = run_pipeline(project.path)
+            self.assertEqual(verify_after_codegen["next_action"]["command"], "verify-methods")
+            self.assertIn("review_task_coverage.csv", verify_after_codegen["next_action"]["cli"])
+
+            _write_json(project.path / "methods" / "run_manifest.yaml", {
+                "status": "success",
+                "review_task_coverage_issues": [],
+                "output_files": ["results/tables/metrics.csv", "results/tables/review_task_coverage.csv"],
+            })
+            refresh_project_passport(project.path, event="test_review_methods_verified")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "assess-result-validity")
+
+            _write_json(project.path / "results" / "result_validity_report.json", {"decision": "conditional_pass", "review_task_coverage_issues": []})
+            refresh_project_passport(project.path, event="test_review_result_validity_written")
             self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "generate-revision-plan")
 
 

@@ -432,6 +432,8 @@ Implemented Priority 6 CLI commands:
 python -m draftpaper_cli.cli collect-method-plan --project <repo>\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project
+python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project --use-review-tasks
+python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project --use-review-tasks
 python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python code/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\my_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
 python -m draftpaper_cli.cli build-method-context --project <repo>\projects\my_project
@@ -440,9 +442,9 @@ python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 
 `collect-method-plan` reads the research plan, data feasibility report, and ranked literature notes. It does not replace user expertise; it creates a structured method contract that combines user-provided method intent with literature method synthesis.
 
-`plan-figures` observes the current project state and writes `results/figure_plan.json` plus `results/figure_plan.html`. The plan decides which scientific figures this specific paper needs from the idea, research plan, target journal, data inventory, method requirements, literature methods, and any supplied local figures/tables. The workflow must not hard-code a universal set of paper figures.
+`plan-figures` observes the current project state and writes `results/figure_plan.json` plus `results/figure_plan.html`. The plan decides which scientific figures this specific paper needs from the idea, research plan, target journal, data inventory, method requirements, literature methods, and any supplied local figures/tables. The workflow must not hard-code a universal set of paper figures. With `--use-review-tasks`, executable and partial tasks from `review/actionable_analysis_tasks.json` add revised reviewer-driven figures; blocked tasks are not plotted.
 
-`generate-analysis-code` reads `references/literature_items.json`, `methods/method_plan.md`, `methods/method_requirements.json`, `data/data_inventory.json`, and `results/figure_plan.json`. It writes deterministic project-local code under `code/`, records the generated command, selected input data, literature method sources, method families, figure plan, and declared outputs in `methods/analysis_code_manifest.json`, and marks the `code` stage as draft so Methods and downstream stages become stale. The generated run should emit only the figures declared by the current figure plan plus required metric/summary tables. This is a reviewable scaffold for local analysis, not permission to skip code review or result validity checks.
+`generate-analysis-code` reads `references/literature_items.json`, `methods/method_plan.md`, `methods/method_requirements.json`, `data/data_inventory.json`, and `results/figure_plan.json`. It writes deterministic project-local code under `code/`, records the generated command, selected input data, literature method sources, method families, figure plan, and declared outputs in `methods/analysis_code_manifest.json`, and marks the `code` stage as draft so Methods and downstream stages become stale. The generated run should emit only the figures declared by the current figure plan plus required metric/summary tables. With `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` so cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage can be audited. This is a reviewable scaffold for local analysis, not permission to skip code review or result validity checks.
 
 `verify-methods` runs the provided command from the project directory and writes `methods/run_manifest.yaml` as JSON-compatible YAML. The manifest records command, return code, input data, declared output files, parsed CSV metrics, generated tables/figures, timestamps, stdout/stderr snippets, and missing outputs.
 
@@ -450,7 +452,7 @@ python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 
 ## Priority 8: Results Manifest and Writer
 
-Results writing must be based on actual local outputs and a result validity gate. Data quality alone is not enough: even clean data can produce weak results, and weak results must trigger backtracking before formal Results and Discussion writing.
+Results writing must be based on actual local outputs and a result validity gate. Data quality alone is not enough: even clean data can produce weak results, and weak results must trigger backtracking before formal Results and Discussion writing. The result validity gate interprets metrics by statistical meaning rather than applying one numeric comparison to every method. A p-value uses an alpha-style threshold such as 0.05, R2 is a goodness-of-fit and explained-variance measure rather than a p-value, correlation coefficients are effect sizes, error metrics are lower-is-better, and classification metrics such as F1 or accuracy are higher-is-better. These statistical checks are activated when the method contract or generated figure metadata actually produces the corresponding statistic; projects without such statistical outputs should remain conditional rather than being forced through an irrelevant p-value or R2 rule.
 
 Expected files:
 
@@ -627,7 +629,7 @@ Future Web UI / desktop app / API service
 
 ## Priority E: Review, Revision Routing, and Re-review Loop
 
-After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has four layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass. The third layer estimates target-journal publication readiness from saved loop artifacts and writes a Codex-readable archived review context. The fourth layer recommends statistical rescue routes when weak data or weak results might be made publishable through robust statistics, missingness analysis, method revision, explicit thresholds, or claim reframing.
+After the hard gates exist, the workflow needs a review-revise-re-review loop. This loop has five layers that share one unified revision issue schema. The first layer converts failed gates into actionable backtracking instructions. The second layer adds a reviewer-style manuscript pass. The third layer estimates target-journal publication readiness from saved loop artifacts and writes a Codex-readable archived review context. The fourth layer is discipline-specific review engineering: it infers the project discipline and runs a matching review engine. Geography is the first deep branch, astronomy and machine learning are reserved with baseline deterministic reviewer rules, and default remains the fallback. The fifth layer recommends statistical rescue routes when weak data or weak results might be made publishable through robust statistics, missingness analysis, method revision, metric-semantics-aware thresholds, domain-specific data quality control, or claim reframing.
 
 Implemented Priority E CLI commands:
 
@@ -635,7 +637,10 @@ Implemented Priority E CLI commands:
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\my_project
+python -m draftpaper_cli.cli propose-review-engineering-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\my_project
+python -m draftpaper_cli.cli prepare-analysis-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli apply-revision --project <repo>\projects\my_project
 python -m draftpaper_cli.cli re-review --project <repo>\projects\my_project
@@ -652,8 +657,19 @@ review/publication_readiness_report.json
 review/publication_readiness_report.html
 review/codex_archive_review_context.json
 review/codex_archive_review_context.html
+review/review_discipline_profile.json
+review/review_workflow_gap_report.json
+review/review_workflow_gap_report.html
+review/review_engineering_plan.json
+review/review_engineering_plan.html
+review/user_confirmation_requests.json
 review/statistical_rescue_plan.json
 review/statistical_rescue_plan.html
+review/actionable_analysis_tasks.json
+review/analysis_revision_feasibility.json
+review/analysis_revision_feasibility.html
+methods/analysis_revision_requirements.json
+results/revision_figure_plan_delta.json
 review/journal_fit_report.html
 review/claim_evidence_matrix.csv
 review/revision_plan.json
@@ -685,13 +701,19 @@ Every issue uses the same schema:
 
 `diagnose-gate-failures` reads the data feasibility report, method run manifest, result validity report, integrity report, and quality report. It does not merely say a gate failed; it maps each failure to a target stage, files to inspect, required user decision, and the CLI commands that should be rerun.
 
-`status` and `run-pipeline` also route into this layer. If `integrity/integrity_report.json` or `quality_checks/quality_report.json` exists with a failed status while the project is at the final quality stage, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, and `generate-revision-plan` as each review artifact appears. This prevents the user from getting trapped in repeated gate reruns without a concrete backtracking plan.
+`status` and `run-pipeline` also route into this layer. If `integrity/integrity_report.json` or `quality_checks/quality_report.json` exists with a failed status while the project is at the final quality stage, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, and `generate-revision-plan` as each review artifact appears. This prevents the user from getting trapped in repeated gate reruns without a concrete backtracking plan.
 
 `review-draft` is a deterministic reviewer-style pass. It checks whether the assembled manuscript exists, whether Methods are reproducible from a successful run manifest, whether result claim strength matches the result validity decision, and whether Discussion exists after Results. This is intentionally conservative and does not replace human review.
 
 `assess-publication-readiness` reads saved data, method, result, figure, integrity, quality, LaTeX, and journal-profile artifacts, then writes `review/publication_readiness_report.json`, `review/publication_readiness_report.html`, `review/codex_archive_review_context.json`, `review/codex_archive_review_context.html`, `review/journal_fit_report.html`, and `review/claim_evidence_matrix.csv`. It reports a readiness score, readiness band, reviewer-style decision, evidence signals, major risks, and a natural-language reviewer narrative. This is an internal triage estimate, not a guaranteed journal acceptance probability.
 
-`recommend-statistical-revision` reads the same saved loop artifacts plus the readiness report, then writes `review/statistical_rescue_plan.json` and `review/statistical_rescue_plan.html`. It recommends routes such as small-sample robustness checks, missingness/imputation audits, method/result validity rebuilding, explicit success thresholds, or claim reframing. It does not modify the data or manuscript automatically.
+`discover-review-workflow-gaps` reads the same project archive and infers a review discipline. The first deep discipline branch is `geography`, covering remote sensing, agricultural geography, and spatial analysis; `astronomy` and `machine_learning` are reserved as runnable branches with baseline reviewer rules; unmatched projects use the `default` branch. The geography engine checks spatial/temporal scale alignment, remote-sensing quality control, spatial autocorrelation, stratified geographic heterogeneity, and weak-fit backtracking. The astronomy engine checks catalog cross-match reliability, light-curve sampling, uncertainty/selection effects, and source-classification validation risks. The machine-learning engine checks leakage, baseline/ablation, validation split robustness, uncertainty/calibration, and class-imbalance metrics. Additional discipline engines can be added under `draftpaper_cli/review_engines/<discipline>.py`.
+
+`propose-review-engineering-plan` turns the discipline-specific gaps into unified revision issues and user-confirmation requests. This is the deterministic A-layer reviewer-engineering floor. The output also includes `codex_enhancement_context`, which is the C-layer extension point for Codex or another LLM to append literature- and manuscript-specific reviewer suggestions without overwriting deterministic blocking issues.
+
+`recommend-statistical-revision` reads the same saved loop artifacts plus the readiness report, then writes `review/statistical_rescue_plan.json` and `review/statistical_rescue_plan.html`. It recommends routes such as small-sample robustness checks, missingness/imputation audits, weak-effect data quality audits, domain-specific QC, method/result validity rebuilding, explicit success thresholds, or claim reframing. It does not modify the data or manuscript automatically.
+
+`prepare-analysis-revision` is the bridge from reviewer text to executable loop work. It reads `review/statistical_rescue_plan.json`, `review/review_engineering_plan.json`, and `data/data_inventory.json`, maps reviewer/rescue routes into unified operation families, checks whether required data roles are present, and writes executable, partial, or blocked tasks. The first concrete branch maps geography and agricultural remote-sensing advice into remote-sensing QC rebuild, feature reconstruction, spatial block validation, stratified heterogeneity analysis, and baseline/ablation tasks when data support them. Blocked tasks must not generate fake code; they list missing data roles and the smallest user-facing data request. After this stage, `status` and `run-pipeline` recommend `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity` before returning to `generate-revision-plan`.
 
 `generate-revision-plan` merges gate diagnosis, reviewer issues, publication-readiness issues, and statistical-rescue issues into `review/revision_plan.json` and `review/commitment_ledger.csv`. The commitment ledger records issue id, source, target stage, decision, status, and the user's revision commitment so later re-review can audit what was supposed to change.
 

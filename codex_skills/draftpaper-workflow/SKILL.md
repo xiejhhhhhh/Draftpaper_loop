@@ -69,10 +69,13 @@ Run stages in this order unless the user asks for a focused rerun:
 26. `diagnose-gate-failures`
 27. `review-draft`
 28. `assess-publication-readiness`
-29. `recommend-statistical-revision`
-30. `generate-revision-plan`
-31. `apply-revision` when the user accepts a revision route
-32. `re-review`
+29. `discover-review-workflow-gaps`
+30. `propose-review-engineering-plan`
+31. `recommend-statistical-revision`
+32. `prepare-analysis-revision`
+33. `generate-revision-plan`
+34. `apply-revision` when the user accepts a revision route
+35. `re-review`
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
@@ -82,7 +85,7 @@ If upstream artifacts change, rerun from the earliest affected stage through dow
 
 ## Gates
 
-Never generate the research plan or writing stages before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json`, produce `results/figure_metadata.json` and `results/figure_quality_report.json`, and avoid workflow-diagram fallbacks for empirical Results. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity and `inventory-results`; Results contain no citations and should interpret figure metadata rather than filenames. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if Data/Methods contain local filenames, paths, commands, manifest dumps, or generated empirical figures without scientific metadata.
+Never generate the research plan or writing stages before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json`, produce `results/figure_metadata.json` and `results/figure_quality_report.json`, and avoid workflow-diagram fallbacks for empirical Results. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity and `inventory-results`; result validity uses metric semantics, so p-values use alpha thresholds, R2 is goodness of fit, and correlations are effect sizes. Results contain no citations and should interpret figure metadata rather than filenames. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if Data/Methods contain local filenames, paths, commands, manifest dumps, or generated empirical figures without scientific metadata.
 
 For Zotero-backed references, first call `list-zotero-collections` after confirming `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` are configured in the local environment. Then call `search-literature --zotero-collection "<collection name>"`; do not fall back to the full Zotero library. Treat imported Zotero records as user-curated references: they are preserved outside external-search ranking, recency, abstract/PDF filtering, and the external 30-reference cap, but must still appear in `literature_summaries/index.html` together with searched references and remain distinguishable by their Zotero source/origin metadata. Use `--zotero-context all` only when the user intends the selected collection to support Introduction, Data, and Methods evidence.
 
@@ -90,7 +93,7 @@ Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_
 
 ## Review and Revision Loop
 
-When any gate fails, use `status` or `run-pipeline` to follow the review sequence: `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, then `generate-revision-plan`. Read `review/codex_archive_review_context.html` when Codex needs the full archived reviewer context. Do not let `apply-revision` rewrite scientific content; it only marks affected stages stale. If revisions require data, methods, statistical processing, or weaker claims, ask the user to confirm. After reruns, use `re-review`.
+When any gate fails, use `status` or `run-pipeline` to follow: `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, reviewer-task reruns, then `generate-revision-plan`. Reviewer-task reruns use `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity`. Review engineering runs geography, astronomy, machine_learning, or default. Use `review/review_engineering_plan.html`, `review/analysis_revision_feasibility.html`, and `review/user_confirmation_requests.json` before data cleaning or method reruns. `apply-revision` only marks stages stale. After reruns, use `re-review`.
 
 ## Skill Reuse
 
