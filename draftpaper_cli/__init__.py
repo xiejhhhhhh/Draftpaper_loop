@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 """Local-first CLI workflow for staged research paper projects.
 
 Contact: xiejinhui22@mails.ucas.ac.cn

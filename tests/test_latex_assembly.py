@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import json
@@ -157,6 +161,7 @@ class LatexAssemblyTests(unittest.TestCase):
                 self.assertTrue((project_path / "latex" / "sections" / f"{name}.tex").exists())
 
             content = main_tex.read_text(encoding="utf-8")
+            self.assertIn("Generated with Draftpaper-loop", content)
             self.assertIn("\\documentclass", content)
             self.assertIn("\\graphicspath{{../}}", content)
             self.assertIn("\\input{sections/introduction}", content)

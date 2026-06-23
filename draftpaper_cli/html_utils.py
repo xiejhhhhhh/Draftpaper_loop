@@ -1,8 +1,14 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import re
 from html import escape
 from pathlib import Path
+
+from .metadata import GENERATOR_HTML_META
 
 
 def markdown_to_html(markdown: str, *, title: str = "DraftPaper Report") -> str:
@@ -56,6 +62,7 @@ def markdown_to_html(markdown: str, *, title: str = "DraftPaper Report") -> str:
 <html lang="en">
 <head>
   <meta charset="utf-8">
+{GENERATOR_HTML_META.rstrip()}
   <title>{escape(title)}</title>
   <style>
     body {{ font-family: Arial, sans-serif; max-width: 980px; margin: 32px auto; line-height: 1.58; color: #202124; }}

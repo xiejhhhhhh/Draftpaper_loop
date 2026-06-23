@@ -10,6 +10,8 @@
 
 # Draftpaper-loop
 
+**阿里巴巴希望天下没有难做的生意，而 Draftpaper-loop 希望天下没有难写的论文。**
+
 **本地优先的科研论文 loop 引擎，用于生成可审计、可追溯的论文初稿。**
 
 [English](./README.md) | [中文](./README.zh-CN.md)
@@ -78,6 +80,10 @@ third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
 生成的论文项目通常位于本地 `projects/` 下，并默认不提交到 git，避免上传研究数据、生成草稿、全文文献缓存和结果图表。
 
 ## 快速开始
+
+### 教程
+
+基础教学视频：[Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/?spm_id_from=333.1387.homepage.video_card.click&vd_source=463ffa8de6f1dbe750355ef3225fa45a)
 
 ### 通过 Codex 使用
 
@@ -177,6 +183,15 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
+
+- 新增仓库级保护文件：`NOTICE`、`COMMERCIAL_LICENSE.md` 和 `TRADEMARK.md`。
+- 将 `LICENSE` 中较早的 DraftPaper CLI 表述更新为 Draftpaper-loop，并补充 API 服务、论文生产服务、付费课程捆绑等商业使用示例。
+- 为一方 Python 文件补充版权声明和联系邮箱，同时保持 `third_party/` 等第三方文件不变。
+- 在生成的 LaTeX、HTML 报告、生成式 Python 脚本，以及包含 `generated_at` 的 JSON 报告中加入稳定的 Draftpaper-loop generator provenance。
+- 本地验证：`python -m unittest discover -s tests`
+- 当前测试规模：130 tests
 
 ### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
 
@@ -292,6 +307,8 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 ## 许可证、商业使用和联系方式
 
 Draftpaper-loop 以 source-available 形式开放给非商业科研、评估、教学和个人论文工作流使用。商业使用、付费服务、SaaS 部署、企业部署、转售，或集成到商业产品中，需要事先获得项目开发者的书面授权。
+
+当前非商业 source-available 条款、归属声明、商业授权范围和项目名称/商标政策见 [`LICENSE`](./LICENSE)、[`NOTICE`](./NOTICE)、[`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md) 和 [`TRADEMARK.md`](./TRADEMARK.md)。
 
 如需商业授权，请联系：[xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn)。
 

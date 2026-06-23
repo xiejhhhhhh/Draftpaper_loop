@@ -10,6 +10,8 @@
 
 # Draftpaper-loop
 
+**Alibaba set out to make it easy to do business anywhere; Draftpaper-loop sets out to make no paper hard to write.**
+
 **Local-first research paper loop engine for auditable, traceable manuscript drafts.**
 
 [English](./README.md) | [中文](./README.zh-CN.md)
@@ -87,6 +89,10 @@ third_party/paper-fetch-skill/   # Vendored MIT paper-fetch runtime
 Generated paper projects are stored under `projects/` locally and are intentionally ignored by git to avoid uploading research data, generated drafts, full-text paper caches, and result artifacts.
 
 ## Quick Start
+
+### Tutorial
+
+Basic tutorial video: [Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/?spm_id_from=333.1387.homepage.video_card.click&vd_source=463ffa8de6f1dbe750355ef3225fa45a)
 
 ### Use Through Codex
 
@@ -225,6 +231,15 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 
 ## Recent Updates
 
+### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
+
+- Added repository-level protection files: `NOTICE`, `COMMERCIAL_LICENSE.md`, and `TRADEMARK.md`.
+- Updated `LICENSE` wording from the older DraftPaper CLI identity to Draftpaper-loop and clarified commercial-use examples such as API services, manuscript-production services, and paid course bundles.
+- Added copyright and contact headers to first-party Python files while keeping vendored third-party files untouched.
+- Added stable Draftpaper-loop generator provenance to generated LaTeX, HTML reports, generated Python scripts, and JSON reports that include `generated_at`.
+- Local verification: `python -m unittest discover -s tests`
+- Current suite: 130 tests
+
 ### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
 
 - Added `assess-publication-readiness` to score target-journal submission readiness from saved loop artifacts, including data feasibility, method verification, result validity, figure metadata, integrity, quality, and journal profile state.
@@ -342,6 +357,8 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 ## License, Commercial Use, And Contact
 
 Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
+
+See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md), and [`TRADEMARK.md`](./TRADEMARK.md) for the current non-commercial source-available terms, attribution notice, commercial authorization scope, and project-name/trademark policy.
 
 For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
 

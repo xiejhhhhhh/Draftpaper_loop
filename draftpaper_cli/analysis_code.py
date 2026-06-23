@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import json
@@ -8,6 +12,7 @@ from typing import Any
 
 from .figure_plan import FigurePlanError, plan_figures, validate_figure_plan_for_codegen
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
+from .metadata import PYTHON_SOURCE_NOTICE
 from .plotting_requirements import plan_plotting_requirements, render_requirements_txt
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
@@ -188,7 +193,7 @@ def _sanitize_outputs(project_path: Path, outputs: list[str]) -> list[str]:
 
 def _render_generated_pipeline(manifest: dict[str, Any]) -> str:
     manifest_literal = json.dumps(manifest, ensure_ascii=True, sort_keys=True)
-    return f'''from __future__ import annotations
+    return PYTHON_SOURCE_NOTICE + f'''from __future__ import annotations
 
 import csv
 import json
@@ -551,7 +556,7 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
 
 
 def _render_run_script() -> str:
-    return '''from __future__ import annotations
+    return PYTHON_SOURCE_NOTICE + '''from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -571,7 +576,7 @@ if __name__ == "__main__":
 
 
 def _render_install_plotting_script() -> str:
-    return '''from __future__ import annotations
+    return PYTHON_SOURCE_NOTICE + '''from __future__ import annotations
 
 import subprocess
 import sys
@@ -590,7 +595,7 @@ if __name__ == "__main__":
 
 
 def _render_generated_test() -> str:
-    return '''from __future__ import annotations
+    return PYTHON_SOURCE_NOTICE + '''from __future__ import annotations
 
 import sys
 from pathlib import Path

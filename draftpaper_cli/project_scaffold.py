@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import json
@@ -6,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from .metadata import attach_generator_metadata
 
 
 class ProjectAlreadyExistsError(FileExistsError):
@@ -105,6 +111,8 @@ def _build_stage_metadata() -> dict[str, dict[str, Any]]:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    if isinstance(payload, dict) and "generated_at" in payload:
+        payload = attach_generator_metadata(payload)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

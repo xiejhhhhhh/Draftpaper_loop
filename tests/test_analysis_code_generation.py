@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import json
@@ -85,6 +89,14 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue((project.path / "code" / "src" / "generated_pipeline.py").exists())
             self.assertTrue((project.path / "code" / "requirements-publication.txt").exists())
             self.assertTrue((project.path / "code" / "tests" / "test_generated_pipeline.py").exists())
+            self.assertIn(
+                "Source-available for non-commercial use only",
+                (project.path / "code" / "src" / "generated_pipeline.py").read_text(encoding="utf-8"),
+            )
+            self.assertIn(
+                "Source-available for non-commercial use only",
+                (project.path / "code" / "scripts" / "run_analysis.py").read_text(encoding="utf-8"),
+            )
             self.assertIn("results/tables/metrics.csv", result["declared_outputs"])
             self.assertIn("results/tables/analysis_summary.csv", result["declared_outputs"])
             self.assertIn("results/figure_metadata.json", result["declared_outputs"])

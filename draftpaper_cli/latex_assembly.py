@@ -1,3 +1,7 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 from __future__ import annotations
 
 import json
@@ -9,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
+from .metadata import GENERATOR_TEX_COMMENT
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 
@@ -201,7 +206,7 @@ def _render_default_main(project_meta: dict[str, Any]) -> str:
 def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
     template_path = project_path / "latex" / "template" / "main.tex"
     if not template_path.exists():
-        return _render_default_main(project_meta)
+        return GENERATOR_TEX_COMMENT + _render_default_main(project_meta)
     template = template_path.read_text(encoding="utf-8")
     sections = "\n".join([
         r"\input{sections/introduction}",
@@ -228,6 +233,8 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         rendered = rendered.replace("\\begin{document}", "\\graphicspath{{../}}\n\\begin{document}", 1)
     acknowledgments = _draftpaper_acknowledgments(aastex="aastex" in str(journal_profile.get("documentclass") or "").lower())
     rendered = _insert_acknowledgments(rendered, acknowledgments)
+    if "Generated with Draftpaper-loop" not in rendered:
+        rendered = GENERATOR_TEX_COMMENT + rendered
     return rendered.rstrip() + "\n"
 
 

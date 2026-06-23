@@ -1,2 +1,6 @@
+﻿# Copyright (c) 2026 xiejhhhhhh
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
 """Scientific plotting helpers for generated Draftpaper analysis workflows."""
 
