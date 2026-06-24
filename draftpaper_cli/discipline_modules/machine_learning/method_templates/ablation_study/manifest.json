@@ -1,0 +1,10 @@
+{
+  "plugin_id": "machine_learning.method.ablation_study",
+  "plugin_type": "method_template",
+  "discipline": "machine_learning",
+  "method_family": "ablation_study",
+  "aliases": ["feature group ablation", "component ablation"],
+  "template": "template.py",
+  "input_roles": ["feature_matrix", "target_or_label"],
+  "output_artifacts": ["results/tables/ablation_metrics.csv", "results/figures/ablation_or_error_analysis.png"]
+}

@@ -1,0 +1,7 @@
+{
+  "discipline": "geography",
+  "method_templates": [
+    "remote_sensing_feature_reconstruction",
+    "spatial_block_validation"
+  ]
+}

@@ -179,7 +179,7 @@ def plan_plotting_requirements(
         "matched_rules": matched_rules,
         "requirements": requirements,
         "packages": [item["package"] for item in requirements],
-        "install_command": "python -m pip install -r code/requirements-publication.txt",
+        "install_command": "python -m pip install -r methods/requirements-publication.txt",
         "notes": [
             "Requirements are inferred from the current figure plan, project idea, field, and method description.",
             "The generated analysis runtime still checks imports at execution time and uses available backends conservatively.",
@@ -191,7 +191,7 @@ def render_requirements_txt(plan: dict[str, Any]) -> str:
     lines = [
         "# Auto-generated publication plotting requirements.",
         "# Install from the project root with:",
-        "# python -m pip install -r code/requirements-publication.txt",
+        "# python -m pip install -r methods/requirements-publication.txt",
         "",
     ]
     for item in plan.get("requirements") or []:

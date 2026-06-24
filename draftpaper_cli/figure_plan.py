@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .discipline import infer_discipline_profile
+from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
@@ -163,6 +165,81 @@ def _add_unique(figures: list[dict[str, Any]], item: dict[str, Any]) -> None:
         figures.append(item)
 
 
+def _generated_group_set(figures: list[dict[str, Any]]) -> set[str]:
+    groups = set()
+    for item in figures:
+        if item.get("generation_mode") != "generated_code":
+            continue
+        group = str(item.get("figure_group") or item.get("visualization_type") or item.get("figure_type") or "")
+        if group:
+            groups.add(group)
+    return groups
+
+
+def _generic_figure_for_group(
+    *,
+    group: str,
+    selected_data: str,
+    numeric: list[str],
+    labels: list[str],
+    lookup: dict[str, str],
+    index: int,
+) -> dict[str, Any]:
+    ndvi_col = _match_column(lookup, ["ndvi", "vegetation"], numeric[0] if numeric else None)
+    yield_col = _match_column(lookup, ["yield", "production", "potential", "response"], numeric[1] if len(numeric) > 1 else None)
+    climate_col = _match_column(lookup, ["temp", "precip", "climate", "rain", "environment"], numeric[2] if len(numeric) > 2 else None)
+    group_col = _match_column(lookup, ["region", "zone", "field", "plot", "county", "province", "group"], labels[0] if labels else None)
+    specs = {
+        "data_overview": ("Data evidence overview", "data_overview", [], None, None, None, ["row_count", "column_count", "data_role_summary"]),
+        "remote_sensing_index_distribution": ("Remote-sensing index distribution", "histogram", [ndvi_col or (numeric[0] if numeric else "")], ndvi_col or (numeric[0] if numeric else None), None, None, ["distribution_summary", "range_check"]),
+        "environmental_driver_response": ("Environmental driver response", "scatter_regression", [climate_col or (numeric[0] if numeric else ""), yield_col or ndvi_col or (numeric[1] if len(numeric) > 1 else "")], climate_col or (numeric[0] if numeric else None), yield_col or ndvi_col or (numeric[1] if len(numeric) > 1 else None), None, ["pearson_r", "linear_fit", "r2"]),
+        "predictor_correlation_structure": ("Predictor correlation structure", "correlation_heatmap", numeric[:6], None, None, None, ["pearson_correlation_matrix"]),
+        "spatial_or_validation_summary": ("Spatial or validation summary", "metric_summary", [group_col or "", yield_col or ndvi_col or ""], None, None, group_col, ["validation_metric", "group_support"]),
+        "catalog_or_sample_coverage": ("Catalog or sample coverage", "data_overview", [], None, None, None, ["sample_support", "coverage_summary"]),
+        "time_series_or_feature_distribution": ("Time-series or feature distribution", "histogram", numeric[:1], numeric[0] if numeric else None, None, None, ["distribution_summary"]),
+        "classification_or_metric_summary": ("Classification or metric summary", "metric_summary", [], None, None, labels[0] if labels else None, ["classification_metric", "baseline_metric"]),
+        "multimodal_or_error_analysis": ("Multimodal or error analysis", "scatter_regression", numeric[:2] + labels[:1], numeric[0] if numeric else None, numeric[1] if len(numeric) > 1 else None, labels[0] if labels else None, ["error_analysis"]),
+        "class_or_target_distribution": ("Class or target distribution", "class_balance" if labels else "histogram", labels[:1] or numeric[:1], numeric[0] if numeric and not labels else None, None, labels[0] if labels else None, ["class_counts", "imbalance_ratio"]),
+        "feature_space_structure": ("Feature space structure", "scatter_regression", numeric[:2] + labels[:1], numeric[0] if numeric else None, numeric[1] if len(numeric) > 1 else None, labels[0] if labels else None, ["pearson_r", "linear_fit", "r2"]),
+        "baseline_vs_model_performance": ("Baseline versus model performance", "metric_summary", [], None, None, None, ["baseline_metric", "model_metric"]),
+        "ablation_or_error_analysis": ("Ablation or error analysis", "metric_summary", numeric[:4], None, None, labels[0] if labels else None, ["ablation_delta", "error_summary"]),
+        "monitoring_coverage": ("Monitoring coverage summary", "data_overview", [], None, None, group_col, ["spatiotemporal_coverage"]),
+        "environmental_time_series": ("Environmental time-series distribution", "histogram", numeric[:1], numeric[0] if numeric else None, None, None, ["temporal_distribution_summary"]),
+        "driver_response": ("Environmental driver response", "scatter_regression", numeric[:2], numeric[0] if numeric else None, numeric[1] if len(numeric) > 1 else None, group_col, ["pearson_r", "linear_fit", "r2"]),
+        "uncertainty_or_validation_summary": ("Uncertainty or validation summary", "metric_summary", [], None, None, group_col, ["uncertainty_summary", "validation_metric"]),
+        "sample_qc": ("Sample quality-control distribution", "histogram", numeric[:1], numeric[0] if numeric else None, None, labels[0] if labels else None, ["qc_distribution"]),
+        "feature_structure": ("Feature structure", "scatter_regression", numeric[:2], numeric[0] if numeric else None, numeric[1] if len(numeric) > 1 else None, labels[0] if labels else None, ["feature_structure"]),
+        "differential_or_signal_summary": ("Differential or signal summary", "metric_summary", [], None, None, labels[0] if labels else None, ["effect_size_summary", "multiple_testing_summary"]),
+        "annotation_summary": ("Annotation summary", "class_balance" if labels else "data_overview", labels[:1], None, None, labels[0] if labels else None, ["annotation_counts"]),
+        "feature_distribution": ("Feature distribution", "histogram", numeric[:1], numeric[0] if numeric else None, None, None, ["distribution_summary"]),
+        "feature_relationship": ("Feature relationship", "scatter_regression", numeric[:2], numeric[0] if numeric else None, numeric[1] if len(numeric) > 1 else None, None, ["pearson_r", "linear_fit", "r2"]),
+        "validation_summary": ("Validation summary", "metric_summary", [], None, None, None, ["validation_metric"]),
+        "metric_summary": ("Metric summary", "metric_summary", [], None, None, None, ["metric_summary"]),
+    }
+    title, figure_type, columns, x, y, group_col, transforms = specs.get(group, specs["metric_summary"])
+    figure_id = _safe_id(title, f"discipline_required_{index}")
+    return {
+        "id": figure_id,
+        "title": title,
+        "path": f"results/figures/{figure_id}.png",
+        "generation_mode": "generated_code",
+        "figure_group": group,
+        "figure_type": figure_type,
+        "visualization_type": figure_type,
+        "required_inputs": [selected_data],
+        "required_columns": [column for column in columns if column],
+        "x": x,
+        "y": y,
+        "group": group_col,
+        "statistical_transform": transforms,
+        "backend_preference": ["matplotlib_scienceplots", "matplotlib", "png_stdlib_fallback"],
+        "no_flowchart_fallback": True,
+        "scientific_question": f"What evidence does the {group.replace('_', ' ')} figure provide for the current study?",
+        "caption_draft": f"{title}.",
+        "result_claim_template": "This figure provides one required piece of the discipline-specific evidence chain and should be interpreted only within the verified data and method boundary.",
+    }
+
+
 def _planned_figures(
     *,
     project_meta: dict[str, Any],
@@ -190,6 +267,7 @@ def _planned_figures(
         x: str | None = None,
         y: str | None = None,
         group: str | None = None,
+        figure_group: str | None = None,
         statistical_transform: list[str] | None = None,
     ) -> None:
         nonlocal generated_index
@@ -200,6 +278,7 @@ def _planned_figures(
             "title": title,
             "path": f"results/figures/{figure_id}.png",
             "generation_mode": "generated_code",
+            "figure_group": figure_group or visualization_type,
             "figure_type": visualization_type,
             "visualization_type": visualization_type,
             "required_inputs": [selected_data],
@@ -228,6 +307,7 @@ def _planned_figures(
             x=ndvi_col,
             y=yield_col,
             statistical_transform=["pearson_r", "linear_fit", "r2"],
+            figure_group="remote_sensing_index_distribution",
         )
         generated(
             title="Environmental driver response",
@@ -238,6 +318,7 @@ def _planned_figures(
             x=climate_col,
             y=yield_col or ndvi_col,
             statistical_transform=["pearson_r", "linear_fit", "r2"],
+            figure_group="environmental_driver_response",
         )
         if len(numeric) >= 3:
             generated(
@@ -247,6 +328,7 @@ def _planned_figures(
                 claim="The correlation heatmap reports the dependence structure among the main predictors and helps constrain interpretation of variable effects.",
                 required_columns=numeric[:6],
                 statistical_transform=["pearson_correlation_matrix"],
+                figure_group="predictor_correlation_structure",
             )
         elif numeric:
             generated(
@@ -257,6 +339,7 @@ def _planned_figures(
                 required_columns=numeric[:1],
                 x=numeric[0],
                 statistical_transform=["mean", "range", "histogram"],
+                figure_group="remote_sensing_index_distribution",
             )
     elif any(term in blob for term in ["classification", "classifier", "cnn", "transformer", "tcn", "multimodal", "random forest", "xgboost"]):
         generated(
@@ -267,6 +350,7 @@ def _planned_figures(
             required_columns=labels[:1],
             group=labels[0] if labels else None,
             statistical_transform=["class_counts", "imbalance_ratio"],
+            figure_group="class_or_target_distribution",
         )
         generated(
             title="Feature space structure",
@@ -278,6 +362,7 @@ def _planned_figures(
             y=numeric[1] if len(numeric) > 1 else None,
             group=labels[0] if labels else None,
             statistical_transform=["pearson_r", "linear_fit", "r2"],
+            figure_group="feature_space_structure",
         )
         generated(
             title="Verified method performance",
@@ -286,6 +371,7 @@ def _planned_figures(
             claim="The performance figure summarizes the verified metric outputs and connects the observed result to the configured result-validity threshold.",
             required_columns=[],
             statistical_transform=["metric_summary"],
+            figure_group="baseline_vs_model_performance",
         )
     else:
         generated(
@@ -297,6 +383,7 @@ def _planned_figures(
             x=numeric[0] if numeric else None,
             group=labels[0] if labels else None,
             statistical_transform=["distribution_summary"],
+            figure_group="data_overview",
         )
         if len(numeric) >= 2:
             generated(
@@ -308,6 +395,7 @@ def _planned_figures(
                 x=numeric[0],
                 y=numeric[1],
                 statistical_transform=["pearson_r", "linear_fit", "r2"],
+                figure_group="feature_relationship",
             )
 
     if literature_items and not figures:
@@ -317,6 +405,7 @@ def _planned_figures(
             question="Which data and method evidence should be generated next according to the literature-informed plan?",
             claim="This planning figure records the data and method target implied by the literature-informed workflow; it should be replaced by a project-specific empirical figure after data are available.",
             required_columns=[],
+            figure_group="data_overview",
         )
     return figures
 
@@ -380,6 +469,74 @@ def _review_task_figures(
     return figures
 
 
+def _apply_discipline_figure_policy(
+    *,
+    figures: list[dict[str, Any]],
+    inventory: dict[str, Any],
+    requirements: dict[str, Any],
+    discipline_profile: dict[str, Any],
+) -> dict[str, Any]:
+    module = get_discipline_module(discipline_profile)
+    module_spec = module.spec.as_dict()
+    figure_inventory = _scoped_inventory(inventory, requirements)
+    numeric = _numeric_columns(figure_inventory)
+    labels = _label_columns(figure_inventory)
+    lookup = _column_lookup(figure_inventory)
+    selected_data = _selected_data(figure_inventory)
+    required_groups = list(module_spec.get("required_figure_groups") or [])
+    minimum = int(module_spec.get("minimum_main_figures") or 5)
+    target = int(module_spec.get("target_main_figures") or max(minimum, 6))
+    groups = _generated_group_set(figures)
+    added_groups: list[str] = []
+    for group in required_groups:
+        if group in groups:
+            continue
+        item = _generic_figure_for_group(
+            group=group,
+            selected_data=selected_data,
+            numeric=numeric,
+            labels=labels,
+            lookup=lookup,
+            index=len(figures) + 1,
+        )
+        _add_unique(figures, item)
+        groups.add(group)
+        added_groups.append(group)
+    fallback_groups = [
+        "data_overview",
+        "feature_distribution",
+        "feature_relationship",
+        "validation_summary",
+        "metric_summary",
+        "predictor_correlation_structure",
+    ]
+    generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
+    for group in fallback_groups:
+        if generated_count >= minimum:
+            break
+        if group in groups:
+            continue
+        item = _generic_figure_for_group(
+            group=group,
+            selected_data=selected_data,
+            numeric=numeric,
+            labels=labels,
+            lookup=lookup,
+            index=len(figures) + 1,
+        )
+        _add_unique(figures, item)
+        groups.add(group)
+        added_groups.append(group)
+        generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
+    return {
+        "discipline": module_spec.get("module_id"),
+        "minimum_main_figures": minimum,
+        "target_main_figures": target,
+        "required_figure_groups": required_groups,
+        "added_figure_groups": added_groups,
+    }
+
+
 def _render_plan_html_markdown(plan: dict[str, Any]) -> str:
     lines = [
         "# Project-Specific Figure Plan",
@@ -391,6 +548,14 @@ def _render_plan_html_markdown(plan: dict[str, Any]) -> str:
         "## Loop Decision",
         "",
         str(plan.get("loop_decision") or ""),
+        "",
+        "## Discipline Figure Policy",
+        "",
+        f"Discipline: `{(plan.get('discipline_profile') or {}).get('discipline', 'default')}`",
+        f"Minimum main figures: `{(plan.get('figure_policy') or {}).get('minimum_main_figures', '')}`",
+        f"Target main figures: `{(plan.get('figure_policy') or {}).get('target_main_figures', '')}`",
+        f"Required figure groups: `{', '.join((plan.get('figure_policy') or {}).get('required_figure_groups') or [])}`",
+        f"Auto-added figure groups: `{', '.join((plan.get('figure_policy') or {}).get('added_figure_groups') or [])}`",
         "",
         "## Planned Figures",
         "",
@@ -447,6 +612,7 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
     review_task_context = {}
     if use_review_tasks:
         review_task_context = _read_json(state.path / "results" / "revision_figure_plan_delta.json", {})
+    discipline_profile = infer_discipline_profile(state.path)
     figures = _planned_figures(
         project_meta=state.metadata,
         research_plan=research_plan,
@@ -459,6 +625,12 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         selected_data = _selected_data(_scoped_inventory(inventory, requirements))
         for item in _review_task_figures(tasks_report=task_report, inventory=inventory, selected_data=selected_data):
             _add_unique(figures, item)
+    figure_policy = _apply_discipline_figure_policy(
+        figures=figures,
+        inventory=inventory,
+        requirements=requirements,
+        discipline_profile=discipline_profile,
+    )
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
     provided_count = sum(1 for item in figures if item.get("generation_mode") == "provided_artifact")
     next_action = "Run generate-analysis-code, then verify-methods, inventory-results, and write-results."
@@ -476,6 +648,8 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         ),
         "review_task_context": review_task_context,
         "used_review_tasks": bool(use_review_tasks and review_task_context),
+        "discipline_profile": discipline_profile,
+        "figure_policy": figure_policy,
         "figures": figures,
         "generated_figure_count": generated_count,
         "provided_figure_count": provided_count,

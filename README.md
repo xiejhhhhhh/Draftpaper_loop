@@ -62,6 +62,7 @@ The loop is designed around five engineering components:
 - Zotero collection import for user-curated reference sets.
 - Traceable `citation_evidence.csv` for auditable manuscript claims.
 - Journal profile stage for target-journal LaTeX constraints.
+- Pluggable data acquisition planning for local files, API-style access, and remote/server-side data without hard-coding field-specific packages into the core Data stage.
 - Data feasibility gate before method planning.
 - Project-specific figure planning before analysis-code generation.
 - Methods hard gate requiring successful local code execution.
@@ -86,7 +87,7 @@ tests/                          # Unit tests
 third_party/paper-fetch-skill/   # Vendored MIT paper-fetch runtime
 ```
 
-Generated paper projects are stored under `projects/` locally and are intentionally ignored by git to avoid uploading research data, generated drafts, full-text paper caches, and result artifacts.
+Generated paper projects are stored under `projects/` locally and are intentionally ignored by git to avoid uploading research data, generated drafts, full-text paper caches, and result artifacts. Within a generated paper project, executable code is stage-owned: `data/scripts/` keeps data collection, API/remote-manifest, preprocessing, and cleaning code; `methods/scripts/` and `methods/src/` keep model, statistical, spatial-analysis, validation, and figure-generation code; `results/` keeps only produced figures, tables, and metadata. The legacy `code/` folder remains as a compatibility launcher/shared-runtime bridge.
 
 ## Quick Start
 
@@ -159,11 +160,13 @@ python -m draftpaper_cli.cli create-project --root <repo>\projects --idea "Your 
 python -m draftpaper_cli.cli status --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
 python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --query "topic keywords"
+python -m draftpaper_cli.cli prepare-data-acquisition --project <repo>\projects\your_project --source-root C:\external\research_folder
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
 python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_project
 python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli list-zotero-collections
 python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
+python -m draftpaper_cli.cli prepare-method-blueprint --project <repo>\projects\your_project
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\your_project
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
@@ -203,13 +206,13 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## Implementation Status
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, data inventory and feasibility checks, method-plan collection, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, pluggable data acquisition planning, data inventory and feasibility checks, method-plan collection, discipline-aware method blueprint generation, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
 When a tracked artifact hash changes, `status` reports `pipeline_state=drift_detected` and recommends `sync-artifact-stale`. That command maps changed artifact paths back to their source stages, marks downstream dependent stages stale, records the drift in `integrity_ledger.jsonl`, and refreshes the passport hash baseline.
 
-`plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, and any supplied local result artifacts, then writes `results/figure_plan.json` and `results/figure_plan.html`. This is where the loop decides which figures the current paper actually needs. With `--use-review-tasks`, it also turns executable or partial reviewer/rescue tasks into revised figures while skipping blocked tasks. `generate-analysis-code` reads that figure plan and writes reviewable project-local Python code under `code/` plus `methods/analysis_code_manifest.json`; with `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` for cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output and required review task coverage exists.
+`prepare-method-blueprint` connects the inferred discipline module, data inventory, data-acquisition profile, method requirements, and reviewer/rescue tasks into `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`. `plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, method blueprint, and any supplied local result artifacts, then writes `results/figure_plan.json` and `results/figure_plan.html`. Discipline modules can now declare minimum/target main-figure counts and required figure groups; the default first-draft policy plans at least five generated main figures when data are available. With `--use-review-tasks`, it also turns executable or partial reviewer/rescue tasks into revised figures while skipping blocked tasks. `generate-analysis-code` reads that figure plan and writes canonical project-local method code under `methods/scripts/` and `methods/src/`, plus `methods/method_code_manifest.json`; `code/` is retained only as a compatibility launcher/copy. With `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` for cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output and required review task coverage exists.
 
 `write-results` now writes result prose that explicitly points readers to the supporting figures and tables through LaTeX labels such as `Figure~\ref{...}` and `Table~\ref{...}`. Internal loop vocabulary, local-path safeguards, gate names, and project-management wording are kept out of the manuscript body and reserved for logs, reports, or acknowledgments. `assemble-latex` inserts a default acknowledgment before the bibliography noting that Draftpaper-loop assisted staged literature organization, analysis traceability, figure inventory, and manuscript drafting.
 
@@ -218,6 +221,10 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. The publication-readiness layer estimates target-journal submission risk from saved data, methods, result, figure, integrity, quality, and journal-profile artifacts, then writes a Codex/LLM-readable archive review packet at `review/codex_archive_review_context.json` and `.html`. The reviewer-engineering layer infers a discipline and runs a matching engine; geography covers remote-sensing, agricultural-geography, and spatial-analysis manuscripts, astronomy covers catalog/light-curve/source-classification review risks, machine learning covers leakage, validation, baseline, ablation, calibration, and imbalance risks, and unmatched projects use a default fallback. Its output includes user-confirmation requests plus a `codex_enhancement_context` extension point so Codex can append literature- and manuscript-specific reviewer suggestions on top of deterministic rules. The statistical rescue layer recommends robust statistics, missingness audits, method rebuilding, explicit success thresholds, domain-aware feature rebuilding, spatial validation, model validation checks, or claim reframing when weak data or weak results might still support a defensible exploratory paper. `prepare-analysis-revision` converts review/rescue advice into executable analysis tasks, checks required data roles, and blocks impossible reruns before new figure planning or code generation. When integrity or final quality reports failed, `status` and `run-pipeline` now walk through the review sequence: gate diagnosis, reviewer pass, publication readiness, review-engineering discovery and planning, statistical rescue, analysis-revision preparation, and revision planning.
 
 `record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
+
+`classify-data-access`, `prepare-data-acquisition`, and `inventory-data-sources` add a discipline-neutral data acquisition layer before ordinary data inventory. The layer shares the same discipline profile used by the reviewer-engineering system, then detects connector types such as `local_files`, `api_access`, and `remote_server`. It writes a plan-first artifact set under `data/` and does not fetch external data or install field-specific packages by default. Domain-specific connectors such as astronomy archives, Google Earth Engine, or bioinformatics repositories can later plug into this interface while the core Data stage remains reusable across disciplines. After reviewer/rescue analysis creates blocked missing-data tasks, `prepare-data-acquisition` writes `data/data_acquisition_tasks.json` and `.html` so Codex can tell the user which data roles are missing, which connector type is suitable, and which confirmation is needed before fetching, linking, or server-side processing.
+
+Discipline modules also declare data acquisition connectors for research planning and missing-data repair. Astronomy covers mission/archive APIs and remote server SSH; geography covers Google Earth Engine plus local raster/vector parsing; ecology covers public web/API download plus GeoTIFF/NetCDF parsing; machine learning covers local files plus Kaggle/Hugging Face/cloud storage; bioinformatics covers GEO/SRA/ENA API access plus remote omics servers. `prepare-data-acquisition` records connector packages, API/download routes, expected data formats, and feasibility states such as `locally_feasible`, `requires_package_install`, or `requires_credentials`.
 
 ## Paper Fetch Integration
 
@@ -230,6 +237,46 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.14.0 (2026-06-24) -- discipline plugin contribution workflow
+
+- Added full `DataConnectorSpec` and `MethodTemplateSpec` schemas for discipline modules.
+- Reorganized discipline modules toward a three-layer model: `data_connectors/`, `method_templates/`, and `review_rules/`.
+- Added geography method templates for `remote_sensing_feature_reconstruction` and `spatial_block_validation`.
+- Added machine-learning method templates for `baseline_model`, `ablation_study`, and `train_validation_test_split_check`.
+- Added plugin contribution preflight commands: `summarize-plugin-candidates`, `generalize-plugin-candidate`, `validate-plugin-candidate`, `package-plugin-contribution`, and `write-github-contribution-guide`.
+- Documented fork/PR rules: forks and branches are temporary contribution channels; stable reusable capabilities merge into `main` under the matching discipline module after privacy, genericity, overlap, fixture, and validation checks.
+
+### v0.13.1 (2026-06-24) -- discipline figure policy and data connector catalog
+
+- Upgraded `plan-figures` so discipline modules can declare `minimum_main_figures`, `target_main_figures`, and `required_figure_groups`; first drafts now aim for at least five generated main figures when data are available.
+- Extended discipline modules with data connector catalogs that include packages, import modules, API/download routes, credential requirements, expected data formats, and local feasibility status.
+- Added `ecology` and `bioinformatics` module skeletons alongside `default`, `geography`, `astronomy`, and `machine_learning`.
+- Expanded geography/agriculture, astronomy, ecology/environment, machine-learning, and bioinformatics data acquisition routes for research-plan data suggestions and missing-data rescue.
+
+### v0.13.0 (2026-06-24) -- stage-owned method code and discipline modules
+
+- Added a stage-owned code layout: data acquisition/preprocessing code belongs under `data/scripts`, method/model/statistical/spatial/figure-generation code belongs under `methods/scripts` and `methods/src`, and `results` keeps only produced figures, tables, and metadata.
+- Added `prepare-method-blueprint`, which writes `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`.
+- Added the `discipline_modules` framework with default, geography, astronomy, and machine-learning module skeletons for shared data, method, figure, formula, and reviewer constraints.
+- Upgraded `generate-analysis-code` so canonical generated code is saved under `methods/` while `code/` remains a compatibility launcher/copy for older workflows.
+- Added contributor documentation under `docs/discipline_modules/` for future discipline-module submissions.
+
+### v0.12.1 (2026-06-24) -- reviewer/rescue data acquisition tasks
+
+- Connected reviewer/rescue missing-data advice to `prepare-data-acquisition`.
+- `prepare-data-acquisition` now reads `review/actionable_analysis_tasks.json`, `review/review_engineering_plan.json`, `review/statistical_rescue_plan.json`, `review/revision_plan.json`, and `review/gate_failure_diagnosis.json`.
+- Added `data/data_acquisition_tasks.json` and `data/data_acquisition_tasks.html`, turning blocked analysis tasks into explicit missing-data requests with `needed_data`, `optional_data`, `suggested_connectors`, and user-confirmation questions.
+- Updated `status` and `run-pipeline` so review/rescue execution now recommends `prepare-data-acquisition` after `prepare-analysis-revision` and before `plan-figures --use-review-tasks`.
+
+### v0.12.0 (2026-06-23) -- pluggable data acquisition planning
+
+- Added a shared discipline inference layer used by both data-acquisition planning and reviewer-engineering engines, so Data and review/rescue routes no longer maintain separate discipline guesses.
+- Added `classify-data-access`, `prepare-data-acquisition`, and `inventory-data-sources` for plan-first data access classification.
+- Added generic connector profiles for `local_files`, `api_access`, and `remote_server`. These detect access patterns without downloading data, writing credentials, or hard-coding astronomy/geography packages into the core Data stage.
+- Added acquisition artifacts: `data/data_access_profile.json`, `data/data_acquisition_plan.json`, `data/data_acquisition_plan.html`, `data/data_source_manifest.csv`, `data/data_access_log.csv`, `data/data_provenance.json`, and `data/data_completeness_report.html`.
+- Added design and implementation notes under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
+- Validated the generic layer against `C:\Flares_classificaiton`: the Flares source root is classified as astronomy while detecting local-file, API-access, and remote-server data modes.
 
 ### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
 

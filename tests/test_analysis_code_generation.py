@@ -85,17 +85,21 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertEqual(figure_plan["status"], "written")
             self.assertTrue((project.path / "results" / "figure_plan.json").exists())
             self.assertTrue((project.path / "results" / "figure_plan.html").exists())
+            self.assertTrue((project.path / "methods" / "scripts" / "run_analysis.py").exists())
+            self.assertTrue((project.path / "methods" / "src" / "generated_pipeline.py").exists())
+            self.assertTrue((project.path / "methods" / "requirements-publication.txt").exists())
+            self.assertTrue((project.path / "methods" / "method_code_manifest.json").exists())
             self.assertTrue((project.path / "code" / "scripts" / "run_analysis.py").exists())
             self.assertTrue((project.path / "code" / "src" / "generated_pipeline.py").exists())
             self.assertTrue((project.path / "code" / "requirements-publication.txt").exists())
             self.assertTrue((project.path / "code" / "tests" / "test_generated_pipeline.py").exists())
             self.assertIn(
                 "Source-available for non-commercial use only",
-                (project.path / "code" / "src" / "generated_pipeline.py").read_text(encoding="utf-8"),
+                (project.path / "methods" / "src" / "generated_pipeline.py").read_text(encoding="utf-8"),
             )
             self.assertIn(
                 "Source-available for non-commercial use only",
-                (project.path / "code" / "scripts" / "run_analysis.py").read_text(encoding="utf-8"),
+                (project.path / "methods" / "scripts" / "run_analysis.py").read_text(encoding="utf-8"),
             )
             self.assertIn("results/tables/metrics.csv", result["declared_outputs"])
             self.assertIn("results/tables/analysis_summary.csv", result["declared_outputs"])
@@ -110,11 +114,13 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue(state.metadata["stages"]["methods"]["stale"])
 
             manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
+            method_manifest = json.loads((project.path / "methods" / "method_code_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(method_manifest["code_layout"], "stage_owned_methods_code_with_code_compatibility_launchers")
             self.assertIn("time_series_deep_learning", manifest["method_families"])
             self.assertIn("multimodal_learning", manifest["method_families"])
             self.assertEqual(manifest["selected_input_data"], "data/raw/sources.csv")
             self.assertGreaterEqual(manifest["literature_method_count"], 1)
-            requirements_text = (project.path / "code" / "requirements-publication.txt").read_text(encoding="utf-8")
+            requirements_text = (project.path / "methods" / "requirements-publication.txt").read_text(encoding="utf-8")
             self.assertIn("matplotlib", requirements_text)
             self.assertIn("SciencePlots", requirements_text)
             self.assertIn("scikit-learn", requirements_text)
@@ -213,6 +219,14 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
 
             figure_plan = json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))
             figure_specs = figure_plan["figures"]
+            generated_specs = [item for item in figure_specs if item.get("generation_mode") == "generated_code"]
+            self.assertGreaterEqual(len(generated_specs), 5)
+            self.assertEqual(figure_plan["figure_policy"]["discipline"], "geography")
+            self.assertGreaterEqual(figure_plan["figure_policy"]["minimum_main_figures"], 5)
+            groups = {item.get("figure_group") for item in generated_specs}
+            self.assertIn("remote_sensing_index_distribution", groups)
+            self.assertIn("environmental_driver_response", groups)
+            self.assertIn("predictor_correlation_structure", groups)
             self.assertTrue(any(item.get("figure_type") == "scatter_regression" for item in figure_specs))
             self.assertTrue(all(item.get("path", "").endswith(".png") for item in figure_specs if item.get("generation_mode") == "generated_code"))
             for item in figure_specs:
@@ -222,7 +236,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertTrue(all(item.get("no_flowchart_fallback") is True for item in figure_specs if item.get("generation_mode") == "generated_code"))
 
             codegen = generate_analysis_code(project.path)
-            requirements_text = (project.path / "code" / "requirements-publication.txt").read_text(encoding="utf-8")
+            requirements_text = (project.path / "methods" / "requirements-publication.txt").read_text(encoding="utf-8")
             self.assertIn("geopandas", requirements_text)
             self.assertIn("rasterio", requirements_text)
             self.assertIn("cartopy", requirements_text)

@@ -1,0 +1,8 @@
+{
+  "discipline": "geography",
+  "review_rule_groups": [
+    "spatial_leakage",
+    "remote_sensing_quality_control",
+    "weak_spatial_generalization"
+  ]
+}

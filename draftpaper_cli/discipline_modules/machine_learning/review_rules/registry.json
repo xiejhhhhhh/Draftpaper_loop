@@ -1,0 +1,9 @@
+{
+  "discipline": "machine_learning",
+  "review_rule_groups": [
+    "data_leakage",
+    "missing_baseline",
+    "missing_ablation",
+    "split_integrity"
+  ]
+}

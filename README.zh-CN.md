@@ -77,6 +77,8 @@ tests/                          # 单元测试
 third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
 ```
 
+生成的单篇论文项目采用阶段归属代码结构：`data/scripts/` 保存数据收集、API/服务器 manifest、预处理和清洗代码；`methods/scripts/` 与 `methods/src/` 保存模型、统计、空间分析、验证和科研绘图代码；`results/` 只保存已经生成的图表、表格和 metadata。旧版 `code/` 目录保留为兼容 launcher 和共享 runtime 过渡层。
+
 生成的论文项目通常位于本地 `projects/` 下，并默认不提交到 git，避免上传研究数据、生成草稿、全文文献缓存和结果图表。
 
 ## 快速开始
@@ -132,6 +134,7 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 .\.venv\Scripts\draftpaper write-data --project .\projects\your_project
 .\.venv\Scripts\draftpaper list-zotero-collections
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
+.\.venv\Scripts\draftpaper prepare-method-blueprint --project .\projects\your_project
 .\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
 .\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
 .\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage methods --kind method_rationale --text "Codex 已展示给用户的方法设计摘要..."
@@ -183,6 +186,46 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.14.0 (2026-06-24) -- discipline plugin contribution workflow
+
+- 新增完整的 `DataConnectorSpec` 和 `MethodTemplateSpec` schema。
+- 将学科模块推进为三层结构：`data_connectors/`、`method_templates/` 和 `review_rules/`。
+- 新增 geography 方法模板：`remote_sensing_feature_reconstruction` 和 `spatial_block_validation`。
+- 新增 machine_learning 方法模板：`baseline_model`、`ablation_study` 和 `train_validation_test_split_check`。
+- 新增插件贡献 preflight 命令：`summarize-plugin-candidates`、`generalize-plugin-candidate`、`validate-plugin-candidate`、`package-plugin-contribution` 和 `write-github-contribution-guide`。
+- 明确 fork/PR 规则：fork 和 branch 只是临时贡献通道；稳定通用能力必须在隐私、通用性、overlap、fixture 和 validation 检查后合并进 `main` 对应学科模块。
+
+### v0.13.1 (2026-06-24) -- discipline figure policy and data connector catalog
+
+- 升级 `plan-figures`：学科模块可以声明 `minimum_main_figures`、`target_main_figures` 和 `required_figure_groups`，在数据可用时默认初稿会尽量规划至少 5 张 generated 主图。
+- 扩展学科模块的数据获取 connector catalog，记录 package、import module、API/下载路径、凭证要求、可获取数据格式和本地 feasibility 状态。
+- 新增 `ecology` 和 `bioinformatics` 学科模块骨架，并与 `default`、`geography`、`astronomy`、`machine_learning` 一起接入 registry。
+- 补充 geography/agriculture、astronomy、ecology/environment、machine_learning 和 bioinformatics 的数据获取路线，用于 research plan 阶段的数据补充建议和 reviewer/rescue 缺失数据回退。
+
+### v0.13.0 (2026-06-24) -- stage-owned method code and discipline modules
+
+- 新增阶段归属代码结构：数据获取和预处理代码进入 `data/scripts`，模型、统计、空间分析、验证和科研绘图代码进入 `methods/scripts` 与 `methods/src`，`results` 只保存图表、表格和 metadata。
+- 新增 `prepare-method-blueprint`，输出 `methods/method_blueprint.json`、`methods/method_data_contract.json`、`methods/method_code_plan.json` 和 `methods/method_formula_plan.json`。
+- 新增 `discipline_modules` 框架，并预留 default、geography、astronomy 和 machine_learning 四类模块骨架，用于共享数据角色、方法族、图表族、公式族和审稿约束。
+- 升级 `generate-analysis-code`：主生成代码默认保存到 `methods/`，`code/` 仅作为旧流程兼容入口。
+- 新增 `docs/discipline_modules/`，用于说明后续不同学科模块如何由 Codex 总结、测试并接入。
+
+### v0.12.1 (2026-06-24) -- reviewer/rescue data acquisition tasks
+
+- 将 reviewer/rescue 中的缺失数据建议接入 `prepare-data-acquisition`。
+- `prepare-data-acquisition` 现在会读取 `review/actionable_analysis_tasks.json`、`review/review_engineering_plan.json`、`review/statistical_rescue_plan.json`、`review/revision_plan.json` 和 `review/gate_failure_diagnosis.json`。
+- 新增 `data/data_acquisition_tasks.json` 和 `data/data_acquisition_tasks.html`，把 blocked analysis task 转换成明确的缺失数据请求，记录 `needed_data`、`optional_data`、`suggested_connectors` 和需要用户确认的问题。
+- 升级 `status` 和 `run-pipeline`，让 review/rescue 执行链在 `prepare-analysis-revision` 之后、`plan-figures --use-review-tasks` 之前自动推荐 `prepare-data-acquisition`。
+
+### v0.12.0 (2026-06-23) -- pluggable data acquisition planning
+
+- 新增共享学科推断层，供数据获取规划和审稿工程共同使用，避免 Data 插件和 review/rescue 插件各自重复判断学科。
+- 新增 `classify-data-access`、`prepare-data-acquisition` 和 `inventory-data-sources`，用于在正式数据清点前生成 plan-first 的数据获取规划。
+- 新增通用 connector profile：`local_files`、`api_access` 和 `remote_server`。这些 connector 只识别数据获取模式，不下载外部数据，不写入凭证，也不把天文学、地理学等领域专用包硬编码进核心 Data 阶段。
+- 新增数据获取产物：`data/data_access_profile.json`、`data/data_acquisition_plan.json`、`data/data_acquisition_plan.html`、`data/data_source_manifest.csv`、`data/data_access_log.csv`、`data/data_provenance.json` 和 `data/data_completeness_report.html`。
+- 新增设计文档和实施计划，保存在 `docs/superpowers/specs/` 和 `docs/superpowers/plans/`。
+- 已用 `C:\Flares_classificaiton` 验证通用层：该项目被识别为 astronomy，同时检测到 local files、API access 和 remote server 三类数据获取模式。
 
 ### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
 

@@ -8,6 +8,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from ..discipline import infer_discipline_from_text
 from ..project_scaffold import _write_json, utc_now
 from . import astronomy, default, geography, machine_learning
 from .base import (
@@ -35,110 +36,7 @@ ENGINE_MODULES = {
 def infer_review_discipline(project: str | Path) -> dict[str, Any]:
     context = collect_review_context(project)
     text = context_text(context)
-    geography_terms = [
-        "geography",
-        "geographic",
-        "geospatial",
-        "gis",
-        "spatial",
-        "remote sensing",
-        "ndvi",
-        "vegetation index",
-        "raster",
-        "yield zoning",
-        "agricultural geography",
-    ]
-    astronomy_terms = [
-        "astronomy",
-        "astronomical",
-        "astrophysics",
-        "x-ray",
-        "xray",
-        "light curve",
-        "flare",
-        "source classification",
-        "catalog",
-        "photometric",
-        "spectral",
-        "telescope",
-        "survey field",
-        "multiwavelength",
-    ]
-    machine_learning_terms = [
-        "machine learning",
-        "deep learning",
-        "classifier",
-        "classification",
-        "random forest",
-        "transformer",
-        "cnn",
-        "resnet",
-        "tcn",
-        "neural network",
-        "baseline",
-        "ablation",
-        "f1",
-        "accuracy",
-    ]
-    geography_score = sum(1 for term in geography_terms if term in text)
-    astronomy_score = sum(1 for term in astronomy_terms if term in text)
-    machine_learning_score = sum(1 for term in machine_learning_terms if term in text)
-    if geography_score >= 2:
-        subdisciplines = []
-        if any(term in text for term in ("remote sensing", "ndvi", "vegetation index", "raster")):
-            subdisciplines.append("remote_sensing")
-        if any(term in text for term in ("wheat", "yield", "crop", "agriculture", "agronomy")):
-            subdisciplines.append("agricultural_geography")
-        if any(term in text for term in ("spatial", "gis", "geographic", "geospatial", "region", "zoning")):
-            subdisciplines.append("spatial_analysis")
-        return {
-            "discipline": "geography",
-            "engine": "geography",
-            "confidence": "high" if geography_score >= 4 else "medium",
-            "matched_terms": [term for term in geography_terms if term in text],
-            "subdisciplines": sorted(set(subdisciplines)) or ["geography"],
-        }
-    if astronomy_score >= 2:
-        subdisciplines = []
-        if any(term in text for term in ("light curve", "flare", "time series")):
-            subdisciplines.append("time_series")
-        if any(term in text for term in ("source classification", "classifier", "classification")):
-            subdisciplines.append("source_classification")
-        if any(term in text for term in ("catalog", "crossmatch", "cross-match")):
-            subdisciplines.append("catalog_crossmatch")
-        if any(term in text for term in ("multiwavelength", "photometric", "spectral", "x-ray", "xray")):
-            subdisciplines.append("multiwavelength")
-        if machine_learning_score >= 2:
-            subdisciplines.append("astronomy_machine_learning")
-        return {
-            "discipline": "astronomy",
-            "engine": "astronomy",
-            "confidence": "high" if astronomy_score >= 4 else "medium",
-            "matched_terms": [term for term in astronomy_terms if term in text],
-            "subdisciplines": sorted(set(subdisciplines)) or ["astronomy"],
-        }
-    if machine_learning_score >= 2:
-        subdisciplines = []
-        if any(term in text for term in ("classification", "classifier", "f1", "accuracy")):
-            subdisciplines.append("supervised_learning")
-        if any(term in text for term in ("deep learning", "transformer", "cnn", "resnet", "tcn", "neural network")):
-            subdisciplines.append("deep_learning")
-        if any(term in text for term in ("baseline", "ablation", "validation", "cross-validation")):
-            subdisciplines.append("model_validation")
-        return {
-            "discipline": "machine_learning",
-            "engine": "machine_learning",
-            "confidence": "high" if machine_learning_score >= 4 else "medium",
-            "matched_terms": [term for term in machine_learning_terms if term in text],
-            "subdisciplines": sorted(set(subdisciplines)) or ["machine_learning"],
-        }
-    return {
-        "discipline": "default",
-        "engine": "default",
-        "confidence": "fallback",
-        "matched_terms": [],
-        "subdisciplines": [],
-    }
+    return infer_discipline_from_text(text)
 
 
 def discover_review_workflow_gaps(project: str | Path) -> dict[str, Any]:

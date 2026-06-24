@@ -1,0 +1,7 @@
+{
+  "discipline": "geography",
+  "data_connectors": [
+    "google_earth_engine",
+    "local_raster_vector"
+  ]
+}

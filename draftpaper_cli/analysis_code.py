@@ -27,6 +27,14 @@ ANALYSIS_CODE_INPUTS = [
 ]
 
 ANALYSIS_CODE_OUTPUTS = [
+    "methods/scripts/run_analysis.py",
+    "methods/scripts/install_plotting_requirements.py",
+    "methods/requirements-publication.txt",
+    "methods/src/scientific_plotting.py",
+    "methods/src/generated_pipeline.py",
+    "methods/tests/test_generated_pipeline.py",
+    "methods/method_code_manifest.json",
+    "methods/analysis_code_manifest.json",
     "code/scripts/run_analysis.py",
     "code/scripts/install_plotting_requirements.py",
     "code/requirements-publication.txt",
@@ -563,7 +571,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = PROJECT_ROOT / "code" / "src"
+SRC_DIR = PROJECT_ROOT / "methods" / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
@@ -584,7 +592,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REQUIREMENTS = PROJECT_ROOT / "code" / "requirements-publication.txt"
+REQUIREMENTS = PROJECT_ROOT / "methods" / "requirements-publication.txt"
 
 
 if __name__ == "__main__":
@@ -601,7 +609,8 @@ import sys
 from pathlib import Path
 
 
-SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+PROJECT_ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "project.json").exists())
+SRC_DIR = PROJECT_ROOT / "methods" / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
@@ -624,6 +633,7 @@ def test_compute_baseline_metrics_from_labels() -> None:
 
 
 def _set_analysis_manifest(project_path: Path, payload: dict[str, Any]) -> None:
+    _write_json(project_path / "methods" / "method_code_manifest.json", payload)
     _write_json(project_path / "methods" / "analysis_code_manifest.json", payload)
 
 
@@ -688,12 +698,14 @@ def generate_analysis_code(
         method_requirements=requirements,
         method_text=method_plan_text,
     )
+    method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
 
     manifest = {
         "status": "written",
         "project_id": state.metadata.get("project_id"),
         "generated_at": utc_now(),
         "generator": "draftpaper_cli.analysis_code.generate_analysis_code",
+        "code_layout": "stage_owned_methods_code_with_code_compatibility_launchers",
         "selected_input_data": selected_input.get("path"),
         "selected_input_profile": selected_input,
         "method_families": method_families,
@@ -703,6 +715,10 @@ def generate_analysis_code(
         "literature_method_count": len(literature_sources),
         "literature_sources": literature_sources,
         "method_plan_excerpt": re.sub(r"\s+", " ", method_plan_text).strip()[:1000],
+        "method_blueprint": method_blueprint,
+        "method_data_contract": method_blueprint.get("method_data_contract") if isinstance(method_blueprint, dict) else {},
+        "method_code_plan": method_blueprint.get("method_code_plan") if isinstance(method_blueprint, dict) else {},
+        "method_formula_plan": method_blueprint.get("method_formula_plan") if isinstance(method_blueprint, dict) else {},
         "figure_plan": figure_plan,
         "plotting_requirements": plotting_requirements,
         "review_task_coverage": review_task_coverage,
@@ -715,27 +731,50 @@ def generate_analysis_code(
         ],
     }
 
-    scripts_dir = state.path / "code" / "scripts"
-    src_dir = state.path / "code" / "src"
-    tests_dir = state.path / "code" / "tests"
-    for directory in [scripts_dir, src_dir, tests_dir, state.path / "methods", state.path / "results" / "tables", state.path / "results" / "figures"]:
+    method_scripts_dir = state.path / "methods" / "scripts"
+    method_src_dir = state.path / "methods" / "src"
+    method_tests_dir = state.path / "methods" / "tests"
+    compat_scripts_dir = state.path / "code" / "scripts"
+    compat_src_dir = state.path / "code" / "src"
+    compat_tests_dir = state.path / "code" / "tests"
+    for directory in [
+        method_scripts_dir,
+        method_src_dir,
+        method_tests_dir,
+        compat_scripts_dir,
+        compat_src_dir,
+        compat_tests_dir,
+        state.path / "methods",
+        state.path / "results" / "tables",
+        state.path / "results" / "figures",
+    ]:
         directory.mkdir(parents=True, exist_ok=True)
 
-    (src_dir / "generated_pipeline.py").write_text(_render_generated_pipeline(manifest), encoding="utf-8")
+    generated_pipeline_source = _render_generated_pipeline(manifest)
+    (method_src_dir / "generated_pipeline.py").write_text(generated_pipeline_source, encoding="utf-8")
     plotting_runtime = (Path(__file__).resolve().parent / "plotting" / "scientific_svg.py").read_text(encoding="utf-8")
-    (src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
-    (state.path / "code" / "requirements-publication.txt").write_text(render_requirements_txt(plotting_requirements), encoding="utf-8")
-    (scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
-    (scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
-    (tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
+    (method_src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
+    requirements_text = render_requirements_txt(plotting_requirements)
+    (state.path / "methods" / "requirements-publication.txt").write_text(requirements_text, encoding="utf-8")
+    (method_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
+    (method_scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
+    (method_tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
+    # Compatibility copies keep older commands and tests working while the stage-owned layout becomes canonical.
+    (compat_src_dir / "generated_pipeline.py").write_text(generated_pipeline_source, encoding="utf-8")
+    (compat_src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
+    (state.path / "code" / "requirements-publication.txt").write_text(requirements_text, encoding="utf-8")
+    (compat_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
+    (compat_scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
+    (compat_tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
     _set_analysis_manifest(state.path, manifest)
     _set_code_stage_manifest(state.path)
     update_stage_status(state.path, "code", "draft")
 
-    verify_command = f"{_quote_command(sys.executable)} code/scripts/run_analysis.py"
+    verify_command = f"{_quote_command(sys.executable)} methods/scripts/run_analysis.py"
     return {
         "status": "written",
         "project_path": str(state.path),
+        "method_code_manifest": str(state.path / "methods" / "method_code_manifest.json"),
         "analysis_code_manifest": str(state.path / "methods" / "analysis_code_manifest.json"),
         "figure_plan": str(state.path / "results" / "figure_plan.json"),
         "generated_files": [str(state.path / relative) for relative in ANALYSIS_CODE_OUTPUTS[:-1]],
@@ -743,7 +782,7 @@ def generate_analysis_code(
         "declared_outputs": declared_outputs,
         "verify_command": verify_command,
         "plotting_requirements": plotting_requirements,
-        "install_plotting_command": f"{_quote_command(sys.executable)} code/scripts/install_plotting_requirements.py",
+        "install_plotting_command": f"{_quote_command(sys.executable)} methods/scripts/install_plotting_requirements.py",
         "next_command": (
             f'{_quote_command(sys.executable)} -m draftpaper_cli.cli verify-methods '
             f'--project "{state.path}" --command "{verify_command}" '

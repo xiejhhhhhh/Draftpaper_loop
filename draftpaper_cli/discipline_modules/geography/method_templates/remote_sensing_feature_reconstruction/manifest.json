@@ -1,0 +1,10 @@
+{
+  "plugin_id": "geography.method.remote_sensing_feature_reconstruction",
+  "plugin_type": "method_template",
+  "discipline": "geography",
+  "method_family": "remote_sensing_feature_reconstruction",
+  "aliases": ["vegetation index reconstruction", "remote sensing feature rebuild"],
+  "template": "template.py",
+  "input_roles": ["analysis_ready_table", "remote_sensing_index", "target_or_response"],
+  "output_artifacts": ["results/tables/remote_sensing_feature_summary.csv", "results/figures/remote_sensing_feature_response.png"]
+}

@@ -1,0 +1,10 @@
+{
+  "plugin_id": "geography.method.spatial_block_validation",
+  "plugin_type": "method_template",
+  "discipline": "geography",
+  "method_family": "spatial_validation",
+  "aliases": ["regional blocked validation", "leave region out validation", "spatial holdout"],
+  "template": "template.py",
+  "input_roles": ["analysis_ready_table", "target_or_response", "predictors", "spatial_group_or_coordinates"],
+  "output_artifacts": ["results/tables/spatial_validation_metrics.csv", "results/figures/spatial_or_validation_summary.png"]
+}

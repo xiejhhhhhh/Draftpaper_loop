@@ -101,6 +101,13 @@ def _cli_for(project_path: Path, command: str) -> str:
 def _review_execution_action(project_path: Path, prefix: str) -> dict[str, Any] | None:
     if not (project_path / "review" / "actionable_analysis_tasks.json").exists():
         return None
+    if not (project_path / "data" / "data_acquisition_tasks.json").exists():
+        return {
+            "stage": "data",
+            "command": "prepare-data-acquisition",
+            "cli": _cli_for(project_path, "prepare-data-acquisition"),
+            "reason": f"{prefix}; reviewer/rescue analysis tasks exist and missing-data requests need connector-aware acquisition tasks.",
+        }
     figure_plan = _read_report(project_path, "results/figure_plan.json")
     if not figure_plan.get("used_review_tasks"):
         return {
@@ -109,7 +116,7 @@ def _review_execution_action(project_path: Path, prefix: str) -> dict[str, Any] 
             "cli": _cli_for(project_path, "plan-figures") + " --use-review-tasks",
             "reason": f"{prefix}; reviewer/rescue tasks exist and need a revised figure plan.",
         }
-    analysis_manifest = _read_report(project_path, "methods/analysis_code_manifest.json")
+    analysis_manifest = _read_report(project_path, "methods/method_code_manifest.json") or _read_report(project_path, "methods/analysis_code_manifest.json")
     coverage = analysis_manifest.get("review_task_coverage") or {}
     if not coverage.get("enabled"):
         return {
@@ -247,9 +254,17 @@ def _methods_stage_command(project_path: Path) -> str:
     return "write-methods"
 
 
+def _figure_plan_stage_command(project_path: Path) -> str:
+    if not (project_path / "methods" / "method_blueprint.json").exists():
+        return "prepare-method-blueprint"
+    return "plan-figures"
+
+
 def _stage_command(project_path: Path, stage: str) -> str | None:
     if stage == "data":
         return _data_stage_command(project_path)
+    if stage == "figure_plan":
+        return _figure_plan_stage_command(project_path)
     if stage == "methods":
         return _methods_stage_command(project_path)
     return STAGE_COMMANDS.get(stage)

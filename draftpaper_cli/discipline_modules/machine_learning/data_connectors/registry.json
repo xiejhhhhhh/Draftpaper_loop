@@ -1,0 +1,7 @@
+{
+  "discipline": "machine_learning",
+  "data_connectors": [
+    "local_files",
+    "kaggle_huggingface"
+  ]
+}

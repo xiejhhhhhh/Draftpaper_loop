@@ -271,8 +271,13 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "review" / "actionable_analysis_tasks.json", {"status": "analysis_revision_prepared"})
             refresh_project_passport(project.path, event="test_analysis_revision_written")
             plan_after_tasks = run_pipeline(project.path)
-            self.assertEqual(plan_after_tasks["next_action"]["command"], "plan-figures")
-            self.assertIn("--use-review-tasks", plan_after_tasks["next_action"]["cli"])
+            self.assertEqual(plan_after_tasks["next_action"]["command"], "prepare-data-acquisition")
+
+            _write_json(project.path / "data" / "data_acquisition_tasks.json", {"status": "tasks_written", "task_count": 1, "tasks": []})
+            refresh_project_passport(project.path, event="test_data_acquisition_tasks_written")
+            plan_after_data_tasks = run_pipeline(project.path)
+            self.assertEqual(plan_after_data_tasks["next_action"]["command"], "plan-figures")
+            self.assertIn("--use-review-tasks", plan_after_data_tasks["next_action"]["cli"])
 
             _write_json(project.path / "results" / "figure_plan.json", {"status": "written", "used_review_tasks": True, "figures": []})
             refresh_project_passport(project.path, event="test_review_figure_plan_written")

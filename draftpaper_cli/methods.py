@@ -22,6 +22,8 @@ from .project_state import load_project, update_stage_status
 METHOD_INPUTS = [
     "methods/method_plan.md",
     "methods/method_requirements.json",
+    "methods/method_blueprint.json",
+    "methods/method_code_manifest.json",
     "methods/run_manifest.yaml",
     "methods/method_writing_context.json",
 ]
@@ -405,6 +407,13 @@ def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[s
     method_excerpt = _clean_sentence(analysis_manifest.get("method_plan_excerpt"))
     if method_excerpt:
         return method_excerpt[:1000]
+    code_plan = analysis_manifest.get("method_code_plan") or {}
+    method_families = ", ".join(str(item).replace("_", " ") for item in code_plan.get("method_families") or [])
+    validation_checks = ", ".join(str(item).replace("_", " ") for item in code_plan.get("validation_checks") or [])
+    if method_families or validation_checks:
+        return ("The verified method code follows the discipline-aware method blueprint. "
+                f"Planned method families include {method_families or 'general analytical modelling'}; "
+                f"validation checks include {validation_checks or 'basic execution and output verification'}.")
     return "The method should be described as a verified local analytical workflow whose steps are constrained by the method plan and available data."
 
 
@@ -455,7 +464,12 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     requirements = validate_method_plan_for_methods(state.path)
     feasibility = validate_data_feasibility_for_methods(state.path)
     observations = load_observations(state.path, stage="methods")
-    analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
+    analysis_manifest = _read_json(state.path / "methods" / "method_code_manifest.json", {})
+    if not analysis_manifest:
+        analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
+    method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
+    if method_blueprint and "method_code_plan" not in analysis_manifest:
+        analysis_manifest["method_code_plan"] = method_blueprint.get("method_code_plan") or {}
     family_summary = _method_family_text(requirements)
     analysis_steps = _strip_forbidden_paths(_analysis_steps_text(requirements, observations, analysis_manifest))
     data_role = _strip_forbidden_paths(_data_role_text(manifest, analysis_manifest))
@@ -476,6 +490,8 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "claim_boundary": claim_boundary,
         "observation_count": len(observations),
         "observations": observations,
+        "method_blueprint": method_blueprint,
+        "method_code_manifest": analysis_manifest,
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
     }

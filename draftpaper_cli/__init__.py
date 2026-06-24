@@ -10,14 +10,24 @@ Commercial use requires written authorization from the developer.
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
+from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
 from .integrity_gate import IntegrityGateError, latest_integrity_report, run_integrity_gate
 from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_latex, compile_latex_pdf
+from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .methods import MethodsGateError, verify_methods, write_methods
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError, load_project_passport, refresh_project_passport
+from .plugin_candidates import (
+    PluginCandidateError,
+    generalize_plugin_candidate,
+    package_plugin_contribution,
+    summarize_plugin_candidates,
+    validate_plugin_candidate,
+    write_github_contribution_guide,
+)
 from .project_scaffold import ProjectAlreadyExistsError, ProjectScaffold, create_project
 from .project_state import (
     InvalidStageStatusError,
@@ -53,14 +63,17 @@ __all__ = [
     "MissingDiscussionInputsError",
     "DiscussionCitationIntegrityError",
     "DataGateError",
+    "DataAcquisitionError",
     "AnalysisCodeGenerationError",
     "AnalysisRevisionError",
     "ArtifactDriftError",
     "LatexAssemblyError",
     "LatexCitationError",
+    "MethodBlueprintError",
     "MethodsGateError",
     "OrchestratorError",
     "PassportError",
+    "PluginCandidateError",
     "ResultsGateError",
     "ProjectAlreadyExistsError",
     "ProjectScaffold",
@@ -85,17 +98,25 @@ __all__ = [
     "run_pipeline",
     "load_project_passport",
     "refresh_project_passport",
+    "summarize_plugin_candidates",
+    "generalize_plugin_candidate",
+    "validate_plugin_candidate",
+    "package_plugin_contribution",
+    "write_github_contribution_guide",
     "detect_artifact_drift",
     "sync_artifact_stale",
     "generate_analysis_code",
     "prepare_analysis_revision",
     "write_introduction",
     "inventory_data",
+    "classify_data_access",
+    "prepare_data_acquisition",
     "assess_data_quality",
     "assess_data_feasibility",
     "write_discussion",
     "assemble_latex",
     "compile_latex_pdf",
+    "prepare_method_blueprint",
     "verify_methods",
     "write_methods",
     "inventory_results",

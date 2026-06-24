@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
+from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
@@ -19,11 +20,20 @@ from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
+from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .figure_plan import FigurePlanError, plan_figures
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError
+from .plugin_candidates import (
+    PluginCandidateError,
+    generalize_plugin_candidate,
+    package_plugin_contribution,
+    summarize_plugin_candidates,
+    validate_plugin_candidate,
+    write_github_contribution_guide,
+)
 from .project_scaffold import ProjectAlreadyExistsError, create_project
 from .project_state import (
     InvalidStageStatusError,
@@ -142,6 +152,18 @@ def build_parser() -> argparse.ArgumentParser:
     data_inventory = subparsers.add_parser("inventory-data", help="Inventory local data files.")
     data_inventory.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    data_access = subparsers.add_parser("classify-data-access", help="Classify project data access modes without fetching field-specific data.")
+    data_access.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    data_access.add_argument("--source-root", default=None, help="Optional external research folder to scan for access-mode evidence.")
+
+    data_acquisition = subparsers.add_parser("prepare-data-acquisition", help="Write a plan-first data acquisition profile and source manifest.")
+    data_acquisition.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    data_acquisition.add_argument("--source-root", default=None, help="Optional external research folder to scan for access-mode evidence.")
+
+    data_sources = subparsers.add_parser("inventory-data-sources", help="Refresh data acquisition source manifest without downloading data.")
+    data_sources.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    data_sources.add_argument("--source-root", default=None, help="Optional external research folder to scan for access-mode evidence.")
+
     data_quality = subparsers.add_parser("assess-data-quality", help="Assess basic local data quality.")
     data_quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     data_quality.add_argument("--required-column", action="append", default=[], help="Column required for the current research plan.")
@@ -162,6 +184,9 @@ def build_parser() -> argparse.ArgumentParser:
     method_plan.add_argument("--method-note", action="append", default=[], help="User-provided method note. Can be repeated.")
     method_plan.add_argument("--primary-metric", default="f1", help="Primary metric expected for result validity.")
     method_plan.add_argument("--minimum-primary-metric", type=float, default=None, help="Minimum acceptable primary metric value.")
+
+    method_blueprint = subparsers.add_parser("prepare-method-blueprint", help="Build a discipline-aware data-to-method code blueprint.")
+    method_blueprint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     figures = subparsers.add_parser("plan-figures", help="Observe project state and plan project-specific scientific figures.")
     figures.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -232,6 +257,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     analysis_revision = subparsers.add_parser("prepare-analysis-revision", help="Convert review/rescue advice into executable analysis tasks and data-feasibility checks.")
     analysis_revision.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    summarize_candidate = subparsers.add_parser("summarize-plugin-candidates", help="Summarize reusable discipline plugin candidates from a completed project.")
+    summarize_candidate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    summarize_candidate.add_argument("--source-file", default=None, help="Optional project or external source code file to summarize.")
+    summarize_candidate.add_argument("--method", default=None, help="Optional method/template keyword to focus candidate generation.")
+
+    generalize_candidate = subparsers.add_parser("generalize-plugin-candidate", help="Convert a project-specific candidate into a generic plugin template.")
+    generalize_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
+
+    validate_candidate = subparsers.add_parser("validate-plugin-candidate", help="Run privacy, genericity, overlap, and fixture checks for a plugin candidate.")
+    validate_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
+
+    package_candidate = subparsers.add_parser("package-plugin-contribution", help="Package a validated plugin candidate for fork/PR review.")
+    package_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
+
+    github_guide = subparsers.add_parser("write-github-contribution-guide", help="Write project-local fork/PR contribution guide for plugin candidates.")
+    github_guide.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     revision_plan = subparsers.add_parser("generate-revision-plan", help="Merge gate, reviewer, readiness, and statistical-rescue issues into a revision plan.")
     revision_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -488,6 +530,30 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "classify-data-access":
+        try:
+            result = classify_data_access(args.project, source_root=args.source_root)
+        except (DataAcquisitionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command in {"prepare-data-acquisition", "inventory-data-sources"}:
+        try:
+            result = prepare_data_acquisition(args.project, source_root=args.source_root)
+        except (DataAcquisitionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "assess-data-quality":
         try:
             result = assess_data_quality(
@@ -590,6 +656,18 @@ def main(argv: list[str] | None = None) -> int:
                 minimum_primary_metric=args.minimum_primary_metric,
             )
         except (MethodPlanError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "prepare-method-blueprint":
+        try:
+            result = prepare_method_blueprint(args.project)
+        except (MethodBlueprintError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:
@@ -785,6 +863,51 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = prepare_analysis_revision(args.project)
         except (AnalysisRevisionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "summarize-plugin-candidates":
+        try:
+            result = summarize_plugin_candidates(args.project, source_file=args.source_file, method=args.method)
+        except (PluginCandidateError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "generalize-plugin-candidate":
+        try:
+            result = generalize_plugin_candidate(args.candidate)
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "validate-plugin-candidate":
+        try:
+            result = validate_plugin_candidate(args.candidate)
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "package-plugin-contribution":
+        try:
+            result = package_plugin_contribution(args.candidate)
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "write-github-contribution-guide":
+        try:
+            result = write_github_contribution_guide(args.project)
+        except (PluginCandidateError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
