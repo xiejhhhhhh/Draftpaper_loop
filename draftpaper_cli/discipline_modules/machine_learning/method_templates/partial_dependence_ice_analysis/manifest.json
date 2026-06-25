@@ -1,0 +1,11 @@
+{
+  "template_id": "partial_dependence_ice_analysis",
+  "display_name": "Partial dependence and ICE analysis plan",
+  "discipline": "machine_learning",
+  "method_family": "model_interpretation",
+  "input_roles": ["feature_matrix", "model_artifact"],
+  "packages": ["scikit-learn", "matplotlib"],
+  "output_artifacts": ["results/tables/partial_dependence.csv", "results/figures/partial_dependence_ice.png"],
+  "figure_groups": ["feature_importance_or_attention_summary", "model_diagnostics"],
+  "genericity_rules": ["Select features from reviewer or method context, not fixed project fields."]
+}

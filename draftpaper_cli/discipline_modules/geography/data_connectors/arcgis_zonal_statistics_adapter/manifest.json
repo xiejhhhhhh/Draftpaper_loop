@@ -1,0 +1,14 @@
+{
+  "connector_id": "arcgis_zonal_statistics_adapter",
+  "display_name": "ArcGIS zonal statistics adapter",
+  "discipline": "geography",
+  "access_modes": ["desktop_gis_runtime", "server_processed_files"],
+  "packages": ["arcpy"],
+  "package_modules": ["arcpy"],
+  "data_formats": ["GeoTIFF", "Shapefile", "GeoPackage", "CSV zonal statistics"],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Record the requested raster variable, zone field, and statistics before execution.",
+    "Do not require ArcGIS at import time; execution is project-bound."
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "connector_id": "pretrained_backbone",
+  "display_name": "Pretrained backbone metadata connector",
+  "access_modes": ["local_checkpoint", "torch_hub", "model_registry"],
+  "data_formats": ["PyTorch checkpoint", "state_dict", "model metadata JSON"],
+  "fixture": "fixture_backbone_metadata.json"
+}

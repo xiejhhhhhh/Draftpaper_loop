@@ -1,0 +1,6 @@
+{
+  "templates": [
+    "long_term_light_curve_feature_extraction",
+    "event_level_transformer_input_builder"
+  ]
+}

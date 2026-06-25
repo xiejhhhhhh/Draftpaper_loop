@@ -1,0 +1,10 @@
+{
+  "rule_group_id": "model_statistical_validity_gate",
+  "display_name": "Model statistical validity gate",
+  "discipline": "machine_learning",
+  "checks": ["minimum_r2", "maximum_p_value", "minimum_sample_count", "generalization_gap"],
+  "genericity_rules": [
+    "Use p-value for statistical confidence and R2 or task metric for effect size/model fit.",
+    "Apply only when the method reports the relevant metric."
+  ]
+}

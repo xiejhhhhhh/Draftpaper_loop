@@ -1,0 +1,13 @@
+{
+  "connector_id": "tabular_environment_dataset",
+  "display_name": "Tabular crop/environment dataset profiler",
+  "discipline": "machine_learning",
+  "access_modes": ["local_files", "server_processed_files"],
+  "packages": [],
+  "data_formats": ["CSV", "Parquet metadata", "dataset profile JSON"],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Parameterize target, feature, group, and split columns.",
+    "Do not encode a crop, region, year, or local file path."
+  ]
+}

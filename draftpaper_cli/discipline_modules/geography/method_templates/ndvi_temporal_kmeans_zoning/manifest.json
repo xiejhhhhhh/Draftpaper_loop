@@ -1,0 +1,12 @@
+{
+  "template_id": "ndvi_temporal_kmeans_zoning",
+  "display_name": "NDVI temporal K-means zoning",
+  "discipline": "geography",
+  "method_family": "spatial_exploratory_analysis",
+  "input_roles": ["analysis_ready_table", "remote_sensing_index"],
+  "optional_roles": ["spatial_group_or_coordinates"],
+  "packages": [],
+  "output_artifacts": ["results/tables/ndvi_temporal_kmeans_zoning.csv"],
+  "figure_groups": ["spatial_or_validation_summary", "remote_sensing_index_distribution"],
+  "genericity_rules": ["Expose feature columns and cluster count.", "Do not encode a study area or sample ID list."]
+}

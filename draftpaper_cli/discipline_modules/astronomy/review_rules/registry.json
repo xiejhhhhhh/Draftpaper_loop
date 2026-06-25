@@ -1,0 +1,8 @@
+{
+  "rule_groups": [
+    "cadence_and_missingness_check",
+    "class_imbalance_check",
+    "catalog_crossmatch_audit",
+    "remote_data_provenance_check"
+  ]
+}

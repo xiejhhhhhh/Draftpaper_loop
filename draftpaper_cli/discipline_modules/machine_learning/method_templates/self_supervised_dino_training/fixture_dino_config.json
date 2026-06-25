@@ -1,0 +1,8 @@
+{
+  "model_type": "vit_small",
+  "img_size": 224,
+  "patch_size": 16,
+  "global_crops": 2,
+  "local_crops": 2,
+  "teacher_momentum": 0.996
+}

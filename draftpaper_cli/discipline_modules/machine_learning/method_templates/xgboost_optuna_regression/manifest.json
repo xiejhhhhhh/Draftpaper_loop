@@ -1,0 +1,12 @@
+{
+  "template_id": "xgboost_optuna_regression",
+  "display_name": "XGBoost Optuna regression",
+  "discipline": "machine_learning",
+  "method_family": "supervised_learning",
+  "input_roles": ["feature_matrix", "target_or_label"],
+  "optional_roles": ["sample_group", "train_validation_test_split"],
+  "packages": ["xgboost", "optuna", "scikit-learn"],
+  "output_artifacts": ["methods/src/xgboost_optuna_regression.py", "results/tables/xgboost_metrics.csv"],
+  "figure_groups": ["baseline_vs_model_performance", "feature_importance_or_attention_summary"],
+  "genericity_rules": ["Keep search space and trial count configurable."]
+}

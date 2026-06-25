@@ -1,0 +1,7 @@
+{
+  "template_id": "few_label_probe_benchmark",
+  "display_name": "Few-label probe benchmark",
+  "method_family": "few_label_evaluation",
+  "figure_groups": ["baseline_vs_model_performance", "learning_curve_or_validation_curve"],
+  "fixture": "fixture_probe_results.csv"
+}

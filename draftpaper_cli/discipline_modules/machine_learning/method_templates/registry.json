@@ -3,6 +3,19 @@
   "method_templates": [
     "baseline_model",
     "ablation_study",
-    "train_validation_test_split_check"
+    "train_validation_test_split_check",
+    "self_supervised_dino_training",
+    "checkpoint_shape_adapter",
+    "embedding_extraction_health_diagnostics",
+    "few_label_probe_benchmark",
+    "embedding_similarity_retrieval",
+    "random_forest_regression_gridsearch",
+    "xgboost_optuna_regression",
+    "gradient_boosting_regression_pipeline",
+    "stacking_regression_ensemble",
+    "observed_predicted_scatter_grid",
+    "feature_importance_report",
+    "partial_dependence_ice_analysis",
+    "shap_tree_explainer_report"
   ]
 }

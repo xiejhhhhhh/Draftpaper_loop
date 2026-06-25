@@ -1,0 +1,12 @@
+{
+  "template_id": "ndvi_cluster_statistical_diagnostics",
+  "display_name": "NDVI cluster statistical diagnostics",
+  "discipline": "geography",
+  "method_family": "environmental_driver_analysis",
+  "input_roles": ["analysis_ready_table", "target_or_response"],
+  "optional_roles": ["spatial_group_or_coordinates", "quality_flag"],
+  "packages": [],
+  "output_artifacts": ["results/tables/ndvi_cluster_statistical_diagnostics.json"],
+  "figure_groups": ["spatial_or_validation_summary", "environmental_driver_response"],
+  "genericity_rules": ["Separate descriptive diagnostics from formal tests that require scipy or statsmodels."]
+}

@@ -1,0 +1,12 @@
+{
+  "template_id": "phenology_curve_smoothing",
+  "display_name": "Phenology curve smoothing",
+  "discipline": "geography",
+  "method_family": "remote_sensing_feature_reconstruction",
+  "input_roles": ["analysis_ready_table", "remote_sensing_index", "temporal_window"],
+  "packages": [],
+  "output_artifacts": ["results/tables/phenology_curve_smoothing.csv"],
+  "figure_groups": ["remote_sensing_index_distribution"],
+  "formula_families": ["moving_average_smoothing", "peak_timing"],
+  "genericity_rules": ["Expose time, value, and smoothing window as parameters."]
+}

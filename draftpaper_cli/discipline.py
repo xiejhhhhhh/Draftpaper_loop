@@ -121,6 +121,13 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         "classifier",
         "classification",
         "random forest",
+        "xgboost",
+        "gradient boosting",
+        "stacking",
+        "shap",
+        "feature importance",
+        "observed-predicted",
+        "r2",
         "transformer",
         "cnn",
         "resnet",
@@ -163,6 +170,33 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
     machine_learning_score = sum(1 for term in machine_learning_terms if term in lowered)
     ecology_score = sum(1 for term in ecology_terms if term in lowered)
     bioinformatics_score = sum(1 for term in bioinformatics_terms if term in lowered)
+    scores = {
+        "geography": geography_score,
+        "astronomy": astronomy_score,
+        "machine_learning": machine_learning_score,
+        "ecology": ecology_score,
+        "bioinformatics": bioinformatics_score,
+    }
+
+    def with_composite_fields(profile: dict[str, Any]) -> dict[str, Any]:
+        primary = str(profile.get("discipline") or "default")
+        secondaries = [
+            discipline for discipline, score in scores.items()
+            if discipline != primary and score >= 2
+        ]
+        modules = ["default"]
+        if primary != "default":
+            modules.append(primary)
+        for discipline in sorted(secondaries, key=lambda item: (-scores[item], item)):
+            if discipline not in modules:
+                modules.append(discipline)
+        profile["primary_discipline"] = primary
+        profile["secondary_disciplines"] = secondaries
+        profile["discipline_scores"] = scores
+        profile["discipline_modules"] = modules
+        profile["is_composite"] = len([item for item in modules if item != "default"]) > 1
+        return profile
+
     if bioinformatics_score >= 2:
         subdisciplines = []
         if any(term in lowered for term in ("geo", "sra", "ena")):
@@ -171,13 +205,13 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             subdisciplines.append("expression_analysis")
         if any(term in lowered for term in ("fastq", "fasta", "sequence", "genomics")):
             subdisciplines.append("sequence_data")
-        return {
+        return with_composite_fields({
             "discipline": "bioinformatics",
             "engine": "bioinformatics",
             "confidence": "high" if bioinformatics_score >= 4 else "medium",
             "matched_terms": [term for term in bioinformatics_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["bioinformatics"],
-        }
+        })
     if ecology_score >= 2:
         subdisciplines = []
         if any(term in lowered for term in ("environmental monitoring", "water quality", "pollution")):
@@ -186,13 +220,13 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             subdisciplines.append("ecology")
         if any(term in lowered for term in ("netcdf", "geotiff", "spatial", "raster")):
             subdisciplines.append("environmental_raster")
-        return {
+        return with_composite_fields({
             "discipline": "ecology",
             "engine": "ecology",
             "confidence": "high" if ecology_score >= 4 else "medium",
             "matched_terms": [term for term in ecology_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["ecology"],
-        }
+        })
     if geography_score >= 2:
         subdisciplines = []
         if any(term in lowered for term in ("remote sensing", "ndvi", "vegetation index", "raster", "google earth engine", "gee", "geotiff")):
@@ -201,13 +235,13 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             subdisciplines.append("agricultural_geography")
         if any(term in lowered for term in ("spatial", "gis", "geographic", "geospatial", "region", "zoning", "shapefile")):
             subdisciplines.append("spatial_analysis")
-        return {
+        return with_composite_fields({
             "discipline": "geography",
             "engine": "geography",
             "confidence": "high" if geography_score >= 4 else "medium",
             "matched_terms": [term for term in geography_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["geography"],
-        }
+        })
     if astronomy_score >= 2:
         subdisciplines = []
         if any(term in lowered for term in ("light curve", "flare", "time series", "transient", "tde")):
@@ -220,13 +254,13 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             subdisciplines.append("multiwavelength")
         if machine_learning_score >= 2:
             subdisciplines.append("astronomy_machine_learning")
-        return {
+        return with_composite_fields({
             "discipline": "astronomy",
             "engine": "astronomy",
             "confidence": "high" if astronomy_score >= 4 else "medium",
             "matched_terms": [term for term in astronomy_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["astronomy"],
-        }
+        })
     if machine_learning_score >= 2:
         subdisciplines = []
         if any(term in lowered for term in ("classification", "classifier", "f1", "accuracy")):
@@ -235,20 +269,20 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             subdisciplines.append("deep_learning")
         if any(term in lowered for term in ("baseline", "ablation", "validation", "cross-validation")):
             subdisciplines.append("model_validation")
-        return {
+        return with_composite_fields({
             "discipline": "machine_learning",
             "engine": "machine_learning",
             "confidence": "high" if machine_learning_score >= 4 else "medium",
             "matched_terms": [term for term in machine_learning_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["machine_learning"],
-        }
-    return {
+        })
+    return with_composite_fields({
         "discipline": "default",
         "engine": "default",
         "confidence": "fallback",
         "matched_terms": [],
         "subdisciplines": [],
-    }
+    })
 
 
 def infer_discipline_profile(project: str | Path, *, extra_text: str = "") -> dict[str, Any]:

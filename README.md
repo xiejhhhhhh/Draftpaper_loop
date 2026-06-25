@@ -238,6 +238,33 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 
 ## Recent Updates
 
+### v0.14.4 (2026-06-25) -- public wording and license positioning
+
+- Kept the custom source-available non-commercial license instead of switching to Apache-2.0 or another standard SPDX license, because preserving commercial authorization requirements needs non-standard terms.
+- Cleaned public update wording so plugin seeds are described by reusable capabilities rather than by specific source projects or private validation targets.
+- Added a README policy expectation that future public changelog entries should avoid exposing concrete internal project names, local validation folders, private datasets, or project-specific research directions.
+
+### v0.14.3 (2026-06-25) -- composite discipline modules
+
+- Added runtime composite discipline modules for cross-disciplinary papers. The loop now records `primary_discipline`, `secondary_disciplines`, `discipline_scores`, and ordered `discipline_modules`.
+- `get_discipline_module` can now merge `default`, the primary discipline, and secondary disciplines, deduplicating connectors, method templates, and review rules by stable ids.
+- Cross-disciplinary projects such as geography + machine learning or astronomy + machine learning can expose both domain data/method plugins and ML modelling/reviewer plugins in `prepare-method-blueprint`, `prepare-data-acquisition`, and `plan-figures`.
+- Plugin candidate manifests now record primary and secondary disciplines while still keeping stable reusable capabilities under their intended home module.
+
+### v0.14.2 (2026-06-24) -- geography and tabular-ML plugin seeds
+
+- Added built-in geography data connectors for Earth Engine precipitation export planning, NetCDF-to-GeoTIFF planning, gridded text-to-raster conversion, and ArcGIS/project-bound zonal statistics manifests.
+- Added geography method templates for monthly remote-sensing index summaries, phenology curve smoothing, NDVI temporal K-means zoning, and cluster statistical diagnostics.
+- Added machine-learning data/model seeds for tabular environmental dataset profiling, sanitized saved-model manifests, RF/XGBoost/GBDT/stacking regression plans, observed-predicted diagnostics, feature importance, PDP/ICE, SHAP planning, and a model statistical-validity reviewer gate.
+- Kept these seeds fixture-backed and dependency-light so reusable plugin code stays generic while project-specific paths, API accounts, data windows, and model binaries remain local.
+
+### v0.14.1 (2026-06-24) -- astronomy and deep-learning plugin sedimentation
+
+- Added astronomy connector and method seeds for photon-event access planning, observation/product manifests, long-term light-curve feature extraction, and event-level sequence input construction.
+- Added machine-learning/deep-learning connector and method seeds for vision catalog alignment, pretrained backbone metadata, self-supervised training plans, checkpoint compatibility diagnostics, embedding health checks, few-label evaluation, and similarity retrieval.
+- Added fixture-backed tests so these discipline plugins can be validated without private data, API credentials, large checkpoints, or GPU training.
+- Kept project-specific paths, credentials, checkpoint binaries, and sample selections out of reusable plugin templates; real projects bind those values locally through Draftpaper-loop project files.
+
 ### v0.14.0 (2026-06-24) -- discipline plugin contribution workflow
 
 - Added full `DataConnectorSpec` and `MethodTemplateSpec` schemas for discipline modules.
@@ -276,7 +303,7 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Added generic connector profiles for `local_files`, `api_access`, and `remote_server`. These detect access patterns without downloading data, writing credentials, or hard-coding astronomy/geography packages into the core Data stage.
 - Added acquisition artifacts: `data/data_access_profile.json`, `data/data_acquisition_plan.json`, `data/data_acquisition_plan.html`, `data/data_source_manifest.csv`, `data/data_access_log.csv`, `data/data_provenance.json`, and `data/data_completeness_report.html`.
 - Added design and implementation notes under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
-- Validated the generic layer against `C:\Flares_classificaiton`: the Flares source root is classified as astronomy while detecting local-file, API-access, and remote-server data modes.
+- Validated the generic layer against a local cross-discipline source tree while detecting local-file, API-access, and remote-server data modes without documenting private paths or project-specific identifiers.
 
 ### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
 

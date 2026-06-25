@@ -1,0 +1,12 @@
+{
+  "template_id": "monthly_remote_sensing_index_summary",
+  "display_name": "Monthly remote-sensing index summary",
+  "discipline": "geography",
+  "method_family": "remote_sensing_feature_reconstruction",
+  "input_roles": ["analysis_ready_table", "remote_sensing_index", "temporal_window"],
+  "optional_roles": ["quality_flag", "spatial_group_or_coordinates"],
+  "packages": [],
+  "output_artifacts": ["results/tables/monthly_remote_sensing_index_summary.csv"],
+  "figure_groups": ["remote_sensing_index_distribution", "data_overview"],
+  "genericity_rules": ["Parameterize month and index columns.", "Do not encode crop, region, or date-window names."]
+}

@@ -1,0 +1,14 @@
+{
+  "connector_id": "gridded_text_to_geotiff_converter",
+  "display_name": "Gridded text to GeoTIFF conversion helper",
+  "discipline": "geography",
+  "access_modes": ["local_files", "server_processed_files"],
+  "packages": ["numpy", "rasterio"],
+  "package_modules": ["numpy", "rasterio"],
+  "data_formats": ["TXT", "CSV", "GeoTIFF", "grid manifest JSON"],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Parameterize row count, column count, transform, CRS, and nodata handling.",
+    "Keep data reshaping separate from project-specific raster export paths."
+  ]
+}

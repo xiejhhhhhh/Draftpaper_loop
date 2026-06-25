@@ -1,0 +1,11 @@
+{
+  "template_id": "observed_predicted_scatter_grid",
+  "display_name": "Observed-predicted scatter grid",
+  "discipline": "machine_learning",
+  "method_family": "error_analysis",
+  "input_roles": ["target_or_label", "model_prediction"],
+  "packages": [],
+  "output_artifacts": ["results/tables/observed_predicted_metrics.csv", "results/figures/observed_predicted_scatter_grid.png"],
+  "figure_groups": ["baseline_vs_model_performance", "model_diagnostics"],
+  "genericity_rules": ["Use observed and predicted columns as parameters."]
+}

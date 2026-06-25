@@ -1,0 +1,7 @@
+{
+  "template_id": "checkpoint_shape_adapter",
+  "display_name": "Checkpoint shape adapter",
+  "method_family": "deep_learning_checkpoint_validation",
+  "figure_groups": ["model_diagnostics"],
+  "fixture": "fixture_checkpoint_shapes.json"
+}

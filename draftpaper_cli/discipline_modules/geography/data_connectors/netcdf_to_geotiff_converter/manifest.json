@@ -1,0 +1,14 @@
+{
+  "connector_id": "netcdf_to_geotiff_converter",
+  "display_name": "NetCDF to GeoTIFF conversion planner",
+  "discipline": "geography",
+  "access_modes": ["local_files", "server_processed_files"],
+  "packages": ["xarray", "rasterio", "netCDF4"],
+  "package_modules": ["xarray", "rasterio", "netCDF4"],
+  "data_formats": ["NetCDF", "GeoTIFF", "conversion manifest JSON"],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Parameterize variable name, coordinate names, CRS, nodata value, and output grid.",
+    "Do not hard-code a dataset provider or local processing folder."
+  ]
+}

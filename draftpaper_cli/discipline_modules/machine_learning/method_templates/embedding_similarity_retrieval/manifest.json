@@ -1,0 +1,7 @@
+{
+  "template_id": "embedding_similarity_retrieval",
+  "display_name": "Embedding similarity retrieval",
+  "method_family": "representation_retrieval",
+  "figure_groups": ["feature_space_structure", "confusion_or_error_analysis"],
+  "fixture": "fixture_embeddings.csv"
+}

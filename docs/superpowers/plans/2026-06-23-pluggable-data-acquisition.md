@@ -4,7 +4,7 @@
 
 **Goal:** Build a minimal discipline-shared, connector-based data acquisition planning layer for Draftpaper-loop.
 
-**Architecture:** Add a shared discipline inference module, route review engines through it, add a data acquisition module with `local_files`, `api_access`, and `remote_server` connector profiles, expose CLI commands, and verify with unit tests plus the Flares source root.
+**Architecture:** Add a shared discipline inference module, route review engines through it, add a data acquisition module with `local_files`, `api_access`, and `remote_server` connector profiles, expose CLI commands, and verify with unit tests plus a local cross-discipline source tree.
 
 **Tech Stack:** Python standard library, existing Draftpaper-loop CLI, existing HTML report helper, unittest/pytest.
 
@@ -49,5 +49,4 @@
 - [x] Test generic local/API/remote detection.
 - [x] Test CLI commands.
 - [x] Test shared discipline routing between data acquisition and review engines.
-- [x] Validate against `C:\Flares_classificaiton` with `--source-root`.
-
+- [x] Validate against a local cross-discipline source tree with `--source-root` without documenting private paths.

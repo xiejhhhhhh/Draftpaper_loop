@@ -37,4 +37,4 @@ This design does not fetch field-specific data. It only classifies access modes 
 
 ## Validation Target
 
-The first validation target is `C:\Flares_classificaiton`. The expected behavior is not to install astronomy-specific code into Draftpaper-loop. Instead, the generic classifier should infer an astronomy discipline profile and detect that the source root uses local files, API access, and remote-server/manifest patterns.
+The first validation target is a local cross-discipline source tree. The expected behavior is not to install field-specific code into Draftpaper-loop. Instead, the generic classifier should infer the appropriate discipline profile and detect whether the source root uses local files, API access, or remote-server/manifest patterns without documenting private paths or project-specific identifiers.

@@ -1,0 +1,12 @@
+{
+  "template_id": "stacking_regression_ensemble",
+  "display_name": "Stacking regression ensemble",
+  "discipline": "machine_learning",
+  "method_family": "supervised_learning",
+  "input_roles": ["feature_matrix", "target_or_label"],
+  "optional_roles": ["train_validation_test_split", "sample_group"],
+  "packages": ["scikit-learn"],
+  "output_artifacts": ["methods/src/stacking_regression.py", "results/tables/stacking_metrics.csv"],
+  "figure_groups": ["baseline_vs_model_performance", "ablation_or_error_analysis"],
+  "genericity_rules": ["Require base-model metrics before claiming ensemble gain."]
+}

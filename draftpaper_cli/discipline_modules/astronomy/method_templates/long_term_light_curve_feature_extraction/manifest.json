@@ -1,0 +1,7 @@
+{
+  "template_id": "long_term_light_curve_feature_extraction",
+  "display_name": "Long-term light-curve feature extraction",
+  "method_family": "time_series_feature_extraction",
+  "figure_groups": ["time_series_or_feature_distribution"],
+  "fixture": "fixture_light_curve.csv"
+}

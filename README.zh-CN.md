@@ -187,6 +187,33 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## 最近更新
 
+### v0.14.4 (2026-06-25) -- public wording and license positioning
+
+- 保留当前 source-available non-commercial 自定义许可，没有切换为 Apache-2.0 或其它标准 SPDX 许可证，因为商业授权边界需要非标准条款才能表达清楚。
+- 清理公开更新日志中的具体项目来源表述，后续公开 README 默认用可复用能力描述插件 seed，而不是暴露内部项目名、私有验证目标或具体研究方向。
+- 明确后续公开 changelog 应避免写入本地验证文件夹、私有数据集、项目级样本选择、真实项目名称或过细的研究场景来源。
+
+### v0.14.3 (2026-06-25) -- composite discipline modules
+
+- 新增 runtime composite discipline modules，用于交叉学科论文；loop 现在会记录 `primary_discipline`、`secondary_disciplines`、`discipline_scores` 和有序 `discipline_modules`。
+- `get_discipline_module` 现在可以合并 `default`、主学科和辅学科，并按稳定 id 去重 data connectors、method templates 和 review rules。
+- geography + machine learning、astronomy + machine learning 等交叉项目可以在 `prepare-method-blueprint`、`prepare-data-acquisition` 和 `plan-figures` 中同时暴露领域插件与 ML 建模/审稿插件。
+- 插件候选 manifest 现在会记录主学科和辅学科，但稳定可复用能力仍然归入其对应 home module，避免按论文方向拆永久分支。
+
+### v0.14.2 (2026-06-24) -- geography and tabular-ML plugin seeds
+
+- 新增 geography 数据 connector：Earth Engine 降水导出规划、NetCDF-to-GeoTIFF 转换规划、栅格文本转 raster、ArcGIS/project-bound 分区统计 manifest。
+- 新增 geography 方法模板：月尺度遥感指数汇总、物候曲线平滑、NDVI 时序 K-means 分区、聚类统计诊断。
+- 新增 machine-learning 数据/模型 seed：表格环境数据 profile、脱敏 saved-model manifest、RF/XGBoost/GBDT/Stacking 回归计划、observed-predicted 诊断、feature importance、PDP/ICE、SHAP plan，以及模型统计有效性 reviewer gate。
+- 这些 seed 均保持 fixture-backed 与 dependency-light：可复用插件代码保持通用，项目路径、API 账号、数据窗口和模型二进制文件只留在本地项目绑定中。
+
+### v0.14.1 (2026-06-24) -- astronomy and deep-learning plugin sedimentation
+
+- 新增 astronomy connector 和 method seed，覆盖 photon/event 数据访问规划、观测产品 manifest、长时标光变特征提取和事件级序列输入构建。
+- 新增 machine-learning/deep-learning connector 和 method seed，覆盖视觉目录对齐、预训练 backbone 元数据、自监督训练规划、checkpoint 兼容性诊断、embedding 健康检查、少标签评估和相似性检索。
+- 为这些学科插件补充 fixture-backed tests，使其不依赖私有数据、API 凭证、大模型 checkpoint 或 GPU 训练即可完成基础验证。
+- 通用插件模板不保存项目私有路径、账号凭证、checkpoint 二进制文件或固定样本选择；真实项目中的具体路径和参数由 Draftpaper-loop 项目本地绑定。
+
 ### v0.14.0 (2026-06-24) -- discipline plugin contribution workflow
 
 - 新增完整的 `DataConnectorSpec` 和 `MethodTemplateSpec` schema。
@@ -225,7 +252,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 - 新增通用 connector profile：`local_files`、`api_access` 和 `remote_server`。这些 connector 只识别数据获取模式，不下载外部数据，不写入凭证，也不把天文学、地理学等领域专用包硬编码进核心 Data 阶段。
 - 新增数据获取产物：`data/data_access_profile.json`、`data/data_acquisition_plan.json`、`data/data_acquisition_plan.html`、`data/data_source_manifest.csv`、`data/data_access_log.csv`、`data/data_provenance.json` 和 `data/data_completeness_report.html`。
 - 新增设计文档和实施计划，保存在 `docs/superpowers/specs/` 和 `docs/superpowers/plans/`。
-- 已用 `C:\Flares_classificaiton` 验证通用层：该项目被识别为 astronomy，同时检测到 local files、API access 和 remote server 三类数据获取模式。
+- 已用本地 cross-discipline 源目录验证通用层，同时检测到 local files、API access 和 remote server 三类数据获取模式；公开文档不记录私有路径或具体项目标识。
 
 ### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
 

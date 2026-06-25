@@ -2,6 +2,10 @@
   "discipline": "machine_learning",
   "data_connectors": [
     "local_files",
-    "kaggle_huggingface"
+    "kaggle_huggingface",
+    "vision_catalog_image",
+    "pretrained_backbone",
+    "tabular_environment_dataset",
+    "saved_model_loader"
   ]
 }

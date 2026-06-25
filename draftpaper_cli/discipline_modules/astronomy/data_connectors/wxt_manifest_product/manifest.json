@@ -1,0 +1,7 @@
+{
+  "connector_id": "wxt_manifest_product",
+  "display_name": "WXT manifest and product path connector",
+  "access_modes": ["remote_manifest", "instrument_archive"],
+  "data_formats": ["manifest CSV", "server product paths", "FITS-in-ZIP inventory"],
+  "fixture": "fixture_wxt_manifest.csv"
+}

@@ -1,0 +1,5 @@
+method,probe_head,fraction,seed,accuracy,macro_f1
+random,linear,0.1,42,0.45,0.42
+dinov2,linear,0.1,42,0.62,0.60
+ssl,linear,0.1,42,0.70,0.68
+ssl,mlp,0.1,42,0.73,0.71

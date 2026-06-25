@@ -1,0 +1,8 @@
+{
+  "data": {
+    "lc": [
+      {"time": 60000.0, "flux": 1.2, "flux_error": 0.1, "exposure": 1200},
+      {"time": 60001.0, "flux": 2.1, "flux_error": 0.2, "exposure": 1100}
+    ]
+  }
+}

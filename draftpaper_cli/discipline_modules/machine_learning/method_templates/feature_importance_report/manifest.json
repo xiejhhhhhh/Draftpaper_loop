@@ -1,0 +1,11 @@
+{
+  "template_id": "feature_importance_report",
+  "display_name": "Feature importance report",
+  "discipline": "machine_learning",
+  "method_family": "model_interpretation",
+  "input_roles": ["feature_matrix", "model_artifact"],
+  "packages": [],
+  "output_artifacts": ["results/tables/feature_importance.csv", "results/figures/feature_importance_or_attention_summary.png"],
+  "figure_groups": ["feature_importance_or_attention_summary"],
+  "genericity_rules": ["Feature names and scores must be parameterized."]
+}

@@ -1,0 +1,14 @@
+{
+  "connector_id": "saved_model_loader",
+  "display_name": "Saved model manifest writer",
+  "discipline": "machine_learning",
+  "access_modes": ["local_model_artifact", "server_processed_files"],
+  "packages": ["joblib", "pickle", "torch"],
+  "package_modules": ["joblib", "pickle", "torch"],
+  "data_formats": ["PKL", "Joblib", "PyTorch checkpoint", "model manifest JSON"],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Record expected features and model family without uploading model binaries.",
+    "Sanitize model paths in reusable manifests."
+  ]
+}

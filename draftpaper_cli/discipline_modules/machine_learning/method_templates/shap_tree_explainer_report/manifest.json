@@ -1,0 +1,11 @@
+{
+  "template_id": "shap_tree_explainer_report",
+  "display_name": "SHAP tree explainer report plan",
+  "discipline": "machine_learning",
+  "method_family": "model_interpretation",
+  "input_roles": ["feature_matrix", "model_artifact"],
+  "packages": ["shap", "matplotlib"],
+  "output_artifacts": ["results/tables/shap_summary.csv", "results/figures/shap_summary.png"],
+  "figure_groups": ["feature_importance_or_attention_summary", "model_diagnostics"],
+  "genericity_rules": ["Treat SHAP as optional when package/runtime is unavailable."]
+}

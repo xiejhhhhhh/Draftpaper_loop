@@ -1,0 +1,7 @@
+{
+  "template_id": "embedding_extraction_health_diagnostics",
+  "display_name": "Embedding extraction health diagnostics",
+  "method_family": "representation_learning_diagnostics",
+  "figure_groups": ["feature_space_structure", "model_diagnostics"],
+  "fixture": "fixture_embeddings.csv"
+}

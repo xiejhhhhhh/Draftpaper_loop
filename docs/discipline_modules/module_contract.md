@@ -18,6 +18,7 @@ Required fields:
 - `reviewer_risks`: common reviewer objections.
 - `code_generation_constraints`: constraints applied before generating project code.
 - `data_connectors`: plan-first data acquisition routes. Each connector should declare `connector_id`, `access_modes`, `packages`, `package_modules`, `download_or_access`, `data_formats`, whether credentials are required, and optional credential environment variables.
+- `method_templates`: reusable project-code templates. Each method template should declare `template_id`, `method_family`, required and optional input roles, package modules, output artifacts, figure groups, formulas, validation checks, a template path, aliases, variants, fixture paths, and genericity rules.
 
 The minimum module shape is:
 
@@ -74,3 +75,9 @@ Overlap decisions should prefer:
 - overlapping `aliases`
 
 Branches and forks are temporary PR channels. `main` is the stable registry.
+
+## Scientific Plugin Boundaries
+
+Reusable plugins should capture discipline-general code patterns, not one paper's exact execution. For example, an astronomy connector may define how to query a photon API with RA/Dec and write a normalized light-curve table, but it must not include a private API account, a fixed source list, or one project's date window. A deep-learning template may define checkpoint shape diagnostics or few-label probe aggregation, but it must not include local checkpoint files, private image folders, or fixed object ids.
+
+Every plugin directory should include at least one small fixture that can run in CI without external credentials, large downloads, private servers, or GPUs. Heavy execution belongs to the local paper project that binds the plugin, not to the reusable plugin itself.

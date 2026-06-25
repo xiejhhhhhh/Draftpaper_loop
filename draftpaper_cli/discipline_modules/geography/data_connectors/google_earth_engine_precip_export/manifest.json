@@ -1,0 +1,16 @@
+{
+  "connector_id": "google_earth_engine_precip_export",
+  "display_name": "Google Earth Engine precipitation export planner",
+  "discipline": "geography",
+  "access_modes": ["api_access", "cloud_processing", "user_confirmed_export"],
+  "packages": ["earthengine-api", "geemap"],
+  "package_modules": ["ee", "geemap"],
+  "data_formats": ["GeoTIFF", "CSV zonal statistics", "export manifest JSON"],
+  "requires_credentials": true,
+  "credential_env_vars": ["GOOGLE_APPLICATION_CREDENTIALS"],
+  "genericity_rules": [
+    "Parameterize the image collection, region, reducer, date range, scale, and export target.",
+    "Do not hard-code local paths, private assets, study regions, crop names, or date windows.",
+    "Generate a confirmable export plan before starting cloud-side data access."
+  ]
+}

@@ -196,6 +196,9 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "method_code_plan": method_code_plan,
         "method_formula_plan": method_formula_plan,
         "data_acquisition_hints": hints.get("data_acquisition_hints") or [],
+        "method_template_hints": hints.get("method_template_hints") or [],
+        "review_rule_hints": hints.get("review_rule_hints") or [],
+        "composite_discipline": hints.get("composite_discipline") or {},
         "review_task_count": len(review_tasks.get("tasks") or []) if isinstance(review_tasks, dict) else 0,
         "next_command": f'python -m draftpaper_cli.cli generate-analysis-code --project "{state.path}"',
     }
@@ -212,6 +215,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "project_path": str(state.path),
         "discipline": discipline_profile.get("discipline"),
+        "primary_discipline": discipline_profile.get("primary_discipline"),
+        "secondary_disciplines": discipline_profile.get("secondary_disciplines") or [],
         "method_blueprint": str(state.path / METHOD_BLUEPRINT_JSON),
         "method_blueprint_html": str(state.path / METHOD_BLUEPRINT_HTML),
         "method_data_contract": str(state.path / METHOD_DATA_CONTRACT_JSON),

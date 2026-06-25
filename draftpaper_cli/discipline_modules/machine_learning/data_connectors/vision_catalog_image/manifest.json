@@ -1,0 +1,7 @@
+{
+  "connector_id": "vision_catalog_image",
+  "display_name": "Vision image-folder and catalog connector",
+  "access_modes": ["local_files", "image_folder", "catalog_table"],
+  "data_formats": ["image folder", "CSV catalog", "FITS catalog"],
+  "fixture": "fixture_catalog.csv"
+}

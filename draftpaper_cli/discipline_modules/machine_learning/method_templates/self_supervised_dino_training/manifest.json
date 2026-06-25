@@ -1,0 +1,7 @@
+{
+  "template_id": "self_supervised_dino_training",
+  "display_name": "Self-supervised DINO training plan",
+  "method_family": "self_supervised_representation_learning",
+  "figure_groups": ["learning_curve_or_validation_curve", "model_diagnostics"],
+  "fixture": "fixture_dino_config.json"
+}

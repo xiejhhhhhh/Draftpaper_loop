@@ -1,0 +1,8 @@
+{
+  "connectors": [
+    "einstein_probe_photon_api",
+    "wxt_manifest_product",
+    "mission_archive_api",
+    "remote_server_ssh"
+  ]
+}

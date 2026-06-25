@@ -1,0 +1,7 @@
+{
+  "model_name": "dinov2_vits14",
+  "source": "torch_hub",
+  "embedding_dim": 384,
+  "patch_size": 14,
+  "input_channels": 3
+}

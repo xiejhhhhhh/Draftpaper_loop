@@ -2,6 +2,10 @@
   "discipline": "geography",
   "data_connectors": [
     "google_earth_engine",
-    "local_raster_vector"
+    "local_raster_vector",
+    "google_earth_engine_precip_export",
+    "netcdf_to_geotiff_converter",
+    "gridded_text_to_geotiff_converter",
+    "arcgis_zonal_statistics_adapter"
   ]
 }

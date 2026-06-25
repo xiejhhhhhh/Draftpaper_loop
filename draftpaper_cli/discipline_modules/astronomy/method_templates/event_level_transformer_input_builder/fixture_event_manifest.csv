@@ -1,0 +1,4 @@
+event_id,source_id,category
+evt1,AGN_1,AGN
+evt2,AGN_1,AGN
+evt3,XRB_2,XRB

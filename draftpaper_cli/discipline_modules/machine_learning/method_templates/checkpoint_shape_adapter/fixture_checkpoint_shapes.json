@@ -1,0 +1,4 @@
+{
+  "checkpoint": {"pos_embedding": [1, 257, 384], "head.weight": [10, 384]},
+  "model": {"pos_embedding": [1, 197, 384], "head.weight": [8, 384]}
+}

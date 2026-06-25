@@ -1,0 +1,8 @@
+{
+  "connector_id": "einstein_probe_photon_api",
+  "display_name": "Einstein Probe photon API connector",
+  "access_modes": ["api_access", "light_curve_query"],
+  "required_env_vars": ["EP_BASE_URL", "EP_EMAIL", "EP_PASSWORD"],
+  "data_formats": ["JSON photon payload", "CSV light curve", "CSV GTI"],
+  "fixture": "fixture_photon_payload.json"
+}

@@ -1,0 +1,7 @@
+{
+  "template_id": "event_level_transformer_input_builder",
+  "display_name": "Event-level transformer input builder",
+  "method_family": "time_series_deep_learning_input",
+  "figure_groups": ["data_overview", "time_series_or_feature_distribution"],
+  "fixture": "fixture_event_manifest.csv"
+}
