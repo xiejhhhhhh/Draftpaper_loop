@@ -10,8 +10,12 @@ from .base import DisciplineModule
 from .base import DisciplineModuleSpec
 from .default import MODULE as DEFAULT
 from .ecology import MODULE as ECOLOGY
+from .engineering import MODULE as ENGINEERING
+from .finance import MODULE as FINANCE
 from .geography import MODULE as GEOGRAPHY
 from .machine_learning import MODULE as MACHINE_LEARNING
+from .medicine import MODULE as MEDICINE
+from .biology import MODULE as BIOLOGY
 
 
 MODULES: dict[str, DisciplineModule] = {
@@ -21,6 +25,10 @@ MODULES: dict[str, DisciplineModule] = {
     "machine_learning": MACHINE_LEARNING,
     "ecology": ECOLOGY,
     "bioinformatics": BIOINFORMATICS,
+    "finance": FINANCE,
+    "medicine": MEDICINE,
+    "biology": BIOLOGY,
+    "engineering": ENGINEERING,
 }
 
 

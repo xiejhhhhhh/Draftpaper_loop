@@ -165,17 +165,77 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         "genomics",
         "transcriptomics",
     ]
+    finance_terms = [
+        "finance",
+        "financial",
+        "asset pricing",
+        "portfolio",
+        "return",
+        "volatility",
+        "event study",
+        "factor model",
+        "stock",
+        "market",
+        "risk",
+        "backtest",
+    ]
+    medicine_terms = [
+        "medicine",
+        "clinical",
+        "patient",
+        "ehr",
+        "cohort",
+        "trial",
+        "survival analysis",
+        "diagnosis",
+        "treatment",
+        "hazard ratio",
+        "medical",
+    ]
+    biology_terms = [
+        "biology",
+        "gene",
+        "protein",
+        "assay",
+        "cell",
+        "differential expression",
+        "pathway",
+        "replicate",
+        "fold change",
+        "fdr",
+    ]
+    engineering_terms = [
+        "engineering",
+        "sensor",
+        "signal",
+        "finite element",
+        "cfd",
+        "simulation",
+        "control",
+        "reliability",
+        "fatigue",
+        "boundary condition",
+        "mesh",
+    ]
     geography_score = sum(1 for term in geography_terms if term in lowered)
     astronomy_score = sum(1 for term in astronomy_terms if term in lowered)
     machine_learning_score = sum(1 for term in machine_learning_terms if term in lowered)
     ecology_score = sum(1 for term in ecology_terms if term in lowered)
     bioinformatics_score = sum(1 for term in bioinformatics_terms if term in lowered)
+    finance_score = sum(1 for term in finance_terms if term in lowered)
+    medicine_score = sum(1 for term in medicine_terms if term in lowered)
+    biology_score = sum(1 for term in biology_terms if term in lowered)
+    engineering_score = sum(1 for term in engineering_terms if term in lowered)
     scores = {
         "geography": geography_score,
         "astronomy": astronomy_score,
         "machine_learning": machine_learning_score,
         "ecology": ecology_score,
         "bioinformatics": bioinformatics_score,
+        "finance": finance_score,
+        "medicine": medicine_score,
+        "biology": biology_score,
+        "engineering": engineering_score,
     }
 
     def with_composite_fields(profile: dict[str, Any]) -> dict[str, Any]:
@@ -211,6 +271,66 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "confidence": "high" if bioinformatics_score >= 4 else "medium",
             "matched_terms": [term for term in bioinformatics_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["bioinformatics"],
+        })
+    if medicine_score >= 2:
+        subdisciplines = []
+        if any(term in lowered for term in ("ehr", "patient", "cohort")):
+            subdisciplines.append("clinical_cohort")
+        if any(term in lowered for term in ("survival analysis", "hazard ratio", "follow-up")):
+            subdisciplines.append("survival_analysis")
+        if any(term in lowered for term in ("trial", "treatment", "diagnosis")):
+            subdisciplines.append("clinical_study")
+        return with_composite_fields({
+            "discipline": "medicine",
+            "engine": "medicine",
+            "confidence": "high" if medicine_score >= 4 else "medium",
+            "matched_terms": [term for term in medicine_terms if term in lowered],
+            "subdisciplines": sorted(set(subdisciplines)) or ["medicine"],
+        })
+    if biology_score >= 2:
+        subdisciplines = []
+        if any(term in lowered for term in ("gene", "differential expression", "fold change", "fdr")):
+            subdisciplines.append("molecular_analysis")
+        if any(term in lowered for term in ("protein", "pathway")):
+            subdisciplines.append("protein_pathway")
+        if any(term in lowered for term in ("assay", "cell", "replicate")):
+            subdisciplines.append("assay_qc")
+        return with_composite_fields({
+            "discipline": "biology",
+            "engine": "biology",
+            "confidence": "high" if biology_score >= 4 else "medium",
+            "matched_terms": [term for term in biology_terms if term in lowered],
+            "subdisciplines": sorted(set(subdisciplines)) or ["biology"],
+        })
+    if finance_score >= 2:
+        subdisciplines = []
+        if any(term in lowered for term in ("event study", "return", "stock", "market")):
+            subdisciplines.append("empirical_asset_pricing")
+        if any(term in lowered for term in ("portfolio", "backtest")):
+            subdisciplines.append("portfolio_backtesting")
+        if any(term in lowered for term in ("volatility", "risk")):
+            subdisciplines.append("risk_modeling")
+        return with_composite_fields({
+            "discipline": "finance",
+            "engine": "finance",
+            "confidence": "high" if finance_score >= 4 else "medium",
+            "matched_terms": [term for term in finance_terms if term in lowered],
+            "subdisciplines": sorted(set(subdisciplines)) or ["finance"],
+        })
+    if engineering_score >= 2:
+        subdisciplines = []
+        if any(term in lowered for term in ("sensor", "signal")):
+            subdisciplines.append("signal_processing")
+        if any(term in lowered for term in ("finite element", "cfd", "mesh", "boundary condition")):
+            subdisciplines.append("simulation_analysis")
+        if any(term in lowered for term in ("reliability", "fatigue")):
+            subdisciplines.append("reliability_engineering")
+        return with_composite_fields({
+            "discipline": "engineering",
+            "engine": "engineering",
+            "confidence": "high" if engineering_score >= 4 else "medium",
+            "matched_terms": [term for term in engineering_terms if term in lowered],
+            "subdisciplines": sorted(set(subdisciplines)) or ["engineering"],
         })
     if ecology_score >= 2:
         subdisciplines = []

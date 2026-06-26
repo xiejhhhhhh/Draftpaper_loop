@@ -65,6 +65,7 @@ Draftpaper-loop 的外层逻辑是：
 - 独立 integrity gate 和 review-revise-re-review 闭环。
 - 论文写作质量门会检查章节篇幅、自然段结构、引用位置、Methods 公式、Results 图表数量以及是否使用自然正文而非列表式文本。
 - 审稿人式投稿就绪度评估，输出目标期刊适配风险、投稿就绪度评分、统计增强修订方案和 claim-evidence matrix，并支持 geography、astronomy、machine_learning 与 default fallback 的审稿工程分支。
+- 元数据优先的公开科研代码挖掘流程，可发现、评分并生成公开仓库候选报告，用于后续学科插件沉淀，但不会复制第三方源码。
 - Codex skill wrapper 仅作为调用层，核心能力仍是 Python package + CLI + 本地项目结构。
 
 ## 项目结构
@@ -179,6 +180,21 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 `write-results` 现在会在结果正文中通过 LaTeX 标签显式指向对应图表，例如 `Figure~\ref{...}` 和 `Table~\ref{...}`。内部 loop 术语、本地路径约束、gate 名称、manifest 信息和项目管理式措辞不会写入论文正文，而是保留在日志、报告或致谢中。`assemble-latex` 会在参考文献之前默认加入致谢，说明 Draftpaper-loop 参与了分阶段文献组织、分析可追溯性、图表清单和论文初稿生成。
 
+## 公开科研代码挖掘
+
+Draftpaper-loop 现在可以在写入任何插件代码之前，从公开科研代码仓库元数据中生成候选报告。这个流程用于辅助学科模块建设，不是代码搬运工具。最小链路如下：
+
+```powershell
+python -m draftpaper_cli.cli discover-research-repos --output-root .\mining --discipline geography --query "remote sensing raster workflow" --from-json .\repo_candidates.json
+python -m draftpaper_cli.cli score-research-repos --input .\mining\research_code_mining\geography_repo_candidates.json --output-root .\mining
+python -m draftpaper_cli.cli extract-plugin-candidates --input .\mining\research_code_mining\geography_scored_repos.json --output-root .\mining --top-n 5
+python -m draftpaper_cli.cli inspect-research-repo --candidate .\mining\research_code_mining\plugin_candidates\geography\<candidate> --local-repo .\local_checkout --output-root .\mining --mode tree_docs
+python -m draftpaper_cli.cli map-repository-workflow --inspection .\mining\research_code_mining\inspections\<candidate>\repository_structure.json --output-root .\mining
+python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mining\research_code_mining\workflow_maps\<candidate>\workflow_map.json --output-root .\mining
+```
+
+生成报告会记录仓库元数据、许可证策略、可复现性信号、工作流信号、文件树角色、候选通用能力和学科基座建议。该流程不会 clone 仓库、不会复制源码目录、不会直接安装第三方代码；后续如果要沉淀为 Draftpaper-loop 插件，仍然需要经过人工/Codex 审阅、隐私检查、许可证检查、fixture 测试和 overlap 检查。
+
 ## Paper Fetch 集成
 
 本仓库将 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。adapter 会优先使用 `PATH` 中的 `paper-fetch` 命令；如果不可用，则可使用 vendored runtime source。
@@ -186,6 +202,20 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
 ## 最近更新
+
+### v0.14.6 (2026-06-26) -- repository inspection and foundation discipline seeds
+
+- 新增 `inspect-research-repo`，只读取候选仓库 checkout 的结构、docs 和 package metadata，并输出 `repository_structure.json`、`file_inventory.csv`、`package_manifest.json` 和 HTML 检查报告，不复制源码。
+- 新增 `map-repository-workflow`，把仓库文件角色映射为 data connector、preprocessing、method、figure、validation、review、environment 和 documentation 等候选能力。
+- 新增 `bootstrap-discipline-foundation`，根据 workflow map 生成候选级学科基座建议；默认只写 candidate，不直接修改正式学科模块。
+- 新增 finance、medicine、biology 和 engineering 四个基础学科模块，每个模块都先内置数据 connector spec、方法 template spec 和 reviewer-rule groups。
+
+### v0.14.5 (2026-06-26) -- metadata-only research-code mining
+
+- 新增最小版公开科研代码挖掘链路：`discover-research-repos`、`score-research-repos` 和 `extract-plugin-candidates`。
+- 新流程会在 `research_code_mining/` 下生成元数据级 JSON/HTML 报告，并根据许可证安全性、可复现性元数据、论文关联信号、工作流完整性和可复用能力提示对仓库排序。
+- 候选抽取会生成 `candidate_manifest.json`、`candidate_report.html` 和候选索引报告，同时明确避免 clone 仓库、复制第三方源码或直接安装插件。
+- 这为后续学科模块扩展提供了更安全的入口：公开代码只能启发通用 data/method/figure/review 模板，真正合并前仍需经过许可证、隐私、overlap、fixture 和维护者审阅。
 
 ### v0.14.4 (2026-06-25) -- public wording and license positioning
 

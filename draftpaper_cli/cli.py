@@ -45,6 +45,15 @@ from .project_state import (
     validate_project,
 )
 from .quality_gate import QualityGateError, run_quality_check
+from .research_code_mining import (
+    ResearchCodeMiningError,
+    bootstrap_discipline_foundation,
+    discover_research_repos,
+    extract_plugin_candidates,
+    inspect_research_repo,
+    map_repository_workflow,
+    score_research_repos,
+)
 from .research_plan import MissingReferencesError, NoveltyOverlapError, generate_research_plan
 from .review_revision import (
     ReviewRevisionError,
@@ -257,6 +266,36 @@ def build_parser() -> argparse.ArgumentParser:
 
     analysis_revision = subparsers.add_parser("prepare-analysis-revision", help="Convert review/rescue advice into executable analysis tasks and data-feasibility checks.")
     analysis_revision.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    discover_repos = subparsers.add_parser("discover-research-repos", help="Discover metadata-only public research-code repository candidates.")
+    discover_repos.add_argument("--output-root", required=True, help="Directory for research_code_mining reports.")
+    discover_repos.add_argument("--discipline", required=True, help="Target discipline module, for example geography or machine_learning.")
+    discover_repos.add_argument("--query", required=True, help="Research-code discovery query.")
+    discover_repos.add_argument("--from-json", default=None, help="Offline GitHub-search-style JSON list or payload.")
+    discover_repos.add_argument("--limit", type=int, default=30, help="Maximum repositories to keep.")
+
+    score_repos = subparsers.add_parser("score-research-repos", help="Score discovered research-code repositories for reusable plugin mining.")
+    score_repos.add_argument("--input", required=True, help="Path to *_repo_candidates.json.")
+    score_repos.add_argument("--output-root", default=None, help="Optional output root for scored reports.")
+
+    extract_candidates = subparsers.add_parser("extract-plugin-candidates", help="Extract metadata-only plugin candidate reports from scored repositories.")
+    extract_candidates.add_argument("--input", required=True, help="Path to *_scored_repos.json.")
+    extract_candidates.add_argument("--output-root", default=None, help="Optional output root for candidate reports.")
+    extract_candidates.add_argument("--top-n", type=int, default=5, help="Number of top repositories to convert into candidate reports.")
+
+    inspect_repo = subparsers.add_parser("inspect-research-repo", help="Inspect repository tree/docs for a mined candidate without copying source code.")
+    inspect_repo.add_argument("--candidate", required=True, help="Path to candidate directory or candidate_manifest.json.")
+    inspect_repo.add_argument("--local-repo", required=True, help="Local repository checkout to inspect.")
+    inspect_repo.add_argument("--output-root", default=None, help="Optional output root for inspection reports.")
+    inspect_repo.add_argument("--mode", default="tree", choices=["tree", "docs", "tree_docs"], help="Inspection depth; source code is not copied in any mode.")
+
+    workflow_map = subparsers.add_parser("map-repository-workflow", help="Map repository structure inspection to reusable workflow roles.")
+    workflow_map.add_argument("--inspection", required=True, help="Path to repository_structure.json.")
+    workflow_map.add_argument("--output-root", default=None, help="Optional output root for workflow maps.")
+
+    bootstrap_foundation = subparsers.add_parser("bootstrap-discipline-foundation", help="Write candidate-only discipline foundation suggestions from a workflow map.")
+    bootstrap_foundation.add_argument("--workflow-map", required=True, help="Path to workflow_map.json.")
+    bootstrap_foundation.add_argument("--output-root", default=None, help="Optional output root for foundation candidate reports.")
 
     summarize_candidate = subparsers.add_parser("summarize-plugin-candidates", help="Summarize reusable discipline plugin candidates from a completed project.")
     summarize_candidate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -863,6 +902,71 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = prepare_analysis_revision(args.project)
         except (AnalysisRevisionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "discover-research-repos":
+        try:
+            result = discover_research_repos(
+                output_root=args.output_root,
+                discipline=args.discipline,
+                query=args.query,
+                from_json=args.from_json,
+                limit=args.limit,
+            )
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "score-research-repos":
+        try:
+            result = score_research_repos(input_file=args.input, output_root=args.output_root)
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "extract-plugin-candidates":
+        try:
+            result = extract_plugin_candidates(input_file=args.input, output_root=args.output_root, top_n=args.top_n)
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "inspect-research-repo":
+        try:
+            result = inspect_research_repo(
+                candidate=args.candidate,
+                local_repo=args.local_repo,
+                output_root=args.output_root,
+                mode=args.mode,
+            )
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "map-repository-workflow":
+        try:
+            result = map_repository_workflow(inspection_file=args.inspection, output_root=args.output_root)
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "bootstrap-discipline-foundation":
+        try:
+            result = bootstrap_discipline_foundation(workflow_map=args.workflow_map, output_root=args.output_root)
+        except ResearchCodeMiningError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

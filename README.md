@@ -75,6 +75,7 @@ The loop is designed around five engineering components:
 - Review-revise-re-review loop with gate-failure routing and commitment ledger.
 - Publication-readiness reviewer layer with journal-fit risk, submission-readiness scoring, statistical rescue planning, and claim-evidence matrix outputs.
 - Discipline-specific reviewer-engineering engines with geography/remote-sensing support, reserved astronomy and machine-learning branches, and a default fallback.
+- Metadata-only research-code mining that discovers, scores, and reports public repository candidates for future discipline plugin sedimentation without copying third-party source code.
 - Codex skill wrapper that remains only a calling layer.
 
 ## Project Layout
@@ -226,6 +227,21 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 
 Discipline modules also declare data acquisition connectors for research planning and missing-data repair. Astronomy covers mission/archive APIs and remote server SSH; geography covers Google Earth Engine plus local raster/vector parsing; ecology covers public web/API download plus GeoTIFF/NetCDF parsing; machine learning covers local files plus Kaggle/Hugging Face/cloud storage; bioinformatics covers GEO/SRA/ENA API access plus remote omics servers. `prepare-data-acquisition` records connector packages, API/download routes, expected data formats, and feasibility states such as `locally_feasible`, `requires_package_install`, or `requires_credentials`.
 
+## Research-Code Mining
+
+Draftpaper-loop can now prepare metadata-only candidate reports from public research-code repositories before any plugin code is written. This is a curation aid for building discipline modules, not a code-copying tool. The first minimal chain is:
+
+```powershell
+python -m draftpaper_cli.cli discover-research-repos --output-root .\mining --discipline geography --query "remote sensing raster workflow" --from-json .\repo_candidates.json
+python -m draftpaper_cli.cli score-research-repos --input .\mining\research_code_mining\geography_repo_candidates.json --output-root .\mining
+python -m draftpaper_cli.cli extract-plugin-candidates --input .\mining\research_code_mining\geography_scored_repos.json --output-root .\mining --top-n 5
+python -m draftpaper_cli.cli inspect-research-repo --candidate .\mining\research_code_mining\plugin_candidates\geography\<candidate> --local-repo .\local_checkout --output-root .\mining --mode tree_docs
+python -m draftpaper_cli.cli map-repository-workflow --inspection .\mining\research_code_mining\inspections\<candidate>\repository_structure.json --output-root .\mining
+python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mining\research_code_mining\workflow_maps\<candidate>\workflow_map.json --output-root .\mining
+```
+
+The generated reports record repository metadata, license policy, reproducibility signals, workflow signals, file-tree roles, candidate capabilities, and discipline-foundation suggestions. They intentionally do not clone repositories, copy source folders, or package third-party code; later generalization still needs manual/Codex review, privacy checks, license checks, fixture tests, and overlap review before a plugin can be proposed for `main`.
+
 ## Paper Fetch Integration
 
 This repository vendors [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) under `third_party/paper-fetch-skill`. The adapter prefers a `paper-fetch` command on `PATH`; if unavailable, it can use the vendored runtime source. For a clean environment:
@@ -237,6 +253,20 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.14.6 (2026-06-26) -- repository inspection and foundation discipline seeds
+
+- Added `inspect-research-repo`, which reads a candidate repository checkout as structure/docs/package metadata only and writes `repository_structure.json`, `file_inventory.csv`, `package_manifest.json`, and HTML inspection reports without copying source code.
+- Added `map-repository-workflow`, which maps repository file roles into data connector, preprocessing, method, figure, validation, review, environment, and documentation capabilities.
+- Added `bootstrap-discipline-foundation`, which writes candidate-only discipline foundation suggestions from workflow maps; it does not modify formal modules by default.
+- Added foundation discipline modules for finance, medicine, biology, and engineering, each with initial data connector specs, method template specs, and reviewer-rule groups.
+
+### v0.14.5 (2026-06-26) -- metadata-only research-code mining
+
+- Added the first minimal public research-code mining chain: `discover-research-repos`, `score-research-repos`, and `extract-plugin-candidates`.
+- The new flow writes metadata-only JSON/HTML reports under `research_code_mining/`, ranking repositories by license safety, reproducibility metadata, linked-paper signals, workflow completeness, and reusable capability hints.
+- Candidate extraction produces `candidate_manifest.json`, `candidate_report.html`, and an index report while explicitly avoiding repository cloning, third-party source copying, or direct plugin installation.
+- This creates a safer front door for future discipline-module expansion: public code can inspire generalized data/method/figure/review templates only after license, privacy, overlap, fixture, and maintainer review.
 
 ### v0.14.4 (2026-06-25) -- public wording and license positioning
 
