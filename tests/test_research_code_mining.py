@@ -296,6 +296,57 @@ class ResearchCodeMiningTests(unittest.TestCase):
             self.assertGreaterEqual(len(foundation_payload["review_rule_candidates"]), 1)
             self.assertEqual(foundation_payload["merge_policy"], "candidate_only_do_not_modify_formal_module")
 
+    def test_capture_and_classify_discipline_learning_from_project(self) -> None:
+        from draftpaper_cli.project_scaffold import create_project
+        from draftpaper_cli.research_code_mining import capture_discipline_learning, classify_plugin_reusability
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Finance event study for market reaction and abnormal returns",
+                field="finance event study portfolio",
+            )
+            (project.path / "observations" / "observations.jsonl").write_text(
+                json.dumps({
+                    "stage": "methods",
+                    "kind": "agent_analysis",
+                    "text": "Reusable event-study method: align event dates, estimate benchmark returns, compute abnormal returns and CAR. Project-specific ticker list should not be generalized.",
+                }, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({
+                    "method_families": ["event_study", "factor_model"],
+                    "user_method": "Use event study and factor model diagnostics.",
+                }, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (project.path / "review" / "review_engineering_plan.json").write_text(
+                json.dumps({
+                    "issues": [
+                        {"code": "lookahead_bias_gate", "reason": "Avoid using post-event information in features."}
+                    ]
+                }, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            captured = capture_discipline_learning(project.path)
+            candidate_dir = Path(captured["candidate_dir"])
+            self.assertTrue((candidate_dir / "learning_manifest.json").exists())
+            self.assertTrue((candidate_dir / "reusable_parts.html").exists())
+            self.assertTrue((candidate_dir / "project_specific_parts.html").exists())
+            manifest = json.loads((candidate_dir / "learning_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "learning_candidate_written")
+            self.assertEqual(manifest["discipline"], "finance")
+            self.assertEqual(manifest["promotion_policy"], "candidate_only_requires_reusability_classification")
+
+            classified = classify_plugin_reusability(candidate_dir)
+            report = json.loads(Path(classified["reusability_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "classified")
+            self.assertIn("event_study", report["reusable_signals"])
+            self.assertIn("ticker", " ".join(report["project_specific_signals"]).lower())
+            self.assertEqual(report["recommended_action"], "generalize_before_promotion")
+
 
 if __name__ == "__main__":
     unittest.main()

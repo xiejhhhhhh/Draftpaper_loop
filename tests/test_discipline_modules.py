@@ -61,6 +61,11 @@ class DisciplineModuleTests(unittest.TestCase):
             self.assertIn(ids["data"], connector_ids)
             self.assertIn(ids["method"], method_ids)
             self.assertIn(ids["review"], review_ids)
+            self.assertEqual(hints["module"]["maturity"], "runnable")
+            runnable = [item for item in hints["method_template_hints"] if item["template_id"] == ids["method"]]
+            self.assertTrue(runnable)
+            self.assertEqual(runnable[0]["maturity"], "runnable")
+            self.assertTrue(runnable[0]["template_path"])
 
     def test_discipline_inference_supports_ecology_and_bioinformatics(self) -> None:
         from draftpaper_cli.discipline import infer_discipline_from_text

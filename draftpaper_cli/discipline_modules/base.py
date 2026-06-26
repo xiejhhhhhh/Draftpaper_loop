@@ -65,6 +65,7 @@ class MethodTemplateSpec:
     aliases: list[str] = field(default_factory=list)
     variants: list[str] = field(default_factory=list)
     genericity_rules: list[str] = field(default_factory=list)
+    maturity: str = "foundation"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -85,6 +86,7 @@ class MethodTemplateSpec:
             "aliases": list(self.aliases),
             "variants": list(self.variants),
             "genericity_rules": list(self.genericity_rules),
+            "maturity": self.maturity,
         }
 
 
@@ -108,6 +110,7 @@ class DisciplineModuleSpec:
     data_connectors: list[dict[str, Any] | DataConnectorSpec] = field(default_factory=list)
     method_templates: list[dict[str, Any] | MethodTemplateSpec] = field(default_factory=list)
     review_rule_groups: list[dict[str, Any]] = field(default_factory=list)
+    maturity: str = "foundation"
 
     def connector_dicts(self) -> list[dict[str, Any]]:
         return [item.as_dict() if hasattr(item, "as_dict") else dict(item) for item in self.data_connectors]
@@ -133,6 +136,7 @@ class DisciplineModuleSpec:
             "data_connectors": self.connector_dicts(),
             "method_templates": self.method_template_dicts(),
             "review_rule_groups": list(self.review_rule_groups),
+            "maturity": self.maturity,
         }
 
 

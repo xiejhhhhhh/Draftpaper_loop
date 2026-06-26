@@ -48,6 +48,8 @@ from .quality_gate import QualityGateError, run_quality_check
 from .research_code_mining import (
     ResearchCodeMiningError,
     bootstrap_discipline_foundation,
+    capture_discipline_learning,
+    classify_plugin_reusability,
     discover_research_repos,
     extract_plugin_candidates,
     inspect_research_repo,
@@ -296,6 +298,13 @@ def build_parser() -> argparse.ArgumentParser:
     bootstrap_foundation = subparsers.add_parser("bootstrap-discipline-foundation", help="Write candidate-only discipline foundation suggestions from a workflow map.")
     bootstrap_foundation.add_argument("--workflow-map", required=True, help="Path to workflow_map.json.")
     bootstrap_foundation.add_argument("--output-root", default=None, help="Optional output root for foundation candidate reports.")
+
+    capture_learning = subparsers.add_parser("capture-discipline-learning", help="Capture reusable discipline-learning candidates from a local paper project.")
+    capture_learning.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    capture_learning.add_argument("--output-root", default=None, help="Optional output root; defaults to the project directory.")
+
+    classify_reusability = subparsers.add_parser("classify-plugin-reusability", help="Classify a learning candidate as reusable, project-specific, or requiring generalization.")
+    classify_reusability.add_argument("--candidate", required=True, help="Path to plugin_candidates/from_loop/<discipline>/<candidate_id>.")
 
     summarize_candidate = subparsers.add_parser("summarize-plugin-candidates", help="Summarize reusable discipline plugin candidates from a completed project.")
     summarize_candidate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -966,6 +975,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "bootstrap-discipline-foundation":
         try:
             result = bootstrap_discipline_foundation(workflow_map=args.workflow_map, output_root=args.output_root)
+        except ResearchCodeMiningError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "capture-discipline-learning":
+        try:
+            result = capture_discipline_learning(args.project, output_root=args.output_root)
+        except (ResearchCodeMiningError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "classify-plugin-reusability":
+        try:
+            result = classify_plugin_reusability(args.candidate)
         except ResearchCodeMiningError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

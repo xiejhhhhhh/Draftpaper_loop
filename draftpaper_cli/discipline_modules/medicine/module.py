@@ -11,6 +11,7 @@ class MedicineModule(DisciplineModule):
     spec = DisciplineModuleSpec(
         module_id="medicine",
         display_name="Clinical and biomedical manuscript workflow",
+        maturity="runnable",
         keywords=["medicine", "clinical", "patient", "ehr", "cohort", "trial", "survival", "diagnosis", "treatment"],
         data_roles=["patient_id", "index_date", "exposure", "outcome", "covariates", "follow_up_time", "censoring_indicator"],
         method_families=["cohort_construction", "survival_analysis", "propensity_score", "diagnostic_model", "calibration_analysis"],
@@ -24,7 +25,7 @@ class MedicineModule(DisciplineModule):
             DataConnectorSpec("medical_imaging_manifest", "Medical imaging manifest", ["local_files", "remote_server"], ["pydicom", "nibabel"], ["pydicom", "nibabel"], ["DICOM, NIfTI, or de-identified local image manifest"], ["dcm", "nii", "csv"], genericity_rules=["Keep only de-identified paths and modality metadata in manifests."]),
         ],
         method_templates=[
-            MethodTemplateSpec("cohort_construction", "Cohort construction with inclusion/exclusion criteria", "medicine", "cohort_construction", ["patient_id", "index_date", "exposure", "outcome"], ["covariates"], ["pandas"], ["pandas"], ["cohort_flow_table", "cohort_flow_figure"], ["cohort_flow"], ["risk_set_definition"], ["inclusion_exclusion_check", "privacy_check"], aliases=["STROBE cohort"]),
+            MethodTemplateSpec("cohort_construction", "Cohort construction with inclusion/exclusion criteria", "medicine", "cohort_construction", ["patient_id", "index_date", "exposure", "outcome"], ["covariates"], ["pandas"], ["pandas"], ["cohort_flow_table", "cohort_flow_figure"], ["cohort_flow"], ["risk_set_definition"], ["inclusion_exclusion_check", "privacy_check"], template_path="method_templates/cohort_construction/template.py", fixture_paths=["method_templates/cohort_construction/fixture_patients.csv"], aliases=["STROBE cohort"], maturity="runnable"),
             MethodTemplateSpec("survival_analysis", "Time-to-event survival analysis", "medicine", "survival_analysis", ["follow_up_time", "event_indicator", "exposure"], ["covariates"], ["lifelines"], ["lifelines"], ["hazard_ratio_table", "kaplan_meier_figure"], ["kaplan_meier_curve"], ["cox_model", "hazard_ratio"], ["proportional_hazards_check", "censoring_check"], aliases=["Cox model", "Kaplan-Meier"]),
             MethodTemplateSpec("propensity_score_adjustment", "Propensity score matching or weighting", "medicine", "propensity_score", ["exposure", "covariates", "outcome"], ["follow_up_time"], ["pandas", "sklearn"], ["pandas", "sklearn"], ["balance_table", "adjusted_effect_table"], ["covariate_balance"], ["propensity_score"], ["balance_check", "positivity_check"], aliases=["PSM", "IPTW"]),
         ],

@@ -11,6 +11,7 @@ class FinanceModule(DisciplineModule):
     spec = DisciplineModuleSpec(
         module_id="finance",
         display_name="Finance and empirical asset-pricing workflow",
+        maturity="runnable",
         keywords=["finance", "asset pricing", "portfolio", "return", "volatility", "event study", "factor model"],
         data_roles=["asset_identifier", "timestamp", "price_or_return", "benchmark_return", "event_date", "firm_or_security_metadata"],
         method_families=["event_study", "factor_model", "portfolio_backtest", "volatility_model", "risk_metric"],
@@ -24,7 +25,7 @@ class FinanceModule(DisciplineModule):
             DataConnectorSpec("sec_filing_metadata", "Company filing and fundamentals metadata", ["api_access", "public_web_download"], [], [], ["SEC EDGAR or local company fundamentals table"], ["json", "csv", "xbrl"], genericity_rules=["Do not store API credentials or company-specific secrets."]),
         ],
         method_templates=[
-            MethodTemplateSpec("event_study", "Event study with abnormal-return windowing", "finance", "event_study", ["price_or_return", "benchmark_return", "event_date"], ["firm_metadata"], ["pandas", "statsmodels"], ["pandas", "statsmodels"], ["event_window_table", "cumulative_abnormal_return_figure"], ["event_window", "cumulative_abnormal_return"], ["abnormal_return", "cumulative_abnormal_return"], ["pre_event_window_check", "benchmark_alignment_check"], aliases=["abnormal return", "CAR"]),
+            MethodTemplateSpec("event_study", "Event study with abnormal-return windowing", "finance", "event_study", ["price_or_return", "benchmark_return", "event_date"], ["firm_metadata"], ["pandas", "statsmodels"], ["pandas", "statsmodels"], ["event_window_table", "cumulative_abnormal_return_figure"], ["event_window", "cumulative_abnormal_return"], ["abnormal_return", "cumulative_abnormal_return"], ["pre_event_window_check", "benchmark_alignment_check"], template_path="method_templates/event_study/template.py", fixture_paths=["method_templates/event_study/fixture_returns.csv"], aliases=["abnormal return", "CAR"], maturity="runnable"),
             MethodTemplateSpec("factor_model", "Linear factor exposure model", "finance", "factor_model", ["asset_return", "factor_returns"], ["risk_free_rate"], ["pandas", "statsmodels"], ["pandas", "statsmodels"], ["factor_loading_table", "residual_diagnostics"], ["factor_exposure", "residual_diagnostics"], ["factor_regression"], ["time_ordering_check", "heteroskedasticity_check"], aliases=["CAPM", "Fama French"]),
             MethodTemplateSpec("portfolio_backtest", "Portfolio backtest and risk-return diagnostics", "finance", "portfolio_backtest", ["asset_returns", "portfolio_weights"], ["transaction_costs"], ["pandas", "numpy"], ["pandas", "numpy"], ["performance_table", "drawdown_figure"], ["risk_return_frontier", "drawdown_curve"], ["sharpe_ratio", "maximum_drawdown"], ["lookahead_bias_check", "transaction_cost_sensitivity"], aliases=["backtesting", "asset allocation"]),
         ],

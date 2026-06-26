@@ -11,6 +11,7 @@ class EngineeringModule(DisciplineModule):
     spec = DisciplineModuleSpec(
         module_id="engineering",
         display_name="Engineering experiment, simulation, and reliability workflow",
+        maturity="runnable",
         keywords=["engineering", "sensor", "signal", "finite element", "cfd", "simulation", "control", "reliability", "fatigue"],
         data_roles=["sample_or_component_id", "timestamp_or_step", "measurement", "unit", "boundary_condition", "operating_condition"],
         method_families=["signal_processing_pipeline", "simulation_postprocessing", "reliability_analysis", "control_validation", "uncertainty_quantification"],
@@ -24,7 +25,7 @@ class EngineeringModule(DisciplineModule):
             DataConnectorSpec("materials_property_database", "Materials or component property database", ["api_access", "public_web_download", "local_files"], [], [], ["Materials Project, NIST, local materials table"], ["json", "csv"], genericity_rules=["Expose material system and property units as parameters."]),
         ],
         method_templates=[
-            MethodTemplateSpec("signal_processing_pipeline", "Signal filtering, feature extraction, and spectral analysis", "engineering", "signal_processing_pipeline", ["timestamp_or_step", "measurement", "sampling_rate"], ["operating_condition"], ["numpy", "scipy"], ["numpy", "scipy"], ["signal_feature_table", "spectrum_figure"], ["signal_spectrum", "time_response"], ["frequency_response"], ["sampling_rate_check", "filter_parameter_check"], aliases=["FFT", "time series signal"]),
+            MethodTemplateSpec("signal_processing_pipeline", "Signal filtering, feature extraction, and spectral analysis", "engineering", "signal_processing_pipeline", ["timestamp_or_step", "measurement", "sampling_rate"], ["operating_condition"], ["numpy", "scipy"], ["numpy", "scipy"], ["signal_feature_table", "spectrum_figure"], ["signal_spectrum", "time_response"], ["frequency_response"], ["sampling_rate_check", "filter_parameter_check"], template_path="method_templates/signal_processing_pipeline/template.py", fixture_paths=["method_templates/signal_processing_pipeline/fixture_signal.csv"], aliases=["FFT", "time series signal"], maturity="runnable"),
             MethodTemplateSpec("simulation_postprocessing", "Simulation postprocessing and convergence diagnostics", "engineering", "simulation_postprocessing", ["simulation_output", "boundary_condition"], ["mesh_size", "time_step"], ["numpy", "pandas"], ["numpy", "pandas"], ["response_table", "convergence_figure"], ["response_curve", "convergence_plot"], ["stress_strain"], ["boundary_condition_check", "convergence_check"], aliases=["FEM", "CFD"]),
             MethodTemplateSpec("reliability_uncertainty_analysis", "Reliability and uncertainty analysis", "engineering", "reliability_analysis", ["measurement", "failure_or_threshold"], ["operating_condition"], ["numpy", "scipy"], ["numpy", "scipy"], ["reliability_table", "uncertainty_figure"], ["uncertainty_interval", "failure_probability"], ["reliability_function", "uncertainty_propagation"], ["sensitivity_analysis", "physical_plausibility_check"], aliases=["fatigue", "UQ"]),
         ],

@@ -11,6 +11,7 @@ class BiologyModule(DisciplineModule):
     spec = DisciplineModuleSpec(
         module_id="biology",
         display_name="General biology and molecular-analysis workflow",
+        maturity="runnable",
         keywords=["biology", "gene", "protein", "assay", "cell", "differential expression", "pathway", "replicate"],
         data_roles=["sample_id", "condition", "biological_replicate", "feature_id", "measurement", "batch"],
         method_families=["differential_expression", "enrichment_analysis", "assay_qc", "protein_feature_analysis", "replicate_validation"],
@@ -24,7 +25,7 @@ class BiologyModule(DisciplineModule):
             DataConnectorSpec("local_assay_table", "Local de-identified assay table", ["local_files"], [], [], ["qPCR, ELISA, imaging, or plate-reader export"], ["csv", "xlsx", "tsv"], genericity_rules=["Keep sample labels generic and preserve replicate metadata."]),
         ],
         method_templates=[
-            MethodTemplateSpec("differential_expression", "Differential expression or measurement comparison", "biology", "differential_expression", ["feature_id", "measurement", "condition", "replicate"], ["batch"], ["pandas", "statsmodels"], ["pandas", "statsmodels"], ["differential_table", "volcano_plot"], ["volcano_plot", "effect_size_distribution"], ["fold_change", "fdr_adjustment"], ["replicate_check", "multiple_testing_fdr_check"], aliases=["DE analysis"]),
+            MethodTemplateSpec("differential_expression", "Differential expression or measurement comparison", "biology", "differential_expression", ["feature_id", "measurement", "condition", "replicate"], ["batch"], ["pandas", "statsmodels"], ["pandas", "statsmodels"], ["differential_table", "volcano_plot"], ["volcano_plot", "effect_size_distribution"], ["fold_change", "fdr_adjustment"], ["replicate_check", "multiple_testing_fdr_check"], template_path="method_templates/differential_expression/template.py", fixture_paths=["method_templates/differential_expression/fixture_expression.csv"], aliases=["DE analysis"], maturity="runnable"),
             MethodTemplateSpec("pathway_enrichment", "Pathway or ontology enrichment analysis", "biology", "enrichment_analysis", ["feature_list", "background_set"], ["organism"], [], [], ["enrichment_table", "pathway_barplot"], ["pathway_enrichment"], ["enrichment_score"], ["background_set_check", "fdr_check"], aliases=["GO enrichment", "KEGG enrichment"]),
             MethodTemplateSpec("assay_quality_control", "Assay QC and replicate consistency", "biology", "assay_qc", ["sample_id", "measurement", "replicate"], ["plate_id", "batch"], ["pandas", "numpy"], ["pandas", "numpy"], ["qc_table", "replicate_consistency_figure"], ["qc_distribution", "replicate_consistency"], ["coefficient_of_variation"], ["control_check", "batch_effect_check"], aliases=["biological replicate QC"]),
         ],

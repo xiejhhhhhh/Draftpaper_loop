@@ -10,7 +10,7 @@ from typing import Any
 
 from ..discipline import infer_discipline_from_text
 from ..project_scaffold import _write_json, utc_now
-from . import astronomy, default, geography, machine_learning
+from . import astronomy, biology, default, engineering, finance, geography, machine_learning, medicine
 from .base import (
     REVIEW_ENGINEERING_PLAN_JSON,
     REVIEW_WORKFLOW_GAP_JSON,
@@ -30,6 +30,10 @@ ENGINE_MODULES = {
     "default": default,
     "geography": geography,
     "machine_learning": machine_learning,
+    "finance": finance,
+    "medicine": medicine,
+    "biology": biology,
+    "engineering": engineering,
 }
 
 

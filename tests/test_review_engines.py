@@ -233,6 +233,45 @@ class ReviewEngineTests(unittest.TestCase):
             self.assertIn("machine_learning_baseline_ablation", codes)
             self.assertIn("machine_learning_validation_split_robustness", codes)
 
+    def test_foundation_review_engines_discover_domain_gaps(self) -> None:
+        from draftpaper_cli.review_engines import discover_review_workflow_gaps
+
+        cases = [
+            (
+                "finance",
+                "Finance event study with portfolio return, abnormal return, factor model, and backtest.",
+                "finance event study portfolio volatility",
+                "finance_lookahead_bias_audit",
+            ),
+            (
+                "medicine",
+                "Clinical cohort survival analysis with patient EHR outcomes and treatment exposure.",
+                "medicine clinical cohort survival",
+                "medicine_ethics_privacy_audit",
+            ),
+            (
+                "biology",
+                "Biology differential expression assay with gene replicate and pathway enrichment.",
+                "biology gene expression assay",
+                "biology_multiple_testing_fdr_audit",
+            ),
+            (
+                "engineering",
+                "Engineering sensor signal simulation with boundary condition and reliability analysis.",
+                "engineering sensor signal finite element",
+                "engineering_unit_boundary_condition_audit",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            for discipline, idea, field, expected_code in cases:
+                project = create_project(root=tmp, idea=idea, field=field, overwrite=True)
+                (project.path / "research_plan" / "research_plan.md").write_text(idea, encoding="utf-8")
+                gaps = discover_review_workflow_gaps(project.path)
+                self.assertEqual(gaps["engine"], discipline)
+                self.assertEqual(gaps["discipline_profile"]["discipline"], discipline)
+                codes = {gap["code"] for gap in gaps["missing_review_workflows"]}
+                self.assertIn(expected_code, codes)
+
 
 if __name__ == "__main__":
     unittest.main()

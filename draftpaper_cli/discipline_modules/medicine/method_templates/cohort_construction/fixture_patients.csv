@@ -1,0 +1,4 @@
+patient_id,eligible,exposure,outcome,follow_up_days
+P001,1,treated,1,120
+P002,0,control,0,80
+P003,1,treated,0,150

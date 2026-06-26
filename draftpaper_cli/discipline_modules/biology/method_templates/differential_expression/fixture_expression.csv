@@ -1,0 +1,5 @@
+sample_id,feature_id,condition,measurement
+S1,GeneA,control,10.0
+S2,GeneA,case,20.0
+S3,GeneB,control,5.0
+S4,GeneB,case,4.0

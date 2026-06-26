@@ -22,6 +22,10 @@ Draftpaper-loop is a local-first research paper loop engine. It is not just a on
 
 The project follows the loop-engineering shift from prompting an agent turn by turn to designing a system that prompts, observes, verifies, stores state, and decides the next action. For research writing, this matters because a paper draft is rarely correct after one generation. Literature, data, methods, results, journal constraints, and reviewer feedback change each other. Draftpaper-loop treats those changes as first-class loop events instead of ad hoc chat history.
 
+Draftpaper-loop is also intended to become a learning research workflow rather than a fixed template library. The goal is to preserve paper revision experience, reviewer-response logic, data-analysis methods, and code implementation patterns as reusable discipline modules. It should not replace scientific judgment; it should structure accumulated methods and review experience so later researchers can enter a field faster, understand its basic research patterns, and judge whether cross-disciplinary combinations are scientifically plausible.
+
+The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
+
 ## What It Does
 
 Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
@@ -253,6 +257,14 @@ python -m pip install -e third_party\paper-fetch-skill
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
 ## Recent Updates
+
+### v0.14.7 (2026-06-26) -- learning loop and runnable foundation modules
+
+- Added discipline module maturity metadata with `foundation`, `runnable`, and `mature` as the intended progression.
+- Added `capture-discipline-learning`, which summarizes reusable project lessons from observations, method artifacts, review plans, data contexts, result metadata, and rescue plans into `plugin_candidates/from_loop/...` without copying raw data or hidden reasoning.
+- Added `classify-plugin-reusability`, which separates reusable method/review/data signals from project-specific identifiers, local paths, credentials, fixed regions, and other non-generalizable content before any promotion.
+- Upgraded finance, medicine, biology, and engineering from foundation-only specs to runnable foundation modules by adding one standard-library fixture-backed method template per discipline.
+- Added foundation reviewer engines for finance, medicine, biology, and engineering so these disciplines no longer fall back directly to the default reviewer route.
 
 ### v0.14.6 (2026-06-26) -- repository inspection and foundation discipline seeds
 

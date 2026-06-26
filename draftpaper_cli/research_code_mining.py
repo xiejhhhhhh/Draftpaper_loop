@@ -12,6 +12,8 @@ from typing import Any
 
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
+from .project_state import load_project
+from .discipline import infer_discipline_profile
 
 
 class ResearchCodeMiningError(RuntimeError):
@@ -281,6 +283,75 @@ def bootstrap_discipline_foundation(*, workflow_map: str | Path, output_root: st
     }
 
 
+def capture_discipline_learning(project: str | Path, *, output_root: str | Path | None = None) -> dict[str, Any]:
+    """Capture reusable discipline-learning candidates from a completed local project."""
+    state = load_project(project)
+    profile = infer_discipline_profile(state.path)
+    discipline = str(profile.get("discipline") or "default")
+    root = Path(output_root).expanduser().resolve() if output_root else state.path
+    candidate_id = _safe_id(f"{discipline}_{state.metadata.get('project_id')}_loop_learning")
+    candidate_dir = root / "plugin_candidates" / "from_loop" / discipline / candidate_id
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    sources = _collect_project_learning_sources(state.path)
+    reusable, project_specific = _split_reusable_and_project_specific(sources)
+    manifest = {
+        "status": "learning_candidate_written",
+        "generated_at": utc_now(),
+        "candidate_id": candidate_id,
+        "project_id": state.metadata.get("project_id"),
+        "discipline": discipline,
+        "discipline_profile": profile,
+        "source_policy": "project_archive_summary_only_no_raw_data_copy",
+        "promotion_policy": "candidate_only_requires_reusability_classification",
+        "source_files": [item["path"] for item in sources],
+        "reusable_summary": reusable,
+        "project_specific_summary": project_specific,
+    }
+    _write_json(candidate_dir / "learning_manifest.json", manifest)
+    write_html_report(candidate_dir / "reusable_parts.html", _render_learning_parts("Reusable Parts", reusable), title="Reusable Learning Parts")
+    write_html_report(candidate_dir / "project_specific_parts.html", _render_learning_parts("Project-Specific Parts", project_specific), title="Project-Specific Learning Parts")
+    _write_json(candidate_dir / "promotion_plan.json", {
+        "status": "pending_reusability_classification",
+        "generated_at": utc_now(),
+        "candidate_id": candidate_id,
+        "next_command": f'python -m draftpaper_cli.cli classify-plugin-reusability --candidate "{candidate_dir}"',
+    })
+    return {
+        "status": "written",
+        "candidate_dir": str(candidate_dir),
+        "learning_manifest": str(candidate_dir / "learning_manifest.json"),
+    }
+
+
+def classify_plugin_reusability(candidate: str | Path) -> dict[str, Any]:
+    """Classify a learning candidate into reusable and project-specific signals."""
+    root = Path(candidate).expanduser().resolve()
+    manifest = _read_json(root / "learning_manifest.json")
+    reusable_text = " ".join(str(item) for item in manifest.get("reusable_summary") or [])
+    specific_text = " ".join(str(item) for item in manifest.get("project_specific_summary") or [])
+    reusable_signals = _reusable_signals(reusable_text)
+    project_specific_signals = _project_specific_signals(specific_text + " " + reusable_text)
+    if reusable_signals and not project_specific_signals:
+        action = "ready_for_generalization"
+    elif reusable_signals:
+        action = "generalize_before_promotion"
+    else:
+        action = "keep_project_local"
+    report = {
+        "status": "classified",
+        "generated_at": utc_now(),
+        "candidate_id": manifest.get("candidate_id"),
+        "discipline": manifest.get("discipline"),
+        "reusable_signals": reusable_signals,
+        "project_specific_signals": project_specific_signals,
+        "recommended_action": action,
+        "promotion_gate": "manual_confirmation_required",
+    }
+    _write_json(root / "reusability_report.json", report)
+    write_html_report(root / "reusability_report.html", _render_reusability_report(report), title="Plugin Reusability Classification")
+    return {"status": "written", "reusability_report": str(root / "reusability_report.json"), "html_report": str(root / "reusability_report.html")}
+
+
 def _mining_root(output_root: str | Path) -> Path:
     root = Path(output_root).expanduser().resolve() / "research_code_mining"
     root.mkdir(parents=True, exist_ok=True)
@@ -441,6 +512,65 @@ def _foundation_item(discipline: str, item_id: str, description: str, evidence: 
 
 def _fallback_foundation_items(discipline: str, kind: str) -> list[dict[str, Any]]:
     return [_foundation_item(discipline, f"fallback_{kind}_candidate", f"Fallback {kind} candidate requiring domain review", [])]
+
+
+def _collect_project_learning_sources(project_path: Path) -> list[dict[str, str]]:
+    paths = [
+        project_path / "observations" / "observations.jsonl",
+        project_path / "methods" / "method_requirements.json",
+        project_path / "methods" / "method_blueprint.json",
+        project_path / "methods" / "method_code_manifest.json",
+        project_path / "review" / "review_engineering_plan.json",
+        project_path / "review" / "statistical_rescue_plan.json",
+        project_path / "results" / "figure_metadata.json",
+        project_path / "data" / "data_acquisition_tasks.json",
+        project_path / "data" / "data_writing_context.json",
+    ]
+    sources = []
+    for path in paths:
+        if path.exists() and path.is_file():
+            sources.append({"path": str(path.relative_to(project_path)), "excerpt": path.read_text(encoding="utf-8-sig", errors="replace")[:6000]})
+    return sources
+
+
+def _split_reusable_and_project_specific(sources: list[dict[str, str]]) -> tuple[list[str], list[str]]:
+    reusable_keywords = ["reusable", "method", "template", "review", "gate", "qc", "validation", "workflow", "feature", "model", "event-study", "event study"]
+    specific_keywords = ["project-specific", "ticker", "local path", "sample id", "region", "private", "password", "token", "api_key", "api key"]
+    reusable: list[str] = []
+    specific: list[str] = []
+    for source in sources:
+        text = " ".join(source["excerpt"].split())
+        lowered = text.lower()
+        if any(keyword in lowered for keyword in reusable_keywords):
+            reusable.append(f"{source['path']}: {text[:700]}")
+        if any(keyword in lowered for keyword in specific_keywords):
+            specific.append(f"{source['path']}: {text[:700]}")
+    return reusable or ["No reusable method/review/data pattern was confidently identified."], specific or ["No obvious project-specific blocker was identified."]
+
+
+def _reusable_signals(text: str) -> list[str]:
+    mapping = {
+        "event_study": ["event study", "event-study", "abnormal return", "car"],
+        "factor_model": ["factor model", "capm", "fama"],
+        "cohort_construction": ["cohort", "inclusion", "exclusion"],
+        "survival_analysis": ["survival", "hazard"],
+        "differential_expression": ["differential expression", "fold change"],
+        "signal_processing_pipeline": ["signal", "fft", "rms"],
+        "review_gate": ["review", "gate", "bias", "validation"],
+    }
+    lowered = text.lower()
+    return [signal for signal, keywords in mapping.items() if any(keyword in lowered for keyword in keywords)]
+
+
+def _project_specific_signals(text: str) -> list[str]:
+    mapping = {
+        "ticker_or_asset_list": ["ticker"],
+        "local_or_private_path": ["c:\\", "d:\\", "local path"],
+        "private_credential": ["token", "password", "api_key", "api key"],
+        "fixed_region_or_sample": ["project-specific", "sample id", "region"],
+    }
+    lowered = text.lower()
+    return [signal for signal, keywords in mapping.items() if any(keyword in lowered for keyword in keywords)]
 
 
 def _load_seed_repositories(from_json: str | Path | None, *, discipline: str, query: str) -> list[dict[str, Any]]:
@@ -713,6 +843,32 @@ def _render_foundation_report(payload: dict[str, Any]) -> str:
         lines.extend(["", f"## {key}"])
         for item in payload.get(key) or []:
             lines.append(f"- `{item.get('candidate_id')}`: {item.get('description')}")
+    return "\n".join(lines)
+
+
+def _render_learning_parts(title: str, parts: list[str]) -> str:
+    lines = [f"# {title}", "", "These items are summaries from project artifacts, not raw data or copied source code."]
+    for item in parts:
+        lines.append(f"- {item}")
+    return "\n".join(lines)
+
+
+def _render_reusability_report(report: dict[str, Any]) -> str:
+    lines = [
+        "# Plugin Reusability Classification",
+        "",
+        f"Candidate: `{report.get('candidate_id')}`",
+        f"Discipline: `{report.get('discipline')}`",
+        f"Recommended action: `{report.get('recommended_action')}`",
+        "",
+        "## Reusable Signals",
+    ]
+    for item in report.get("reusable_signals") or []:
+        lines.append(f"- `{item}`")
+    lines.append("")
+    lines.append("## Project-Specific Signals")
+    for item in report.get("project_specific_signals") or []:
+        lines.append(f"- `{item}`")
     return "\n".join(lines)
 
 
