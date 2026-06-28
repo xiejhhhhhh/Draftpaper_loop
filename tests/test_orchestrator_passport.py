@@ -169,7 +169,71 @@ class OrchestratorPassportTests(unittest.TestCase):
             status_after_integrity = status_project(project.path)
 
             self.assertEqual(status_after_integrity["next_action"]["stage"], "quality_checks")
-            self.assertEqual(status_after_integrity["next_action"]["command"], "quality-check")
+            self.assertEqual(status_after_integrity["next_action"]["command"], "audit-citations")
+
+            (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
+            _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
+            status_after_citation_audit = status_project(project.path)
+
+            self.assertEqual(status_after_citation_audit["next_action"]["stage"], "quality_checks")
+            self.assertEqual(status_after_citation_audit["next_action"]["command"], "quality-check")
+
+    def test_status_recommends_citation_repair_loop_before_quality_check(self) -> None:
+        from draftpaper_cli.orchestrator import run_pipeline
+        from draftpaper_cli.passport import refresh_project_passport
+        from draftpaper_cli.project_scaffold import _write_json
+        from draftpaper_cli.project_state import update_stage_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Citation repair route", field="workflow engineering")
+            for stage in [
+                "references",
+                "journal_profile",
+                "research_plan",
+                "introduction",
+                "data",
+                "method_plan",
+                "figure_plan",
+                "code",
+                "methods",
+                "result_validity",
+                "results",
+                "discussion",
+                "latex",
+            ]:
+                update_stage_status(project.path, stage, "completed")
+            _write_json(project.path / "data" / "data_writing_context.json", {"narrative_summary": "ready"})
+            (project.path / "data" / "data.tex").write_text("\\section{Data}\nReady.\n", encoding="utf-8")
+            (project.path / "data" / "data_inventory.json").write_text("{}", encoding="utf-8")
+            (project.path / "data" / "data_quality_report.json").write_text("{}", encoding="utf-8")
+            (project.path / "data" / "data_feasibility_report.json").write_text('{"decision":"pass"}', encoding="utf-8")
+            _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
+            (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
+            _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
+            refresh_project_passport(project.path, event="test_integrity_passed_no_citation_audit")
+
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "audit-citations")
+
+            (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
+            _write_json(project.path / "citation_audit" / "citation_audit_report.json", {
+                "status": "failed",
+                "summary": {"unsupported": 1, "unverifiable": 0},
+            })
+            refresh_project_passport(project.path, event="test_citation_audit_failed")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "generate-citation-repair-plan")
+
+            _write_json(project.path / "citation_audit" / "citation_repair_plan.json", {"status": "repair_plan_written", "issues": []})
+            refresh_project_passport(project.path, event="test_citation_repair_plan")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "apply-citation-repair")
+
+            _write_json(project.path / "citation_audit" / "citation_repair_ledger.json", {"status": "applied", "applied_action_count": 1})
+            refresh_project_passport(project.path, event="test_citation_repair_applied")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "re-audit-citations")
+
+            _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
+            refresh_project_passport(project.path, event="test_citation_final_passed")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "quality-check")
 
     def test_status_recommends_gate_failure_diagnosis_after_integrity_failure(self) -> None:
         from draftpaper_cli.orchestrator import status_project

@@ -11,6 +11,14 @@ from pathlib import Path
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
+from .citation_audit import CitationAuditError, audit_citations
+from .citation_repair import (
+    CitationRepairError,
+    apply_citation_repair,
+    generate_citation_repair_plan,
+    re_audit_citations,
+    run_citation_repair_loop,
+)
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
@@ -247,6 +255,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     integrity = subparsers.add_parser("run-integrity-gate", help="Run citation evidence and result artifact integrity checks.")
     integrity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    citation_audit = subparsers.add_parser("audit-citations", help="Run claim-level citation/source support audit before final quality check.")
+    citation_audit.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    citation_audit.add_argument("--final", action="store_true", help="Write the final pass report when the audit passes.")
+
+    citation_repair_plan = subparsers.add_parser("generate-citation-repair-plan", help="Generate a citation repair plan from the latest citation audit.")
+    citation_repair_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    citation_repair_apply = subparsers.add_parser("apply-citation-repair", help="Apply safe citation repairs from citation_audit/citation_repair_plan.json.")
+    citation_repair_apply.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    citation_repair_apply.add_argument("--dry-run", action="store_true", help="Report repairs without editing manuscript files.")
+
+    citation_reaudit = subparsers.add_parser("re-audit-citations", help="Rerun citation audit after repair and write final report if passed.")
+    citation_reaudit.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    citation_loop = subparsers.add_parser("run-citation-repair-loop", help="Iterate citation audit, repair planning, repair application, and final re-audit.")
+    citation_loop.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    citation_loop.add_argument("--max-iterations", type=int, default=3, help="Maximum repair iterations before stopping.")
 
     diagnose = subparsers.add_parser("diagnose-gate-failures", help="Convert failed gates into actionable revision issues.")
     diagnose.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -848,6 +874,54 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "audit-citations":
+        try:
+            result = audit_citations(args.project, final=args.final)
+        except CitationAuditError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "generate-citation-repair-plan":
+        try:
+            result = generate_citation_repair_plan(args.project)
+        except (CitationAuditError, CitationRepairError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "apply-citation-repair":
+        try:
+            result = apply_citation_repair(args.project, dry_run=args.dry_run)
+        except CitationRepairError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "re-audit-citations":
+        try:
+            result = re_audit_citations(args.project)
+        except CitationAuditError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "run-citation-repair-loop":
+        try:
+            result = run_citation_repair_loop(args.project, max_iterations=args.max_iterations)
+        except (CitationAuditError, CitationRepairError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

@@ -91,6 +91,19 @@ def prepared_assembled_project(tmp: str) -> Path:
     write_results(project.path)
     write_discussion(project.path)
     assemble_latex(project.path)
+    (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
+    (project.path / "citation_audit" / "final_citation_audit_report.json").write_text(
+        json.dumps({
+            "status": "passed",
+            "summary": {
+                "blocking_issue_count": 0,
+                "unsupported": 0,
+                "unverifiable": 0,
+                "average_match_score": 0.88,
+            },
+        }),
+        encoding="utf-8",
+    )
     return project.path
 
 
@@ -138,6 +151,20 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertEqual(report["status"], "failed")
             codes = {issue["code"] for issue in report["issues"]}
             self.assertIn("stale_stage_in_final_latex", codes)
+
+    def test_quality_check_fails_without_final_citation_audit_report(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            (project_path / "citation_audit" / "final_citation_audit_report.json").unlink()
+
+            report = run_quality_check(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertIn("required_artifact_missing", codes)
+            self.assertIn("citation_audit_not_passed", codes)
 
     def test_quality_check_fails_results_citations_and_missing_artifacts(self) -> None:
         from draftpaper_cli.quality_gate import run_quality_check

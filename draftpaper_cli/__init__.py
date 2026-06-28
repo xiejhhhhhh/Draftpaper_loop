@@ -10,6 +10,8 @@ Commercial use requires written authorization from the developer.
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
+from .citation_audit import CitationAuditError, audit_citations
+from .citation_repair import CitationRepairError, apply_citation_repair, generate_citation_repair_plan, re_audit_citations, run_citation_repair_loop
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
@@ -66,6 +68,8 @@ __all__ = [
     "DataAcquisitionError",
     "AnalysisCodeGenerationError",
     "AnalysisRevisionError",
+    "CitationAuditError",
+    "CitationRepairError",
     "ArtifactDriftError",
     "LatexAssemblyError",
     "LatexCitationError",
@@ -96,6 +100,11 @@ __all__ = [
     "checkpoint_project",
     "resume_project",
     "run_pipeline",
+    "audit_citations",
+    "generate_citation_repair_plan",
+    "apply_citation_repair",
+    "re_audit_citations",
+    "run_citation_repair_loop",
     "load_project_passport",
     "refresh_project_passport",
     "summarize_plugin_candidates",

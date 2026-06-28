@@ -182,6 +182,51 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     return None
 
 
+def _citation_audit_passed(project_path: Path) -> bool:
+    report = _read_report(project_path, "citation_audit/final_citation_audit_report.json")
+    return report.get("status") == "passed"
+
+
+def _citation_audit_action(project_path: Path) -> dict[str, Any] | None:
+    if _citation_audit_passed(project_path):
+        return None
+    latest = _read_report(project_path, "citation_audit/citation_audit_report.json")
+    if not latest:
+        return {
+            "stage": "quality_checks",
+            "command": "audit-citations",
+            "cli": _cli_for(project_path, "audit-citations") + " --final",
+            "reason": "Final quality check is blocked until claim-level citation support has a passing audit report.",
+        }
+    if latest.get("status") == "passed":
+        return {
+            "stage": "quality_checks",
+            "command": "re-audit-citations",
+            "cli": _cli_for(project_path, "re-audit-citations"),
+            "reason": "A passing citation audit exists, but the final citation audit report has not been written.",
+        }
+    if not (project_path / "citation_audit" / "citation_repair_plan.json").exists():
+        return {
+            "stage": "citation_audit",
+            "command": "generate-citation-repair-plan",
+            "cli": _cli_for(project_path, "generate-citation-repair-plan"),
+            "reason": "Claim-level citation audit failed; generate a repair plan before final quality check.",
+        }
+    if not (project_path / "citation_audit" / "citation_repair_ledger.json").exists():
+        return {
+            "stage": "citation_audit",
+            "command": "apply-citation-repair",
+            "cli": _cli_for(project_path, "apply-citation-repair"),
+            "reason": "Citation repair plan exists and must be applied before re-audit.",
+        }
+    return {
+        "stage": "citation_audit",
+        "command": "re-audit-citations",
+        "cli": _cli_for(project_path, "re-audit-citations"),
+        "reason": "Citation repairs were applied; rerun the audit and write the final pass report before quality check.",
+    }
+
+
 def _review_sequence_action(project_path: Path, prefix: str) -> dict[str, Any]:
     sequence = [
         ("review/gate_failure_diagnosis.json", "diagnose-gate-failures", "map failed gates to revision stages"),
@@ -285,6 +330,10 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
     command = _stage_command(project_path, stage)
     if stage == "quality_checks" and not _integrity_is_current(project_path):
         command = "run-integrity-gate"
+    elif stage == "quality_checks":
+        citation_action = _citation_audit_action(project_path)
+        if citation_action:
+            return citation_action
     if not command:
         raise OrchestratorError(f"No orchestrator command mapping exists for stage: {stage}")
     return {

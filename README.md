@@ -6,7 +6,7 @@
 [![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#key-features)
 [![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#quick-start)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
-[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#license-commercial-use-and-contact)
+[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#contributors-license-commercial-use-and-contact)
 
 # Draftpaper-loop
 
@@ -118,6 +118,10 @@ python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
 python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
 python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli audit-citations --project <repo>\projects\your_project --final
+python -m draftpaper_cli.cli generate-citation-repair-plan --project <repo>\projects\your_project
+python -m draftpaper_cli.cli apply-citation-repair --project <repo>\projects\your_project
+python -m draftpaper_cli.cli re-audit-citations --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
 python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\your_project
@@ -177,6 +181,7 @@ python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\yo
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
 python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli run-citation-repair-loop --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
 python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
 python -m draftpaper_cli.cli validate-project --project <repo>\projects\your_project
@@ -223,6 +228,8 @@ When a tracked artifact hash changes, `status` reports `pipeline_state=drift_det
 
 `run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
 
+`audit-citations`, `generate-citation-repair-plan`, `apply-citation-repair`, `re-audit-citations`, and `run-citation-repair-loop` add an independent citation audit and repair loop after integrity checks and before final quality checks. The loop compares each manuscript citation usage against BibTeX metadata and `references/citation_evidence.csv` at claim level, writes intermediate HTML reports under `citation_audit/iterations/`, and writes `citation_audit/final_citation_audit_report.html` only after the strict report has no unsupported or unverifiable citation usages. If citation audit fails, `status` and `run-pipeline` recommend the citation repair loop rather than continuing blindly to `quality-check`. The final quality gate also requires `citation_audit/final_citation_audit_report.json` with `status=passed`, so direct `quality-check` calls cannot skip source-support verification.
+
 `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. The publication-readiness layer estimates target-journal submission risk from saved data, methods, result, figure, integrity, quality, and journal-profile artifacts, then writes a Codex/LLM-readable archive review packet at `review/codex_archive_review_context.json` and `.html`. The reviewer-engineering layer infers a discipline and runs a matching engine; geography covers remote-sensing, agricultural-geography, and spatial-analysis manuscripts, astronomy covers catalog/light-curve/source-classification review risks, machine learning covers leakage, validation, baseline, ablation, calibration, and imbalance risks, and unmatched projects use a default fallback. Its output includes user-confirmation requests plus a `codex_enhancement_context` extension point so Codex can append literature- and manuscript-specific reviewer suggestions on top of deterministic rules. The statistical rescue layer recommends robust statistics, missingness audits, method rebuilding, explicit success thresholds, domain-aware feature rebuilding, spatial validation, model validation checks, or claim reframing when weak data or weak results might still support a defensible exploratory paper. `prepare-analysis-revision` converts review/rescue advice into executable analysis tasks, checks required data roles, and blocks impossible reruns before new figure planning or code generation. When integrity or final quality reports failed, `status` and `run-pipeline` now walk through the review sequence: gate diagnosis, reviewer pass, publication readiness, review-engineering discovery and planning, statistical rescue, analysis-revision preparation, and revision planning.
 
 `record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
@@ -246,7 +253,7 @@ python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mi
 
 The generated reports record repository metadata, license policy, reproducibility signals, workflow signals, file-tree roles, candidate capabilities, and discipline-foundation suggestions. They intentionally do not clone repositories, copy source folders, or package third-party code; later generalization still needs manual/Codex review, privacy checks, license checks, fixture tests, and overlap review before a plugin can be proposed for `main`.
 
-## Paper Fetch Integration
+## Third-party Skills Integration
 
 This repository vendors [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) under `third_party/paper-fetch-skill`. The adapter prefers a `paper-fetch` command on `PATH`; if unavailable, it can use the vendored runtime source. For a clean environment:
 
@@ -256,7 +263,37 @@ python -m pip install -e third_party\paper-fetch-skill
 
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
+## Contributors, License, Commercial Use, And Contact
+
+Draftpaper-loop welcomes reusable discipline-module contributions, especially data connectors, method templates, reviewer rules, fixtures, and project-tested workflow lessons that can be generalized without private paths, credentials, raw data, or project-specific claims.
+
+Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
+
+See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md), and [`TRADEMARK.md`](./TRADEMARK.md) for the current non-commercial source-available terms, attribution notice, commercial authorization scope, and project-name/trademark policy.
+
+For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
+
+Personal homepage: [https://xiejhhhhhh.github.io/Jinhui_profile/](https://xiejhhhhhh.github.io/Jinhui_profile/)
+
+Third-party components keep their own licenses.
+
+## Support
+
+开发不易，给点tokens费OTZ
+
+<p align="center">
+  <img src="./docs/assets/donate_alipay.jpg" alt="Alipay donation QR code" width="260">
+  <img src="./docs/assets/donate_wechat.png" alt="WeChat Pay donation QR code" width="260">
+</p>
+
 ## Recent Updates
+
+### v0.14.8 (2026-06-28) -- citation audit and repair loop
+
+- Added an independent citation audit and repair loop: `audit-citations`, `generate-citation-repair-plan`, `apply-citation-repair`, `re-audit-citations`, and `run-citation-repair-loop`.
+- Added claim-level local citation support checking against BibTeX and `references/citation_evidence.csv`, with RefCheck-style HTML reports under `citation_audit/iterations/` and a final pass report at `citation_audit/final_citation_audit_report.html`.
+- Updated `status` and `run-pipeline` so final quality checks are blocked after integrity checks until citation audit passes; failed citation audits now route into the citation repair loop instead of continuing blindly to `quality-check`.
+- Upgraded `quality-check` so direct calls require `citation_audit/final_citation_audit_report.json` with `status=passed`, preventing source-support verification from being skipped.
 
 ### v0.14.7 (2026-06-26) -- learning loop and runnable foundation modules
 
@@ -469,15 +506,3 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 - Standardized reference outputs: `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, and literature review notes in Markdown plus HTML.
 - Added target-journal template resolution through `resolve-journal-template` and literature-informed `generate-plan`.
 - Added a traceable Introduction writer whose citation keys must exist in both BibTeX and citation evidence.
-
-## License, Commercial Use, And Contact
-
-Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
-
-See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md), and [`TRADEMARK.md`](./TRADEMARK.md) for the current non-commercial source-available terms, attribution notice, commercial authorization scope, and project-name/trademark policy.
-
-For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
-
-Personal homepage: [https://xiejhhhhhh.github.io/Jinhui_profile/](https://xiejhhhhhh.github.io/Jinhui_profile/)
-
-Third-party components keep their own licenses.

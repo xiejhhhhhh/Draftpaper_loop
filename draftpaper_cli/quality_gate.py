@@ -39,6 +39,7 @@ QUALITY_INPUTS = [
     "results/result_manifest.yaml",
     "results/results.tex",
     "references/citation_evidence.csv",
+    "citation_audit/final_citation_audit_report.json",
 ]
 
 QUALITY_OUTPUTS = [
@@ -416,6 +417,34 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
     }
 
 
+def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    report = _read_json(project_path / "citation_audit" / "final_citation_audit_report.json")
+    status = report.get("status")
+    summary = report.get("summary") or {}
+    if status != "passed":
+        issues.append(QualityIssue(
+            "error",
+            "citation_audit_not_passed",
+            "Final quality check requires citation_audit/final_citation_audit_report.json with status=passed.",
+            "citation_audit/final_citation_audit_report.json",
+        ))
+    blocking = int(summary.get("blocking_issue_count") or 0)
+    if blocking:
+        issues.append(QualityIssue(
+            "error",
+            "citation_audit_has_blocking_issues",
+            f"Final citation audit still has blocking source-support issues: {blocking}.",
+            "citation_audit/final_citation_audit_report.json",
+        ))
+    return {
+        "status": status,
+        "blocking_issue_count": blocking,
+        "average_match_score": summary.get("average_match_score"),
+        "unsupported": summary.get("unsupported"),
+        "unverifiable": summary.get("unverifiable"),
+    }
+
+
 def _check_latex_hygiene(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
     main_tex = _read_text(project_path / "latex" / "main.tex")
     profile = _read_json(project_path / "journal_profile" / "journal_profile.json")
@@ -490,6 +519,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     manuscript_hygiene_report = _check_manuscript_narrative_hygiene(state.path, issues)
     writing_quality_report = _check_manuscript_writing_quality(state.path, issues)
     bibliography_report = _check_bibliography(state.path, issues)
+    citation_audit_report = _check_citation_audit(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
     pdf_report = _check_pdf(state.path, issues)
 
@@ -516,6 +546,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "manuscript_hygiene": manuscript_hygiene_report,
         "writing_quality": writing_quality_report,
         "bibliography": bibliography_report,
+        "citation_audit": citation_audit_report,
         "latex": latex_report,
         "pdf": pdf_report,
     }

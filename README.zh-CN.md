@@ -6,7 +6,7 @@
 [![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#核心特性)
 [![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#快速开始)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
-[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#许可证商业使用和联系方式)
+[![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#贡献者许可证商业使用和联系方式)
 
 # Draftpaper-loop
 
@@ -108,6 +108,10 @@ python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
 python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
 python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
+python -m draftpaper_cli.cli audit-citations --project <repo>\projects\your_project --final
+python -m draftpaper_cli.cli generate-citation-repair-plan --project <repo>\projects\your_project
+python -m draftpaper_cli.cli apply-citation-repair --project <repo>\projects\your_project
+python -m draftpaper_cli.cli re-audit-citations --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
 python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\your_project
@@ -199,13 +203,45 @@ python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mi
 
 生成报告会记录仓库元数据、许可证策略、可复现性信号、工作流信号、文件树角色、候选通用能力和学科基座建议。该流程不会 clone 仓库、不会复制源码目录、不会直接安装第三方代码；后续如果要沉淀为 Draftpaper-loop 插件，仍然需要经过人工/Codex 审阅、隐私检查、许可证检查、fixture 测试和 overlap 检查。
 
-## Paper Fetch 集成
+`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop` 新增一个独立的引用核查与修复 loop，位于 integrity gate 之后、final quality check 之前。该 loop 会把论文正文中的每一次引用与 BibTeX 元数据和 `references/citation_evidence.csv` 进行 claim-level 对比，检查参考文献来源是否真实存在、是否支持当前论断，或至少在语义上与当前论断相近。中间迭代审查报告会保存到 `citation_audit/iterations/`，只有严格通过后才会生成 `citation_audit/final_citation_audit_report.html`。如果引用审查失败，`status` 和 `run-pipeline` 会推荐进入 citation repair loop，而不是继续盲目执行 `quality-check`；同时 `quality-check` 也会要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，避免用户直接跳过来源核查。
+
+## 第三方 skills 集成
 
 本仓库将 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`。adapter 会优先使用 `PATH` 中的 `paper-fetch` 命令；如果不可用，则可使用 vendored runtime source。
 
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
+## 贡献者、许可证、商业使用和联系方式
+
+Draftpaper-loop 欢迎可复用的学科模块贡献，尤其是数据 connector、方法模板、审稿规则、fixture，以及可以从真实项目中泛化出来的工作流经验。贡献内容不应包含私有路径、账号凭证、原始数据或项目专属结论。
+
+Draftpaper-loop 以 source-available 形式开放给非商业科研、评估、教学和个人论文工作流使用。商业使用、付费服务、SaaS 部署、企业部署、转售，或集成到商业产品中，需要事先获得项目开发者的书面授权。
+
+当前非商业 source-available 条款、归属声明、商业授权范围和项目名称/商标政策见 [`LICENSE`](./LICENSE)、[`NOTICE`](./NOTICE)、[`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md) 和 [`TRADEMARK.md`](./TRADEMARK.md)。
+
+如需商业授权，请联系：[xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn)。
+
+个人主页：[https://xiejhhhhhh.github.io/Jinhui_profile/](https://xiejhhhhhh.github.io/Jinhui_profile/)
+
+第三方组件保留各自许可证。
+
+## 打赏
+
+开发不易，给点tokens费OTZ
+
+<p align="center">
+  <img src="./docs/assets/donate_alipay.jpg" alt="支付宝收款码" width="260">
+  <img src="./docs/assets/donate_wechat.png" alt="微信支付收款码" width="260">
+</p>
+
 ## 最近更新
+
+### v0.14.8 (2026-06-28) -- citation audit and repair loop
+
+- 新增独立的引用核查与修复 loop：`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop`。
+- 新增 claim-level 本地引用支持度核查：将论文正文中的引用论断与 BibTeX 和 `references/citation_evidence.csv` 对比，并在 `citation_audit/iterations/` 保存中间 HTML 审查报告，通过后生成 `citation_audit/final_citation_audit_report.html`。
+- 升级 `status` 和 `run-pipeline`：integrity gate 通过后不会直接进入 `quality-check`，而是先要求最终引用核查通过；如果审查失败，会推荐进入 citation repair loop。
+- 升级 `quality-check`：直接调用时也要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，防止跳过参考文献来源与论断一致性核查。
 
 ### v0.14.7 (2026-06-26) -- learning loop and runnable foundation modules
 
@@ -415,15 +451,3 @@ python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mi
 - 标准化 reference outputs：`library.bib`、`literature_items.json`、`citation_evidence.csv` 和 Markdown/HTML literature review notes。
 - 新增 `resolve-journal-template` 和 literature-informed `generate-plan`。
 - 新增可追溯 Introduction writer。
-
-## 许可证、商业使用和联系方式
-
-Draftpaper-loop 以 source-available 形式开放给非商业科研、评估、教学和个人论文工作流使用。商业使用、付费服务、SaaS 部署、企业部署、转售，或集成到商业产品中，需要事先获得项目开发者的书面授权。
-
-当前非商业 source-available 条款、归属声明、商业授权范围和项目名称/商标政策见 [`LICENSE`](./LICENSE)、[`NOTICE`](./NOTICE)、[`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md) 和 [`TRADEMARK.md`](./TRADEMARK.md)。
-
-如需商业授权，请联系：[xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn)。
-
-个人主页：[https://xiejhhhhhh.github.io/Jinhui_profile/](https://xiejhhhhhh.github.io/Jinhui_profile/)
-
-第三方组件保留各自许可证。
