@@ -69,6 +69,17 @@ class ProjectScaffoldTests(unittest.TestCase):
             self.assertEqual(metadata["stages"]["research_plan"]["depends_on"], ["references", "journal_profile"])
             self.assertEqual(metadata["stages"]["method_plan"]["depends_on"], ["research_plan", "references", "data"])
             self.assertEqual(metadata["stages"]["results"]["depends_on"], ["result_validity"])
+            self.assertEqual(metadata["dpl"]["schema_family"], "dpl")
+            self.assertEqual(metadata["dpl"]["project_schema"], "dpl.project.v1")
+            self.assertEqual(metadata["dpl"]["stage_manifest_schema"], "dpl.stage_manifest.v1")
+            self.assertEqual(metadata["generated_by"]["name"], "Draftpaper-loop")
+            self.assertEqual(metadata["generated_by"]["schema_family"], "dpl")
+            self.assertIn("does not grant commercial use rights", metadata["generated_by"]["sponsorship_note"])
+
+            references_manifest = json.loads((project.path / "references" / "stage_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(references_manifest["dpl"]["schema_family"], "dpl")
+            self.assertEqual(references_manifest["dpl"]["stage_manifest_schema"], "dpl.stage_manifest.v1")
+            self.assertEqual(references_manifest["generated_by"]["name"], "Draftpaper-loop")
 
             idea_note = (project.path / "idea" / "idea.md").read_text(encoding="utf-8")
             self.assertIn("Long-term AGN outburst prediction", idea_note)

@@ -269,7 +269,11 @@ Draftpaper-loop welcomes reusable discipline-module contributions, especially da
 
 Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
 
-See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md), and [`TRADEMARK.md`](./TRADEMARK.md) for the current non-commercial source-available terms, attribution notice, commercial authorization scope, and project-name/trademark policy.
+Sponsorship or donation supports project maintenance but does not grant commercial use rights. Commercial use still requires separate prior written authorization.
+
+Draftpaper-loop uses the DPL schema family to represent local-first paper-loop state, including project passports, stage manifests, citation evidence, run manifests, result manifests, artifact hashes, claim traces, and loop events.
+
+See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md), [`TRADEMARK.md`](./TRADEMARK.md), [`COMPLIANCE.md`](./COMPLIANCE.md), [`docs/DPL_SCHEMA.md`](./docs/DPL_SCHEMA.md), and [`docs/FORENSIC_FINGERPRINTING.md`](./docs/FORENSIC_FINGERPRINTING.md) for the current non-commercial source-available terms, attribution notice, commercial authorization scope, project-name/trademark policy, public schema identity, and compliance boundary.
 
 For commercial authorization, contact [xiejinhui22@mails.ucas.ac.cn](mailto:xiejinhui22@mails.ucas.ac.cn).
 
@@ -281,12 +285,22 @@ Third-party components keep their own licenses.
 
 开发不易，给点tokens费OTZ
 
+Donation supports maintenance only and does not grant commercial use rights.
+
 <p align="center">
   <img src="./docs/assets/donate_alipay.jpg" alt="Alipay donation QR code" width="260">
   <img src="./docs/assets/donate_wechat.png" alt="WeChat Pay donation QR code" width="260">
 </p>
 
 ## Recent Updates
+
+### v0.14.9 (2026-06-28) -- public IP protection and DPL schema provenance layer
+
+- Added public compliance documentation that clarifies the non-commercial source-available boundary, commercial authorization requirement, sponsorship-not-license rule, and prohibited anti-abuse mechanisms such as hidden payloads, telemetry, device fingerprinting, remote license checks, or destructive checks.
+- Added the public DPL schema family documentation and generated project provenance blocks for project metadata, stage manifests, and project passports.
+- Added stable public contract helpers for claim IDs and evidence IDs, plus tests that verify deterministic DPL identifiers and generated project metadata.
+- Added public forensic-fingerprinting guidance at a high level only; private forensic cases, golden outputs, comparison scripts, and thresholds remain outside the public repository.
+- Updated commercial license and trademark notes so project terms such as Draftpaper-loop, DPL loop engine, project passport, claim trace, and evidence binding cannot be used to imply commercial authorization or official endorsement.
 
 ### v0.14.8 (2026-06-28) -- citation audit and repair loop
 

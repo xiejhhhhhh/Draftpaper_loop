@@ -33,6 +33,9 @@ class OrchestratorPassportTests(unittest.TestCase):
             passport = load_project_passport(project.path)
             self.assertEqual(passport["project_id"], project.project_id)
             self.assertEqual(passport["schema_version"], 1)
+            self.assertEqual(passport["dpl"]["schema_family"], "dpl")
+            self.assertEqual(passport["dpl"]["project_passport_schema"], "dpl.project_passport.v1")
+            self.assertEqual(passport["generated_by"]["name"], "Draftpaper-loop")
             self.assertGreaterEqual(passport["artifact_count"], 3)
             self.assertIn("project.json", {item["path"] for item in passport["artifacts"]})
 

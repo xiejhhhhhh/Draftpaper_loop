@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
+
 
 PASSPORT_FILES = {
     "passport": "project_passport.yaml",
@@ -167,6 +169,12 @@ def _write_passport(project_path: Path, *, event: str) -> dict[str, Any]:
     awaiting = _latest_unconsumed_checkpoint(project_path)
     passport = {
         "schema_version": 1,
+        "dpl": dpl_block(
+            project_passport_schema=DPL_SCHEMAS["project_passport"],
+            artifact_hash_schema=DPL_SCHEMAS["artifact_hash"],
+            loop_event_schema=DPL_SCHEMAS["loop_event"],
+        ),
+        "generated_by": generated_by_block(schema_version=DPL_SCHEMAS["project_passport"]),
         "project_id": metadata.get("project_id"),
         "project_slug": metadata.get("project_slug"),
         "title": metadata.get("title"),

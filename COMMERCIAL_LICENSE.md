@@ -12,6 +12,10 @@ Commercial use includes, but is not limited to:
 - integration into commercial research platforms, writing assistants, journal
   tools, data-analysis services, or AI-agent products.
 
+Sponsorship or donation supports project maintenance but does not grant
+commercial use rights. Commercial use requires separate prior written
+authorization.
+
 To request commercial authorization, contact:
 
 xiejinhui22@mails.ucas.ac.cn
@@ -19,4 +23,3 @@ xiejinhui22@mails.ucas.ac.cn
 Third-party components keep their own license terms. A commercial
 Draftpaper-loop authorization does not automatically grant commercial rights to
 third-party dependencies or vendored third-party code.
-

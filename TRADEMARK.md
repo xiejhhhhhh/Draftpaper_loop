@@ -19,3 +19,17 @@ written authorization. Contact:
 
 xiejinhui22@mails.ucas.ac.cn
 
+## Associated project terms
+
+Draftpaper-loop, DPL loop engine, project passport, claim trace, and evidence
+binding are names associated with the Draftpaper-loop project.
+
+These terms may be used truthfully for attribution, compatibility statements,
+research citation, and non-commercial evaluation. They may not be used to imply
+official status, endorsement, commercial authorization, or affiliation without
+prior written permission.
+
+Forks, derivatives, wrappers, hosted services, commercial workflows, and SaaS
+products must not use these names, confusingly similar names, badges, slogans,
+or repository identity to present themselves as official Draftpaper-loop
+offerings unless separately authorized in writing.

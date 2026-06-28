@@ -25,3 +25,13 @@ references/fulltext/
 # Do not vendor nested git metadata. The commercial repository keeps the
 # paper-fetch framework files, docs, fixtures, and tests for reproducibility.
 third_party/paper-fetch-skill/.git/
+
+# Maintainer-local forensic material. Public docs describe the policy only;
+# private cases, golden outputs, clone reports, and exact comparison scripts
+# stay outside the public repository.
+private_forensic_cases/
+private_golden_outputs/
+private_forensic_reports/
+private_clone_comparison/
+IP_PROTECTION_AND_SCHEMA_FINGERPRINT_PLAN*.md
+PRIVATE_*.md

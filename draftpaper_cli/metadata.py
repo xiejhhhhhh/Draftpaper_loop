@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .provenance import PROJECT_PROVENANCE
+
 
 GENERATOR_NAME = "Draftpaper-loop"
 GENERATOR_URL = "https://github.com/xiejhhhhhh/Draftpaper_loop"
@@ -31,4 +33,6 @@ def attach_generator_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     enriched.setdefault("generated_by", GENERATOR_NAME)
     enriched.setdefault("generator_url", GENERATOR_URL)
     enriched.setdefault("generator_contact", GENERATOR_CONTACT)
+    enriched.setdefault("generator_license", PROJECT_PROVENANCE["license"])
+    enriched.setdefault("generator_sponsorship_note", PROJECT_PROVENANCE["sponsorship_note"])
     return enriched

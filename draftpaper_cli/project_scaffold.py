@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .metadata import attach_generator_metadata
+from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
 
 
 class ProjectAlreadyExistsError(FileExistsError):
@@ -156,6 +157,8 @@ def _write_stage_manifests(project_path: Path, metadata: dict[str, Any]) -> None
         manifest = {
             "project_id": metadata["project_id"],
             "stage": stage,
+            "dpl": dpl_block(stage_manifest_schema=DPL_SCHEMAS["stage_manifest"]),
+            "generated_by": generated_by_block(schema_version=DPL_SCHEMAS["stage_manifest"]),
             "status": stage_meta["status"],
             "stale": stage_meta["stale"],
             "depends_on": stage_meta["depends_on"],
@@ -205,6 +208,18 @@ def create_project(
     now = utc_now()
     metadata = {
         "schema_version": 1,
+        "dpl": dpl_block(
+            project_schema=DPL_SCHEMAS["project"],
+            project_passport_schema=DPL_SCHEMAS["project_passport"],
+            stage_manifest_schema=DPL_SCHEMAS["stage_manifest"],
+            citation_evidence_schema=DPL_SCHEMAS["citation_evidence"],
+            run_manifest_schema=DPL_SCHEMAS["run_manifest"],
+            result_manifest_schema=DPL_SCHEMAS["result_manifest"],
+            artifact_hash_schema=DPL_SCHEMAS["artifact_hash"],
+            claim_trace_schema=DPL_SCHEMAS["claim_trace"],
+            loop_event_schema=DPL_SCHEMAS["loop_event"],
+        ),
+        "generated_by": generated_by_block(schema_version=DPL_SCHEMAS["project"]),
         "project_id": project_slug,
         "project_slug": project_slug,
         "title": idea.strip(),
