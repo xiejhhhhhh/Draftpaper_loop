@@ -1,4 +1,4 @@
-# Copyright (c) 2026 xiejhhhhhh
+﻿# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -165,7 +165,7 @@ def generalize_plugin_candidate(candidate: str | Path) -> dict[str, Any]:
     generalized_dir = root / "generalized_template"
     generalized_dir.mkdir(parents=True, exist_ok=True)
     template = "\n".join([
-        "# Copyright (c) 2026 xiejhhhhhh",
+        "# Copyright (c) 2026 Jinray Xie",
         "# Contact: xiejinhui22@mails.ucas.ac.cn",
         "# Source-available for non-commercial use only; commercial use requires written authorization.",
         "",

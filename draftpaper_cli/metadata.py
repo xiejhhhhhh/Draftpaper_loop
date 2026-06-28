@@ -1,4 +1,4 @@
-# Copyright (c) 2026 xiejhhhhhh
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -17,7 +17,7 @@ GENERATOR_TEX_COMMENT = (
     "% Commercial use requires prior written authorization: xiejinhui22@mails.ucas.ac.cn\n"
 )
 PYTHON_SOURCE_NOTICE = (
-    "# Copyright (c) 2026 xiejhhhhhh\n"
+    "# Copyright (c) 2026 Jinray Xie\n"
     "# Contact: xiejinhui22@mails.ucas.ac.cn\n"
     "# Source-available for non-commercial use only; commercial use requires written authorization.\n\n"
 )

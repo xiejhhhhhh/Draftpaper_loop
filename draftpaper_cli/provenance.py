@@ -1,4 +1,4 @@
-# Copyright (c) 2026 xiejhhhhhh
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -10,7 +10,7 @@ from typing import Any
 
 PROJECT_PROVENANCE: dict[str, str] = {
     "name": "Draftpaper-loop",
-    "author": "xiejhhhhhh",
+    "author": "Jinray Xie",
     "repository": "https://github.com/xiejhhhhhh/Draftpaper_loop",
     "license": "Source-Available Non-Commercial",
     "commercial_contact": "xiejinhui22@mails.ucas.ac.cn",

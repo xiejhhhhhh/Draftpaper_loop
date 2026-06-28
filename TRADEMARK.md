@@ -2,7 +2,7 @@
 
 Draftpaper-loop, Draftpaper, and associated project names, slogans, badges,
 README identity text, and repository presentation are project identifiers of
-xiejhhhhhh.
+Jinray Xie.
 
 You may refer to Draftpaper-loop truthfully for attribution, compatibility,
 research citation, or non-commercial evaluation. You may not use the

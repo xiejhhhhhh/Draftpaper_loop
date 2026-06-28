@@ -26,6 +26,8 @@ Draftpaper-loop is also intended to become a learning research workflow rather t
 
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
+Author / developer: Jinray.
+
 ## What It Does
 
 Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
@@ -267,6 +269,11 @@ The third-party runtime is MIT licensed. Keep its license notice when redistribu
 
 Draftpaper-loop welcomes reusable discipline-module contributions, especially data connectors, method templates, reviewer rules, fixtures, and project-tested workflow lessons that can be generalized without private paths, credentials, raw data, or project-specific claims.
 
+Current contributors:
+
+- Jinray Xie: overall Draftpaper-loop framework, including literature workflows, data and methods auditing, result-output auditing, rollback mechanisms, and discipline-module contributions for deep learning, astronomy, and geography.
+- Chen Wei: astronomy discipline-module supplements and related validation generation.
+
 Draftpaper-loop is source-available for non-commercial research, evaluation, education, and personal paper-writing workflows. Commercial use, paid services, SaaS deployment, enterprise deployment, resale, or integration into commercial products requires separate written authorization from the developer.
 
 Sponsorship or donation supports project maintenance but does not grant commercial use rights. Commercial use still requires separate prior written authorization.
@@ -299,7 +306,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added public compliance documentation that clarifies the non-commercial source-available boundary, commercial authorization requirement, sponsorship-not-license rule, and prohibited anti-abuse mechanisms such as hidden payloads, telemetry, device fingerprinting, remote license checks, or destructive checks.
 - Added the public DPL schema family documentation and generated project provenance blocks for project metadata, stage manifests, and project passports.
 - Added stable public contract helpers for claim IDs and evidence IDs, plus tests that verify deterministic DPL identifiers and generated project metadata.
-- Added public forensic-fingerprinting guidance at a high level only; private forensic cases, golden outputs, comparison scripts, and thresholds remain outside the public repository.
+- Added public forensic-fingerprinting guidance at a high level.
 - Updated commercial license and trademark notes so project terms such as Draftpaper-loop, DPL loop engine, project passport, claim trace, and evidence binding cannot be used to imply commercial authorization or official endorsement.
 
 ### v0.14.8 (2026-06-28) -- citation audit and repair loop

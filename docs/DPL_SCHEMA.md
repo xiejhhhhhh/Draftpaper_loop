@@ -54,7 +54,7 @@ Generated project metadata may include a visible block like:
 ```yaml
 generated_by:
   name: Draftpaper-loop
-  author: xiejhhhhhh
+  author: Jinray Xie
   repository: https://github.com/xiejhhhhhh/Draftpaper_loop
   license: Source-Available Non-Commercial
   commercial_contact: xiejinhui22@mails.ucas.ac.cn
