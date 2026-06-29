@@ -26,8 +26,6 @@ Draftpaper-loop is also intended to become a learning research workflow rather t
 
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
-Author / developer: Jinray.
-
 ## What It Does
 
 Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
@@ -295,9 +293,28 @@ Third-party components keep their own licenses.
 Donation supports maintenance only and does not grant commercial use rights.
 
 <p align="center">
-  <img src="./docs/assets/donate_alipay.jpg" alt="Alipay donation QR code" width="260">
-  <img src="./docs/assets/donate_wechat.png" alt="WeChat Pay donation QR code" width="260">
+  <a href="https://xiejhhhhhh.github.io/Draftpaper_loop/support/"><strong>Open the interactive support page / 打开交互式支持页</strong></a>
 </p>
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="./docs/assets/donate_wechat_clean.png" alt="WeChat Pay QR code" width="190"><br>
+      <strong>WeChat Pay</strong><br>
+      微信支付
+    </td>
+    <td align="center">
+      <img src="./docs/assets/donate_alipay_clean.png" alt="Alipay QR code" width="190"><br>
+      <strong>Alipay</strong><br>
+      支付宝
+    </td>
+    <td align="center">
+      <img src="./docs/assets/donate_paypal_clean.png" alt="PayPal QR code" width="190"><br>
+      <strong>PayPal</strong><br>
+      International support
+    </td>
+  </tr>
+</table>
 
 ## Recent Updates
 

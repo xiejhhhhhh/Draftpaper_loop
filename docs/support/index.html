@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Support Draftpaper-loop, a local-first research paper loop engine for auditable and traceable manuscript drafts.">
+    <title>Support Draftpaper-loop</title>
+    <link rel="stylesheet" href="./support.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://github.com/xiejhhhhhh/Draftpaper_loop" aria-label="Draftpaper-loop GitHub repository">
+        <span class="brand-mark">DPL</span>
+        <span>
+          <strong>Draftpaper-loop</strong>
+          <small data-i18n="brandSubtitle">Local-first research paper loop engine</small>
+        </span>
+      </a>
+      <nav class="top-actions" aria-label="Page actions">
+        <button class="lang-toggle" type="button" data-lang-toggle>中文</button>
+        <a class="ghost-link" href="https://github.com/xiejhhhhhh/Draftpaper_loop" data-i18n="github">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow" data-i18n="eyebrow">Support an auditable research workflow</p>
+          <h1 data-i18n="heroTitle">Make research drafts easier to verify, revise, and reuse.</h1>
+          <p class="hero-text" data-i18n="heroText">
+            Draftpaper-loop turns paper writing into a local, traceable loop: retrieve evidence, plan the manuscript, run methods, verify results, repair weak links, and assemble a reviewable LaTeX draft.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-action" type="button" data-open-support data-i18n="supportButton">Support the project</button>
+            <a class="secondary-action" href="https://github.com/xiejhhhhhh/Draftpaper_loop#quick-start" data-i18n="quickStart">Quick start</a>
+          </div>
+          <p class="license-note" data-i18n="licenseNote">Donations support maintenance only and do not grant commercial use rights.</p>
+        </div>
+
+        <div class="loop-panel" aria-label="Draftpaper-loop workflow">
+          <div class="loop-node is-active" data-i18n="loopObserve">Observe</div>
+          <div class="loop-node" data-i18n="loopEvidence">Evidence</div>
+          <div class="loop-node" data-i18n="loopPlan">Plan</div>
+          <div class="loop-node" data-i18n="loopMethods">Methods</div>
+          <div class="loop-node" data-i18n="loopVerify">Verify</div>
+          <div class="loop-node" data-i18n="loopRepair">Repair</div>
+          <div class="loop-node" data-i18n="loopLatex">LaTeX</div>
+          <svg class="loop-lines" viewBox="0 0 580 360" role="img" aria-hidden="true">
+            <path d="M120 70 C260 20 430 45 485 145 C540 245 385 330 230 305 C90 282 55 155 120 70" />
+            <path d="M165 118 C250 85 350 105 405 175 C440 220 390 265 300 272 C210 280 130 220 165 118" />
+          </svg>
+        </div>
+      </section>
+
+      <section class="value-grid" aria-label="Project capabilities">
+        <article>
+          <span class="card-kicker">01</span>
+          <h2 data-i18n="capCitationTitle">Citation audit loop</h2>
+          <p data-i18n="capCitationText">Checks whether cited sources support the manuscript claims and routes weak claims into repair.</p>
+        </article>
+        <article>
+          <span class="card-kicker">02</span>
+          <h2 data-i18n="capDisciplineTitle">Discipline modules</h2>
+          <p data-i18n="capDisciplineText">Preserves reusable data connectors, method templates, reviewer gates, and project lessons.</p>
+        </article>
+        <article>
+          <span class="card-kicker">03</span>
+          <h2 data-i18n="capLocalTitle">Local-first state</h2>
+          <p data-i18n="capLocalText">Keeps project files, manifests, evidence, results, and revision state in a transparent local directory.</p>
+        </article>
+        <article>
+          <span class="card-kicker">04</span>
+          <h2 data-i18n="capReviewTitle">Reviewer rescue</h2>
+          <p data-i18n="capReviewText">Turns quality failures into concrete backtracking tasks for data, methods, results, and claims.</p>
+        </article>
+      </section>
+
+      <section class="support-section" id="support">
+        <div>
+          <p class="eyebrow" data-i18n="supportEyebrow">Tokens for maintenance</p>
+          <h2 data-i18n="supportTitle">If it saves your paper time, you can support the loop.</h2>
+          <p data-i18n="supportText">
+            Support helps maintain documentation, examples, discipline modules, testing, and the local-first workflow. It is appreciated, never required.
+          </p>
+        </div>
+        <div class="qr-grid">
+          <figure class="qr-card">
+            <img src="../assets/donate_wechat_clean.png" alt="WeChat Pay QR code">
+            <figcaption><strong>WeChat Pay</strong><span data-i18n="wechatLabel">微信支付</span></figcaption>
+          </figure>
+          <figure class="qr-card">
+            <img src="../assets/donate_alipay_clean.png" alt="Alipay QR code">
+            <figcaption><strong>Alipay</strong><span data-i18n="alipayLabel">支付宝</span></figcaption>
+          </figure>
+          <figure class="qr-card">
+            <img src="../assets/donate_paypal_clean.png" alt="PayPal QR code">
+            <figcaption><strong>PayPal</strong><span data-i18n="paypalLabel">International support</span></figcaption>
+          </figure>
+        </div>
+      </section>
+    </main>
+
+    <button class="floating-support" type="button" data-open-support>
+      <span data-i18n="floatingLabel">Support</span>
+      <strong>Tokens</strong>
+    </button>
+
+    <aside class="support-drawer" data-support-drawer aria-hidden="true">
+      <div class="drawer-backdrop" data-close-support></div>
+      <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-head">
+          <div>
+            <p class="eyebrow" data-i18n="drawerEyebrow">Support Draftpaper-loop</p>
+            <h2 id="drawer-title" data-i18n="drawerTitle">Choose a support channel</h2>
+          </div>
+          <button class="close-button" type="button" data-close-support aria-label="Close">Close</button>
+        </div>
+        <div class="drawer-qrs">
+          <button class="drawer-qr" type="button" data-focus-qr="../assets/donate_wechat_clean.png" data-focus-label="WeChat Pay">
+            <img src="../assets/donate_wechat_clean.png" alt="WeChat Pay QR code">
+            <span>WeChat Pay</span>
+          </button>
+          <button class="drawer-qr" type="button" data-focus-qr="../assets/donate_alipay_clean.png" data-focus-label="Alipay">
+            <img src="../assets/donate_alipay_clean.png" alt="Alipay QR code">
+            <span>Alipay</span>
+          </button>
+          <button class="drawer-qr" type="button" data-focus-qr="../assets/donate_paypal_clean.png" data-focus-label="PayPal">
+            <img src="../assets/donate_paypal_clean.png" alt="PayPal QR code">
+            <span>PayPal</span>
+          </button>
+        </div>
+        <p class="drawer-note" data-i18n="drawerNote">Support is for maintenance only. Commercial use requires prior written authorization.</p>
+        <div class="drawer-links">
+          <a href="https://github.com/xiejhhhhhh/Draftpaper_loop" data-i18n="drawerGithub">Open GitHub</a>
+          <a href="mailto:xiejinhui22@mails.ucas.ac.cn" data-i18n="drawerCommercial">Commercial authorization</a>
+        </div>
+      </section>
+    </aside>
+
+    <aside class="qr-lightbox" data-qr-lightbox aria-hidden="true">
+      <button class="lightbox-backdrop" type="button" data-close-lightbox aria-label="Close enlarged QR code"></button>
+      <figure class="lightbox-panel">
+        <img data-lightbox-image src="../assets/donate_wechat_clean.png" alt="">
+        <figcaption data-lightbox-label>WeChat Pay</figcaption>
+      </figure>
+    </aside>
+
+    <script src="./support.js"></script>
+  </body>
+</html>
