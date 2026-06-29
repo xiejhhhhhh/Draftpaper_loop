@@ -288,7 +288,7 @@ Third-party components keep their own licenses.
 
 ## Support
 
-开发不易，给点tokens费OTZ
+Building this takes time; a few tokens for maintenance are appreciated. OTZ
 
 Donation supports maintenance only and does not grant commercial use rights.
 
