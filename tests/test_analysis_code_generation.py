@@ -69,6 +69,106 @@ def prepare_codegen_project(project_path: Path) -> None:
     )
 
 
+def write_storyboard_contract(project_path: Path) -> None:
+    storyboard = {
+        "status": "written",
+        "source": "research_blueprint",
+        "figures": [
+            {
+                "figure_id": "fig_1_workflow",
+                "proposed_title": "Time-aware flaring-source classification workflow",
+                "research_question": "How does the study connect long-term light curves, current observation tokens, and spectral features?",
+                "expected_finding": "The workflow should expose every data-to-model step required for source classification.",
+                "scientific_claim_boundary": "Workflow evidence is descriptive and does not itself prove classification performance.",
+                "required_data": ["light_curve", "current_observation_tokens", "spectral_features"],
+                "required_method": ["data_alignment", "time_aware_transformer"],
+                "suggested_plot_type": "data_overview",
+                "validation_metric": "pipeline_completeness",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["method_plan", "figure_plan", "code"],
+                "fallback_if_data_missing": "Use available tabular feature coverage and mark missing modalities.",
+            },
+            {
+                "figure_id": "fig_2_class_support",
+                "proposed_title": "Class support and label balance for flaring-source categories",
+                "research_question": "Are the available labels sufficient for a supervised classification claim?",
+                "expected_finding": "The label distribution should define which classes can support reliable evaluation.",
+                "scientific_claim_boundary": "Minority-class claims must remain limited when sample support is low.",
+                "required_data": ["class_label"],
+                "required_method": ["class_balance_check"],
+                "suggested_plot_type": "class_balance",
+                "validation_metric": "imbalance_ratio",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["figure_plan", "code", "results"],
+                "fallback_if_data_missing": "Report unlabeled sample support only.",
+            },
+            {
+                "figure_id": "fig_3_feature_space",
+                "proposed_title": "Hardness-flux feature space before sequence modeling",
+                "research_question": "Do spectral hardness and flux contain separable source-class structure?",
+                "expected_finding": "Feature-space structure should indicate whether tabular spectral information adds useful signal.",
+                "scientific_claim_boundary": "Feature separation is exploratory and must be confirmed by validation metrics.",
+                "required_data": ["hardness", "flux", "class_label"],
+                "required_method": ["feature_space_diagnostic"],
+                "suggested_plot_type": "scatter_regression",
+                "validation_metric": "class_separation_summary",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["figure_plan", "code", "results"],
+                "fallback_if_data_missing": "Use the strongest two numeric features available.",
+            },
+            {
+                "figure_id": "fig_4_model_performance",
+                "proposed_title": "Baseline versus time-aware model performance",
+                "research_question": "Does the time-aware model improve over transparent baselines?",
+                "expected_finding": "The proposed model should be interpreted only against baseline and ablation metrics.",
+                "scientific_claim_boundary": "Performance claims require verified metrics from local code execution.",
+                "required_data": ["features", "class_label"],
+                "required_method": ["baseline_model", "time_aware_transformer", "ablation_study"],
+                "suggested_plot_type": "metric_summary",
+                "validation_metric": "f1",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["code", "verify_methods", "result_validity"],
+                "fallback_if_data_missing": "Report baseline-only feasibility.",
+            },
+            {
+                "figure_id": "fig_5_error_analysis",
+                "proposed_title": "Error structure across confused flaring-source classes",
+                "research_question": "Which source classes remain ambiguous after multimodal fusion?",
+                "expected_finding": "Residual errors should identify classes requiring additional data or weaker claims.",
+                "scientific_claim_boundary": "Error interpretation is conditional on label quality and sample support.",
+                "required_data": ["predicted_label", "class_label"],
+                "required_method": ["confusion_or_error_analysis"],
+                "suggested_plot_type": "metric_summary",
+                "validation_metric": "confusion_summary",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["code", "results", "discussion"],
+                "fallback_if_data_missing": "Use per-class support and metric summary.",
+            },
+        ],
+        "tables": [
+            {
+                "table_id": "table_1_dataset",
+                "proposed_title": "Dataset, modality, and validation split summary",
+                "required_data": ["source_id", "class_label"],
+                "required_method": ["data_inventory"],
+            }
+        ],
+    }
+    method_plan = {
+        "status": "written",
+        "source": "research_blueprint",
+        "method_tasks": [
+            {"task_id": "method_1", "figure_id": "fig_2_class_support", "method_family": "class_balance_check"},
+            {"task_id": "method_2", "figure_id": "fig_3_feature_space", "method_family": "feature_space_diagnostic"},
+            {"task_id": "method_3", "figure_id": "fig_4_model_performance", "method_family": "baseline_model"},
+            {"task_id": "method_4", "figure_id": "fig_5_error_analysis", "method_family": "error_analysis"},
+        ],
+    }
+    (project_path / "research_plan").mkdir(parents=True, exist_ok=True)
+    (project_path / "research_plan" / "figure_storyboard.json").write_text(json.dumps(storyboard), encoding="utf-8")
+    (project_path / "research_plan" / "method_plan.json").write_text(json.dumps(method_plan), encoding="utf-8")
+
+
 class AnalysisCodeGenerationTests(unittest.TestCase):
     def test_generate_analysis_code_writes_manifest_and_runnable_code(self) -> None:
         from draftpaper_cli.analysis_code import generate_analysis_code
@@ -254,6 +354,30 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             self.assertGreaterEqual(float(run_manifest["metrics"]["r2"]), 0.0)
             formulas = (project.path / "methods" / "method_formulas.tex").read_text(encoding="utf-8")
             self.assertIn("R^2", formulas)
+
+    def test_figure_plan_and_codegen_follow_research_storyboard(self) -> None:
+        from draftpaper_cli.analysis_code import generate_analysis_code
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Storyboard source classification", field="astronomy machine learning")
+            prepare_codegen_project(project.path)
+            write_storyboard_contract(project.path)
+
+            plan_figures(project.path)
+            figure_plan = json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))
+            storyboard_figures = [item for item in figure_plan["figures"] if item.get("source") == "research_storyboard"]
+            self.assertGreaterEqual(len(storyboard_figures), 5)
+            self.assertEqual(storyboard_figures[0]["id"], "fig_1_workflow")
+            self.assertEqual(storyboard_figures[0]["title"], "Time-aware flaring-source classification workflow")
+            self.assertEqual(storyboard_figures[0]["storyboard_trace"]["validation_metric"], "pipeline_completeness")
+            self.assertIn("research_storyboard", figure_plan["loop_decision"])
+
+            result = generate_analysis_code(project.path)
+            self.assertEqual(result["status"], "written")
+            manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["research_storyboard"]["source"], "research_blueprint")
+            self.assertGreaterEqual(len(manifest["research_storyboard"]["figures"]), 5)
+            self.assertIn("method_tasks", manifest["research_method_plan"])
 
 
 if __name__ == "__main__":

@@ -679,6 +679,8 @@ def generate_analysis_code(
     if not isinstance(literature_items, list):
         raise AnalysisCodeGenerationError("references/literature_items.json must contain a list.")
     method_plan_text = _read_text(state.path / "methods" / "method_plan.md")
+    research_storyboard = _read_json(state.path / "research_plan" / "figure_storyboard.json", {})
+    research_method_plan = _read_json(state.path / "research_plan" / "method_plan.json", {})
     selected_input = _select_tabular_input(
         inventory,
         method_text=" ".join([method_plan_text, str(requirements.get("user_method") or "")]),
@@ -691,7 +693,15 @@ def generate_analysis_code(
         base_outputs.insert(3, REVIEW_TASK_METRICS_OUTPUT)
     declared_outputs = _sanitize_outputs(state.path, list(output_files or (base_outputs + generated_figure_outputs)))
     literature_sources = _literature_sources(literature_items)
-    method_families = list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"]
+    storyboard_method_families = [
+        str(task.get("method_family"))
+        for task in (research_method_plan.get("method_tasks") or [])
+        if isinstance(task, dict) and task.get("method_family")
+    ] if isinstance(research_method_plan, dict) else []
+    method_families = list(dict.fromkeys(
+        (list(requirements.get("method_families") or []) or ["method_family_requires_user_confirmation"])
+        + storyboard_method_families
+    ))
     plotting_requirements = plan_plotting_requirements(
         figure_plan=figure_plan,
         project_meta=state.metadata,
@@ -715,6 +725,8 @@ def generate_analysis_code(
         "literature_method_count": len(literature_sources),
         "literature_sources": literature_sources,
         "method_plan_excerpt": re.sub(r"\s+", " ", method_plan_text).strip()[:1000],
+        "research_storyboard": research_storyboard if isinstance(research_storyboard, dict) else {},
+        "research_method_plan": research_method_plan if isinstance(research_method_plan, dict) else {},
         "method_blueprint": method_blueprint,
         "method_data_contract": method_blueprint.get("method_data_contract") if isinstance(method_blueprint, dict) else {},
         "method_code_plan": method_blueprint.get("method_code_plan") if isinstance(method_blueprint, dict) else {},

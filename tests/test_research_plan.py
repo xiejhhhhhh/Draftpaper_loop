@@ -140,6 +140,74 @@ class ResearchPlanTests(unittest.TestCase):
             html = (project.path / "research_plan" / "research_plan.html").read_text(encoding="utf-8")
             self.assertIn("../references/literature_summaries/index.html", html)
 
+    def test_generate_research_plan_writes_structured_blueprint_storyboard_and_bilingual_outputs(self) -> None:
+        from draftpaper_cli.research_plan import generate_research_plan
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Time-aware Transformer classification of EP WXT flaring sources using long-term light curves, current observation tokens, and spectral features",
+                field="high-energy time-domain astronomy; X-ray transient classification; machine learning for irregular light curves",
+                target_journal="APJS",
+            )
+            write_reference_outputs(project.path, [
+                {
+                    "title": "Astronomical Transformer for time series and tabular data",
+                    "authors": ["A. Author"],
+                    "year": "2024",
+                    "publication": "Astronomy and Computing",
+                    "abstract": "Transformer models combine irregular light curves and tabular features for transient classification.",
+                    "citation_count": 20,
+                    "source": "semantic_scholar",
+                },
+                {
+                    "title": "Representation learning for high-energy time-domain astrophysics",
+                    "authors": ["B. Author"],
+                    "year": "2025",
+                    "publication": "Astrophysical Journal Supplement Series",
+                    "abstract": "High-energy transient studies need temporal, spectral, and uncertainty-aware event representations.",
+                    "citation_count": 12,
+                    "source": "semantic_scholar",
+                },
+            ], query="EP WXT flaring source transformer classification")
+            write_generic_profile(project.path, tmp)
+
+            result = generate_research_plan(project.path, allow_high_similarity=True)
+
+            self.assertEqual(result["status"], "written")
+            for relative in [
+                "research_plan/research_blueprint.json",
+                "research_plan/figure_storyboard.json",
+                "research_plan/method_plan.json",
+                "research_plan/research_plan.zh-CN.md",
+            ]:
+                self.assertTrue((project.path / relative).exists(), relative)
+
+            blueprint = json.loads((project.path / "research_plan" / "research_blueprint.json").read_text(encoding="utf-8"))
+            storyboard = json.loads((project.path / "research_plan" / "figure_storyboard.json").read_text(encoding="utf-8"))
+            method_plan = json.loads((project.path / "research_plan" / "method_plan.json").read_text(encoding="utf-8"))
+            self.assertGreaterEqual(len(blueprint["research_claims"]), 4)
+            self.assertGreaterEqual(len(storyboard["figures"]), 5)
+            self.assertGreaterEqual(len(storyboard["tables"]), 1)
+            self.assertLessEqual(storyboard["quality_gate"]["incomplete_figure_count"], 2)
+            self.assertEqual(method_plan["source"], "research_blueprint")
+            self.assertGreaterEqual(len(method_plan["method_tasks"]), 4)
+            for figure in storyboard["figures"]:
+                self.assertTrue(figure["research_question"])
+                self.assertTrue(figure["expected_finding"])
+                self.assertTrue(figure["required_data"])
+                self.assertTrue(figure["required_method"])
+                self.assertTrue(figure["supporting_literature_keys"])
+                self.assertNotIn("Additional discipline-specific", figure["proposed_title"])
+            plan = (project.path / "research_plan" / "research_plan.md").read_text(encoding="utf-8")
+            plan_cn = (project.path / "research_plan" / "research_plan.zh-CN.md").read_text(encoding="utf-8")
+            html = (project.path / "research_plan" / "research_plan.html").read_text(encoding="utf-8")
+            self.assertIn("Figure Storyboard", plan)
+            self.assertIn("Time-aware Transformer", plan)
+            self.assertIn("图表故事板", plan_cn)
+            self.assertIn("toggleLanguage", html)
+            self.assertIn("中文", html)
+
     def test_cli_generate_plan_writes_research_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="AGN outburst prediction", field="machine learning astronomy")

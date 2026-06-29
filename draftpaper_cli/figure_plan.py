@@ -15,11 +15,13 @@ from .html_utils import write_html_report
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
+from .research_blueprint import storyboard_to_figure_plan_items
 
 
 FIGURE_PLAN_INPUTS = [
     "project.json",
     "research_plan/research_plan.md",
+    "research_plan/figure_storyboard.json",
     "references/literature_items.json",
     "journal_profile/journal_profile.json",
     "data/data_inventory.json",
@@ -469,6 +471,24 @@ def _review_task_figures(
     return figures
 
 
+def _storyboard_figures(
+    *,
+    project_path: Path,
+    inventory: dict[str, Any],
+    requirements: dict[str, Any],
+) -> list[dict[str, Any]]:
+    storyboard = _read_json(project_path / "research_plan" / "figure_storyboard.json", {})
+    if not isinstance(storyboard, dict) or not storyboard.get("figures"):
+        return []
+    scoped = _scoped_inventory(inventory, requirements)
+    return storyboard_to_figure_plan_items(
+        storyboard,
+        selected_data=_selected_data(scoped),
+        available_columns=_numeric_columns(scoped),
+        label_columns=_label_columns(scoped),
+    )
+
+
 def _apply_discipline_figure_policy(
     *,
     figures: list[dict[str, Any]],
@@ -613,13 +633,16 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
     if use_review_tasks:
         review_task_context = _read_json(state.path / "results" / "revision_figure_plan_delta.json", {})
     discipline_profile = infer_discipline_profile(state.path)
-    figures = _planned_figures(
-        project_meta=state.metadata,
-        research_plan=research_plan,
-        requirements=requirements,
-        inventory=inventory,
-        literature_items=literature_items,
-    )
+    figures = _storyboard_figures(project_path=state.path, inventory=inventory, requirements=requirements)
+    used_research_storyboard = bool(figures)
+    if not figures:
+        figures = _planned_figures(
+            project_meta=state.metadata,
+            research_plan=research_plan,
+            requirements=requirements,
+            inventory=inventory,
+            literature_items=literature_items,
+        )
     if use_review_tasks:
         task_report = _read_json(state.path / "review" / "actionable_analysis_tasks.json", {})
         selected_data = _selected_data(_scoped_inventory(inventory, requirements))
@@ -644,10 +667,14 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         "target_journal": state.metadata.get("target_journal"),
         "journal_constraints": journal_profile.get("profile") or journal_profile,
         "loop_decision": (
+            "The agent consumed research_storyboard from research_plan/figure_storyboard.json and aligned planned figures to the research blueprint before applying discipline fallbacks."
+            if used_research_storyboard else
             "The agent observed the current project state and selected figures from the research question, available data, method requirements, literature methods, and supplied artifacts."
         ),
         "review_task_context": review_task_context,
         "used_review_tasks": bool(use_review_tasks and review_task_context),
+        "used_research_storyboard": used_research_storyboard,
+        "research_storyboard": _read_json(state.path / "research_plan" / "figure_storyboard.json", {}),
         "discipline_profile": discipline_profile,
         "figure_policy": figure_policy,
         "figures": figures,

@@ -148,12 +148,16 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     inventory = _read_json(state.path / "data" / "data_inventory.json", {})
     acquisition_plan = _read_json(state.path / "data" / "data_acquisition_plan.json", {})
     review_tasks = _read_json(state.path / "review" / "actionable_analysis_tasks.json", {})
+    research_storyboard = _read_json(state.path / "research_plan" / "figure_storyboard.json", {})
+    research_method_plan = _read_json(state.path / "research_plan" / "method_plan.json", {})
     context = {
         "metadata": state.metadata,
         "method_requirements": requirements,
         "inventory": inventory,
         "data_acquisition_plan": acquisition_plan,
         "review_tasks": review_tasks,
+        "research_storyboard": research_storyboard,
+        "research_method_plan": research_method_plan,
         "research_plan_excerpt": _read_text(state.path / "research_plan" / "research_plan.md"),
     }
     hints = module.method_blueprint_hints(context)
@@ -174,6 +178,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "method_families": method_families,
         "validation_checks": list(hints.get("validation_hints") or []),
         "figure_families": list(hints.get("figure_hints") or []),
+        "storyboard_method_tasks": list(research_method_plan.get("method_tasks") or []) if isinstance(research_method_plan, dict) else [],
+        "storyboard_figures": list(research_storyboard.get("figures") or []) if isinstance(research_storyboard, dict) else [],
         "figure_policy": hints.get("figure_policy") or {},
         "code_generation_constraints": list(hints.get("code_generation_constraints") or []),
         "stage_owned_code_locations": ["methods/scripts", "methods/src"],
@@ -192,6 +198,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "discipline_profile": discipline_profile,
         "discipline_module": module.spec.as_dict(),
         "method_requirements": requirements,
+        "research_storyboard": research_storyboard if isinstance(research_storyboard, dict) else {},
+        "research_method_plan": research_method_plan if isinstance(research_method_plan, dict) else {},
         "method_data_contract": method_data_contract,
         "method_code_plan": method_code_plan,
         "method_formula_plan": method_formula_plan,

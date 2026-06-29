@@ -16,6 +16,7 @@ from .html_utils import write_html_report
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .research_blueprint import ResearchBlueprintQualityError, build_research_blueprint
 
 
 RESEARCH_PLAN_INPUTS = [
@@ -29,9 +30,13 @@ RESEARCH_PLAN_INPUTS = [
 
 RESEARCH_PLAN_OUTPUTS = [
     "research_plan/research_plan.md",
+    "research_plan/research_plan.zh-CN.md",
     "research_plan/research_plan.html",
     "research_plan/research_questions.md",
     "research_plan/research_questions.html",
+    "research_plan/research_blueprint.json",
+    "research_plan/figure_storyboard.json",
+    "research_plan/method_plan.json",
     "research_plan/target_journal_anchor_papers.json",
     "research_plan/novelty_overlap_report.json",
     "research_plan/novelty_overlap_report.md",
@@ -54,6 +59,10 @@ class NoveltyOverlapError(RuntimeError):
     def __init__(self, message: str, report_path: Path) -> None:
         super().__init__(message)
         self.report_path = report_path
+
+
+class ResearchPlanQualityError(RuntimeError):
+    """Raised when the generated research plan is too incomplete for downstream loop stages."""
 
 
 def _read_json(path: Path) -> Any:
@@ -324,6 +333,139 @@ def _expected_table_lines(policy: dict[str, int | str]) -> list[str]:
     return [f"- Table {index}: {text}" for index, text in enumerate(specs[:target], start=1)]
 
 
+def _storyboard_markdown(blueprint: dict[str, Any]) -> list[str]:
+    storyboard = blueprint.get("figure_storyboard") or {}
+    lines = ["## Figure Storyboard", ""]
+    lines.append(
+        "Each planned figure is bound to a research question, expected finding, data requirement, method requirement, validation metric, and citation support. Downstream figure planning and code generation should follow this storyboard before falling back to generic discipline templates."
+    )
+    lines.append("")
+    for index, item in enumerate(storyboard.get("figures") or [], start=1):
+        lines.extend([
+            f"- Fig. {index}: {item.get('proposed_title')} (`{item.get('figure_id')}`)",
+            f"  Research question: {item.get('research_question')}",
+            f"  Expected finding: {item.get('expected_finding')}",
+            f"  Required data: {', '.join(item.get('required_data') or [])}",
+            f"  Required method: {', '.join(item.get('required_method') or [])}",
+            f"  Validation metric: {item.get('validation_metric')}",
+            f"  Literature support: {', '.join(item.get('supporting_literature_keys') or [])}",
+            "",
+        ])
+    lines.extend(["## Planned Core Tables", ""])
+    for index, item in enumerate(storyboard.get("tables") or [], start=1):
+        lines.append(f"- Table {index}: {item.get('proposed_title')} (`{item.get('table_id')}`)")
+    lines.append("")
+    return lines
+
+
+def _method_plan_markdown(blueprint: dict[str, Any]) -> list[str]:
+    lines = ["## Method Plan Contract", ""]
+    lines.append(
+        "The method plan below is generated inside the research-plan stage and should be consumed by method blueprinting, figure planning, and analysis-code generation."
+    )
+    lines.append("")
+    for task in (blueprint.get("method_plan") or {}).get("method_tasks") or []:
+        lines.extend([
+            f"- {task.get('task_id')} for {task.get('figure_id')}: {task.get('method_family')}",
+            f"  Required data: {', '.join(task.get('required_data') or [])}",
+            f"  Validation metric: {task.get('validation_metric')}",
+            "",
+        ])
+    return lines
+
+
+def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, Any]) -> str:
+    lines = [
+        "# 文献驱动研究方案",
+        "",
+        "## 项目背景",
+        "",
+        f"研究题目：{project_meta.get('title') or project_meta.get('idea')}",
+        "",
+        f"研究想法：{project_meta.get('idea')}",
+        "",
+        f"研究领域：{project_meta.get('field')}",
+        "",
+        f"目标期刊：{project_meta.get('target_journal')}",
+        "",
+        "## 文献综合",
+        "",
+        str((blueprint.get("literature_synthesis") or {}).get("synthesis_summary") or "当前文献综合结果需要在 references 阶段继续补充。"),
+        "",
+        "## 研究问题与预期发现",
+        "",
+    ]
+    for claim in blueprint.get("research_claims") or []:
+        lines.extend([
+            f"- {claim.get('claim_id')}：{claim.get('research_question')}",
+            f"  预期发现：{claim.get('expected_finding')}",
+            "",
+        ])
+    lines.extend(["## 图表故事板", ""])
+    for item in (blueprint.get("figure_storyboard") or {}).get("figures") or []:
+        lines.extend([
+            f"- {item.get('figure_id')}：{item.get('proposed_title')}",
+            f"  研究问题：{item.get('research_question')}",
+            f"  预期发现：{item.get('expected_finding')}",
+            f"  数据需求：{', '.join(item.get('required_data') or [])}",
+            f"  方法需求：{', '.join(item.get('required_method') or [])}",
+            "",
+        ])
+    lines.extend(["## 方法计划", ""])
+    for task in (blueprint.get("method_plan") or {}).get("method_tasks") or []:
+        lines.append(f"- {task.get('task_id')}：围绕 {task.get('figure_id')} 执行 {task.get('method_family')}。")
+    lines.extend([
+        "",
+        "## 文献笔记",
+        "",
+        "[打开完整文献综述索引](../references/literature_summaries/index.html)",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def _write_bilingual_research_plan_html(path: Path, english_markdown: str, chinese_markdown: str) -> None:
+    from .html_utils import markdown_to_html
+
+    english_body = markdown_to_html(english_markdown, title="Research Plan").split("<body>", 1)[1].split("</body>", 1)[0]
+    chinese_body = markdown_to_html(chinese_markdown, title="研究方案").split("<body>", 1)[1].split("</body>", 1)[0]
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Literature-Informed Research Plan</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; max-width: 1080px; margin: 32px auto; line-height: 1.58; color: #202124; }}
+    .toolbar {{ position: sticky; top: 0; background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 12px 0; margin-bottom: 20px; }}
+    button {{ border: 1px solid #d1d5db; background: #f8fafc; padding: 8px 12px; margin-right: 8px; cursor: pointer; }}
+    button.active {{ background: #111827; color: #ffffff; }}
+    h1, h2, h3 {{ color: #111827; }}
+    code {{ background: #f3f4f6; padding: 0.1rem 0.25rem; border-radius: 4px; }}
+    li {{ margin: 0.35rem 0; }}
+    .lang-panel[hidden] {{ display: none; }}
+  </style>
+  <script>
+    function toggleLanguage(lang) {{
+      document.getElementById('lang-en').hidden = lang !== 'en';
+      document.getElementById('lang-cn').hidden = lang !== 'cn';
+      document.getElementById('btn-en').className = lang === 'en' ? 'active' : '';
+      document.getElementById('btn-cn').className = lang === 'cn' ? 'active' : '';
+    }}
+  </script>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="btn-en" class="active" onclick="toggleLanguage('en')">English</button>
+    <button id="btn-cn" onclick="toggleLanguage('cn')">中文</button>
+  </div>
+  <section id="lang-en" class="lang-panel">{english_body}</section>
+  <section id="lang-cn" class="lang-panel" hidden>{chinese_body}</section>
+</body>
+</html>
+"""
+    path.write_text(html, encoding="utf-8")
+
+
 def _build_research_questions(project_meta: dict[str, Any], citation_rows: list[dict[str, str]]) -> list[str]:
     idea = project_meta.get("idea", "the proposed study")
     has_gap = any((row.get("claim") or "") == "current gap" for row in citation_rows)
@@ -351,6 +493,7 @@ def render_research_plan(
     literature_notes: str,
     anchor_papers: list[dict[str, Any]] | None = None,
     discipline_profile: dict[str, Any] | None = None,
+    blueprint: dict[str, Any] | None = None,
 ) -> str:
     grouped = _evidence_by_claim(citation_rows)
     top_items = _top_items(literature_items)
@@ -425,9 +568,16 @@ def render_research_plan(
         "",
         f"The research plan must reserve at least {output_policy['minimum_figures']} main figures and at least {output_policy['minimum_tables']} core table before the downstream Methods and Results stages. The current discipline policy is `{output_policy['discipline']}` and targets {output_policy['target_figures']} main figures.",
         "",
-        *_expected_figure_lines(output_policy),
-        *_expected_table_lines(output_policy),
         "",
+    ])
+    if blueprint:
+        lines.extend(_storyboard_markdown(blueprint))
+        lines.extend(_method_plan_markdown(blueprint))
+    else:
+        lines.extend(_expected_figure_lines(output_policy))
+        lines.extend(_expected_table_lines(output_policy))
+        lines.append("")
+    lines.extend([
         "## Expected Contribution",
         "",
         "The expected contribution is a traceable research design that connects the user-provided idea to explicit literature evidence, reproducible data construction, and a validation strategy that can be checked before manuscript writing.",
@@ -484,6 +634,19 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
         )
 
     discipline_profile = infer_discipline_profile(state.path)
+    try:
+        blueprint = build_research_blueprint(
+            project_meta=state.metadata,
+            literature_items=literature_items,
+            citation_rows=citation_rows,
+            discipline_profile=discipline_profile,
+            anchor_papers=anchor_papers,
+        )
+    except ResearchBlueprintQualityError as exc:
+        raise ResearchPlanQualityError(str(exc)) from exc
+    _write_json(research_plan_dir / "research_blueprint.json", blueprint)
+    _write_json(research_plan_dir / "figure_storyboard.json", blueprint["figure_storyboard"])
+    _write_json(research_plan_dir / "method_plan.json", blueprint["method_plan"])
     plan_text = render_research_plan(
         state.metadata,
         literature_items,
@@ -491,11 +654,14 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
         literature_notes,
         anchor_papers,
         discipline_profile,
+        blueprint,
     )
     questions_text = render_research_questions(state.metadata, citation_rows)
+    plan_text_cn = _render_research_plan_cn(state.metadata, blueprint)
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
+    (research_plan_dir / "research_plan.zh-CN.md").write_text(plan_text_cn, encoding="utf-8")
     (research_plan_dir / "research_questions.md").write_text(questions_text, encoding="utf-8")
-    write_html_report(research_plan_dir / "research_plan.html", plan_text, title="Literature-Informed Research Plan")
+    _write_bilingual_research_plan_html(research_plan_dir / "research_plan.html", plan_text, plan_text_cn)
     write_html_report(research_plan_dir / "research_questions.html", questions_text, title="Research Questions")
 
     update_stage_status(state.path, "research_plan", "draft")
