@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -108,6 +109,36 @@ class ResearchPlanTests(unittest.TestCase):
             project_json = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project_json["stages"]["research_plan"]["status"], "draft")
             self.assertEqual(project_json["stages"]["introduction"]["status"], "stale")
+
+    def test_research_plan_declares_minimum_main_figures_and_literature_index_link(self) -> None:
+        from draftpaper_cli.research_plan import generate_research_plan
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Time-aware Transformer classification of EP WXT flaring sources using long-term light curves",
+                field="high-energy time-domain astronomy; machine learning",
+                target_journal="APJS",
+            )
+            write_reference_outputs(project.path, SAMPLE_ITEMS, query="EP WXT flaring source classification")
+            write_generic_profile(project.path, tmp)
+            literature_index = project.path / "references" / "literature_summaries" / "index.html"
+            literature_index.parent.mkdir(parents=True, exist_ok=True)
+            literature_index.write_text("<html><body>literature summaries</body></html>", encoding="utf-8")
+
+            generate_research_plan(project.path)
+
+            plan = (project.path / "research_plan" / "research_plan.md").read_text(encoding="utf-8")
+            figure_count = len(re.findall(r"^- Fig\.\s+\d+:", plan, flags=re.MULTILINE))
+            table_count = len(re.findall(r"^- Table\s+\d+:", plan, flags=re.MULTILINE))
+            self.assertGreaterEqual(figure_count, 5)
+            self.assertGreaterEqual(table_count, 1)
+            self.assertIn("[Open the full literature summaries](../references/literature_summaries/index.html)", plan)
+            snapshot = plan.split("## Literature Notes Snapshot", 1)[1]
+            self.assertNotIn("# Literature Review Notes", snapshot)
+
+            html = (project.path / "research_plan" / "research_plan.html").read_text(encoding="utf-8")
+            self.assertIn("../references/literature_summaries/index.html", html)
 
     def test_cli_generate_plan_writes_research_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

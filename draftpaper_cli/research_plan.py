@@ -10,6 +10,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .discipline import infer_discipline_profile
+from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
 from .project_scaffold import _write_json
@@ -35,6 +37,11 @@ RESEARCH_PLAN_OUTPUTS = [
     "research_plan/novelty_overlap_report.md",
     "research_plan/novelty_overlap_report.html",
 ]
+
+MINIMUM_RESEARCH_PLAN_FIGURES = 5
+TARGET_RESEARCH_PLAN_FIGURES = 6
+MINIMUM_RESEARCH_PLAN_TABLES = 1
+TARGET_RESEARCH_PLAN_TABLES = 2
 
 
 class MissingReferencesError(FileNotFoundError):
@@ -277,6 +284,46 @@ def _infer_method_route(project_meta: dict[str, Any], evidence_rows: list[dict[s
     return "Define baseline models first, then introduce the proposed method only where it directly addresses the literature-supported gap."
 
 
+def _research_plan_output_policy(discipline_profile: dict[str, Any] | None = None) -> dict[str, int | str]:
+    module = get_discipline_module(discipline_profile or {})
+    module_spec = module.spec.as_dict()
+    minimum_figures = max(MINIMUM_RESEARCH_PLAN_FIGURES, int(module_spec.get("minimum_main_figures") or 0))
+    target_figures = max(TARGET_RESEARCH_PLAN_FIGURES, minimum_figures, int(module_spec.get("target_main_figures") or 0))
+    return {
+        "discipline": str(module_spec.get("module_id") or "default"),
+        "minimum_figures": minimum_figures,
+        "target_figures": target_figures,
+        "minimum_tables": MINIMUM_RESEARCH_PLAN_TABLES,
+        "target_tables": TARGET_RESEARCH_PLAN_TABLES,
+    }
+
+
+def _expected_figure_lines(policy: dict[str, int | str]) -> list[str]:
+    specs = [
+        "Study workflow from data acquisition, data construction, quality control, method execution, validation, and interpretation.",
+        "Data source, sample coverage, missingness, and preprocessing overview, including the evidence needed to judge whether the planned study is feasible.",
+        "Proposed model or analytical framework, including the components that directly address the literature-supported research gap.",
+        "Baseline comparison and ablation or sensitivity design, so the proposed method can be separated from simpler alternatives.",
+        "Validation and uncertainty assessment, including external, temporal, spatial, class-stratified, or reviewer-relevant checks when the discipline requires them.",
+        "Main result synthesis figure that connects the strongest empirical patterns to the manuscript claim boundary and highlights failure modes or limitations.",
+    ]
+    target = int(policy.get("target_figures") or TARGET_RESEARCH_PLAN_FIGURES)
+    while len(specs) < target:
+        specs.append("Additional discipline-specific diagnostic or supplementary main figure required by the target journal, reviewer risks, or data structure.")
+    return [f"- Fig. {index}: {text}" for index, text in enumerate(specs[:target], start=1)]
+
+
+def _expected_table_lines(policy: dict[str, int | str]) -> list[str]:
+    specs = [
+        "Dataset summary, data provenance, preprocessing choices, quality-control criteria, and validation split design.",
+        "Baseline comparison, ablation, sensitivity, or robustness metrics that can be traced to the planned figures and method code.",
+    ]
+    target = int(policy.get("target_tables") or TARGET_RESEARCH_PLAN_TABLES)
+    while len(specs) < target:
+        specs.append("Additional discipline-specific table required by the target journal or reviewer-risk profile.")
+    return [f"- Table {index}: {text}" for index, text in enumerate(specs[:target], start=1)]
+
+
 def _build_research_questions(project_meta: dict[str, Any], citation_rows: list[dict[str, str]]) -> list[str]:
     idea = project_meta.get("idea", "the proposed study")
     has_gap = any((row.get("claim") or "") == "current gap" for row in citation_rows)
@@ -303,11 +350,13 @@ def render_research_plan(
     citation_rows: list[dict[str, str]],
     literature_notes: str,
     anchor_papers: list[dict[str, Any]] | None = None,
+    discipline_profile: dict[str, Any] | None = None,
 ) -> str:
     grouped = _evidence_by_claim(citation_rows)
     top_items = _top_items(literature_items)
     questions = _build_research_questions(project_meta, citation_rows)
     evidence_sentences = [_format_evidence_sentence(row) for row in citation_rows[:8]]
+    output_policy = _research_plan_output_policy(discipline_profile)
 
     lines = [
         "# Literature-Informed Research Plan",
@@ -374,10 +423,10 @@ def render_research_plan(
         "",
         "## Expected Figures and Tables",
         "",
-        "- Fig. 1: Study workflow from data construction to validation and interpretation.",
-        "- Fig. 2: Proposed model or analytical framework, including the parts that address the literature-supported gap.",
-        "- Table 1: Dataset summary, preprocessing choices, and validation split design.",
-        "- Table 2: Baseline comparison and ablation results.",
+        f"The research plan must reserve at least {output_policy['minimum_figures']} main figures and at least {output_policy['minimum_tables']} core table before the downstream Methods and Results stages. The current discipline policy is `{output_policy['discipline']}` and targets {output_policy['target_figures']} main figures.",
+        "",
+        *_expected_figure_lines(output_policy),
+        *_expected_table_lines(output_policy),
         "",
         "## Expected Contribution",
         "",
@@ -394,7 +443,15 @@ def render_research_plan(
     ])
     for sentence in evidence_sentences:
         lines.append(f"- {sentence}")
-    lines.extend(["", "## Literature Notes Snapshot", "", _compact(literature_notes, limit=1200), ""])
+    lines.extend([
+        "",
+        "## Literature Notes Snapshot",
+        "",
+        "The full literature notes are maintained as a separate HTML index so the research plan remains readable and does not re-render nested Markdown headings from the references stage.",
+        "",
+        "[Open the full literature summaries](../references/literature_summaries/index.html)",
+        "",
+    ])
     return "\n".join(lines)
 
 
@@ -426,7 +483,15 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
             research_plan_dir / "novelty_overlap_report.md",
         )
 
-    plan_text = render_research_plan(state.metadata, literature_items, citation_rows, literature_notes, anchor_papers)
+    discipline_profile = infer_discipline_profile(state.path)
+    plan_text = render_research_plan(
+        state.metadata,
+        literature_items,
+        citation_rows,
+        literature_notes,
+        anchor_papers,
+        discipline_profile,
+    )
     questions_text = render_research_questions(state.metadata, citation_rows)
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
     (research_plan_dir / "research_questions.md").write_text(questions_text, encoding="utf-8")
