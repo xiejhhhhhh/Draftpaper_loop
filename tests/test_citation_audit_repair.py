@@ -173,6 +173,9 @@ class CitationAuditRepairTests(unittest.TestCase):
             plan = generate_citation_repair_plan(project_path)
             self.assertEqual(plan["status"], "repair_plan_written")
             self.assertEqual(plan["issue_count"], 1)
+            self.assertEqual(plan["issues"][0]["action"], "rewrite_to_supported_claim")
+            self.assertFalse(plan["issues"][0]["deletion_allowed"])
+            self.assertNotIn("remove", plan["issues"][0]["action"])
             self.assertTrue((project_path / "citation_audit" / "citation_repair_plan.html").exists())
 
             applied = apply_citation_repair(project_path)
@@ -183,6 +186,23 @@ class CitationAuditRepairTests(unittest.TestCase):
             self.assertEqual(final_audit["status"], "passed")
             self.assertEqual(final_audit["summary"]["unsupported"], 0)
             self.assertTrue((project_path / "citation_audit" / "final_citation_audit_report.html").exists())
+
+    def test_repair_plan_never_deletes_retained_references_or_citation_bearing_claims(self) -> None:
+        from draftpaper_cli.citation_audit import audit_citations
+        from draftpaper_cli.citation_repair import generate_citation_repair_plan
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = _write_minimal_citation_project(tmp)
+
+            audit_citations(project_path)
+            plan = generate_citation_repair_plan(project_path)
+
+            self.assertTrue(plan["issues"])
+            for issue in plan["issues"]:
+                self.assertFalse(issue.get("deletion_allowed"), issue)
+                self.assertNotRegex(str(issue.get("action") or ""), r"remove|delete")
+                self.assertNotRegex(str(issue.get("repair_instruction") or "").lower(), r"remove|delete|删")
+            self.assertEqual(plan["citation_retention_policy"]["planned_reference_removal_count"], 0)
 
     def test_cli_commands_run_citation_repair_loop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -243,11 +263,58 @@ class CitationAuditRepairTests(unittest.TestCase):
             report = audit_citations(project_path)
             coverage = report["reference_coverage"]
 
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["summary"]["unique_cited_reference_count"], 3)
+            self.assertEqual(report["summary"]["summarized_reference_count"], 4)
+            self.assertEqual(report["summary"]["summarized_but_uncited_count"], 1)
             self.assertEqual(coverage["total_summarized_references"], 4)
             self.assertIn("Unused2025Relevant", coverage["summarized_but_uncited"])
             self.assertIn("OffTopic2024Policy", coverage["topic_suspect_references"])
             self.assertTrue((project_path / "citation_audit" / "reference_coverage_report.json").exists())
             self.assertTrue((project_path / "citation_audit" / "reference_coverage_report.html").exists())
+            html = (project_path / "citation_audit" / "citation_audit_report.html").read_text(encoding="utf-8")
+            self.assertIn("Reference Coverage", html)
+            self.assertIn("unique cited references", html)
+            self.assertIn("summarized but uncited", html)
+
+    def test_writers_cover_required_reference_usage_plan_entries(self) -> None:
+        from draftpaper_cli.discussion import write_discussion
+        from draftpaper_cli.introduction import write_introduction
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = _write_citation_preservation_project(tmp)
+            (project_path / "research_plan" / "research_plan.md").write_text("# Research Plan\n\nUse all retained references.\n", encoding="utf-8")
+            (project_path / "references" / "literature_review_notes.md").write_text("# Notes\n\nReference notes.\n", encoding="utf-8")
+            (project_path / "results" / "results.tex").write_text("\\section{Results}\nThe local results are preliminary.\n", encoding="utf-8")
+
+            write_introduction(project_path)
+            write_discussion(project_path)
+
+            intro = (project_path / "introduction" / "introduction.tex").read_text(encoding="utf-8")
+            discussion = (project_path / "discussion" / "discussion.tex").read_text(encoding="utf-8")
+            combined = intro + "\n" + discussion
+
+            self.assertIn("\\citep{Yuan2022The13}", combined)
+            self.assertIn("\\citep{OffTopic2024Policy}", combined)
+            self.assertTrue((project_path / "references" / "reference_usage_plan.json").exists())
+
+    def test_audit_attaches_standalone_citation_sentence_to_previous_evidence_sentence(self) -> None:
+        from draftpaper_cli.citation_audit import audit_citations
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = _write_minimal_citation_project(tmp)
+            (project_path / "introduction" / "introduction.tex").write_text(
+                "\\section{Introduction}\n"
+                "The paper reports external validation of compact models. \\citep{Smith2024Model}.\n",
+                encoding="utf-8",
+            )
+            (project_path / "discussion" / "discussion.tex").write_text("\\section{Discussion}\nNo citations here.\n", encoding="utf-8")
+
+            report = audit_citations(project_path)
+            usage = next(usage for usage in report["usages"] if usage["citation_key"] == "Smith2024Model")
+
+            self.assertEqual(usage["verdict"], "supported")
+            self.assertIn("external validation", usage["claim"])
 
 
 if __name__ == "__main__":

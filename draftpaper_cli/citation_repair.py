@@ -64,14 +64,14 @@ def _repair_action_for_usage(usage: dict[str, Any]) -> tuple[str, str, bool]:
         )
     if support_status == "unverifiable" or verdict == "unverifiable":
         return (
-            "resolve_reference_metadata_or_replace",
-            "Resolve BibTeX metadata and citation evidence first; replace the source only if it cannot be verified.",
+            "resolve_reference_metadata_or_evidence",
+            "Resolve BibTeX metadata or add citation evidence so the retained reference can be checked before manuscript acceptance.",
             False,
         )
     return (
-        "replace_or_remove_irrelevant_citation",
-        "First look for a better supporting source or rewrite the claim; remove the claim and citation only as the last resort.",
-        True,
+        "rewrite_to_supported_claim",
+        "Rewrite the local claim so it matches the retained reference evidence; keep the reference and citation in the manuscript.",
+        False,
     )
 
 
@@ -149,7 +149,31 @@ def generate_citation_repair_plan(project: str | Path) -> dict[str, Any]:
             "repair_instruction": instruction,
             "reasoning": usage.get("reasoning"),
         })
-    removal_count = sum(1 for issue in issues if bool(issue.get("deletion_allowed")))
+    coverage = audit.get("reference_coverage") or {}
+    for key in coverage.get("summarized_but_uncited") or []:
+        issues.append({
+            "issue_id": f"citation_repair_{len(issues) + 1:03d}",
+            "usage_id": "",
+            "citation_key": key,
+            "section": "references",
+            "file": "references/reference_usage_plan.json",
+            "verdict": "coverage_gap",
+            "citation_intent": "required_reference_coverage",
+            "support_status": "summarized_but_uncited",
+            "topic_relevance_score": 0,
+            "claim_alignment_score": 0,
+            "blocking": True,
+            "match_score": 0,
+            "original_passage": "",
+            "original_claim": "",
+            "supporting_evidence": "",
+            "action": "rerun_writers_for_reference_coverage",
+            "suggested_claim": "",
+            "deletion_allowed": False,
+            "repair_instruction": "Regenerate or revise Introduction, Data, Methods, or Discussion from references/reference_usage_plan.json so this retained summary reference is cited at least once outside Results.",
+            "reasoning": "The reference is retained in literature summaries but is absent from the manuscript citation set.",
+        })
+    removal_count = 0
     total_usages = int((audit.get("summary") or {}).get("total_usages") or 0)
     plan = {
         "status": "repair_plan_written",
@@ -159,9 +183,9 @@ def generate_citation_repair_plan(project: str | Path) -> dict[str, Any]:
         "issue_count": len(issues),
         "citation_retention_policy": {
             "initial_total_usages": total_usages,
-            "planned_last_resort_removal_count": removal_count,
+            "planned_reference_removal_count": removal_count,
             "planned_retention_ratio": round((total_usages - removal_count) / total_usages, 3) if total_usages else 1.0,
-            "policy": "Prefer claim narrowing, source replacement, or evidence completion before deleting citation-bearing text.",
+            "policy": "Citation audit preserves retained references. Repairs narrow or rewrite manuscript claims, add evidence metadata, or rerun writers for coverage; they do not delete retained references or citation-bearing claims.",
         },
         "issues": issues,
     }
@@ -179,7 +203,7 @@ def _replacement_for_issue(issue: dict[str, Any]) -> str:
         citation_key = str(issue.get("citation_key") or "").strip()
         if suggested and citation_key:
             return f"{suggested.rstrip('.。 ')} \\citep{{{citation_key}}}."
-    if action == "resolve_reference_metadata_or_replace":
+    if action == "resolve_reference_metadata_or_evidence":
         return str(issue.get("original_passage") or "")
     return ""
 

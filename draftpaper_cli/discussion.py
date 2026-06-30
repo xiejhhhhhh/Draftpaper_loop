@@ -12,6 +12,7 @@ from typing import Any
 
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 
 
 DISCUSSION_INPUTS = [
@@ -115,6 +116,25 @@ def _evidence(row: dict[str, str]) -> str:
     return _compact(row.get("evidence_summary", ""))
 
 
+def _reference_coverage_paragraphs(project_path: Path, section: str, existing_text: str) -> list[str]:
+    entries = missing_entries_for_section(project_path, section, existing_text)
+    if not entries:
+        return []
+    sentences = []
+    for entry in entries:
+        evidence = _compact(str(entry.get("evidence_summary") or entry.get("title") or "This retained reference provides relevant context."))
+        key = str(entry.get("citation_key") or "")
+        if key:
+            sentences.append(f"{evidence} \\citep{{{key}}}.")
+    paragraphs = []
+    for index in range(0, len(sentences), 4):
+        paragraphs.append(
+            "Additional retained references help delimit how the present findings should be compared with prior work and where the current interpretation should remain cautious. "
+            + " ".join(sentences[index:index + 4])
+        )
+    return paragraphs
+
+
 def _manuscript_context_text(text: str) -> str:
     cleaned = str(text or "")
     replacements = {
@@ -170,6 +190,7 @@ def render_discussion_tex(
     introduction_text: str,
     results_text: str,
     citation_rows: list[dict[str, str]],
+    project_path: Path | None = None,
 ) -> str:
     idea = project_meta.get("idea") or project_meta.get("title") or "the proposed study"
     field = project_meta.get("field") or "the target field"
@@ -186,7 +207,7 @@ def render_discussion_tex(
         "\\section{Discussion}",
         (
             f"The findings should be interpreted as evidence for a reproducible empirical design for {idea} rather than as an isolated modelling result. "
-            f"In {field}, the literature basis identified a concrete gap: {_evidence(gap)} {_cite(gap)} The local results, especially {result_signal}, "
+            f"In {field}, the literature basis identified a concrete gap: {_evidence(gap)} {_cite(gap)}. The local results, especially {result_signal}, "
             f"therefore matter because they connect the planned research question to evidence generated from the current analysis rather than to unsupported narrative claims."
         ),
         (
@@ -196,7 +217,7 @@ def render_discussion_tex(
         ),
         (
             f"Compared with existing work, the current draft should emphasize where the local findings agree with or depart from the cited evidence. "
-            f"Prior data-oriented work indicates that {_evidence(data).lower()} {_cite(data)} Method-oriented work further suggests that {_evidence(method).lower()} {_cite(method)} "
+            f"Prior data-oriented work indicates that {_evidence(data).lower()} {_cite(data)}. Method-oriented work further suggests that {_evidence(method).lower()} {_cite(method)}. "
             f"The present results should therefore be discussed through data construction, validation design, and method behavior rather than through a broad claim of novelty."
         ),
         (
@@ -206,11 +227,14 @@ def render_discussion_tex(
             f"or citation evidence changes, because those sources define the defensible boundary of the paper."
         ),
         (
-            f"Overall, the study is best presented as a literature-informed and locally reproducible answer to the gap identified above. Background evidence shows why the topic is relevant "
-            f"{_cite(background)}, while the result figures and tables determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
+            f"Overall, the study is best presented as a literature-informed and locally reproducible answer to the gap identified above. Background evidence shows why the topic is relevant. "
+            f"{_evidence(background)} {_cite(background)}. The result figures and tables determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
             f"paper's evidence trail and avoids adding claims that are not supported by either the retrieved literature or the generated empirical outputs."
         ),
     ]
+    if project_path is not None:
+        ensure_reference_usage_plan(project_path)
+        paragraphs.extend(_reference_coverage_paragraphs(project_path, "discussion", "\n\n".join(paragraphs)))
     return "\n\n".join(_paragraph(paragraph) if not paragraph.startswith("\\section") else paragraph for paragraph in paragraphs) + "\n"
 
 
@@ -230,7 +254,7 @@ def write_discussion(project: str | Path) -> dict[str, Any]:
     discussion_dir.mkdir(parents=True, exist_ok=True)
     output_path = discussion_dir / "discussion.tex"
     output_path.write_text(
-        render_discussion_tex(state.metadata, plan_text, introduction_text, results_text, citation_rows),
+        render_discussion_tex(state.metadata, plan_text, introduction_text, results_text, citation_rows, state.path),
         encoding="utf-8",
     )
 

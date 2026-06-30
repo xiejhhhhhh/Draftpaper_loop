@@ -12,6 +12,7 @@ from typing import Any
 
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 
 
 INTRODUCTION_INPUTS = [
@@ -111,7 +112,27 @@ def _cite(row: dict[str, str]) -> str:
     return f"\\citep{{{row.get('citation_key')}}}"
 
 
-def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citation_rows: list[dict[str, str]]) -> str:
+def _reference_coverage_paragraphs(project_path: Path, section: str, existing_text: str) -> list[str]:
+    paragraphs: list[str] = []
+    entries = missing_entries_for_section(project_path, section, existing_text)
+    if not entries:
+        return paragraphs
+    sentences = []
+    for entry in entries:
+        evidence = _compact(str(entry.get("evidence_summary") or entry.get("title") or "This retained reference provides relevant context."))
+        key = str(entry.get("citation_key") or "")
+        if key:
+            sentences.append(f"{evidence} \\citep{{{key}}}.")
+    for index in range(0, len(sentences), 4):
+        chunk = sentences[index:index + 4]
+        paragraphs.append(
+            "The retained literature summaries also define additional background that should remain visible in the manuscript. "
+            + " ".join(chunk)
+        )
+    return paragraphs
+
+
+def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citation_rows: list[dict[str, str]], project_path: Path | None = None) -> str:
     idea = project_meta.get("idea") or project_meta.get("title") or "the proposed study"
     field = project_meta.get("field") or "the target field"
     background = _pick(citation_rows, "background evidence", 0)
@@ -122,19 +143,19 @@ def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citat
     paragraphs = [
         (
             f"{idea} is positioned within {field}, where recent work has increasingly emphasized the need to connect "
-            f"domain-specific data construction with reproducible analytical design. {_evidence(background)} {_cite(background)} "
+            f"domain-specific data construction with reproducible analytical design. {_evidence(background)} {_cite(background)}. "
             f"This background motivates a study design that treats the research question, data provenance, and validation strategy "
             f"as connected parts of the same manuscript workflow."
         ),
         (
             f"The current literature also indicates that the relevant empirical setting depends on carefully prepared data rather "
-            f"than on a generic modelling pipeline. {_evidence(data)} {_cite(data)} Methodological work provides a second line of "
-            f"support, because {_evidence(method).lower()} {_cite(method)} Together, these studies suggest that the Introduction "
+            f"than on a generic modelling pipeline. {_evidence(data)} {_cite(data)}. Methodological work provides a second line of "
+            f"support, because {_evidence(method).lower()} {_cite(method)}. Together, these studies suggest that the Introduction "
             f"should frame the topic through both data availability and model evaluation rather than through a broad technical claim alone."
         ),
         (
             f"The main research gap is therefore defined through traceable citation evidence instead of free-form speculation. "
-            f"{_evidence(gap)} {_cite(gap)} In practical terms, this means the proposed paper should focus on the part of the problem "
+            f"{_evidence(gap)} {_cite(gap)}. In practical terms, this means the proposed paper should focus on the part of the problem "
             f"that can be tested with available data, compared with defensible baselines, and evaluated under a validation protocol "
             f"that is explicit enough to support later Methods and Results sections."
         ),
@@ -146,6 +167,9 @@ def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citat
             f"replacing it with unsupported narrative."
         ),
     ]
+    if project_path is not None:
+        ensure_reference_usage_plan(project_path)
+        paragraphs.extend(_reference_coverage_paragraphs(project_path, "introduction", "\n\n".join(paragraphs)))
     return "\\section{Introduction}\n" + "\n\n".join(_paragraph(paragraph) for paragraph in paragraphs) + "\n"
 
 
@@ -164,7 +188,7 @@ def write_introduction(project: str | Path) -> dict[str, Any]:
     introduction_dir = state.path / "introduction"
     introduction_dir.mkdir(parents=True, exist_ok=True)
     output_path = introduction_dir / "introduction.tex"
-    output_path.write_text(render_introduction_tex(state.metadata, plan_text, citation_rows), encoding="utf-8")
+    output_path.write_text(render_introduction_tex(state.metadata, plan_text, citation_rows, state.path), encoding="utf-8")
 
     update_stage_status(state.path, "introduction", "draft")
     _set_introduction_manifest(state.path)

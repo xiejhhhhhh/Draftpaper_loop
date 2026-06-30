@@ -14,6 +14,7 @@ from .html_utils import write_html_report
 from .observations import load_observations
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 
 
 DATA_INVENTORY_OUTPUT = "data/data_inventory.json"
@@ -462,12 +463,30 @@ def render_data_tex(context: dict[str, Any]) -> str:
             "The data description should therefore be read as a manuscript-facing synthesis of the accessible evidence, "
             "not as a listing of local artifacts."
         )
-    return (
+    paragraphs = [
         "\\section{Data}\n"
-        f"{_safe_latex_text(source)} {_safe_latex_text(content)} The manuscript should describe these materials by their scientific role, source context, measured content, temporal or spatial coverage when available, and relationship to the stated research question rather than by local storage names.\n\n"
-        f"{_safe_latex_text(processing)} This construction step is important because the subsequent methods section can only make claims that are supported by analysis-ready variables and documented preprocessing decisions. When raw access is incomplete or the working material is a processed export, the text should state that boundary directly while still explaining what the processed records represent scientifically.\n\n"
-        f"{_safe_latex_text(observation_text)} {_safe_latex_text(boundary)} These constraints define the scope of the empirical claims: the data section should make clear what evidence is available, how it was made usable, and which conclusions would require additional observations, external validation data, or more complete provenance before they could be stated more strongly.\n"
-    )
+        f"{_safe_latex_text(source)} {_safe_latex_text(content)} The manuscript should describe these materials by their scientific role, source context, measured content, temporal or spatial coverage when available, and relationship to the stated research question rather than by local storage names.",
+        f"{_safe_latex_text(processing)} This construction step is important because the subsequent methods section can only make claims that are supported by analysis-ready variables and documented preprocessing decisions. When raw access is incomplete or the working material is a processed export, the text should state that boundary directly while still explaining what the processed records represent scientifically.",
+        f"{_safe_latex_text(observation_text)} {_safe_latex_text(boundary)} These constraints define the scope of the empirical claims: the data section should make clear what evidence is available, how it was made usable, and which conclusions would require additional observations, external validation data, or more complete provenance before they could be stated more strongly.",
+    ]
+    project_path = context.get("project_path")
+    if project_path:
+        project_dir = Path(str(project_path))
+        ensure_reference_usage_plan(project_dir)
+        entries = missing_entries_for_section(project_dir, "data", "\n\n".join(paragraphs))
+        if entries:
+            sentences = []
+            for entry in entries:
+                key = str(entry.get("citation_key") or "")
+                evidence = _strip_forbidden_paths(_clean_sentence(entry.get("evidence_summary") or entry.get("title")))
+                if key and evidence:
+                    sentences.append(f"{_safe_latex_text(evidence)} \\citep{{{key}}}.")
+            for index in range(0, len(sentences), 4):
+                paragraphs.append(
+                    "The retained data-oriented references further constrain the description of the source material and its empirical boundary. "
+                    + " ".join(sentences[index:index + 4])
+                )
+    return "\n\n".join(paragraphs) + "\n"
 
 
 def write_data(project: str | Path) -> dict[str, Any]:

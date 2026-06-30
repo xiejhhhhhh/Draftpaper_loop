@@ -168,8 +168,11 @@ def _sentence_spans(text: str) -> list[tuple[int, int, str]]:
 
 
 def _best_passage_for_citation(text: str, match_start: int) -> str:
-    for start, end, sentence in _sentence_spans(text):
+    spans = _sentence_spans(text)
+    for index, (start, end, sentence) in enumerate(spans):
         if start <= match_start <= end:
+            if not _tokens(_clean_latex(sentence)) and index > 0:
+                return spans[index - 1][2] + " " + sentence
             return sentence
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return lines[0] if lines else ""
@@ -242,7 +245,10 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
     usages: list[CitationUsage] = []
     seen: set[tuple[str, str, str]] = set()
     for section, relatives in SECTION_FILES.items():
+        canonical_exists = any((project_path / relative).exists() for relative in relatives if not relative.startswith("latex/sections/"))
         for relative in relatives:
+            if relative.startswith("latex/sections/") and canonical_exists:
+                continue
             path = project_path / relative
             if not path.exists():
                 continue
@@ -383,8 +389,12 @@ def _reference_coverage(project_path: Path, usages: list[CitationUsage], evidenc
     cited = {usage.citation_key for usage in usages}
     suspect = _topic_suspect_keys(project_path, summarized, item_keys, evidence, usages)
     coverage = {
+        "coverage_status": "passed" if not (summarized - cited) else "failed",
         "total_summarized_references": len(summarized),
         "total_cited_references": len(cited),
+        "unique_cited_reference_count": len(cited),
+        "summarized_reference_count": len(summarized),
+        "summarized_but_uncited_count": len(summarized - cited),
         "cited_summarized_references": sorted(summarized & cited),
         "summarized_but_uncited": sorted(summarized - cited),
         "cited_but_not_summarized": sorted(cited - summarized),
@@ -404,10 +414,11 @@ def _render_coverage_html(coverage: dict[str, Any]) -> str:
 <head><meta charset="utf-8"><title>Reference Coverage Report</title></head>
 <body>
   <h1>Reference Coverage Report</h1>
+  <p>Status: {escape(str(coverage.get('coverage_status') or 'unknown'))}</p>
   <p>Total summarized references: {coverage.get('total_summarized_references', 0)}</p>
   <p>Total cited references: {coverage.get('total_cited_references', 0)}</p>
   <p>Coverage ratio: {coverage.get('coverage_ratio', 1.0)}</p>
-  <h2>Summarized But Uncited</h2><ul>{list_items(coverage.get('summarized_but_uncited') or [])}</ul>
+  <h2>summarized but uncited</h2><ul>{list_items(coverage.get('summarized_but_uncited') or [])}</ul>
   <h2>Topic Suspect References</h2><ul>{list_items(coverage.get('topic_suspect_references') or [])}</ul>
   <h2>Review Required</h2><ul>{list_items(coverage.get('review_required') or [])}</ul>
 </body>
@@ -428,6 +439,7 @@ def _next_iteration(audit_dir: Path) -> int:
 
 def _render_html(report: dict[str, Any], *, title: str) -> str:
     summary = report.get("summary") or {}
+    coverage = report.get("reference_coverage") or {}
     rows = []
     for usage in report.get("usages") or []:
         verdict = str(usage.get("verdict") or "unverifiable")
@@ -492,6 +504,15 @@ def _render_html(report: dict[str, Any], *, title: str) -> str:
   </section>
   <h2>Claim-level Citation Audit</h2>
   {''.join(rows) if rows else '<p>No citation usages were found.</p>'}
+  <h2>Reference Coverage</h2>
+  <p>Status: {escape(str(coverage.get('coverage_status') or 'unknown'))}. The audit found {coverage.get('unique_cited_reference_count', 0)} unique cited references from {coverage.get('summarized_reference_count', 0)} retained literature summaries.</p>
+  <p>summarized but uncited references: {coverage.get('summarized_but_uncited_count', 0)}. Coverage ratio: {coverage.get('coverage_ratio', 1.0)}.</p>
+  <h3>Cited summarized references</h3>
+  <ul>{''.join(f'<li>{escape(str(item))}</li>' for item in coverage.get('cited_summarized_references') or []) or '<li>None</li>'}</ul>
+  <h3>summarized but uncited</h3>
+  <ul>{''.join(f'<li>{escape(str(item))}</li>' for item in coverage.get('summarized_but_uncited') or []) or '<li>None</li>'}</ul>
+  <h3>Topic suspect references</h3>
+  <ul>{''.join(f'<li>{escape(str(item))}</li>' for item in coverage.get('topic_suspect_references') or []) or '<li>None</li>'}</ul>
 </body>
 </html>
 """
@@ -509,7 +530,11 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
     usages = _collect_usages(state.path, bib, evidence)
     summary = _summary(usages)
     coverage = _reference_coverage(state.path, usages, evidence)
-    status = "passed" if summary["blocking_issue_count"] == 0 else "failed"
+    summary["unique_cited_reference_count"] = coverage.get("unique_cited_reference_count", 0)
+    summary["summarized_reference_count"] = coverage.get("summarized_reference_count", 0)
+    summary["summarized_but_uncited_count"] = coverage.get("summarized_but_uncited_count", 0)
+    summary["reference_coverage_status"] = coverage.get("coverage_status", "unknown")
+    status = "passed" if summary["blocking_issue_count"] == 0 and coverage.get("coverage_status") == "passed" else "failed"
     report = {
         "status": status,
         "generated_at": utc_now(),
@@ -522,6 +547,7 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
             "orphan_in_list": 0,
             "minimum_average_match_score": 0.65,
             "blocking_issue_count": 0,
+            "summarized_but_uncited": 0,
         },
         "summary": summary,
         "reference_coverage": coverage,

@@ -203,7 +203,7 @@ python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mi
 
 生成报告会记录仓库元数据、许可证策略、可复现性信号、工作流信号、文件树角色、候选通用能力和学科基座建议。该流程不会 clone 仓库、不会复制源码目录、不会直接安装第三方代码；后续如果要沉淀为 Draftpaper-loop 插件，仍然需要经过人工/Codex 审阅、隐私检查、许可证检查、fixture 测试和 overlap 检查。
 
-`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop` 新增一个独立的引用核查与修复 loop，位于 integrity gate 之后、final quality check 之前。该 loop 会把论文正文中的每一次引用与 BibTeX 元数据和 `references/citation_evidence.csv` 进行 claim-level 对比，检查参考文献来源是否真实存在、是否支持当前论断，或至少在语义上与当前论断相近。中间迭代审查报告会保存到 `citation_audit/iterations/`，只有严格通过后才会生成 `citation_audit/final_citation_audit_report.html`。如果引用审查失败，`status` 和 `run-pipeline` 会推荐进入 citation repair loop，而不是继续盲目执行 `quality-check`；同时 `quality-check` 也会要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，避免用户直接跳过来源核查。
+`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop` 新增一个独立的引用核查与修复 loop，位于 integrity gate 之后、final quality check 之前。该 loop 会把论文正文中的每一次引用与 BibTeX 元数据和 `references/citation_evidence.csv` 进行 claim-level 对比，检查参考文献来源是否真实存在、是否支持当前论断，或至少在语义上与当前论断相近。它同时强制执行 reference coverage：所有保留在 `references/literature_summaries/` 中的文献都会被写入 `references/reference_usage_plan.json`，并且必须在 Results 之外的正文中至少引用一次。引用核查不是参考文献质量过滤器；参考文献质量应该在文献检索和人工确认阶段完成。进入引用核查后，系统会保留已确认文献，并通过收窄、改写或补充正文 claim，让每一处引用更加真实、贴切、合理，而不是在核查阶段删减参考文献。最终引用核查报告会合并 claim-level audit 和 `citation_audit/reference_coverage_report.html` 的内容，同时显示引用使用次数、去重后的被引文献数量、summary 文献总数、summary 中存在但正文未引用的文献，以及主题存疑文献。中间迭代审查报告会保存到 `citation_audit/iterations/`，只有严格通过后才会生成 `citation_audit/final_citation_audit_report.html`。如果引用审查失败，`status` 和 `run-pipeline` 会推荐进入 citation repair loop，而不是继续盲目执行 `quality-check`；同时 `quality-check` 也会要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，避免用户直接跳过来源核查和 reference coverage 核查。
 
 ## 第三方 skills 集成
 
@@ -265,6 +265,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 </table>
 
 ## 最近更新
+
+### v0.14.10 (2026-06-30) -- citation preservation and reference coverage audit
+
+- 为 claim-level 引用核查记录补充 citation intent、support status、topic relevance score、claim-alignment score、blocking status 和 repair hints。
+- 升级 citation repair plan：对于语义相关、方法/工具背景相关、部分支持或不贴切的引用，保留已确认参考文献，并优先收窄和改写正文 claim，使其符合文献证据；引用核查阶段不再规划删除参考文献或删除带引用的正文句子。
+- 新增 `references/reference_usage_plan.json`，把 retained literature summaries 分配到对应正文章节，并要求每篇保留文献都必须在 Results 之外至少引用一次。
+- 新增 `citation_audit/reference_coverage_report.json` 和 `citation_audit/reference_coverage_report.html`，用于对比 `references/literature_summaries/` 中保留的文献和正文中实际去重引用的文献；summary 中存在但正文未引用的文献现在会导致 citation audit 阻塞失败，不再允许最终参考文献数量被静默缩小。
+- 新增回归测试，覆盖方法/工具/背景类引用保留、上下文相关引用改写，以及 reference coverage gap 与 unsupported citation 的分离报告。
 
 ### v0.14.9 (2026-06-28) -- public IP protection and DPL schema provenance layer
 

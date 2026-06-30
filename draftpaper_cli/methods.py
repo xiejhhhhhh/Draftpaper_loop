@@ -17,6 +17,7 @@ from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
+from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 
 
 METHOD_INPUTS = [
@@ -534,12 +535,32 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     project_path = context.get("project_path")
     if project_path:
         formulas = _read_text(Path(str(project_path)) / "methods" / "method_formulas.tex").strip()
+    citation_paragraphs: list[str] = []
+    if project_path:
+        project_dir = Path(str(project_path))
+        ensure_reference_usage_plan(project_dir)
+        existing = "\n\n".join([family, data_role, analysis_steps, verification, boundary])
+        entries = missing_entries_for_section(project_dir, "methods", existing)
+        if entries:
+            sentences = []
+            for entry in entries:
+                key = str(entry.get("citation_key") or "")
+                evidence = _strip_forbidden_paths(_clean_sentence(entry.get("evidence_summary") or entry.get("title")))
+                if key and evidence:
+                    sentences.append(f"{_safe_latex_text(evidence)} \\citep{{{key}}}.")
+            for index in range(0, len(sentences), 4):
+                citation_paragraphs.append(
+                    "The retained method-oriented references define the methodological context for the verified analysis route. "
+                    + " ".join(sentences[index:index + 4])
+                )
     formula_block = f"\n\n{formulas}\n" if formulas else "\n"
+    citation_block = ("\n\n" + "\n\n".join(citation_paragraphs)) if citation_paragraphs else ""
     return (
         "\\section{Methods}\n"
         f"{family} {data_role} The methodological description is written from the verified analytical design rather than from local execution details, so the section should explain why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a purely procedural account of software operations.\n\n"
         f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. If later verification changes the input data, validation split, model family, or primary metric, this section should be regenerated before the Results and Discussion are revised.\n\n"
         f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands, filenames, or manifest internals. The mathematical expressions below summarize the measurable quantities inferred from the verified outputs and should be expanded when the project uses additional estimators, loss functions, sampling assumptions, or domain-specific indices."
+        f"{citation_block}"
         f"{formula_block}"
     )
 
