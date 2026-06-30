@@ -266,6 +266,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.14.12 (2026-06-30) -- clickable reference links and compact query phrases
+
+- 每篇文献 summary HTML 中的 DOI 和 URL 现在会渲染为可点击链接，方便人工复查文献来源。
+- 调整文献检索 query plan：先从 idea/title 中抽取方法、仪器、数据和任务相关的短关键词，再与 data/method query 组合检索。
+- 避免把完整研究题目或整句 idea 反复塞进每一条检索 query，同时保留 high-energy time-domain astronomy、X-ray transient classification 等学科锚点。
+- 已用 astronomy 项目重新运行 `search-literature -> generate-plan` 验证：新的 query plan 不再重复完整 idea，同时保留 12 篇参考文献、6 张计划主图和 1 个核心表格。
+
 ### v0.14.11 (2026-06-30) -- research-plan Markdown contract and structured literature query plan
 
 - 调整 `generate-plan`：面向用户阅读的 research plan 只生成 `research_plan/research_plan.md` 和 `research_plan/research_plan.zh-CN.md`，不再额外生成 `research_plan.html` 和单独的 `research_questions.*` 文件。

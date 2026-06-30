@@ -98,6 +98,42 @@ def _split_semicolon_terms(text: str, limit: int = 5) -> list[str]:
     return _unique_terms([part.strip(" -.") for part in parts if part.strip()], limit=limit)
 
 
+def _idea_phrases(text: str, *, limit: int = 6) -> list[str]:
+    raw = re.sub(r"[_/]+", " ", text or "")
+    candidates: list[str] = []
+    known_patterns = [
+        r"time-aware transformer",
+        r"ep\s+wxt",
+        r"einstein probe",
+        r"x-ray transient(?:s)?",
+        r"x-ray flaring source(?:s)?",
+        r"flaring source(?:s)?",
+        r"long-term light curve(?:s)?",
+        r"current observation token(?:s)?",
+        r"spectral feature(?:s)?",
+        r"irregular light curve(?:s)?",
+        r"source classification",
+        r"transient classification",
+        r"multimodal classification",
+    ]
+    lowered = raw.lower()
+    for pattern in known_patterns:
+        match = re.search(pattern, lowered)
+        if match:
+            candidates.append(match.group(0))
+    for part in re.split(r",|;|:|\band\b|\busing\b|\bwith\b|\bfor\b|\bof\b", raw, flags=re.IGNORECASE):
+        words = [
+            word
+            for word in re.findall(r"[A-Za-z][A-Za-z0-9-]{1,}", part)
+            if word.lower() not in {"the", "and", "for", "with", "using", "based", "study", "research", "framework"}
+        ]
+        if 2 <= len(words) <= 5:
+            candidates.append(" ".join(words))
+        elif len(words) > 5:
+            candidates.append(" ".join(words[:4]))
+    return _unique_terms(candidates, limit=limit)
+
+
 def _discipline_anchor(project_text: str, field: str) -> str:
     blob = f"{project_text} {field}".lower()
     if any(term in blob for term in ["x-ray", "astronomy", "transient", "wxt", "flare", "light curve"]):
@@ -246,9 +282,11 @@ def _domain_anchor(project_text: str, field: str, target_journal: str) -> str:
 def build_context_search_queries(project: str | Path, query: str | None = None) -> dict[str, str | list[str]]:
     state = load_project(project)
     idea_query = query or build_search_query(project)
-    idea_terms = _split_semicolon_terms(str(state.metadata.get("idea", "")), limit=3)
+    idea_terms = _idea_phrases(str(state.metadata.get("idea", "")), limit=5)
     if query:
-        idea_terms = _unique_terms([query, *idea_terms], limit=4)
+        idea_terms = _unique_terms([*_idea_phrases(query, limit=3), *idea_terms], limit=5)
+    if not idea_terms:
+        idea_terms = _split_semicolon_terms(str(state.metadata.get("idea", "")), limit=3)
     field = str(state.metadata.get("field", ""))
     target_journal = str(state.metadata.get("target_journal", ""))
     discipline = _discipline_anchor(str(state.metadata.get("idea", "")), field)

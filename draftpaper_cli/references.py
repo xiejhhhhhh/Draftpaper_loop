@@ -687,6 +687,18 @@ def _safe_filename(text: str, fallback: str) -> str:
     return (name[:70].strip("_") or fallback)
 
 
+def _reference_links_html(item: dict[str, Any]) -> str:
+    links = []
+    doi = str(item.get("doi") or "").strip()
+    url = str(item.get("url") or "").strip()
+    if doi:
+        doi_url = doi if doi.lower().startswith(("http://", "https://")) else f"https://doi.org/{doi}"
+        links.append(f'<a href="{escape(doi_url)}" target="_blank" rel="noopener">DOI: {escape(doi)}</a>')
+    if url:
+        links.append(f'<a href="{escape(url)}" target="_blank" rel="noopener">URL</a>')
+    return " ".join(links) if links else "n/a"
+
+
 def write_literature_html_summaries(references_dir: Path, items: list[dict[str, Any]]) -> list[str]:
     summary_dir = references_dir / "literature_summaries"
     summary_dir.mkdir(parents=True, exist_ok=True)
@@ -750,7 +762,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Relevance to Study</th><td>{escape(str(item.get('relevance_score', 0)))}</td></tr>
     <tr><th>Journal authority</th><td>{escape(str(item.get('journal_score', 0)))} {escape(', '.join(item.get('journal_rank_labels') or []))}</td></tr>
     <tr><th>Citation authority</th><td>{escape(str(item.get('citation_authority_score', 0)))}</td></tr>
-    <tr><th>DOI / URL</th><td>{escape(item.get('doi') or '')} {escape(item.get('url') or '')}</td></tr>
+    <tr><th>DOI / URL</th><td>{_reference_links_html(item)}</td></tr>
   </table>
   <h2>Query provenance</h2>
   {provenance_table}

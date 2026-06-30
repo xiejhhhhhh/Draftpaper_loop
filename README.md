@@ -318,6 +318,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.14.12 (2026-06-30) -- clickable reference links and compact query phrases
+
+- Made DOI and URL fields clickable in per-paper literature summary HTML files.
+- Reworked literature query planning so idea/title text is reduced to short phrases such as method, instrument, data, and task terms before being crossed with data and method queries.
+- Prevented long full-title research ideas from being repeated across every search query while keeping discipline anchors such as high-energy time-domain astronomy and X-ray transient classification.
+- Revalidated the astronomy workflow with `search-literature -> generate-plan`; the generated query plan now avoids full-sentence idea duplication while preserving 12 retained references, 6 planned figures, and 1 planned core table.
+
 ### v0.14.11 (2026-06-30) -- research-plan Markdown contract and structured literature query plan
 
 - Changed `generate-plan` so the human-facing research plan is written as `research_plan/research_plan.md` and `research_plan/research_plan.zh-CN.md`; `research_plan.html` and separate `research_questions.*` outputs are no longer generated.

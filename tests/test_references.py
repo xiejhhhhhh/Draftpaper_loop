@@ -295,6 +295,8 @@ class ReferencesTests(unittest.TestCase):
             self.assertIn("light curve spectral hardness dataset construction", summary_text)
             self.assertIn("Query provenance", summary_text)
             self.assertIn("Recommended section", summary_text)
+            self.assertIn('href="https://doi.org/10.1000/data.5"', summary_text)
+            self.assertIn('href="https://doi.org/10.1000/method.5"', summary_text)
 
             search_queries = json.loads((project.path / "references" / "search_queries.json").read_text(encoding="utf-8"))
             self.assertEqual(search_queries["data"], "light curve spectral hardness dataset construction")
@@ -394,6 +396,9 @@ class ReferencesTests(unittest.TestCase):
                 if entry["context"] != "target_journal_anchor":
                     self.assertIn("astronomy", entry["query"].lower())
                 self.assertIn("query_components", entry)
+                self.assertLessEqual(len(entry["query"]), 180)
+                self.assertNotIn("using long-term light curves, current observation tokens, and spectral features", entry["query"])
+                self.assertNotIn("Time-aware Transformer classification of EP WXT flaring sources using long-term", entry["query"])
 
     def test_live_search_uses_small_per_query_limits_for_data_and_methods(self) -> None:
         from draftpaper_cli.literature_search import search_literature_for_project
