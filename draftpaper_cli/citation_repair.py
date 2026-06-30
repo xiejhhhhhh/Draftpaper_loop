@@ -40,6 +40,41 @@ def _sentence_pattern(passage: str) -> re.Pattern[str]:
     return re.compile(escaped + r"(?=\s|$)", re.MULTILINE)
 
 
+def _suggest_supported_claim(usage: dict[str, Any]) -> str:
+    evidence = str(usage.get("supporting_evidence") or "").strip()
+    if evidence:
+        return evidence.rstrip(".。 ")
+    citation_key = str(usage.get("citation_key") or "The cited source")
+    return f"{citation_key} provides relevant background for this statement"
+
+
+def _repair_action_for_usage(usage: dict[str, Any]) -> tuple[str, str, bool]:
+    verdict = str(usage.get("verdict") or "")
+    support_status = str(usage.get("support_status") or "")
+    blocking = bool(usage.get("blocking"))
+    if support_status in {"directly_supported"} or verdict == "supported":
+        return "keep_citation", "No repair is required.", False
+    if support_status == "partially_supported_rewrite_needed" and not blocking:
+        return "keep_citation", "No immediate repair is required; the citation can be reviewed during prose editing.", False
+    if not blocking:
+        return (
+            "rewrite_to_supported_claim",
+            "Rewrite the local claim so it states only what the cited source directly supports, and keep the citation as context or provenance.",
+            False,
+        )
+    if support_status == "unverifiable" or verdict == "unverifiable":
+        return (
+            "resolve_reference_metadata_or_replace",
+            "Resolve BibTeX metadata and citation evidence first; replace the source only if it cannot be verified.",
+            False,
+        )
+    return (
+        "replace_or_remove_irrelevant_citation",
+        "First look for a better supporting source or rewrite the claim; remove the claim and citation only as the last resort.",
+        True,
+    )
+
+
 def _render_plan_html(plan: dict[str, Any]) -> str:
     rows = []
     for issue in plan.get("issues") or []:
@@ -47,6 +82,8 @@ def _render_plan_html(plan: dict[str, Any]) -> str:
             "<article class='issue'>"
             f"<h3>{escape(str(issue.get('citation_key') or ''))} · {escape(str(issue.get('action') or ''))}</h3>"
             f"<p><strong>Original claim</strong>: {escape(str(issue.get('original_claim') or ''))}</p>"
+            f"<p><strong>Suggested claim</strong>: {escape(str(issue.get('suggested_claim') or ''))}</p>"
+            f"<p><strong>Intent/status</strong>: {escape(str(issue.get('citation_intent') or ''))} · {escape(str(issue.get('support_status') or ''))}</p>"
             f"<p><strong>Repair instruction</strong>: {escape(str(issue.get('repair_instruction') or ''))}</p>"
             f"<p><strong>Reason</strong>: {escape(str(issue.get('reasoning') or ''))}</p>"
             "</article>"
@@ -85,36 +122,47 @@ def generate_citation_repair_plan(project: str | Path) -> dict[str, Any]:
         audit = audit_citations(state.path)
     issues = []
     for usage in audit.get("usages") or []:
-        verdict = str(usage.get("verdict") or "")
-        score = float(usage.get("match_score") or 0)
-        if verdict == "supported" or (verdict == "partially_supported" and score >= 0.55):
+        action, instruction, deletion_allowed = _repair_action_for_usage(usage)
+        if action == "keep_citation":
             continue
-        action = "rewrite_claim" if verdict == "partially_supported" else "remove_unsupported_claim"
+        score = float(usage.get("match_score") or 0)
+        suggested_claim = _suggest_supported_claim(usage)
         issues.append({
             "issue_id": f"citation_repair_{len(issues) + 1:03d}",
             "usage_id": usage.get("usage_id"),
             "citation_key": usage.get("citation_key"),
             "section": usage.get("section"),
             "file": usage.get("file"),
-            "verdict": verdict,
+            "verdict": usage.get("verdict"),
+            "citation_intent": usage.get("citation_intent"),
+            "support_status": usage.get("support_status"),
+            "topic_relevance_score": usage.get("topic_relevance_score"),
+            "claim_alignment_score": usage.get("claim_alignment_score"),
+            "blocking": usage.get("blocking"),
             "match_score": score,
             "original_passage": usage.get("passage"),
             "original_claim": usage.get("claim"),
             "supporting_evidence": usage.get("supporting_evidence"),
             "action": action,
-            "repair_instruction": (
-                "Rewrite the claim so it only states what the cited source supports."
-                if action == "rewrite_claim"
-                else "Remove the weak claim and its citation unless a stronger source is supplied."
-            ),
+            "suggested_claim": suggested_claim,
+            "deletion_allowed": deletion_allowed,
+            "repair_instruction": instruction,
             "reasoning": usage.get("reasoning"),
         })
+    removal_count = sum(1 for issue in issues if bool(issue.get("deletion_allowed")))
+    total_usages = int((audit.get("summary") or {}).get("total_usages") or 0)
     plan = {
         "status": "repair_plan_written",
         "generated_at": utc_now(),
         "project_path": str(state.path),
         "source_audit": "citation_audit/citation_audit_report.json",
         "issue_count": len(issues),
+        "citation_retention_policy": {
+            "initial_total_usages": total_usages,
+            "planned_last_resort_removal_count": removal_count,
+            "planned_retention_ratio": round((total_usages - removal_count) / total_usages, 3) if total_usages else 1.0,
+            "policy": "Prefer claim narrowing, source replacement, or evidence completion before deleting citation-bearing text.",
+        },
         "issues": issues,
     }
     audit_dir = state.path / "citation_audit"
@@ -124,8 +172,20 @@ def generate_citation_repair_plan(project: str | Path) -> dict[str, Any]:
     return plan
 
 
+def _replacement_for_issue(issue: dict[str, Any]) -> str:
+    action = str(issue.get("action") or "")
+    if action == "rewrite_to_supported_claim":
+        suggested = str(issue.get("suggested_claim") or "").strip()
+        citation_key = str(issue.get("citation_key") or "").strip()
+        if suggested and citation_key:
+            return f"{suggested.rstrip('.。 ')} \\citep{{{citation_key}}}."
+    if action == "resolve_reference_metadata_or_replace":
+        return str(issue.get("original_passage") or "")
+    return ""
+
+
 def apply_citation_repair(project: str | Path, *, dry_run: bool = False) -> dict[str, Any]:
-    """Apply safe citation repairs by removing unsupported citation-bearing sentences."""
+    """Apply safe citation repairs by narrowing claims before last-resort deletion."""
     try:
         state = load_project(project)
     except Exception as exc:
@@ -148,8 +208,8 @@ def apply_citation_repair(project: str | Path, *, dry_run: bool = False) -> dict
         text = _read_text(target)
         if not text:
             continue
-        replacement = ""
-        new_text, count = _sentence_pattern(passage).subn(replacement, text, count=1)
+        replacement = _replacement_for_issue(issue)
+        new_text, count = _sentence_pattern(passage).subn(lambda _match: replacement, text, count=1)
         if count == 0:
             continue
         new_text = re.sub(r"\n{3,}", "\n\n", new_text)
