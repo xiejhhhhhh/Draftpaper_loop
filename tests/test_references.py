@@ -293,6 +293,7 @@ class ReferencesTests(unittest.TestCase):
             summary_text = "\n".join(path.read_text(encoding="utf-8") for path in (project.path / "references" / "literature_summaries").glob("*.html"))
             self.assertIn("Search context", summary_text)
             self.assertIn("light curve spectral hardness dataset construction", summary_text)
+            self.assertIn("Query provenance", summary_text)
             self.assertIn("Recommended section", summary_text)
 
             search_queries = json.loads((project.path / "references" / "search_queries.json").read_text(encoding="utf-8"))
@@ -363,12 +364,14 @@ class ReferencesTests(unittest.TestCase):
 
             queries = build_context_search_queries(project.path, "X-ray transient classification")
 
+            self.assertIn("query_plan", queries)
             self.assertIsInstance(queries["data"], list)
             self.assertIsInstance(queries["methods"], list)
+            self.assertIsInstance(queries["introduction"], list)
             self.assertGreaterEqual(len(queries["data"]), 3)
-            self.assertLessEqual(len(queries["data"]), 5)
+            self.assertLessEqual(len(queries["data"]), 6)
             self.assertGreaterEqual(len(queries["methods"]), 3)
-            self.assertLessEqual(len(queries["methods"]), 5)
+            self.assertLessEqual(len(queries["methods"]), 6)
             for context in ["data", "methods"]:
                 for query in queries[context]:
                     self.assertIn("astronomy", query.lower())
@@ -376,6 +379,21 @@ class ReferencesTests(unittest.TestCase):
             self.assertTrue(any("1D CNN" in query or "ResNet" in query for query in queries["methods"]))
             self.assertTrue(any("Transformer" in query for query in queries["methods"]))
             self.assertTrue(any("Temporal Convolutional Network" in query for query in queries["methods"]))
+            plan = queries["query_plan"]
+            self.assertGreaterEqual(len(plan), 10)
+            contexts = {entry["context"] for entry in plan}
+            self.assertIn("introduction", contexts)
+            self.assertIn("data", contexts)
+            self.assertIn("methods", contexts)
+            self.assertIn("target_journal_anchor", contexts)
+            levels = {entry["combination_level"] for entry in plan}
+            self.assertIn("all", levels)
+            self.assertIn("pairwise", levels)
+            self.assertIn("single_fallback", levels)
+            for entry in plan:
+                if entry["context"] != "target_journal_anchor":
+                    self.assertIn("astronomy", entry["query"].lower())
+                self.assertIn("query_components", entry)
 
     def test_live_search_uses_small_per_query_limits_for_data_and_methods(self) -> None:
         from draftpaper_cli.literature_search import search_literature_for_project
@@ -412,6 +430,9 @@ class ReferencesTests(unittest.TestCase):
             data_method_limits = [limit for query, limit in calls if "dataset" in query.lower() or "1D CNN" in query or "Transformer" in query or "Temporal Convolutional Network" in query]
             self.assertTrue(data_method_limits)
             self.assertTrue(all(limit <= 2 for limit in data_method_limits))
+            search_queries = json.loads((project.path / "references" / "search_queries.json").read_text(encoding="utf-8"))
+            self.assertIn("query_plan", search_queries)
+            self.assertGreaterEqual(len(search_queries["query_plan"]), 10)
 
     def test_duplicate_paper_can_support_multiple_reference_contexts(self) -> None:
         from draftpaper_cli.references import write_reference_outputs

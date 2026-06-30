@@ -15,7 +15,7 @@ from typing import Any
 
 from .paper_fetch_adapter import enrich_with_paper_fetch
 from .project_state import load_project
-from .references import normalize_reference_items, write_reference_outputs
+from .references import has_sufficient_metadata_or_pdf, normalize_reference_items, write_reference_outputs
 from .project_scaffold import _write_json
 from .zotero_adapter import fetch_zotero_collection_items
 
@@ -78,6 +78,76 @@ def _unique_queries(queries: list[str], limit: int = 5) -> list[str]:
     return unique
 
 
+def _unique_terms(terms: list[str], limit: int = 6) -> list[str]:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for term in terms:
+        compact = _compact_query(str(term or ""), limit=80)
+        key = compact.lower()
+        if not compact or key in seen:
+            continue
+        unique.append(compact)
+        seen.add(key)
+        if len(unique) >= limit:
+            break
+    return unique
+
+
+def _split_semicolon_terms(text: str, limit: int = 5) -> list[str]:
+    parts = re.split(r"[;；\n]+", text or "")
+    return _unique_terms([part.strip(" -.") for part in parts if part.strip()], limit=limit)
+
+
+def _discipline_anchor(project_text: str, field: str) -> str:
+    blob = f"{project_text} {field}".lower()
+    if any(term in blob for term in ["x-ray", "astronomy", "transient", "wxt", "flare", "light curve"]):
+        return "high-energy time-domain astronomy X-ray transient"
+    if any(term in blob for term in ["ndvi", "remote sensing", "geography", "climate", "crop", "yield"]):
+        return "geography remote sensing environmental analysis"
+    if any(term in blob for term in ["medical", "clinical", "patient", "cohort"]):
+        return "medicine clinical research"
+    if any(term in blob for term in ["biology", "genomic", "rna", "protein"]):
+        return "biology bioinformatics"
+    if any(term in blob for term in ["finance", "market", "stock", "return"]):
+        return "finance empirical asset pricing"
+    if "machine learning" in blob:
+        return "machine learning applied research"
+    return _domain_anchor(project_text, field, "")
+
+
+def _query_entry(
+    *,
+    query_id: str,
+    context: str,
+    discipline: str,
+    idea_terms: list[str],
+    data_terms: list[str] | None = None,
+    method_terms: list[str] | None = None,
+    target_journal: str = "",
+    combination_level: str,
+) -> dict[str, Any]:
+    components = {
+        "discipline": [discipline] if discipline else [],
+        "idea": idea_terms,
+        "data": data_terms or [],
+        "methods": method_terms or [],
+        "target_journal": [target_journal] if target_journal else [],
+    }
+    query_parts = [discipline, *idea_terms, *(data_terms or []), *(method_terms or [])]
+    if context == "target_journal_anchor" and target_journal:
+        query_parts.append(target_journal)
+    return {
+        "query_id": query_id,
+        "context": context,
+        "discipline_anchor": discipline,
+        "primary_terms": idea_terms,
+        "secondary_terms": [*(data_terms or []), *(method_terms or [])],
+        "combination_level": combination_level,
+        "query": _compact_query(" ".join(part for part in query_parts if part), limit=240),
+        "query_components": components,
+    }
+
+
 def _method_phrases(method_text: str) -> list[str]:
     phrases = []
     for raw_line in method_text.splitlines():
@@ -85,7 +155,20 @@ def _method_phrases(method_text: str) -> list[str]:
         if not line:
             continue
         lowered = line.lower()
-        if line.startswith("#") or lowered.startswith(("research idea", "user-provided", "formal ")):
+        if line.startswith("#") or lowered.startswith((
+            "research idea",
+            "user-provided",
+            "formal ",
+            "title",
+            "venue",
+            "primary metric",
+            "minimum acceptable",
+            "current data",
+            "the method can",
+            "this paper",
+            "the paper",
+            "no explicit",
+        )):
             continue
         phrase = re.split(r"[:：]", line, maxsplit=1)[0].strip()
         if phrase:
@@ -98,6 +181,40 @@ def _method_phrases(method_text: str) -> list[str]:
         "contrastive learning self-supervised pretraining",
     ]
     return _unique_queries(phrases + fallback, limit=5)
+
+
+def _method_phrases_from_requirements(raw_json: str) -> list[str]:
+    if not raw_json.strip():
+        return []
+    try:
+        payload = json.loads(raw_json)
+    except Exception:
+        return []
+    phrases: list[str] = []
+    for family in payload.get("method_families") or []:
+        phrases.append(str(family).replace("_", " "))
+    user_method = str(payload.get("user_method") or "")
+    if "source-held-out" in user_method.lower():
+        phrases.append("source held-out validation")
+    if "transformer" in user_method.lower():
+        phrases.append("Transformer irregular time series")
+    for feature in payload.get("required_data_features") or []:
+        value = str(feature).replace("_", " ")
+        if any(token in value.lower() for token in ["light", "spectral", "multi", "label"]):
+            phrases.append(f"{value} classification")
+    for item in payload.get("literature_methods") or []:
+        title = str(item.get("title") or "")
+        summary = str(item.get("method_summary") or "")
+        blob = f"{title} {summary}".lower()
+        if "time2vec" in blob:
+            phrases.append("Time2Vec irregular observation time encoding")
+        if "transformer" in blob and "light" in blob:
+            phrases.append("light curve Transformer classification")
+        if "ode" in blob and "irregular" in blob:
+            phrases.append("neural ODE irregular time series")
+        if "self-supervised" in blob:
+            phrases.append("self-supervised light curve representation learning")
+    return _unique_queries(phrases, limit=5)
 
 
 def _data_terms(data_text: str) -> str:
@@ -129,37 +246,104 @@ def _domain_anchor(project_text: str, field: str, target_journal: str) -> str:
 def build_context_search_queries(project: str | Path, query: str | None = None) -> dict[str, str | list[str]]:
     state = load_project(project)
     idea_query = query or build_search_query(project)
-    domain_anchor = _domain_anchor(
-        str(state.metadata.get("idea", "")),
-        str(state.metadata.get("field", "")),
-        str(state.metadata.get("target_journal", "")),
-    )
+    idea_terms = _split_semicolon_terms(str(state.metadata.get("idea", "")), limit=3)
+    if query:
+        idea_terms = _unique_terms([query, *idea_terms], limit=4)
+    field = str(state.metadata.get("field", ""))
+    target_journal = str(state.metadata.get("target_journal", ""))
+    discipline = _discipline_anchor(str(state.metadata.get("idea", "")), field)
     data_text = " ".join([
         _read_text_if_exists(state.path / "data" / "data_inventory.json"),
         _read_text_if_exists(state.path / "data" / "data_feasibility_report.json"),
         _read_text_if_exists(state.path / "idea" / "idea.md"),
     ])
+    method_requirements_text = _read_text_if_exists(state.path / "methods" / "method_requirements.json", limit=12000)
     method_text = " ".join([
         _read_text_if_exists(state.path / "methods" / "method_plan.md"),
-        _read_text_if_exists(state.path / "methods" / "method_requirements.json"),
-        _read_text_if_exists(state.path / "research_plan" / "research_plan.md"),
+        method_requirements_text,
     ])
     data_terms = _data_terms(data_text)
-    data_queries = _unique_queries([
-        f"{domain_anchor} light curve dataset catalog {data_terms}",
-        f"{domain_anchor} spectral features hardness ratio dataset {data_terms}",
-        f"{domain_anchor} multi-band counterpart catalog source classification {data_terms}",
-        f"{domain_anchor} WXT FXT observation data release {data_terms}",
-        f"{domain_anchor} X-ray transient sample construction {data_terms}",
+    data_term_list = _unique_terms([
+        data_terms,
+        "light curve dataset catalog",
+        "spectral features hardness ratio dataset",
+        "multi-band counterpart catalog source classification",
+        "WXT FXT observation data release",
+        "X-ray transient sample construction",
+    ], limit=5)
+    method_term_list = _method_phrases_from_requirements(method_requirements_text) or _method_phrases(method_text)
+    plan: list[dict[str, Any]] = []
+    plan.append(_query_entry(
+        query_id="all_idea_data_method_01",
+        context="introduction",
+        discipline=discipline,
+        idea_terms=idea_terms[:2] or [idea_query],
+        data_terms=data_term_list[:1],
+        method_terms=method_term_list[:1],
+        combination_level="all",
+    ))
+    plan.append(_query_entry(
+        query_id="target_journal_anchor_01",
+        context="target_journal_anchor",
+        discipline=discipline,
+        idea_terms=idea_terms[:2] or [idea_query],
+        method_terms=method_term_list[:1],
+        target_journal=target_journal,
+        combination_level="all",
+    ))
+    for index, term in enumerate(data_term_list[:5], start=1):
+        plan.append(_query_entry(
+            query_id=f"data_pairwise_{index:02d}",
+            context="data",
+            discipline=discipline,
+            idea_terms=idea_terms[:1] or [idea_query],
+            data_terms=[term],
+            combination_level="pairwise",
+        ))
+    for index, term in enumerate(method_term_list[:5], start=1):
+        plan.append(_query_entry(
+            query_id=f"methods_pairwise_{index:02d}",
+            context="methods",
+            discipline=discipline,
+            idea_terms=idea_terms[:1] or [idea_query],
+            method_terms=[term],
+            combination_level="pairwise",
+        ))
+    plan.extend([
+        _query_entry(
+            query_id="introduction_single_idea_01",
+            context="introduction",
+            discipline=discipline,
+            idea_terms=idea_terms[:2] or [idea_query],
+            combination_level="single_fallback",
+        ),
+        _query_entry(
+            query_id="data_single_01",
+            context="data",
+            discipline=discipline,
+            idea_terms=[],
+            data_terms=data_term_list[:1],
+            combination_level="single_fallback",
+        ),
+        _query_entry(
+            query_id="methods_single_01",
+            context="methods",
+            discipline=discipline,
+            idea_terms=[],
+            method_terms=method_term_list[:1],
+            combination_level="single_fallback",
+        ),
     ])
-    method_queries = _unique_queries([
-        f"{domain_anchor} {phrase} X-ray transient classification"
-        for phrase in _method_phrases(method_text)
-    ])
+    data_queries = _unique_queries([entry["query"] for entry in plan if entry["context"] == "data"], limit=6)
+    method_queries = _unique_queries([entry["query"] for entry in plan if entry["context"] == "methods"], limit=6)
+    introduction_queries = _unique_queries([entry["query"] for entry in plan if entry["context"] == "introduction"], limit=4)
     return {
-        "idea": idea_query.strip(),
+        "idea": introduction_queries[0] if introduction_queries else idea_query.strip(),
+        "introduction": introduction_queries or [idea_query.strip()],
         "data": data_queries or [idea_query.strip()],
         "methods": method_queries or [idea_query.strip()],
+        "target_journal_anchor": _unique_queries([entry["query"] for entry in plan if entry["context"] == "target_journal_anchor"], limit=2),
+        "query_plan": plan,
     }
 
 
@@ -358,6 +542,54 @@ def search_free_literature(query: str, limit: int = 30) -> list[dict[str, Any]]:
     return results[:limit]
 
 
+def _count_metadata_ready(items: list[dict[str, Any]]) -> int:
+    return sum(1 for item in normalize_reference_items(items) if has_sufficient_metadata_or_pdf(item))
+
+
+def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]:
+    plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
+    discipline = ""
+    idea = ""
+    for entry in plan:
+        if not isinstance(entry, dict):
+            continue
+        discipline = discipline or str(entry.get("discipline_anchor") or "")
+        components = entry.get("query_components") if isinstance(entry.get("query_components"), dict) else {}
+        idea_terms = components.get("idea") if isinstance(components.get("idea"), list) else []
+        if idea_terms and not idea:
+            idea = str(idea_terms[0])
+    if not discipline:
+        discipline = "scholarly research"
+    candidates = [
+        ("introduction_fallback_broad_01", "introduction", "single_fallback", f"{discipline} {idea}".strip()),
+        ("data_fallback_broad_01", "data", "single_fallback", f"{discipline} survey catalog dataset observation sample".strip()),
+        ("methods_fallback_broad_01", "methods", "single_fallback", f"{discipline} machine learning classification time series validation".strip()),
+        ("methods_fallback_broad_02", "methods", "single_fallback", f"{discipline} transformer irregular time series classification".strip()),
+        ("data_fallback_broad_02", "data", "single_fallback", f"{discipline} light curve spectral feature source catalog".strip()),
+    ]
+    if "astronomy" in discipline.lower() or "x-ray" in discipline.lower():
+        candidates.extend([
+            ("methods_fallback_astronomy_01", "methods", "single_fallback", "astronomical time series classification machine learning"),
+            ("methods_fallback_astronomy_02", "methods", "single_fallback", "astronomical light curve transformer classification"),
+            ("methods_fallback_astronomy_03", "methods", "single_fallback", "astronomical light curve foundation model time domain astronomy"),
+            ("data_fallback_astronomy_01", "data", "single_fallback", "Einstein Probe WXT source classification"),
+            ("data_fallback_astronomy_02", "data", "single_fallback", "X-ray transient source catalog light curve spectral feature"),
+            ("introduction_fallback_astronomy_01", "introduction", "single_fallback", "high-energy transient astronomy machine learning classification"),
+        ])
+    return [
+        {
+            "query_id": query_id,
+            "context": context,
+            "combination_level": level,
+            "discipline_anchor": discipline,
+            "query": _compact_query(query, limit=220),
+            "query_components": {"discipline": [discipline], "idea": [idea] if idea else [], "data": [], "methods": [], "target_journal": []},
+        }
+        for query_id, context, level, query in candidates
+        if query.strip()
+    ]
+
+
 def _as_query_list(value: str | list[str]) -> list[str]:
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
@@ -421,14 +653,76 @@ def search_literature_for_project(
             search_queries.update({str(key): value for key, value in payload["search_queries"].items()})
     else:
         items = []
-        for context, context_query_value in search_queries.items():
-            for context_query in _as_query_list(context_query_value):
-                per_query_limit = min(limit, 2) if context in {"data", "methods"} else limit
+        query_plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
+        if query_plan:
+            iterable_queries = [
+                (
+                    str(entry.get("context") or "introduction"),
+                    str(entry.get("query") or ""),
+                    entry,
+                )
+                for entry in query_plan
+                if str(entry.get("query") or "").strip()
+            ]
+        else:
+            iterable_queries = []
+            for context, context_query_value in search_queries.items():
+                if context == "query_plan":
+                    continue
+                for context_query in _as_query_list(context_query_value):
+                    iterable_queries.append((context, context_query, {}))
+        for context, context_query, plan_entry in iterable_queries:
+                combination_level = str(plan_entry.get("combination_level") or "")
+                per_query_limit = min(limit, 2) if context in {"data", "methods"} or combination_level == "all" else min(limit, 6)
+                if context == "target_journal_anchor":
+                    per_query_limit = min(limit, 2)
                 context_items = search_free_literature(context_query, limit=per_query_limit)
                 for item in context_items:
                     item["search_context"] = context
                     item["search_query"] = context_query
+                    if plan_entry:
+                        item["search_query_id"] = plan_entry.get("query_id")
+                        item["combination_level"] = plan_entry.get("combination_level")
+                        item["discipline_anchor"] = plan_entry.get("discipline_anchor")
+                        item["query_components"] = plan_entry.get("query_components")
+                        item["query_provenance"] = [{
+                            "query_id": plan_entry.get("query_id"),
+                            "context": context,
+                            "combination_level": plan_entry.get("combination_level"),
+                            "query": context_query,
+                            "query_components": plan_entry.get("query_components"),
+                        }]
                 items.extend(context_items)
+        if _count_metadata_ready(items) < min(12, limit):
+            fallback_entries = _fallback_query_plan(search_queries)
+            existing_queries = {str(entry[1]).strip().lower() for entry in iterable_queries}
+            for plan_entry in fallback_entries:
+                context_query = str(plan_entry.get("query") or "")
+                if not context_query or context_query.lower() in existing_queries:
+                    continue
+                context = str(plan_entry.get("context") or "introduction")
+                fallback_limit = min(limit, 2) if context in {"data", "methods"} else min(limit, 6)
+                context_items = search_free_literature(context_query, limit=fallback_limit)
+                for item in context_items:
+                    item["search_context"] = context
+                    item["search_query"] = context_query
+                    item["search_query_id"] = plan_entry.get("query_id")
+                    item["combination_level"] = plan_entry.get("combination_level")
+                    item["discipline_anchor"] = plan_entry.get("discipline_anchor")
+                    item["query_components"] = plan_entry.get("query_components")
+                    item["query_provenance"] = [{
+                        "query_id": plan_entry.get("query_id"),
+                        "context": context,
+                        "combination_level": plan_entry.get("combination_level"),
+                        "query": context_query,
+                        "query_components": plan_entry.get("query_components"),
+                    }]
+                items.extend(context_items)
+                existing_queries.add(context_query.lower())
+                if _count_metadata_ready(items) >= min(12, limit):
+                    break
+            if fallback_entries:
+                search_queries["fallback_query_plan"] = fallback_entries
         items, _manifest = enrich_with_paper_fetch(project, items)
     result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
     manifest_path = state.path / "references" / "zotero_collection_manifest.json"

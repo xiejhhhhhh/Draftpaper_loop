@@ -31,9 +31,6 @@ RESEARCH_PLAN_INPUTS = [
 RESEARCH_PLAN_OUTPUTS = [
     "research_plan/research_plan.md",
     "research_plan/research_plan.zh-CN.md",
-    "research_plan/research_plan.html",
-    "research_plan/research_questions.md",
-    "research_plan/research_questions.html",
     "research_plan/research_blueprint.json",
     "research_plan/figure_storyboard.json",
     "research_plan/method_plan.json",
@@ -374,49 +371,194 @@ def _method_plan_markdown(blueprint: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _cn_term(value: Any) -> str:
+    text = str(value or "")
+    replacements = [
+        ("Time-aware Transformer", "时间感知 Transformer"),
+        ("time-aware", "时间感知"),
+        ("Transformer", "Transformer"),
+        ("EP WXT", "EP/WXT"),
+        ("flaring-source", "耀发源"),
+        ("flaring sources", "耀发源"),
+        ("light curves", "光变曲线"),
+        ("light curve", "光变曲线"),
+        ("current observation tokens", "当前观测 token"),
+        ("spectral features", "能谱特征"),
+        ("classification", "分类"),
+        ("machine learning", "机器学习"),
+        ("long-term", "长期"),
+        ("using", "结合"),
+        (" for ", " 用于 "),
+        (" and ", " 和 "),
+        (" of ", " 的 "),
+        ("high-energy time-domain astronomy", "高能时域天文学"),
+        ("X-ray transient", "X 射线暂现源"),
+        ("irregular", "不规则采样"),
+        ("multimodal", "多模态"),
+        ("baseline", "基线模型"),
+        ("ablation", "消融实验"),
+        ("validation", "验证"),
+        ("uncertainty", "不确定性"),
+        ("source catalog", "源表"),
+        ("source_catalog", "源表"),
+        ("class_label", "类别标签"),
+        ("modality_availability", "模态可用性"),
+        ("current_observation_tokens", "当前观测 token"),
+        ("spectral_features", "能谱特征"),
+        ("validation_split", "验证划分"),
+        ("prediction_score", "预测置信度"),
+        ("predicted_label", "预测标签"),
+        ("data_alignment", "数据对齐"),
+        ("time_aware_transformer", "时间感知 Transformer"),
+        ("multimodal_fusion", "多模态融合"),
+        ("class_balance_check", "类别均衡检查"),
+        ("missingness_check", "缺失情况检查"),
+        ("feature_space_diagnostic", "特征空间诊断"),
+        ("metric_evaluation", "指标评估"),
+        ("ablation_study", "消融实验"),
+        ("confusion_or_error_analysis", "混淆与错误分析"),
+        ("uncertainty_summary", "不确定性汇总"),
+    ]
+    for old, new in replacements:
+        text = text.replace(old, new)
+    return text
+
+
+def _cn_sentence(value: Any) -> str:
+    text = _cn_term(value)
+    templates = [
+        (
+            "What data coverage and label support are available for ",
+            "需要首先确认该研究具备怎样的数据覆盖、标签支撑和模态完整性，研究对象是",
+        ),
+        (
+            "Do the available temporal, spectral, or tabular features contain separable structure before model training?",
+            "在模型训练之前，需要判断时间序列、能谱或表格特征中是否已经存在可分辨的类别结构。",
+        ),
+        (
+            "Does the proposed method improve over transparent baselines under a reproducible validation design?",
+            "需要在可复现的验证设计下比较拟采用方法与透明基线模型的差异，确认性能提升是否真实存在。",
+        ),
+        (
+            "Which data modality or method component contributes most to the result?",
+            "需要通过消融实验判断光变曲线、当前观测、能谱特征或融合模块中哪一部分真正贡献了结果。",
+        ),
+        (
+            "Which classes, samples, or regimes remain uncertain after the proposed method is applied?",
+            "需要识别模型应用后仍然不稳定的类别、样本和观测情形，并据此限定论文结论边界。",
+        ),
+        (
+            "The available samples, labels, and modalities should define which classification claims are scientifically supportable.",
+            "样本数量、标签质量和模态完整性将决定本文能够支撑到何种强度的分类结论。",
+        ),
+        (
+            "Feature-space diagnostics should show whether the data contain model-ready signal rather than only filename-level evidence.",
+            "特征空间诊断应证明数据本身含有可供模型学习的信号，而不是只依赖文件名或元信息形成表面证据。",
+        ),
+        (
+            "The main model result should be judged by baseline comparison, ablation, and verified local metrics.",
+            "主模型结果应同时接受基线比较、消融实验和本地可复验指标的约束。",
+        ),
+        (
+            "Ablation should show whether long-term sequences, current observations, spectral features, or fusion drive the result.",
+            "消融结果应说明长期序列、当前观测、能谱特征和融合结构分别对结果产生了多少影响。",
+        ),
+        (
+            "Error analysis should constrain the final claim boundary and identify data or method limitations.",
+            "错误分析需要反过来约束最终结论，并指出数据或方法上仍然存在的限制。",
+        ),
+    ]
+    for old, new in templates:
+        text = text.replace(old, new)
+    return text
+
+
+def _cn_join(values: list[Any]) -> str:
+    return "、".join(_cn_term(value) for value in values if str(value or "").strip())
+
+
 def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, Any]) -> str:
+    synthesis = blueprint.get("literature_synthesis") or {}
+    method_terms = _cn_join(synthesis.get("key_methods") or [])
+    data_terms = _cn_join(synthesis.get("key_data_modalities") or [])
+    gap_terms = [_cn_sentence(item) for item in (synthesis.get("gap_evidence") or [])[:2] if str(item or "").strip()]
+    if method_terms or data_terms:
+        synthesis_summary = (
+            f"当前文献主要为本研究提供了两类支撑：方法侧集中在{method_terms or '相关模型与验证流程'}，"
+            f"数据侧集中在{data_terms or '观测样本、特征构建和标签支撑'}。这些文献的作用不是简单证明本研究一定成立，"
+            "而是帮助确定哪些数据输入、模型比较和验证环节必须在后续流程中被明确实现。"
+        )
+    else:
+        synthesis_summary = "当前文献综合结果仍需在 references 阶段继续补充；在正式写作前，应优先检查文献综述索引中的每篇文献是否确实服务于本研究。"
+    if gap_terms:
+        synthesis_summary += " 与研究缺口直接相关的证据包括：" + "；".join(gap_terms) + "。"
     lines = [
         "# 文献驱动研究方案",
         "",
         "## 项目背景",
         "",
-        f"研究题目：{project_meta.get('title') or project_meta.get('idea')}",
+        f"本研究暂定题目为：{_cn_term(project_meta.get('title') or project_meta.get('idea'))}。",
         "",
-        f"研究想法：{project_meta.get('idea')}",
+        f"核心研究想法是围绕“{_cn_term(project_meta.get('idea'))}”构建一套可复验的研究流程。这里的重点不是先写出漂亮的论文表述，而是把文献证据、数据条件、方法路线和预期图表在计划阶段先绑定清楚。",
         "",
-        f"研究领域：{project_meta.get('field')}",
+        f"研究领域可概括为：{_cn_term(project_meta.get('field'))}。",
         "",
-        f"目标期刊：{project_meta.get('target_journal')}",
+        f"目标期刊为：{project_meta.get('target_journal') or '尚未指定'}。",
         "",
         "## 文献综合",
         "",
-        str((blueprint.get("literature_synthesis") or {}).get("synthesis_summary") or "当前文献综合结果需要在 references 阶段继续补充。"),
+        synthesis_summary,
+        "",
+        "从当前文献证据看，后续写作需要把研究意义落在三个层面：已有工作如何处理类似数据，已有方法在哪些场景下有效，以及本研究的数据与方法是否足以支撑更进一步的结论。Introduction 和 Discussion 应围绕这些证据展开，避免只给出笼统背景。",
         "",
         "## 研究问题与预期发现",
         "",
     ]
     for claim in blueprint.get("research_claims") or []:
         lines.extend([
-            f"- {claim.get('claim_id')}：{claim.get('research_question')}",
-            f"  预期发现：{claim.get('expected_finding')}",
+            f"- {claim.get('claim_id')}：{_cn_sentence(claim.get('research_question'))}",
+            f"  预期发现：{_cn_sentence(claim.get('expected_finding'))}",
             "",
         ])
-    lines.extend(["## 图表故事板", ""])
-    for item in (blueprint.get("figure_storyboard") or {}).get("figures") or []:
+    lines.extend([
+        "## 数据与方法约束",
+        "",
+        "后续数据阶段应优先确认样本覆盖、标签来源、模态缺失、时间采样和质量控制记录。方法阶段则必须围绕这些数据条件构建，而不是脱离数据空谈模型。若某一类数据无法获得，相应图表和结论需要降级，而不是继续保留强结论。",
+        "",
+        "## 图表故事板",
+        "",
+    ])
+    for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("figures") or [], start=1):
         lines.extend([
-            f"- {item.get('figure_id')}：{item.get('proposed_title')}",
-            f"  研究问题：{item.get('research_question')}",
-            f"  预期发现：{item.get('expected_finding')}",
-            f"  数据需求：{', '.join(item.get('required_data') or [])}",
-            f"  方法需求：{', '.join(item.get('required_method') or [])}",
+            f"- 图{index}：{_cn_term(item.get('proposed_title'))}",
+            f"  研究问题：{_cn_sentence(item.get('research_question'))}",
+            f"  预期发现：{_cn_sentence(item.get('expected_finding'))}",
+            f"  数据需求：{_cn_join(item.get('required_data') or [])}",
+            f"  方法需求：{_cn_join(item.get('required_method') or [])}",
+            f"  验证指标：{_cn_term(item.get('validation_metric'))}",
+            "",
+        ])
+    lines.extend(["## 核心表格", ""])
+    for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("tables") or [], start=1):
+        lines.extend([
+            f"- 表{index}：{_cn_term(item.get('proposed_title'))}",
+            f"  数据需求：{_cn_join(item.get('required_data') or [])}",
+            f"  方法需求：{_cn_join(item.get('required_method') or [])}",
             "",
         ])
     lines.extend(["## 方法计划", ""])
-    for task in (blueprint.get("method_plan") or {}).get("method_tasks") or []:
-        lines.append(f"- {task.get('task_id')}：围绕 {task.get('figure_id')} 执行 {task.get('method_family')}。")
+    for index, task in enumerate((blueprint.get("method_plan") or {}).get("method_tasks") or [], start=1):
+        lines.extend([
+            f"- 任务{index}：该任务服务于第{index}张主图，核心方法为{_cn_term(task.get('method_family'))}。",
+            f"  需要输入的数据包括：{_cn_join(task.get('required_data') or [])}；验证指标为：{_cn_term(task.get('validation_metric'))}。",
+        ])
     lines.extend([
         "",
-        "## 文献笔记",
+        "## 风险与人工确认",
+        "",
+        "在进入正式写作和代码生成前，需要人工确认三件事：第一，当前文献集合是否足够覆盖背景、数据和方法；第二，本地或服务器端数据是否能满足图表故事板中的数据需求；第三，方法代码是否能够真实跑出对应图表，而不是只生成流程图或占位图。",
+        "",
+        "## 文献笔记索引",
         "",
         "[打开完整文献综述索引](../references/literature_summaries/index.html)",
         "",
@@ -424,46 +566,13 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     return "\n".join(lines)
 
 
-def _write_bilingual_research_plan_html(path: Path, english_markdown: str, chinese_markdown: str) -> None:
-    from .html_utils import markdown_to_html
-
-    english_body = markdown_to_html(english_markdown, title="Research Plan").split("<body>", 1)[1].split("</body>", 1)[0]
-    chinese_body = markdown_to_html(chinese_markdown, title="研究方案").split("<body>", 1)[1].split("</body>", 1)[0]
-    html = f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Literature-Informed Research Plan</title>
-  <style>
-    body {{ font-family: Arial, sans-serif; max-width: 1080px; margin: 32px auto; line-height: 1.58; color: #202124; }}
-    .toolbar {{ position: sticky; top: 0; background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 12px 0; margin-bottom: 20px; }}
-    button {{ border: 1px solid #d1d5db; background: #f8fafc; padding: 8px 12px; margin-right: 8px; cursor: pointer; }}
-    button.active {{ background: #111827; color: #ffffff; }}
-    h1, h2, h3 {{ color: #111827; }}
-    code {{ background: #f3f4f6; padding: 0.1rem 0.25rem; border-radius: 4px; }}
-    li {{ margin: 0.35rem 0; }}
-    .lang-panel[hidden] {{ display: none; }}
-  </style>
-  <script>
-    function toggleLanguage(lang) {{
-      document.getElementById('lang-en').hidden = lang !== 'en';
-      document.getElementById('lang-cn').hidden = lang !== 'cn';
-      document.getElementById('btn-en').className = lang === 'en' ? 'active' : '';
-      document.getElementById('btn-cn').className = lang === 'cn' ? 'active' : '';
-    }}
-  </script>
-</head>
-<body>
-  <div class="toolbar">
-    <button id="btn-en" class="active" onclick="toggleLanguage('en')">English</button>
-    <button id="btn-cn" onclick="toggleLanguage('cn')">中文</button>
-  </div>
-  <section id="lang-en" class="lang-panel">{english_body}</section>
-  <section id="lang-cn" class="lang-panel" hidden>{chinese_body}</section>
-</body>
-</html>
-"""
-    path.write_text(html, encoding="utf-8")
+def _assert_cn_plan_quality(text: str) -> None:
+    chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+    ascii_letters = len(re.findall(r"[A-Za-z]", text))
+    if chinese_chars < 120 or chinese_chars <= ascii_letters * 0.12:
+        raise ResearchPlanQualityError("research_plan.zh-CN.md is not sufficiently localized into fluent Chinese.")
+    if "Research question:" in text or "Expected finding:" in text:
+        raise ResearchPlanQualityError("research_plan.zh-CN.md still contains untranslated English structural labels.")
 
 
 def _build_research_questions(project_meta: dict[str, Any], citation_rows: list[dict[str, str]]) -> list[str]:
@@ -647,6 +756,10 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     _write_json(research_plan_dir / "research_blueprint.json", blueprint)
     _write_json(research_plan_dir / "figure_storyboard.json", blueprint["figure_storyboard"])
     _write_json(research_plan_dir / "method_plan.json", blueprint["method_plan"])
+    for obsolete_name in ["research_plan.html", "research_questions.md", "research_questions.html"]:
+        obsolete_path = research_plan_dir / obsolete_name
+        if obsolete_path.exists():
+            obsolete_path.unlink()
     plan_text = render_research_plan(
         state.metadata,
         literature_items,
@@ -656,23 +769,18 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
         discipline_profile,
         blueprint,
     )
-    questions_text = render_research_questions(state.metadata, citation_rows)
     plan_text_cn = _render_research_plan_cn(state.metadata, blueprint)
+    _assert_cn_plan_quality(plan_text_cn)
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
     (research_plan_dir / "research_plan.zh-CN.md").write_text(plan_text_cn, encoding="utf-8")
-    (research_plan_dir / "research_questions.md").write_text(questions_text, encoding="utf-8")
-    _write_bilingual_research_plan_html(research_plan_dir / "research_plan.html", plan_text, plan_text_cn)
-    write_html_report(research_plan_dir / "research_questions.html", questions_text, title="Research Questions")
 
     update_stage_status(state.path, "research_plan", "draft")
     _set_research_plan_manifest(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),
-        "research_plan": str(research_plan_dir / "research_plan.html"),
-        "research_plan_markdown": str(research_plan_dir / "research_plan.md"),
-        "research_questions": str(research_plan_dir / "research_questions.html"),
-        "research_questions_markdown": str(research_plan_dir / "research_questions.md"),
+        "research_plan": str(research_plan_dir / "research_plan.md"),
+        "research_plan_zh_cn": str(research_plan_dir / "research_plan.zh-CN.md"),
         "citation_count": len(citation_rows),
         "literature_count": len(literature_items),
         "anchor_paper_count": len(anchor_papers),

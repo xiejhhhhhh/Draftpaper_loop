@@ -318,6 +318,15 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.14.11 (2026-06-30) -- research-plan Markdown contract and structured literature query plan
+
+- Changed `generate-plan` so the human-facing research plan is written as `research_plan/research_plan.md` and `research_plan/research_plan.zh-CN.md`; `research_plan.html` and separate `research_questions.*` outputs are no longer generated.
+- Embedded research questions, figure storyboard, method-plan contract, expected tables, risk checks, and the literature-summary index link directly into the research plan Markdown files.
+- Upgraded the Chinese research-plan renderer so it writes a fluent Chinese planning document from the same blueprint instead of only translating section headings.
+- Added structured literature query planning with context, query ID, combination level, discipline anchor, and query components for introduction/data/method/target-journal searches.
+- Added low-count fallback searches for astronomy-style projects and records query provenance in `references/search_queries.json`, `references/literature_items.json`, and per-paper literature summary HTML files.
+- Verified the new flow on the local astronomy project by rerunning `search-literature -> generate-plan`; the project now records 12 retained references, 30 citation-evidence rows, 6 planned main figures, and 1 planned core table.
+
 ### v0.14.10 (2026-06-30) -- citation preservation and reference coverage audit
 
 - Added citation-use metadata for claim-level audit records, including citation intent, support status, topic relevance score, claim-alignment score, blocking status, and repair hints.
@@ -508,7 +517,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added `plan-figures` so the loop plans project-specific scientific figures before generating analysis code.
 - Changed `generate-analysis-code` to follow `results/figure_plan.json` instead of producing fixed workflow figures.
 - Added remote/server/API data handling through source manifests and supplied processed/result artifacts with claim-limited conditional passes.
-- Added HTML outputs for summary-style artifacts such as research plans, research questions, novelty reports, figure plans, and literature review notes while keeping Markdown compatibility files.
+- Added HTML outputs for report-style artifacts such as novelty reports, figure plans, and literature review notes. Later versions moved the main research plan back to Markdown-first outputs for better direct review and editing.
 - Moved contact, commercial-use terms, and homepage information to the end of the README after the update log.
 
 ### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis

@@ -77,9 +77,10 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertEqual(result["status"], "written")
             self.assertEqual(result["citation_count"], 2)
             self.assertTrue((project.path / "research_plan" / "research_plan.md").exists())
-            self.assertTrue((project.path / "research_plan" / "research_plan.html").exists())
-            self.assertTrue((project.path / "research_plan" / "research_questions.md").exists())
-            self.assertTrue((project.path / "research_plan" / "research_questions.html").exists())
+            self.assertTrue((project.path / "research_plan" / "research_plan.zh-CN.md").exists())
+            self.assertFalse((project.path / "research_plan" / "research_plan.html").exists())
+            self.assertFalse((project.path / "research_plan" / "research_questions.md").exists())
+            self.assertFalse((project.path / "research_plan" / "research_questions.html").exists())
             self.assertTrue((project.path / "research_plan" / "target_journal_anchor_papers.json").exists())
             self.assertTrue((project.path / "research_plan" / "novelty_overlap_report.md").exists())
             self.assertTrue((project.path / "research_plan" / "novelty_overlap_report.html").exists())
@@ -91,12 +92,10 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertIn("Research Questions", plan)
             self.assertIn("Data Requirements", plan)
             self.assertIn("Method Route", plan)
+            self.assertIn("Method Plan Contract", plan)
+            self.assertIn("Figure Storyboard", plan)
             self.assertIn("Target-Journal Anchor Literature", plan)
             self.assertIn("Risks and User Confirmation", plan)
-
-            questions = (project.path / "research_plan" / "research_questions.md").read_text(encoding="utf-8")
-            self.assertIn("RQ1", questions)
-            self.assertIn("multimodal", questions.lower())
 
             manifest = json.loads((project.path / "research_plan" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")
@@ -104,7 +103,8 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertIn("references/citation_evidence.csv", manifest["input_files"])
             self.assertIn("research_plan/target_journal_anchor_papers.json", manifest["output_files"])
             self.assertIn("research_plan/research_plan.md", manifest["output_files"])
-            self.assertIn("research_plan/research_plan.html", manifest["output_files"])
+            self.assertIn("research_plan/research_plan.zh-CN.md", manifest["output_files"])
+            self.assertNotIn("research_plan/research_plan.html", manifest["output_files"])
 
             project_json = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project_json["stages"]["research_plan"]["status"], "draft")
@@ -136,9 +136,6 @@ class ResearchPlanTests(unittest.TestCase):
             self.assertIn("[Open the full literature summaries](../references/literature_summaries/index.html)", plan)
             snapshot = plan.split("## Literature Notes Snapshot", 1)[1]
             self.assertNotIn("# Literature Review Notes", snapshot)
-
-            html = (project.path / "research_plan" / "research_plan.html").read_text(encoding="utf-8")
-            self.assertIn("../references/literature_summaries/index.html", html)
 
     def test_generate_research_plan_writes_structured_blueprint_storyboard_and_bilingual_outputs(self) -> None:
         from draftpaper_cli.research_plan import generate_research_plan
@@ -201,12 +198,16 @@ class ResearchPlanTests(unittest.TestCase):
                 self.assertNotIn("Additional discipline-specific", figure["proposed_title"])
             plan = (project.path / "research_plan" / "research_plan.md").read_text(encoding="utf-8")
             plan_cn = (project.path / "research_plan" / "research_plan.zh-CN.md").read_text(encoding="utf-8")
-            html = (project.path / "research_plan" / "research_plan.html").read_text(encoding="utf-8")
             self.assertIn("Figure Storyboard", plan)
             self.assertIn("Time-aware Transformer", plan)
             self.assertIn("图表故事板", plan_cn)
-            self.assertIn("toggleLanguage", html)
-            self.assertIn("中文", html)
+            self.assertIn("时间感知", plan_cn)
+            self.assertIn("预期发现", plan_cn)
+            self.assertNotIn("Research question:", plan_cn)
+            self.assertNotIn("Expected finding:", plan_cn)
+            chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", plan_cn))
+            ascii_letters = len(re.findall(r"[A-Za-z]", plan_cn))
+            self.assertGreater(chinese_chars, ascii_letters * 0.35)
 
     def test_cli_generate_plan_writes_research_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -230,9 +231,10 @@ class ResearchPlanTests(unittest.TestCase):
 
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "written")
-            self.assertTrue(payload["research_plan"].endswith(".html"))
+            self.assertTrue(payload["research_plan"].endswith(".md"))
             self.assertTrue(Path(payload["research_plan"]).exists())
-            self.assertTrue(Path(payload["research_questions"]).exists())
+            self.assertTrue(Path(payload["research_plan_zh_cn"]).exists())
+            self.assertNotIn("research_questions", payload)
 
     def test_cli_generate_plan_returns_blocked_high_similarity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -266,6 +266,15 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.14.11 (2026-06-30) -- research-plan Markdown contract and structured literature query plan
+
+- 调整 `generate-plan`：面向用户阅读的 research plan 只生成 `research_plan/research_plan.md` 和 `research_plan/research_plan.zh-CN.md`，不再额外生成 `research_plan.html` 和单独的 `research_questions.*` 文件。
+- 将研究问题、figure storyboard、method-plan contract、预期表格、风险检查和文献综述索引链接直接合并进 research plan Markdown，减少用户需要打开的分散文件。
+- 升级中文 research plan 渲染器：中文版不再只是翻译标题，而是基于同一份 blueprint 生成更自然的中文研究方案说明。
+- 升级文献检索 query plan：每条检索记录都会带有 context、query ID、组合层级、学科锚点和 query components，用于区分 introduction/data/method/target-journal 检索来源。
+- 为天文学等项目增加低数量自动补检，并把 query provenance 写入 `references/search_queries.json`、`references/literature_items.json` 和每篇文献的 HTML summary。
+- 已用本地 astronomy 项目重新运行 `search-literature -> generate-plan` 验证：当前项目保留 12 篇参考文献、30 条 citation-evidence rows、6 张计划主图和 1 个核心表格。
+
 ### v0.14.10 (2026-06-30) -- citation preservation and reference coverage audit
 
 - 为 claim-level 引用核查记录补充 citation intent、support status、topic relevance score、claim-alignment score、blocking status 和 repair hints。
@@ -456,7 +465,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 `plan-figures`，在生成分析代码前先规划项目专属科研图表。
 - `generate-analysis-code` 改为读取 `results/figure_plan.json`，不再生成固定 workflow 图。
 - 增加远程/服务器/API 数据和用户提供 processed/result artifacts 的支持，并对 claim strength 做 conditional pass 限制。
-- summary 类文档增加 HTML 主产物，例如 research plan、research questions、novelty report、figure plan 和 literature review notes，同时保留 Markdown 兼容文件。
+- report 类产物曾补充 HTML 输出，例如 novelty report、figure plan 和 literature review notes；后续版本已将 research plan 调整回 Markdown-first，方便直接审阅和修改。
 - 联系方式、商业使用条款和个人主页移动到 README 末尾。
 
 ### v0.5.0 (2026-06-09) -- review routing and gate-failure diagnosis

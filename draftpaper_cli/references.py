@@ -99,7 +99,20 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "search_contexts": search_contexts or [search_context or "idea"],
         "search_query": str(item.get("search_query") or "").strip(),
         "search_queries": [str(query).strip() for query in (item.get("search_queries") or []) if str(query).strip()],
+        "search_query_id": str(item.get("search_query_id") or "").strip(),
+        "combination_level": str(item.get("combination_level") or "").strip(),
+        "discipline_anchor": str(item.get("discipline_anchor") or "").strip(),
+        "query_components": item.get("query_components") if isinstance(item.get("query_components"), dict) else {},
+        "query_provenance": item.get("query_provenance") if isinstance(item.get("query_provenance"), list) else [],
     }
+    if not normalized["query_provenance"] and normalized["search_query"]:
+        normalized["query_provenance"] = [{
+            "query_id": normalized["search_query_id"],
+            "context": normalized["search_context"],
+            "combination_level": normalized["combination_level"],
+            "query": normalized["search_query"],
+            "query_components": normalized["query_components"],
+        }]
     normalized["bibtex_key"] = str(item.get("bibtex_key") or citation_key(normalized, index))
     normalized["evidence_notes"] = item.get("evidence_notes") or infer_evidence_summary(normalized)
     return normalized
@@ -314,6 +327,28 @@ def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> N
             queries.append(clean_query)
     target["search_contexts"] = contexts
     target["search_queries"] = queries
+    provenance = list(target.get("query_provenance") or [])
+    seen = {
+        (
+            str(entry.get("query_id") or ""),
+            str(entry.get("context") or ""),
+            str(entry.get("query") or ""),
+        )
+        for entry in provenance
+        if isinstance(entry, dict)
+    }
+    for entry in source.get("query_provenance") or []:
+        if not isinstance(entry, dict):
+            continue
+        key = (
+            str(entry.get("query_id") or ""),
+            str(entry.get("context") or ""),
+            str(entry.get("query") or ""),
+        )
+        if key not in seen:
+            provenance.append(entry)
+            seen.add(key)
+    target["query_provenance"] = provenance
 
 
 def _year_int(item: dict[str, Any]) -> int | None:
@@ -396,7 +431,7 @@ def select_references_by_context(
             zotero_items.append(preserved)
         elif has_sufficient_metadata_or_pdf(item):
             external_items.append(item)
-    by_context: dict[str, list[dict[str, Any]]] = {"idea": [], "data": [], "methods": []}
+    by_context: dict[str, list[dict[str, Any]]] = {"idea": [], "introduction": [], "target_journal_anchor": [], "data": [], "methods": []}
     for item in external_items:
         context = str(item.get("search_context") or "idea").lower()
         if context not in by_context:
@@ -417,6 +452,8 @@ def select_references_by_context(
             selected.append(item)
     remainder = _dedupe_ranked(
         selected
+        + ranked_by_context["target_journal_anchor"]
+        + ranked_by_context["introduction"]
         + ranked_by_context["idea"]
         + ranked_by_context["data"][CONTEXT_MINIMUM_ITEMS:]
         + ranked_by_context["methods"][CONTEXT_MINIMUM_ITEMS:]
@@ -568,7 +605,14 @@ def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
         contexts = item.get("search_contexts") or [item.get("search_context") or "idea"]
         for context_value in contexts:
             context = str(context_value or "idea").lower()
-            section = {"idea": "introduction", "data": "data", "methods": "methods"}.get(context, "introduction")
+            section = {
+                "idea": "introduction",
+                "introduction": "introduction",
+                "target_journal_anchor": "introduction",
+                "discussion": "discussion",
+                "data": "data",
+                "methods": "methods",
+            }.get(context, "introduction")
             rows.append({
                 "citation_key": item["bibtex_key"],
                 "section": section,
@@ -652,6 +696,25 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     index_rows = []
     for index, item in enumerate(items, start=1):
         summary = item.get("deep_summary") or {}
+        provenance_rows = []
+        for entry in item.get("query_provenance") or []:
+            if not isinstance(entry, dict):
+                continue
+            provenance_rows.append(
+                "<tr>"
+                f"<td>{escape(str(entry.get('query_id') or item.get('search_query_id') or 'n/a'))}</td>"
+                f"<td>{escape(str(entry.get('context') or item.get('search_context') or 'idea'))}</td>"
+                f"<td>{escape(str(entry.get('combination_level') or item.get('combination_level') or 'n/a'))}</td>"
+                f"<td>{escape(str(entry.get('query') or ''))}</td>"
+                "</tr>"
+            )
+        provenance_table = (
+            "<table><tr><th>Query ID</th><th>Context</th><th>Combination level</th><th>Query</th></tr>"
+            + "\n".join(provenance_rows)
+            + "</table>"
+            if provenance_rows
+            else "<p>No structured query provenance was recorded for this item.</p>"
+        )
         filename = f"{index:02d}_{_safe_filename(item.get('bibtex_key', ''), 'paper')}.html"
         relative = f"references/literature_summaries/{filename}"
         html = f"""<!doctype html>
@@ -679,6 +742,9 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Venue</th><td>{escape(item.get('publication') or 'n/a')}</td></tr>
     <tr><th>Search context</th><td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td></tr>
     <tr><th>Search query</th><td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td></tr>
+    <tr><th>Search query ID</th><td>{escape(item.get('search_query_id') or 'n/a')}</td></tr>
+    <tr><th>Combination level</th><td>{escape(item.get('combination_level') or 'n/a')}</td></tr>
+    <tr><th>Discipline anchor</th><td>{escape(item.get('discipline_anchor') or 'n/a')}</td></tr>
     <tr><th>Recommended section</th><td>{escape({'idea': 'introduction', 'data': 'data', 'methods': 'methods'}.get(str(item.get('search_context') or 'idea'), 'introduction'))}</td></tr>
     <tr><th>Citation weight</th><td class="score">{escape(str(item.get('citation_weight', 0)))}</td></tr>
     <tr><th>Relevance to Study</th><td>{escape(str(item.get('relevance_score', 0)))}</td></tr>
@@ -686,6 +752,8 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Citation authority</th><td>{escape(str(item.get('citation_authority_score', 0)))}</td></tr>
     <tr><th>DOI / URL</th><td>{escape(item.get('doi') or '')} {escape(item.get('url') or '')}</td></tr>
   </table>
+  <h2>Query provenance</h2>
+  {provenance_table}
   <h2>Abstract Summary</h2>
   <p>{escape(item.get('abstract') or 'No abstract metadata is available.')}</p>
   <h2>Structured Reading Notes</h2>
@@ -709,6 +777,8 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
             f"<td>{escape(item.get('zotero_collection') or 'n/a')}</td>"
             f"<td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td>"
             f"<td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td>"
+            f"<td>{escape(item.get('search_query_id') or 'n/a')}</td>"
+            f"<td>{escape(item.get('combination_level') or 'n/a')}</td>"
             f"<td>{escape(str(item.get('citation_weight', 0)))}</td>"
             f"<td>{escape(str(item.get('relevance_score', 0)))}</td><td>{escape(str(item.get('journal_score', 0)))}</td></tr>"
         )
@@ -718,7 +788,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
 <body>
 <h1>Literature Summary Index</h1>
 <table border="1" cellpadding="6" cellspacing="0">
-<tr><th>#</th><th>Title</th><th>Citation key</th><th>Source</th><th>Origin</th><th>Zotero collection</th><th>Context</th><th>Search query</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr>
+<tr><th>#</th><th>Title</th><th>Citation key</th><th>Source</th><th>Origin</th><th>Zotero collection</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr>
 """ + "\n".join(index_rows) + "\n</table>\n</body>\n</html>\n"
     (summary_dir / "index.html").write_text(index_html, encoding="utf-8")
     return ["references/literature_summaries/index.html", *output_files]
