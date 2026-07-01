@@ -1,0 +1,3 @@
+object_id,class_label,obs_id,detector,product_level,object_index
+synthetic-source-001,class-a,1001,1,2,1
+synthetic-source-002,class-b,1002,2,2,1

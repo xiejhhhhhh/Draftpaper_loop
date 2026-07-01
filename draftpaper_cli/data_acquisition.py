@@ -89,6 +89,20 @@ REMOTE_SERVER_TERMS = [
     "read-only",
     "read only",
 ]
+FITS_ZIP_STREAM_TERMS = [
+    "fits",
+    "zip",
+    "fits-in-zip",
+    "stream",
+    "streaming",
+    "event list",
+    "light curve",
+    "spectrum",
+    "spectral",
+    "instrument archive",
+    "observation product",
+    "product archive",
+]
 
 
 class DataAcquisitionError(RuntimeError):
@@ -213,6 +227,7 @@ def _connector_profiles(project_files: list[dict[str, Any]], source_scan: Source
     local_evidence = [item["path"] for item in (project_files + source_data_files)[:12]]
     api_evidence = [term for term in API_TERMS if term in lowered]
     remote_evidence = [term for term in REMOTE_SERVER_TERMS if term in lowered]
+    fits_zip_evidence = [term for term in FITS_ZIP_STREAM_TERMS if term in lowered]
     profiles = [
         _connector_profile(
             "local_files",
@@ -247,6 +262,21 @@ def _connector_profiles(project_files: list[dict[str, Any]], source_scan: Source
             ],
             ["Remote paths are not manuscript evidence by themselves; local manifests and processed summaries must be preserved."],
         ),
+        _connector_profile(
+            "fits_zip_stream",
+            bool(fits_zip_evidence),
+            "high" if len(fits_zip_evidence) >= 3 else "medium",
+            fits_zip_evidence,
+            [
+                "Build an event-level product manifest before any large remote read.",
+                "Inspect ZIP/FITS headers and required members without full extraction.",
+                "Stream compact event, current-observation, history, spectral inventory, parse-status, and quality tables back to the local project.",
+            ],
+            [
+                "FITS/ZIP stream workflows require explicit provenance and parse-status reports.",
+                "Raw observation products may remain remote, so manuscript claims must rely on local processed summaries and documented access logs.",
+            ],
+        ),
     ]
     return profiles
 
@@ -267,7 +297,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _connector_names(profile: dict[str, Any]) -> list[str]:
     names = [str(item.get("connector")) for item in profile.get("connectors") or [] if item.get("detected")]
-    for name in ["local_files", "api_access", "remote_server"]:
+    for name in ["local_files", "api_access", "remote_server", "fits_zip_stream"]:
         if name not in names:
             names.append(name)
     return names
@@ -279,7 +309,7 @@ def _suggest_connectors_for_need(need: str, discipline: str, available: list[str
     if any(token in need_text for token in ["spatial", "coordinate", "region", "raster", "geotiff", "earth engine"]):
         preferred = ["local_files", "api_access", "remote_server"]
     elif any(token in need_text for token in ["catalog", "cross", "label", "class", "source", "photometric", "spectral", "light", "cadence", "exposure"]):
-        preferred = ["api_access", "remote_server", "local_files"]
+        preferred = ["fits_zip_stream", "api_access", "remote_server", "local_files"]
     elif any(token in need_text for token in ["quality", "qc", "flag", "cloud", "mask"]):
         preferred = ["local_files", "api_access", "remote_server"]
     elif any(token in need_text for token in ["target", "predictor", "feature", "group", "time"]):
@@ -288,8 +318,10 @@ def _suggest_connectors_for_need(need: str, discipline: str, available: list[str
         preferred = ["local_files", "api_access", "remote_server"]
     if discipline == "geography" and "api_access" not in preferred:
         preferred.append("api_access")
-    if discipline == "astronomy" and "remote_server" not in preferred:
-        preferred.append("remote_server")
+    if discipline == "astronomy":
+        for connector in ["fits_zip_stream", "remote_server"]:
+            if connector not in preferred:
+                preferred.append(connector)
     result = [name for name in preferred if name in available]
     for name in available:
         if name not in result:

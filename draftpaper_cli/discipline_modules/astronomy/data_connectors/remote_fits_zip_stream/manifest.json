@@ -1,0 +1,22 @@
+{
+  "connector_id": "remote_fits_zip_stream",
+  "display_name": "Remote FITS/ZIP streaming connector",
+  "access_modes": ["remote_server_ssh", "instrument_archive", "fits_zip_stream"],
+  "packages": ["astropy", "numpy", "pandas"],
+  "optional_packages": ["paramiko", "pyarrow"],
+  "data_formats": ["FITS", "ZIP", "CSV", "Parquet", "JSON provenance"],
+  "requires_credentials": true,
+  "credential_env_vars": [
+    "DRAFTPAPER_REMOTE_HOST",
+    "DRAFTPAPER_REMOTE_USER",
+    "DRAFTPAPER_REMOTE_WORKDIR"
+  ],
+  "template": "template.py",
+  "fixture": "fixture_event_manifest.csv",
+  "privacy_policy": [
+    "No hard-coded server address",
+    "No hard-coded user name",
+    "No password or token in tracked files",
+    "Remote raw product paths are redacted in public reports"
+  ]
+}

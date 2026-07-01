@@ -318,6 +318,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.14.13 (2026-07-01) -- remote FITS/ZIP streaming data connector
+
+- Added the astronomy `remote_fits_zip_stream` data connector for remote-server or instrument-archive workflows where large FITS/ZIP observation products remain external and Draftpaper-loop only persists compact manifests, processed tables, parse-status reports, and provenance records.
+- Added a generic public template for event-product manifest construction, ZIP member availability inspection, dense observation-window selection, and streaming data contracts without hard-coded private server addresses, user names, passwords, source identifiers, or project-specific labels.
+- Split training smoke validation into method templates: astronomy now exposes `source_holdout_stream_smoke_test`, while machine learning exposes `group_holdout_training_smoke_test`, so event-random metrics remain leakage-risk contrasts and group/source-held-out metrics become the primary validation path when feasible.
+- Upgraded `prepare-data-acquisition` to detect `fits_zip_stream` access patterns and route astronomy missing-data tasks toward the proper connector.
+
 ### v0.14.12 (2026-06-30) -- clickable reference links and compact query phrases
 
 - Made DOI and URL fields clickable in per-paper literature summary HTML files.

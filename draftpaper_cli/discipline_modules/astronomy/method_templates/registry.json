@@ -1,6 +1,7 @@
 {
   "templates": [
     "long_term_light_curve_feature_extraction",
-    "event_level_transformer_input_builder"
+    "event_level_transformer_input_builder",
+    "source_holdout_stream_smoke_test"
   ]
 }

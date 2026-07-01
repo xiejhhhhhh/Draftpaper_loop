@@ -1,0 +1,13 @@
+{
+  "plugin_id": "machine_learning.method.group_holdout_training_smoke_test",
+  "plugin_type": "method_template",
+  "discipline": "machine_learning",
+  "method_family": "cross_validation",
+  "aliases": ["source-held-out validation", "group holdout smoke test", "leakage contrast"],
+  "template": "template.py",
+  "input_roles": ["feature_matrix", "target_or_label", "sample_group"],
+  "output_artifacts": [
+    "results/tables/group_holdout_smoke_metrics.csv",
+    "results/tables/training_data_completeness_report.csv"
+  ]
+}

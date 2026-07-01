@@ -266,6 +266,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.14.13 (2026-07-01) -- remote FITS/ZIP streaming data connector
+
+- 新增 astronomy 学科模块的 `remote_fits_zip_stream` 数据连接器，用于大型 FITS/ZIP 观测产品保留在远端服务器或仪器归档中的场景；Draftpaper-loop 本地只保留 compact manifest、processed tables、parse-status reports 和 provenance records。
+- 新增公开通用模板，支持 event-product manifest 构建、ZIP 成员可用性检查、密集观测窗口选择和 streaming data contract 输出；模板不写死私有服务器地址、用户名、密码、真实源 ID 或项目专属类别标签。
+- 将训练冒烟验证拆到方法模板层：astronomy 模块新增 `source_holdout_stream_smoke_test`，machine learning 模块新增 `group_holdout_training_smoke_test`，从而让 event-random 指标只作为泄漏风险对照，source/group-held-out 指标在可行时作为主要验证路径。
+- 升级 `prepare-data-acquisition`，可以识别 `fits_zip_stream` 数据访问模式，并将 astronomy 缺失数据任务路由到更合适的远端流式数据连接器。
+
 ### v0.14.12 (2026-06-30) -- clickable reference links and compact query phrases
 
 - 每篇文献 summary HTML 中的 DOI 和 URL 现在会渲染为可点击链接，方便人工复查文献来源。

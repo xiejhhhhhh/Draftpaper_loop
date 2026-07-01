@@ -4,6 +4,7 @@
     "baseline_model",
     "ablation_study",
     "train_validation_test_split_check",
+    "group_holdout_training_smoke_test",
     "self_supervised_dino_training",
     "checkpoint_shape_adapter",
     "embedding_extraction_health_diagnostics",

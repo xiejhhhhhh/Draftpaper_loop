@@ -2,6 +2,7 @@
   "connectors": [
     "einstein_probe_photon_api",
     "wxt_manifest_product",
+    "remote_fits_zip_stream",
     "mission_archive_api",
     "remote_server_ssh"
   ]

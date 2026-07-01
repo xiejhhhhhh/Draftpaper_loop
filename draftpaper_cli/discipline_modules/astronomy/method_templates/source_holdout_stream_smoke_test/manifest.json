@@ -1,0 +1,19 @@
+{
+  "plugin_id": "astronomy.method.source_holdout_stream_smoke_test",
+  "plugin_type": "method_template",
+  "discipline": "astronomy",
+  "method_family": "event_level_validation",
+  "aliases": ["source-held-out smoke test", "remote stream training validation"],
+  "template": "template.py",
+  "input_roles": [
+    "event_level_samples",
+    "current_observation_tokens",
+    "history_sequence_tokens",
+    "class_label",
+    "source_or_object_group"
+  ],
+  "output_artifacts": [
+    "results/tables/training_data_completeness_report.csv",
+    "results/tables/source_holdout_smoke_metrics.csv"
+  ]
+}
