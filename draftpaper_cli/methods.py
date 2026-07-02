@@ -26,6 +26,14 @@ METHOD_INPUTS = [
     "methods/method_blueprint.json",
     "methods/method_code_manifest.json",
     "methods/run_manifest.yaml",
+]
+
+METHOD_WRITING_INPUTS = [
+    "methods/method_plan.md",
+    "methods/method_requirements.json",
+    "methods/method_blueprint.json",
+    "methods/method_code_manifest.json",
+    "methods/run_manifest.yaml",
     "methods/method_writing_context.json",
 ]
 
@@ -499,7 +507,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     context_path = state.path / "methods" / "method_writing_context.json"
     _write_json(context_path, context)
     write_html_report(state.path / "methods" / "method_writing_context.html", _render_method_context_md(context), title="Method Writing Context")
-    _set_methods_manifest(state.path)
+    _set_methods_writing_manifest(state.path)
     return context
 
 
@@ -569,6 +577,14 @@ def _set_methods_manifest(project_path: Path) -> None:
     manifest_path = project_path / "methods" / "stage_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["input_files"] = METHOD_INPUTS
+    manifest["output_files"] = ["methods/run_manifest.yaml", "methods/method_formula_manifest.json", "methods/method_formulas.tex"]
+    _write_json(manifest_path, manifest)
+
+
+def _set_methods_writing_manifest(project_path: Path) -> None:
+    manifest_path = project_path / "methods_writing" / "stage_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["input_files"] = METHOD_WRITING_INPUTS + ["results/results.tex", "core_evidence/core_evidence_report.json"]
     manifest["output_files"] = METHOD_OUTPUTS
     _write_json(manifest_path, manifest)
 
@@ -581,8 +597,8 @@ def write_methods(project: str | Path) -> dict[str, Any]:
     methods_dir = state.path / "methods"
     output_path = methods_dir / "methods.tex"
     output_path.write_text(_render_methods_tex(state.metadata, manifest, context), encoding="utf-8")
-    update_stage_status(state.path, "methods", "draft")
-    _set_methods_manifest(state.path)
+    update_stage_status(state.path, "methods_writing", "draft")
+    _set_methods_writing_manifest(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),

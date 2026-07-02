@@ -32,7 +32,6 @@ PROJECT_DIRECTORIES = [
     "research_plan",
     "references",
     "journal_profile",
-    "introduction",
     "data/acquisition",
     "data/raw",
     "data/processed",
@@ -49,8 +48,12 @@ PROJECT_DIRECTORIES = [
     "code/scripts",
     "code/tests",
     "result_validity",
+    "core_evidence",
     "results/figures",
     "results/tables",
+    "data_writing",
+    "methods_writing",
+    "introduction",
     "discussion",
     "latex/sections",
     "latex/template",
@@ -64,14 +67,17 @@ STAGE_ORDER = [
     "references",
     "journal_profile",
     "research_plan",
-    "introduction",
     "data",
     "method_plan",
     "figure_plan",
     "code",
     "methods",
     "result_validity",
+    "core_evidence",
     "results",
+    "introduction",
+    "data_writing",
+    "methods_writing",
     "discussion",
     "latex",
     "quality_checks",
@@ -102,16 +108,19 @@ def _build_stage_metadata() -> dict[str, dict[str, Any]]:
     stages["references"]["depends_on"] = ["idea"]
     stages["journal_profile"]["depends_on"] = ["idea"]
     stages["research_plan"]["depends_on"] = ["references", "journal_profile"]
-    stages["introduction"]["depends_on"] = ["research_plan", "references", "journal_profile"]
     stages["data"]["depends_on"] = ["research_plan"]
     stages["method_plan"]["depends_on"] = ["research_plan", "references", "data"]
     stages["figure_plan"]["depends_on"] = ["method_plan", "data", "references", "journal_profile"]
     stages["code"]["depends_on"] = ["figure_plan", "method_plan", "data", "references"]
     stages["methods"]["depends_on"] = ["method_plan", "data", "code"]
     stages["result_validity"]["depends_on"] = ["methods", "method_plan", "data"]
-    stages["results"]["depends_on"] = ["result_validity"]
+    stages["core_evidence"]["depends_on"] = ["result_validity", "figure_plan", "methods", "data"]
+    stages["results"]["depends_on"] = ["core_evidence"]
+    stages["introduction"]["depends_on"] = ["research_plan", "references", "journal_profile", "core_evidence"]
+    stages["data_writing"]["depends_on"] = ["data", "results", "core_evidence"]
+    stages["methods_writing"]["depends_on"] = ["method_plan", "methods", "results", "core_evidence"]
     stages["discussion"]["depends_on"] = ["introduction", "results", "references"]
-    stages["latex"]["depends_on"] = ["introduction", "data", "method_plan", "methods", "result_validity", "results", "discussion", "references", "journal_profile"]
+    stages["latex"]["depends_on"] = ["introduction", "data_writing", "method_plan", "methods_writing", "result_validity", "results", "discussion", "references", "journal_profile"]
     stages["quality_checks"]["depends_on"] = ["latex"]
     return stages
 

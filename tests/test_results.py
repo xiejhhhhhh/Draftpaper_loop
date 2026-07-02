@@ -81,7 +81,7 @@ class ResultsManifestWriterTests(unittest.TestCase):
             with self.assertRaises(ResultsGateError):
                 write_results(project.path)
 
-    def test_write_results_creates_latex_without_citations_and_inserts_figures_at_result_subsection_end(self) -> None:
+    def test_write_results_creates_latex_without_citations_and_writes_chinese_review_summary(self) -> None:
         from draftpaper_cli.results import inventory_results, write_results
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -101,7 +101,7 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertIn("results/figures/risk_curve.png", tex)
             self.assertIn("results/tables/metrics.csv", tex)
             self.assertNotIn("\\cite", tex)
-            self.assertIn("\\subsection{Primary Empirical Pattern}", tex)
+            self.assertNotIn("\\subsection", tex)
             self.assertRegex(tex, r"Figure~\\ref\{fig:[^{}]+\}")
             self.assertLess(tex.index("The figure provides visual evidence"), tex.index("\\includegraphics"))
             self.assertLess(tex.index("risk_curve.png"), tex.index("\\end{figure}"))
@@ -113,12 +113,16 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertNotIn("result validity gate", tex)
             self.assertNotIn("project workflow", tex)
             self.assertNotIn("verified workflow", tex)
+            summary = project.path / "results" / "results_summary_zh.md"
+            self.assertTrue(summary.exists())
+            self.assertIn("结果部分中文审阅摘要", summary.read_text(encoding="utf-8"))
 
             manifest = json.loads((project.path / "results" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")
             self.assertIn("results/result_validity_report.json", manifest["input_files"])
             self.assertIn("results/result_manifest.yaml", manifest["input_files"])
             self.assertIn("results/results.tex", manifest["output_files"])
+            self.assertIn("results/results_summary_zh.md", manifest["output_files"])
 
     def test_write_results_rejects_citation_in_manifest_claim(self) -> None:
         from draftpaper_cli.results import ResultsGateError, write_results

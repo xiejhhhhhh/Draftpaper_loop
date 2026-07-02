@@ -46,8 +46,11 @@ class ProjectScaffoldTests(unittest.TestCase):
                 "code/scripts",
                 "code/tests",
                 "result_validity",
+                "core_evidence",
                 "results/figures",
                 "results/tables",
+                "data_writing",
+                "methods_writing",
                 "discussion",
                 "latex/sections",
                 "latex/template",
@@ -68,7 +71,11 @@ class ProjectScaffoldTests(unittest.TestCase):
             self.assertEqual(metadata["stages"]["journal_profile"]["depends_on"], ["idea"])
             self.assertEqual(metadata["stages"]["research_plan"]["depends_on"], ["references", "journal_profile"])
             self.assertEqual(metadata["stages"]["method_plan"]["depends_on"], ["research_plan", "references", "data"])
-            self.assertEqual(metadata["stages"]["results"]["depends_on"], ["result_validity"])
+            self.assertEqual(metadata["stages"]["core_evidence"]["depends_on"], ["result_validity", "figure_plan", "methods", "data"])
+            self.assertEqual(metadata["stages"]["results"]["depends_on"], ["core_evidence"])
+            self.assertEqual(metadata["stages"]["introduction"]["depends_on"], ["research_plan", "references", "journal_profile", "core_evidence"])
+            self.assertEqual(metadata["stages"]["data_writing"]["depends_on"], ["data", "results", "core_evidence"])
+            self.assertEqual(metadata["stages"]["methods_writing"]["depends_on"], ["method_plan", "methods", "results", "core_evidence"])
             self.assertEqual(metadata["dpl"]["schema_family"], "dpl")
             self.assertEqual(metadata["dpl"]["project_schema"], "dpl.project.v1")
             self.assertEqual(metadata["dpl"]["stage_manifest_schema"], "dpl.stage_manifest.v1")

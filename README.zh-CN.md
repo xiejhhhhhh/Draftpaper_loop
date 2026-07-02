@@ -266,6 +266,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.15.1 (2026-07-01) -- evidence-first paper loop and core evidence gate
+
+- 调整主论文流程：文献调研和 research plan 之后，先完成数据补充与整合、方法代码运行、核心图表生成、result validity 和 core evidence gate，再进入正文写作。
+- 新增 `assess-core-evidence`，输出 `core_evidence/core_evidence_report.json` 和 `.html`，用于检查数据补充、数据整合、方法分析、图表生成、figure metadata 和结果有效性，并保留人工确认核心图表的检查点。
+- 将执行阶段和正文写作阶段拆开：`data` 和 `methods` 负责证明数据与方法可用，`data_writing` 和 `methods_writing` 在 Results 证据明确之后再生成 `data.tex` 和 `methods.tex`。
+- Results 写作改为连续自然段，不再默认按每张图拆小节，并新增 `results/results_summary_zh.md`，用于中文概括结果部分和图表解释，方便人工审图。
+- 同步更新 orchestrator、LaTeX assembly、quality gate、review routing 和 Codex skill wrapper，使其遵循 evidence-first loop。
+
 ### v0.14.13 (2026-07-01) -- remote FITS/ZIP streaming data connector
 
 - 新增 astronomy 学科模块的 `remote_fits_zip_stream` 数据连接器，用于大型 FITS/ZIP 观测产品保留在远端服务器或仪器归档中的场景；Draftpaper-loop 本地只保留 compact manifest、processed tables、parse-status reports 和 provenance records。

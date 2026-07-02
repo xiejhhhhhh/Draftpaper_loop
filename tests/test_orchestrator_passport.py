@@ -141,26 +141,36 @@ class OrchestratorPassportTests(unittest.TestCase):
                 "references",
                 "journal_profile",
                 "research_plan",
-                "introduction",
                 "data",
                 "method_plan",
                 "figure_plan",
                 "code",
                 "methods",
                 "result_validity",
+                "core_evidence",
                 "results",
+                "introduction",
+                "data_writing",
+                "methods_writing",
                 "discussion",
                 "latex",
             ]:
                 update_stage_status(project.path, stage, "completed")
             _write_json(project.path / "data" / "data_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "data" / "data.tex").write_text("\\section{Data}\nReady.\n", encoding="utf-8")
+            (project.path / "data" / "data_acquisition_plan.json").write_text('{"tasks":[{"status":"ready"}]}', encoding="utf-8")
             (project.path / "data" / "data_inventory.json").write_text("{}", encoding="utf-8")
             (project.path / "data" / "data_quality_report.json").write_text("{}", encoding="utf-8")
             (project.path / "data" / "data_feasibility_report.json").write_text('{"decision":"pass"}', encoding="utf-8")
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
+            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
+            (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
+            (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+            (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
+            (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
             refresh_project_passport(project.path, event="test_status_ready")
 
             status = status_project(project.path)
@@ -193,26 +203,36 @@ class OrchestratorPassportTests(unittest.TestCase):
                 "references",
                 "journal_profile",
                 "research_plan",
-                "introduction",
                 "data",
                 "method_plan",
                 "figure_plan",
                 "code",
                 "methods",
                 "result_validity",
+                "core_evidence",
                 "results",
+                "introduction",
+                "data_writing",
+                "methods_writing",
                 "discussion",
                 "latex",
             ]:
                 update_stage_status(project.path, stage, "completed")
             _write_json(project.path / "data" / "data_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "data" / "data.tex").write_text("\\section{Data}\nReady.\n", encoding="utf-8")
+            (project.path / "data" / "data_acquisition_plan.json").write_text('{"tasks":[{"status":"ready"}]}', encoding="utf-8")
             (project.path / "data" / "data_inventory.json").write_text("{}", encoding="utf-8")
             (project.path / "data" / "data_quality_report.json").write_text("{}", encoding="utf-8")
             (project.path / "data" / "data_feasibility_report.json").write_text('{"decision":"pass"}', encoding="utf-8")
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
+            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
+            (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
+            (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+            (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
+            (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
             _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
             refresh_project_passport(project.path, event="test_integrity_passed_no_citation_audit")
 

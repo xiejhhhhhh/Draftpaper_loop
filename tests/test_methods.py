@@ -85,7 +85,7 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertNotIn("\\texttt", methods_tex)
             self.assertIn("accuracy", methods_tex)
 
-            manifest = json.loads((project.path / "methods" / "stage_manifest.json").read_text(encoding="utf-8"))
+            manifest = json.loads((project.path / "methods_writing" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")
             self.assertIn("methods/method_requirements.json", manifest["input_files"])
             self.assertIn("methods/run_manifest.yaml", manifest["input_files"])

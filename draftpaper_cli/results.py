@@ -21,6 +21,7 @@ RESULT_INPUTS = [
 
 RESULT_OUTPUTS = [
     "results/results.tex",
+    "results/results_summary_zh.md",
 ]
 
 FIGURE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".svg"}
@@ -279,17 +280,6 @@ def _entry_reference(kind: str, entry: dict[str, Any]) -> str:
     return f"{name}~\\ref{{{_entry_label(kind, entry)}}}"
 
 
-def _result_heading(index: int) -> str:
-    headings = [
-        "Primary Empirical Pattern",
-        "Model Response and Diagnostic Evidence",
-        "Spatial or Temporal Structure",
-        "Sensitivity and Supporting Evidence",
-        "Integrated Result Summary",
-    ]
-    return headings[(index - 1) % len(headings)]
-
-
 def _entry_groups(entries: list[tuple[str, dict[str, Any]]]) -> list[list[tuple[str, dict[str, Any]]]]:
     groups: list[list[tuple[str, dict[str, Any]]]] = []
     current: list[tuple[str, dict[str, Any]]] = []
@@ -317,7 +307,6 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
         "",
     ]
     for group_index, group in enumerate(_entry_groups(entries), start=1):
-        lines.extend([f"\\subsection{{{_safe_latex_text(_result_heading(group_index))}}}", ""])
         claims = [
             _safe_latex_text(_manuscript_result_text(str(entry.get("result_claim") or "This artifact supports one result from the current analysis.")))
             for _kind, entry in group
@@ -347,6 +336,27 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
     return tex
 
 
+def render_results_summary_zh(entries: list[tuple[str, dict[str, Any]]]) -> str:
+    lines = [
+        "# 结果部分中文审阅摘要",
+        "",
+        "本摘要用于人工快速检查图表是否支撑结果叙述，不作为论文正文直接使用。",
+        "",
+    ]
+    for index, group in enumerate(_entry_groups(entries), start=1):
+        refs = "、".join(str(entry.get("id") or entry.get("path") or f"artifact_{index}") for _kind, entry in group)
+        claims = [
+            _manuscript_result_text(str(entry.get("result_claim") or "该图表支持当前分析中的一个经验结果。"))
+            for _kind, entry in group
+        ]
+        lines.append(f"## 图表组 {index}: {refs}")
+        lines.append("")
+        lines.append("这一组图表主要用于说明：" + "；".join(claims) + "。")
+        lines.append("审阅时需要重点确认图中的坐标、图例、统计量和可视化模式是否与这一解释一致，若不一致，应先回退到方法代码或图表规划阶段，而不是直接修改结果文字。")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _set_results_stage_manifest(project_path: Path) -> None:
     manifest_path = project_path / "results" / "stage_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -366,12 +376,15 @@ def write_results(project: str | Path) -> dict[str, Any]:
     entries = _validate_manifest(state.path, manifest)
     output_path = state.path / "results" / "results.tex"
     output_path.write_text(render_results_tex(state.metadata, entries), encoding="utf-8")
+    summary_path = state.path / "results" / "results_summary_zh.md"
+    summary_path.write_text(render_results_summary_zh(entries), encoding="utf-8")
     update_stage_status(state.path, "results", "draft")
     _set_results_stage_manifest(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),
         "results": str(output_path),
+        "results_summary_zh": str(summary_path),
         "artifact_count": len(entries),
         "outputs": RESULT_OUTPUTS,
     }

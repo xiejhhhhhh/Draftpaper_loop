@@ -30,14 +30,17 @@ STAGE_COMMANDS = {
     "references": "search-literature",
     "journal_profile": "resolve-journal-template",
     "research_plan": "generate-plan",
-    "introduction": "write-introduction",
     "data": "inventory-data",
     "method_plan": "collect-method-plan",
     "figure_plan": "plan-figures",
     "code": "generate-analysis-code",
     "methods": "verify-methods",
     "result_validity": "assess-result-validity",
+    "core_evidence": "assess-core-evidence",
     "results": "inventory-results",
+    "introduction": "write-introduction",
+    "data_writing": "build-data-context",
+    "methods_writing": "build-method-context",
     "discussion": "write-discussion",
     "latex": "assemble-latex",
     "quality_checks": "quality-check",
@@ -45,16 +48,30 @@ STAGE_COMMANDS = {
 
 MINIMUM_STAGE_OUTPUTS = {
     "data": [
+        "data/data_acquisition_plan.json",
         "data/data_inventory.json",
         "data/data_quality_report.json",
         "data/data_feasibility_report.json",
+    ],
+    "data_writing": [
         "data/data_writing_context.json",
         "data/data.tex",
     ],
     "methods": [
         "methods/run_manifest.yaml",
+    ],
+    "methods_writing": [
         "methods/method_writing_context.json",
         "methods/methods.tex",
+    ],
+    "core_evidence": [
+        "core_evidence/core_evidence_report.json",
+        "core_evidence/core_evidence_report.html",
+    ],
+    "results": [
+        "results/result_manifest.yaml",
+        "results/results.tex",
+        "results/results_summary_zh.md",
     ],
 }
 
@@ -276,9 +293,19 @@ def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
 
 def _data_stage_command(project_path: Path) -> str:
     checks = [
+        ("data/data_acquisition_plan.json", "prepare-data-acquisition"),
         ("data/data_inventory.json", "inventory-data"),
         ("data/data_quality_report.json", "assess-data-quality"),
         ("data/data_feasibility_report.json", "assess-data-feasibility"),
+    ]
+    for relative, command in checks:
+        if not (project_path / relative).exists():
+            return command
+    return "assess-data-feasibility"
+
+
+def _data_writing_stage_command(project_path: Path) -> str:
+    checks = [
         ("data/data_writing_context.json", "build-data-context"),
         ("data/data.tex", "write-data"),
     ]
@@ -289,6 +316,13 @@ def _data_stage_command(project_path: Path) -> str:
 
 
 def _methods_stage_command(project_path: Path) -> str:
+    manifest = _read_report(project_path, "methods/run_manifest.yaml")
+    if manifest.get("status") != "success":
+        return "verify-methods"
+    return "verify-methods"
+
+
+def _methods_writing_stage_command(project_path: Path) -> str:
     manifest = _read_report(project_path, "methods/run_manifest.yaml")
     if manifest.get("status") != "success":
         return "verify-methods"
@@ -305,13 +339,29 @@ def _figure_plan_stage_command(project_path: Path) -> str:
     return "plan-figures"
 
 
+def _results_stage_command(project_path: Path) -> str:
+    if not (project_path / "results" / "result_manifest.yaml").exists():
+        return "inventory-results"
+    if not (project_path / "results" / "results.tex").exists():
+        return "write-results"
+    if not (project_path / "results" / "results_summary_zh.md").exists():
+        return "write-results"
+    return "write-results"
+
+
 def _stage_command(project_path: Path, stage: str) -> str | None:
     if stage == "data":
         return _data_stage_command(project_path)
+    if stage == "data_writing":
+        return _data_writing_stage_command(project_path)
     if stage == "figure_plan":
         return _figure_plan_stage_command(project_path)
     if stage == "methods":
         return _methods_stage_command(project_path)
+    if stage == "methods_writing":
+        return _methods_writing_stage_command(project_path)
+    if stage == "results":
+        return _results_stage_command(project_path)
     return STAGE_COMMANDS.get(stage)
 
 

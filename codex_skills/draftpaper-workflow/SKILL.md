@@ -45,47 +45,42 @@ Run stages in this order unless the user asks for a focused rerun:
 2. `search-literature`
 3. `resolve-journal-template`
 4. `generate-plan`
-5. `write-introduction`
+5. `prepare-data-acquisition`
 6. `inventory-data`
 7. `assess-data-quality`
 8. `assess-data-feasibility`
 9. `record-observation --stage data` after Codex has visibly summarized data source/content/processing
-10. `build-data-context`
-11. `write-data`
-12. `collect-method-plan`
-13. `plan-figures`
-14. `generate-analysis-code`
-15. `verify-methods`
-16. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
-17. `build-method-context`
-18. `write-methods`
-19. `assess-result-validity`
-20. `inventory-results`
-21. `write-results`
-22. `write-discussion`
-23. `assemble-latex`
-24. `run-integrity-gate`
-25. `quality-check`
-26. `diagnose-gate-failures`
-27. `review-draft`
-28. `assess-publication-readiness`
-29. `discover-review-workflow-gaps`
-30. `propose-review-engineering-plan`
-31. `recommend-statistical-revision`
-32. `prepare-analysis-revision`
-33. `generate-revision-plan`
-34. `apply-revision` when the user accepts a revision route
-35. `re-review`
+10. `collect-method-plan`
+11. `prepare-method-blueprint`
+12. `plan-figures`
+13. `generate-analysis-code`
+14. `verify-methods`
+15. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
+16. `assess-result-validity`
+17. `assess-core-evidence`
+18. `checkpoint --stage core_evidence` for human figure/evidence confirmation
+19. `inventory-results`
+20. `write-results`
+21. `write-introduction`
+22. `build-data-context`
+23. `write-data`
+24. `build-method-context`
+25. `write-methods`
+26. `write-discussion`
+27. `assemble-latex`
+28. `run-integrity-gate`
+29. `quality-check`
+30. reviewer/rescue commands when gates fail
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
 ## Rerun Rules
 
-If upstream artifacts change, rerun from the earliest affected stage through downstream writing, assembly, integrity, and quality. If references change, rerun plan, Introduction, Discussion, assembly, integrity, and quality. Journal profile affects all writing and assembly; data affects method plan onward; code or method changes affect method verification onward. If results change, rerun result validity onward. Template-only changes affect assembly, integrity, and quality.
+If upstream artifacts change, rerun from the earliest affected stage through downstream writing, assembly, integrity, and quality. If references change, rerun plan, evidence generation, Results, then manuscript writing. Journal profile affects plan, all writing, and assembly; data affects method plan onward; code or method changes affect method verification onward. If results change, rerun result validity, core evidence, Results, then downstream writing. Template-only changes affect assembly, integrity, and quality.
 
 ## Gates
 
-Never generate the research plan or writing stages before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`. Never verify/write Methods before data feasibility is `pass` or `conditional_pass` and method requirements exist. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json`, produce `results/figure_metadata.json` and `results/figure_quality_report.json`, and avoid workflow-diagram fallbacks for empirical Results. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity and `inventory-results`; result validity uses metric semantics, so p-values use alpha thresholds, R2 is goodness of fit, and correlations are effect sizes. Results contain no citations and should interpret figure metadata rather than filenames. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if Data/Methods contain local filenames, paths, commands, manifest dumps, or generated empirical figures without scientific metadata.
+Never generate the research plan before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. The main loop is evidence-first: literature and plan -> data acquisition/integration -> method/code -> figures/metadata/run manifest/result validity -> `assess-core-evidence` -> human confirmation -> Results -> Introduction/Data/Methods/Discussion. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`, both after core evidence and Results. Introduction/Data/Methods may frame expected mechanisms, hypotheses, and planned tests, but must not leak numeric Results conclusions before the Results section. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json`, produce `results/figure_metadata.json` and `results/figure_quality_report.json`, and avoid workflow-diagram fallbacks for empirical Results. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity, passed `assess-core-evidence`, and `inventory-results`; result validity uses metric semantics, so p-values use alpha thresholds, R2 is goodness of fit, and correlations are effect sizes. Results contain no citations and should interpret figure metadata rather than filenames. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if core evidence is not passed, Data/Methods contain local filenames, paths, commands, manifest dumps, or generated empirical figures lack scientific metadata.
 
 For Zotero-backed references, first call `list-zotero-collections` after confirming `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` are configured in the local environment. Then call `search-literature --zotero-collection "<collection name>"`; do not fall back to the full Zotero library. Treat imported Zotero records as user-curated references: they are preserved outside external-search ranking, recency, abstract/PDF filtering, and the external 30-reference cap, but must still appear in `literature_summaries/index.html` together with searched references and remain distinguishable by their Zotero source/origin metadata. Use `--zotero-context all` only when the user intends the selected collection to support Introduction, Data, and Methods evidence.
 

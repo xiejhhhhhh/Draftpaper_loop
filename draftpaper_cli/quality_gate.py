@@ -36,8 +36,10 @@ QUALITY_INPUTS = [
     "methods/run_manifest.yaml",
     "methods/method_writing_context.json",
     "results/result_validity_report.json",
+    "core_evidence/core_evidence_report.json",
     "results/result_manifest.yaml",
     "results/results.tex",
+    "results/results_summary_zh.md",
     "references/citation_evidence.csv",
     "citation_audit/final_citation_audit_report.json",
 ]
@@ -46,7 +48,24 @@ QUALITY_OUTPUTS = [
     "quality_checks/quality_report.json",
 ]
 
-FINAL_INPUT_STAGES = ["references", "journal_profile", "introduction", "data", "method_plan", "methods", "result_validity", "results", "discussion", "latex"]
+FINAL_INPUT_STAGES = [
+    "references",
+    "journal_profile",
+    "research_plan",
+    "data",
+    "method_plan",
+    "figure_plan",
+    "code",
+    "methods",
+    "result_validity",
+    "core_evidence",
+    "results",
+    "introduction",
+    "data_writing",
+    "methods_writing",
+    "discussion",
+    "latex",
+]
 RESULT_CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{", re.IGNORECASE)
 CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{([^{}]+)\}", re.IGNORECASE)
 FILESYSTEM_PATTERN = re.compile(
@@ -197,6 +216,40 @@ def _check_result_validity(project_path: Path, issues: list[QualityIssue]) -> di
         "observed_value": report.get("observed_value"),
         "minimum_value": report.get("minimum_value"),
         "failure_causes": report.get("failure_causes") or [],
+    }
+
+
+def _check_core_evidence(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    report = _read_json(project_path / "core_evidence" / "core_evidence_report.json")
+    decision = report.get("decision")
+    if decision != "pass":
+        issues.append(QualityIssue(
+            "error",
+            "core_evidence_not_passed",
+            f"Core evidence must pass before final manuscript quality check. Current decision: {decision}.",
+            "core_evidence/core_evidence_report.json",
+        ))
+    if not report.get("requires_user_confirmation", True):
+        issues.append(QualityIssue(
+            "warning",
+            "core_evidence_confirmation_not_explicit",
+            "Core evidence report should preserve an explicit human confirmation point for result figures.",
+            "core_evidence/core_evidence_report.json",
+        ))
+    coverage = report.get("workflow_coverage") or {}
+    missing = [key for key in ["data_supplementation", "data_integration", "method_analysis", "figure_production", "result_validity"] if not coverage.get(key)]
+    if missing:
+        issues.append(QualityIssue(
+            "error",
+            "core_evidence_workflow_coverage_incomplete",
+            "Core evidence workflow coverage is incomplete: " + ", ".join(missing),
+            "core_evidence/core_evidence_report.json",
+        ))
+    return {
+        "decision": decision,
+        "figure_count": report.get("figure_count"),
+        "workflow_coverage": coverage,
+        "requires_user_confirmation": report.get("requires_user_confirmation"),
     }
 
 
@@ -515,6 +568,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     data_report = _check_data_feasibility(state.path, issues)
     methods_report = _check_methods(state.path, issues)
     result_validity_report = _check_result_validity(state.path, issues)
+    core_evidence_report = _check_core_evidence(state.path, issues)
     results_report = _check_results(state.path, issues)
     manuscript_hygiene_report = _check_manuscript_narrative_hygiene(state.path, issues)
     writing_quality_report = _check_manuscript_writing_quality(state.path, issues)
@@ -542,6 +596,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "data": data_report,
         "methods": methods_report,
         "result_validity": result_validity_report,
+        "core_evidence": core_evidence_report,
         "results": results_report,
         "manuscript_hygiene": manuscript_hygiene_report,
         "writing_quality": writing_quality_report,

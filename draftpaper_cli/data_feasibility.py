@@ -27,10 +27,14 @@ DATA_TEX = "data/data.tex"
 REMOTE_SOURCE_FILES = ["data/remote_sources.json", "data/source_manifest.json"]
 
 DATA_OUTPUTS = [
+    "data/data_acquisition_plan.json",
     DATA_INVENTORY_OUTPUT,
     DATA_QUALITY_OUTPUT,
     DATA_FEASIBILITY_JSON,
     DATA_FEASIBILITY_MD,
+]
+
+DATA_WRITING_OUTPUTS = [
     DATA_WRITING_CONTEXT_JSON,
     DATA_WRITING_CONTEXT_HTML,
     DATA_TEX,
@@ -435,7 +439,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     }
     _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
     write_html_report(state.path / DATA_WRITING_CONTEXT_HTML, _render_data_context_md(context), title="Data Writing Context")
-    _set_data_manifest(state.path)
+    _set_data_writing_manifest(state.path)
     return context
 
 
@@ -496,14 +500,14 @@ def write_data(project: str | Path) -> dict[str, Any]:
     context = _load_json(state.path, DATA_WRITING_CONTEXT_JSON) if context_path.exists() else build_data_writing_context(state.path)
     output_path = state.path / DATA_TEX
     output_path.write_text(render_data_tex(context), encoding="utf-8")
-    update_stage_status(state.path, "data", "draft")
-    _set_data_manifest(state.path)
+    update_stage_status(state.path, "data_writing", "draft")
+    _set_data_writing_manifest(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),
         "data": str(output_path),
         "data_writing_context": str(state.path / DATA_WRITING_CONTEXT_JSON),
-        "outputs": DATA_OUTPUTS,
+        "outputs": DATA_WRITING_OUTPUTS,
     }
 
 
@@ -581,7 +585,7 @@ def assess_data_feasibility(project: str | Path, *, min_rows: int = 30) -> dict[
         "observed_rows": total_rows,
         "blocking_issues": issues,
         "recommended_actions": actions,
-        "stale_if_goal_changes": ["research_plan", "introduction", "method_plan", "figure_plan", "code", "methods", "result_validity", "results", "discussion", "latex", "quality_checks"],
+        "stale_if_goal_changes": ["research_plan", "method_plan", "figure_plan", "code", "methods", "result_validity", "core_evidence", "results", "introduction", "data_writing", "methods_writing", "discussion", "latex", "quality_checks"],
     }
     _write_json(state.path / DATA_FEASIBILITY_JSON, report)
     (state.path / DATA_FEASIBILITY_MD).write_text(_render_feasibility_md(report), encoding="utf-8")
@@ -602,6 +606,21 @@ def _set_data_manifest(project_path: Path) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["input_files"] = ["research_plan/research_plan.md", "data/raw", "data/processed"]
     manifest["output_files"] = DATA_OUTPUTS
+    _write_json(manifest_path, manifest)
+
+
+def _set_data_writing_manifest(project_path: Path) -> None:
+    manifest_path = project_path / "data_writing" / "stage_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["input_files"] = [
+        "data/data_inventory.json",
+        "data/data_quality_report.json",
+        "data/data_feasibility_report.json",
+        "observations",
+        "references/reference_usage_plan.json",
+        "results/results.tex",
+    ]
+    manifest["output_files"] = DATA_WRITING_OUTPUTS
     _write_json(manifest_path, manifest)
 
 

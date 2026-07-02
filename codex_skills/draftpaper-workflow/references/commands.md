@@ -45,7 +45,6 @@ The command writes `references/literature_summaries/index.html` plus one HTML su
 ## Writing Stages
 
 ```powershell
-python -m draftpaper_cli.cli write-introduction --project <repo>\projects\my_project
 python -m draftpaper_cli.cli classify-data-access --project <repo>\projects\my_project --source-root C:\external\research_folder
 python -m draftpaper_cli.cli prepare-data-acquisition --project <repo>\projects\my_project --source-root C:\external\research_folder
 python -m draftpaper_cli.cli inventory-data-sources --project <repo>\projects\my_project --source-root C:\external\research_folder
@@ -59,10 +58,16 @@ python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project --use-review-tasks
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project --use-review-tasks
 python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python methods/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figure_metadata.json --output results/figure_quality_report.json --output <figure-path-from-results-figure_plan-json>
-python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-core-evidence --project <repo>\projects\my_project
+python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage core_evidence --note "User approved core figures and evidence"
 python -m draftpaper_cli.cli inventory-results --project <repo>\projects\my_project
 python -m draftpaper_cli.cli write-results --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-introduction --project <repo>\projects\my_project
+python -m draftpaper_cli.cli build-data-context --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-data --project <repo>\projects\my_project
+python -m draftpaper_cli.cli build-method-context --project <repo>\projects\my_project
+python -m draftpaper_cli.cli write-methods --project <repo>\projects\my_project
 python -m draftpaper_cli.cli write-discussion --project <repo>\projects\my_project
 ```
 
@@ -72,7 +77,7 @@ Cross-disciplinary projects use runtime composite discipline modules. The discip
 
 `prepare-method-blueprint` connects the inferred discipline module or composite module, data inventory, data-acquisition profile, method requirements, and reviewer/rescue tasks into `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`. Run it after `collect-method-plan` and before `plan-figures` when the project has enough data context. Discipline modules can declare minimum/target main-figure counts and required figure groups, so `plan-figures` should normally produce at least five generated main figures for a complete first draft when data are available.
 
-`generate-analysis-code` writes the canonical project-local analysis runtime to `methods/src/`, executable scripts to `methods/scripts/`, and `methods/method_code_manifest.json`. `code/` is kept only as a compatibility launcher/copy for older commands. Generated empirical figures should produce `results/figure_metadata.json` and `results/figure_quality_report.json`; pass those files to `verify-methods` as declared outputs. With `--use-review-tasks`, also pass `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv`. `assess-result-validity` interprets the primary metric by statistical semantics: p-values use alpha-style thresholds such as 0.05, R2 is goodness of fit rather than a p-value, correlations are effect sizes, error metrics are lower-is-better, and classification metrics are higher-is-better. Low R2 or weak correlation outputs trigger data-quality and method-rebuild recommendations only when the method or generated figures actually produce those statistics. `inventory-results` uses the metadata to turn real plot statistics into result claims. If a planned generated figure cannot produce metadata or falls back to a placeholder/workflow diagram, rerun from `plan-figures` or revise the data/method plan instead of writing Results.
+`generate-analysis-code` writes the canonical project-local analysis runtime to `methods/src/`, executable scripts to `methods/scripts/`, and `methods/method_code_manifest.json`. `code/` is kept only as a compatibility launcher/copy for older commands. Generated empirical figures should produce `results/figure_metadata.json` and `results/figure_quality_report.json`; pass those files to `verify-methods` as declared outputs. With `--use-review-tasks`, also pass `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv`. `assess-result-validity` interprets the primary metric by statistical semantics: p-values use alpha-style thresholds such as 0.05, R2 is goodness of fit rather than a p-value, correlations are effect sizes, error metrics are lower-is-better, and classification metrics are higher-is-better. Low R2 or weak correlation outputs trigger data-quality and method-rebuild recommendations only when the method or generated figures actually produce those statistics. `assess-core-evidence` then verifies data supplementation, data integration, method execution, figure production, figure metadata, and result validity before any manuscript writing proceeds. It writes `core_evidence/core_evidence_report.json` and `.html`, and the user should inspect the figures before continuing. `inventory-results` uses the metadata to turn real plot statistics into result claims, and `write-results` also writes `results/results_summary_zh.md` for a Chinese figure-review summary. If a planned generated figure cannot produce metadata or falls back to a placeholder/workflow diagram, rerun from `plan-figures` or revise the data/method plan instead of writing Results.
 
 ## Assembly and Review
 

@@ -63,11 +63,7 @@ def prepared_project(tmp: str) -> Path:
     write_reference_outputs(project.path, SAMPLE_ITEMS, query="AGN outburst prediction")
     resolve_journal_template(project.path, target_journal="APJS", from_html=_write_aas_html(Path(tmp)))
     generate_research_plan(project.path)
-    write_introduction(project.path)
-    (project.path / "data" / "data.tex").write_text(
-        "\\section{Data}\nThe study uses locally prepared multimodal survey data.\n",
-        encoding="utf-8",
-    )
+    (project.path / "data" / "data_acquisition_plan.json").write_text(json.dumps({"tasks": [{"status": "ready"}]}), encoding="utf-8")
     rows = "\n".join(f"{i},{i % 2},0.{i % 10}" for i in range(1, 41))
     (project.path / "data" / "raw" / "sample.csv").write_text("id,target,value\n" + rows + "\n", encoding="utf-8")
     inventory_data(project.path)
@@ -75,6 +71,8 @@ def prepared_project(tmp: str) -> Path:
     assess_data_feasibility(project.path, min_rows=30)
     update_stage_status(project.path, "data", "draft")
     collect_method_plan(project.path, user_method="Use supervised multimodal classification.", primary_metric="f1", minimum_primary_metric=0.7)
+    update_stage_status(project.path, "figure_plan", "draft")
+    update_stage_status(project.path, "code", "draft")
     output = project.path / "results" / "tables" / "metrics.csv"
     figure = project.path / "results" / "figures" / "risk_curve.png"
     command = (
@@ -87,12 +85,38 @@ def prepared_project(tmp: str) -> Path:
         command=command,
         output_files=["results/tables/metrics.csv", "results/figures/risk_curve.png"],
     )
-    write_methods(project.path)
     assess_result_validity(project.path)
+    _write_core_evidence_pass(project.path, figure_count=1)
     inventory_results(project.path)
     write_results(project.path)
+    write_introduction(project.path)
+    (project.path / "data" / "data.tex").write_text(
+        "\\section{Data}\nThe study uses locally prepared multimodal survey data.\n",
+        encoding="utf-8",
+    )
+    update_stage_status(project.path, "data_writing", "draft")
+    write_methods(project.path)
     write_discussion(project.path)
     return project.path
+
+
+def _write_core_evidence_pass(project_path: Path, *, figure_count: int) -> None:
+    (project_path / "core_evidence").mkdir(parents=True, exist_ok=True)
+    payload = {
+        "decision": "pass",
+        "requires_user_confirmation": True,
+        "figure_count": figure_count,
+        "workflow_coverage": {
+            "data_supplementation": True,
+            "data_integration": True,
+            "method_analysis": True,
+            "figure_production": True,
+            "result_validity": True,
+        },
+    }
+    (project_path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps(payload), encoding="utf-8")
+    (project_path / "core_evidence" / "core_evidence_report.html").write_text("<html><body>pass</body></html>", encoding="utf-8")
+    update_stage_status(project_path, "core_evidence", "draft")
 
 
 def _write_aas_html(base: Path) -> Path:

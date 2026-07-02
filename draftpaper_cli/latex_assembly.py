@@ -29,6 +29,7 @@ SECTION_INPUTS = [
 LATEX_INPUTS = [relative for _name, relative in SECTION_INPUTS] + [
     "references/library.bib",
     "journal_profile/journal_profile.json",
+    "core_evidence/core_evidence_report.json",
     "latex/template/main.tex",
 ]
 
@@ -120,7 +121,20 @@ def _require_non_stale_input_stages(project_meta: dict[str, Any]) -> None:
     stale = []
     invalid_status = []
     stages = project_meta.get("stages") or {}
-    for stage in ["introduction", "data", "method_plan", "methods", "result_validity", "results", "discussion", "references", "journal_profile"]:
+    for stage in [
+        "introduction",
+        "data",
+        "data_writing",
+        "method_plan",
+        "methods",
+        "methods_writing",
+        "result_validity",
+        "core_evidence",
+        "results",
+        "discussion",
+        "references",
+        "journal_profile",
+    ]:
         stage_meta = stages.get(stage) or {}
         if stage_meta.get("stale"):
             stale.append(stage)

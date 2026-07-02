@@ -28,7 +28,7 @@ The current user experience is strongest for geography, environmental science, r
 
 ## What It Does
 
-Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages: project creation, literature search, journal template profiling, research planning, Introduction, Data, Methods, Results, Discussion, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
+Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages. The main loop is now evidence-first: project creation, literature search, journal template profiling, research planning, data acquisition/integration, method planning, figure planning, analysis-code generation, method verification, result validity, core evidence review, Results writing, Introduction/Data/Methods/Discussion writing, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
 
 The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, Draftpaper-loop can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
 
@@ -71,7 +71,10 @@ The loop is designed around five engineering components:
 - Project-specific figure planning before analysis-code generation.
 - Methods hard gate requiring successful local code execution.
 - Result validity gate before Results writing.
+- Core evidence gate before manuscript writing, checking data supplementation, data integration, method execution, figure production, figure metadata, and result validity before human figure confirmation.
+- Evidence-first manuscript writing: Results are written from confirmed figures first, then Introduction, Data, Methods, and Discussion are generated without leaking numeric results into earlier sections.
 - Results no-citation enforcement with explicit `Figure~\ref{...}` and `Table~\ref{...}` references in result prose.
+- Chinese Results review summary at `results/results_summary_zh.md` for quick human inspection of figure-level interpretation.
 - LaTeX assembly with optional local PDF compilation.
 - Default acknowledgments noting Draftpaper-loop assistance and linking to the project repository.
 - Independent integrity gate for BibTeX existence, citation evidence, and result artifact binding.
@@ -171,15 +174,22 @@ python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
 python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --query "topic keywords"
 python -m draftpaper_cli.cli prepare-data-acquisition --project <repo>\projects\your_project --source-root C:\external\research_folder
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
-python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_project
-python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli list-zotero-collections
 python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
 python -m draftpaper_cli.cli prepare-method-blueprint --project <repo>\projects\your_project
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\your_project
 python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
+python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\your_project
+python -m draftpaper_cli.cli assess-core-evidence --project <repo>\projects\your_project
+python -m draftpaper_cli.cli checkpoint --project <repo>\projects\your_project --stage core_evidence --note "User approved core figures and evidence"
+python -m draftpaper_cli.cli inventory-results --project <repo>\projects\your_project
+python -m draftpaper_cli.cli write-results --project <repo>\projects\your_project
+python -m draftpaper_cli.cli write-introduction --project <repo>\projects\your_project
+python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_project
+python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
+python -m draftpaper_cli.cli write-methods --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-citation-repair-loop --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
@@ -216,7 +226,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## Implementation Status
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, Introduction, observation recording, Data writing context generation, Data writing, pluggable data acquisition planning, data inventory and feasibility checks, method-plan collection, discipline-aware method blueprint generation, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, Methods writing context generation, Methods writing, result validity checks, result inventory, Results writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
+The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, observation recording, pluggable data acquisition planning, data inventory and feasibility checks, method-plan collection, discipline-aware method blueprint generation, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, result validity checks, core evidence assessment, result inventory, Results writing with Chinese review summary, Introduction, Data writing context generation, Data writing, Methods writing context generation, Methods writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
@@ -317,6 +327,14 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.15.1 (2026-07-01) -- evidence-first paper loop and core evidence gate
+
+- Reordered the main paper pipeline so literature and research planning are followed by data acquisition/integration, method/code execution, figure production, result validity, and a core evidence gate before manuscript-section writing.
+- Added `assess-core-evidence`, writing `core_evidence/core_evidence_report.json` and `.html` to check data supplementation, data integration, method analysis, figure production, figure metadata, and result validity before human figure confirmation.
+- Split execution stages from manuscript-writing stages: `data` and `methods` now prove data/method readiness, while `data_writing` and `methods_writing` produce `data.tex` and `methods.tex` after Results evidence exists.
+- Updated Results writing to keep continuous prose without per-figure subsections and to write `results/results_summary_zh.md` for Chinese review of figure-level interpretation.
+- Updated orchestration, LaTeX assembly, quality gates, review routing, and the Codex skill wrapper to follow the evidence-first loop.
 
 ### v0.14.13 (2026-07-01) -- remote FITS/ZIP streaming data connector
 

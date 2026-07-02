@@ -19,6 +19,7 @@ from .citation_repair import (
     re_audit_citations,
     run_citation_repair_loop,
 )
+from .core_evidence import CoreEvidenceError, assess_core_evidence
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
@@ -236,6 +237,9 @@ def build_parser() -> argparse.ArgumentParser:
     result_validity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     result_validity.add_argument("--primary-metric", default=None, help="Override primary metric from methods/method_requirements.json.")
     result_validity.add_argument("--minimum-value", type=float, default=None, help="Override minimum acceptable primary metric value.")
+
+    core_evidence = subparsers.add_parser("assess-core-evidence", help="Assess data-method-figure-result evidence before manuscript writing.")
+    core_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     results = subparsers.add_parser("write-results", help="Write results.tex from result_manifest.yaml.")
     results.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -799,6 +803,18 @@ def main(argv: list[str] | None = None) -> int:
                 minimum_value=args.minimum_value,
             )
         except (ResultValidityError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "assess-core-evidence":
+        try:
+            result = assess_core_evidence(args.project)
+        except (CoreEvidenceError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:
