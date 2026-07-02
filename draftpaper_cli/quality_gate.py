@@ -245,10 +245,19 @@ def _check_core_evidence(project_path: Path, issues: list[QualityIssue]) -> dict
             "Core evidence workflow coverage is incomplete: " + ", ".join(missing),
             "core_evidence/core_evidence_report.json",
         ))
+    contract_coverage = report.get("figure_contract_coverage") or {}
+    if contract_coverage and not contract_coverage.get("all_main_contracts_satisfied"):
+        issues.append(QualityIssue(
+            "error",
+            "main_figure_contracts_not_satisfied",
+            "Research-plan main figure contracts must be satisfied before final quality check; repair missing data or method code instead of substituting figures.",
+            "core_evidence/core_evidence_report.json",
+        ))
     return {
         "decision": decision,
         "figure_count": report.get("figure_count"),
         "workflow_coverage": coverage,
+        "figure_contract_coverage": contract_coverage,
         "requires_user_confirmation": report.get("requires_user_confirmation"),
     }
 

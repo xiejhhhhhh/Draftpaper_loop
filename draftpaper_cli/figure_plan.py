@@ -31,6 +31,8 @@ FIGURE_PLAN_INPUTS = [
 FIGURE_PLAN_OUTPUTS = [
     "results/figure_plan.json",
     "results/figure_plan.html",
+    "results/figure_contracts.json",
+    "results/storyboard_alignment_report.json",
 ]
 
 
@@ -165,6 +167,16 @@ def _add_unique(figures: list[dict[str, Any]], item: dict[str, Any]) -> None:
     paths = {str(existing.get("path")) for existing in figures}
     if item["path"] not in paths:
         figures.append(item)
+
+
+def _mark_supporting_figure(item: dict[str, Any], *, reason: str) -> dict[str, Any]:
+    updated = dict(item)
+    updated["figure_role"] = "supporting"
+    updated["counts_toward_main_figures"] = False
+    updated["contract_locked"] = False
+    updated["allowed_substitute"] = False
+    updated["supporting_reason"] = reason
+    return updated
 
 
 def _generated_group_set(figures: list[dict[str, Any]]) -> set[str]:
@@ -495,6 +507,7 @@ def _apply_discipline_figure_policy(
     inventory: dict[str, Any],
     requirements: dict[str, Any],
     discipline_profile: dict[str, Any],
+    storyboard_locked: bool = False,
 ) -> dict[str, Any]:
     module = get_discipline_module(discipline_profile)
     module_spec = module.spec.as_dict()
@@ -519,6 +532,8 @@ def _apply_discipline_figure_policy(
             lookup=lookup,
             index=len(figures) + 1,
         )
+        if storyboard_locked:
+            item = _mark_supporting_figure(item, reason="discipline_required_group_supports_storyboard_but_cannot_replace_main_result")
         _add_unique(figures, item)
         groups.add(group)
         added_groups.append(group)
@@ -531,8 +546,8 @@ def _apply_discipline_figure_policy(
         "predictor_correlation_structure",
     ]
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
-    for group in fallback_groups:
-        if generated_count >= minimum:
+    for group in ([] if storyboard_locked else fallback_groups):
+        if not storyboard_locked and generated_count >= minimum:
             break
         if group in groups:
             continue
@@ -544,6 +559,8 @@ def _apply_discipline_figure_policy(
             lookup=lookup,
             index=len(figures) + 1,
         )
+        if storyboard_locked:
+            item = _mark_supporting_figure(item, reason="discipline_fallback_supports_storyboard_but_cannot_replace_main_result")
         _add_unique(figures, item)
         groups.add(group)
         added_groups.append(group)
@@ -554,6 +571,74 @@ def _apply_discipline_figure_policy(
         "target_main_figures": target,
         "required_figure_groups": required_groups,
         "added_figure_groups": added_groups,
+    }
+
+
+def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any]) -> dict[str, Any]:
+    contracts: list[dict[str, Any]] = []
+    for item in figures:
+        if item.get("figure_role") != "main_result":
+            continue
+        storyboard_trace = item.get("storyboard_trace") or {}
+        contracts.append({
+            "storyboard_id": item.get("storyboard_id") or item.get("id"),
+            "figure_id": item.get("id"),
+            "title": item.get("title"),
+            "path": item.get("path"),
+            "figure_role": "main_result",
+            "allowed_substitute": False,
+            "contract_locked": True,
+            "required_data": item.get("required_data") or storyboard_trace.get("required_data") or [],
+            "required_method": item.get("required_method") or storyboard_trace.get("required_method") or [],
+            "required_columns": item.get("required_columns") or [],
+            "required_inputs": item.get("required_inputs") or [],
+            "expected_finding": item.get("expected_finding") or storyboard_trace.get("expected_finding"),
+            "validation_metric": item.get("validation_metric") or storyboard_trace.get("validation_metric"),
+            "research_question": item.get("scientific_question") or storyboard_trace.get("research_question"),
+            "success_criteria": [
+                "planned output path exists",
+                "figure metadata references the same storyboard_id or planned path",
+                "required method is not silently substituted",
+                "supporting figures do not count as main research results",
+            ],
+        })
+    return {
+        "status": "written",
+        "source": "research_plan/figure_storyboard.json",
+        "strict_contract_policy": "main_result_figures_must_not_be_silently_substituted",
+        "storyboard_figure_count": len((storyboard or {}).get("figures") or []),
+        "main_contract_count": len(contracts),
+        "contracts": contracts,
+    }
+
+
+def _storyboard_alignment_report(figures: list[dict[str, Any]], storyboard: dict[str, Any]) -> dict[str, Any]:
+    storyboard_ids = [
+        str(item.get("figure_id") or f"storyboard_figure_{index}")
+        for index, item in enumerate((storyboard or {}).get("figures") or [], start=1)
+    ]
+    main_ids = [str(item.get("storyboard_id") or item.get("id")) for item in figures if item.get("figure_role") == "main_result"]
+    missing = [item for item in storyboard_ids if item not in main_ids]
+    extra_main = [item for item in main_ids if item not in storyboard_ids]
+    supporting = [
+        {
+            "id": item.get("id"),
+            "title": item.get("title"),
+            "path": item.get("path"),
+            "reason": item.get("supporting_reason") or "supporting_or_appendix_figure",
+        }
+        for item in figures
+        if item.get("figure_role") != "main_result"
+    ]
+    return {
+        "status": "written",
+        "decision": "pass" if not missing and not extra_main else "revise_required",
+        "storyboard_ids": storyboard_ids,
+        "main_figure_storyboard_ids": main_ids,
+        "missing_storyboard_figures": missing,
+        "extra_main_figures": extra_main,
+        "supporting_figures": supporting,
+        "rule": "Fallback or validation figures may support the evidence package, but they cannot replace research-plan main figures.",
     }
 
 
@@ -643,6 +728,11 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
             inventory=inventory,
             literature_items=literature_items,
         )
+        for item in figures:
+            item.setdefault("figure_role", "main_result")
+            item.setdefault("counts_toward_main_figures", True)
+            item.setdefault("contract_locked", False)
+            item.setdefault("allowed_substitute", False)
     if use_review_tasks:
         task_report = _read_json(state.path / "review" / "actionable_analysis_tasks.json", {})
         selected_data = _selected_data(_scoped_inventory(inventory, requirements))
@@ -653,8 +743,10 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         inventory=inventory,
         requirements=requirements,
         discipline_profile=discipline_profile,
+        storyboard_locked=used_research_storyboard,
     )
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
+    main_figure_count = sum(1 for item in figures if item.get("figure_role") == "main_result" and item.get("counts_toward_main_figures") is not False)
     provided_count = sum(1 for item in figures if item.get("generation_mode") == "provided_artifact")
     next_action = "Run generate-analysis-code, then verify-methods, inventory-results, and write-results."
     if generated_count == 0 and provided_count:
@@ -678,13 +770,19 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         "discipline_profile": discipline_profile,
         "figure_policy": figure_policy,
         "figures": figures,
+        "main_figure_count": main_figure_count,
         "generated_figure_count": generated_count,
         "provided_figure_count": provided_count,
         "next_action": next_action,
     }
     results_dir = state.path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
+    storyboard_payload = plan["research_storyboard"] if isinstance(plan["research_storyboard"], dict) else {}
+    contracts = _figure_contracts(figures, storyboard_payload)
+    alignment = _storyboard_alignment_report(figures, storyboard_payload)
     _write_json(results_dir / "figure_plan.json", plan)
+    _write_json(results_dir / "figure_contracts.json", contracts)
+    _write_json(results_dir / "storyboard_alignment_report.json", alignment)
     write_html_report(results_dir / "figure_plan.html", _render_plan_html_markdown(plan), title="Project-Specific Figure Plan")
     update_stage_status(state.path, "figure_plan", "draft")
     _set_figure_plan_stage_manifest(state.path)

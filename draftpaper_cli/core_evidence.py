@@ -16,6 +16,8 @@ from .project_state import load_project, update_stage_status
 
 CORE_EVIDENCE_JSON = "core_evidence/core_evidence_report.json"
 CORE_EVIDENCE_HTML = "core_evidence/core_evidence_report.html"
+FIGURE_CONTRACTS_JSON = "results/figure_contracts.json"
+FIGURE_EXECUTION_DIAGNOSIS_JSON = "results/figure_execution_diagnosis.json"
 
 
 class CoreEvidenceError(RuntimeError):
@@ -49,6 +51,8 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
         plan = plan_by_path.get(path, {})
         items.append({
             "figure_id": metadata.get("figure_id") or plan.get("figure_id") or path,
+            "storyboard_id": metadata.get("storyboard_id") or plan.get("storyboard_id") or plan.get("id") or "",
+            "figure_role": plan.get("figure_role") or metadata.get("figure_role") or "main_result",
             "path": path,
             "title": metadata.get("title") or plan.get("title") or "",
             "caption": metadata.get("caption") or plan.get("caption_draft") or "",
@@ -79,9 +83,10 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
 
 def _reviewable_figure_issues(project_path: Path, figures: list[dict[str, Any]]) -> list[str]:
     issues: list[str] = []
-    if len(figures) < 5:
+    main_figures = [item for item in figures if item.get("figure_role") != "supporting"]
+    if len(main_figures) < 5:
         issues.append("Fewer than five main reviewable figures are available for the draft evidence package.")
-    for item in figures:
+    for item in main_figures:
         path_text = _normalise_path(item.get("path"))
         if not path_text:
             issues.append("A figure metadata entry is missing its path.")
@@ -99,6 +104,79 @@ def _reviewable_figure_issues(project_path: Path, figures: list[dict[str, Any]])
         if not item.get("publication_ready"):
             issues.append(f"{path_text} is not marked publication_ready in figure metadata.")
     return issues
+
+
+def _diagnosis_by_storyboard(diagnosis: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for item in diagnosis.get("figures") or []:
+        if not isinstance(item, dict):
+            continue
+        key = _normalise_path(item.get("storyboard_id") or item.get("figure_id") or item.get("path"))
+        if key:
+            indexed[key] = item
+    return indexed
+
+
+def _figure_contract_coverage(
+    project_path: Path,
+    *,
+    contracts_payload: dict[str, Any],
+    figure_plan: dict[str, Any],
+    figure_metadata: dict[str, Any],
+    diagnosis: dict[str, Any],
+) -> dict[str, Any]:
+    contracts = [item for item in contracts_payload.get("contracts") or [] if isinstance(item, dict)]
+    metadata_paths = {_normalise_path(item.get("path")) for item in figure_metadata.get("figures") or [] if item.get("path")}
+    metadata_storyboard_ids = {
+        _normalise_path(item.get("storyboard_id") or item.get("figure_id"))
+        for item in figure_metadata.get("figures") or []
+        if item.get("storyboard_id") or item.get("figure_id")
+    }
+    plan_supporting_paths = {
+        _normalise_path(item.get("path"))
+        for item in figure_plan.get("figures") or []
+        if item.get("figure_role") == "supporting" and item.get("path")
+    }
+    diagnosis_index = _diagnosis_by_storyboard(diagnosis)
+    missing: list[dict[str, Any]] = []
+    satisfied: list[dict[str, Any]] = []
+    substituted: list[dict[str, Any]] = []
+    for contract in contracts:
+        path = _normalise_path(contract.get("path"))
+        storyboard_id = _normalise_path(contract.get("storyboard_id") or contract.get("figure_id"))
+        path_exists = bool(path and (project_path / path).exists())
+        metadata_exists = path in metadata_paths or storyboard_id in metadata_storyboard_ids
+        if path in plan_supporting_paths:
+            substituted.append({"storyboard_id": storyboard_id, "path": path, "reason": "main_contract_path_marked_supporting"})
+        if path_exists and metadata_exists and path not in plan_supporting_paths:
+            satisfied.append({"storyboard_id": storyboard_id, "path": path})
+            continue
+        diagnostic = diagnosis_index.get(storyboard_id) or diagnosis_index.get(path) or {}
+        missing.append({
+            "storyboard_id": storyboard_id,
+            "title": contract.get("title"),
+            "path": path,
+            "required_data": contract.get("required_data") or [],
+            "required_method": contract.get("required_method") or [],
+            "diagnosis_status": diagnostic.get("status") or "not_executed",
+            "recommended_repair": diagnostic.get("recommended_repair") or (
+                "repair-figure-method"
+                if "missing_method" in str(diagnostic.get("status") or "")
+                else "repair-figure-data"
+                if "missing_data" in str(diagnostic.get("status") or "") or contract.get("required_data")
+                else "repair-figure-method"
+            ),
+        })
+    return {
+        "contract_count": len(contracts),
+        "satisfied_count": len(satisfied),
+        "missing_count": len(missing),
+        "substituted_count": len(substituted),
+        "all_main_contracts_satisfied": bool(contracts) and not missing and not substituted,
+        "satisfied_contracts": satisfied,
+        "missing_contracts": missing,
+        "substituted_contracts": substituted,
+    }
 
 
 def _decision_from_report(payload: dict[str, Any]) -> str:
@@ -122,7 +200,12 @@ def _workflow_coverage(project_path: Path, run_manifest: dict[str, Any], validit
     }
 
 
-def _recommended_next_action(decision: str, issues: list[str], coverage: dict[str, bool]) -> dict[str, str]:
+def _recommended_next_action(
+    decision: str,
+    issues: list[str],
+    coverage: dict[str, bool],
+    contract_coverage: dict[str, Any] | None = None,
+) -> dict[str, str]:
     if decision == "pass":
         return {
             "command": "checkpoint",
@@ -132,6 +215,24 @@ def _recommended_next_action(decision: str, issues: list[str], coverage: dict[st
         return {
             "command": "prepare-data-acquisition",
             "reason": "Data supplementation or integration evidence is incomplete.",
+        }
+    contract_coverage = contract_coverage or {}
+    missing_contracts = contract_coverage.get("missing_contracts") or []
+    if missing_contracts:
+        statuses = " ".join(str(item.get("diagnosis_status") or "") for item in missing_contracts)
+        if "missing_data" in statuses or any(item.get("recommended_repair") == "repair-figure-data" for item in missing_contracts):
+            return {
+                "command": "repair-figure-data",
+                "reason": "At least one research-plan main figure is blocked by missing data; run the data acquisition/integration repair loop before changing the figure claim.",
+            }
+        if "missing_method" in statuses or any(item.get("recommended_repair") == "repair-figure-method" for item in missing_contracts):
+            return {
+                "command": "repair-figure-method",
+                "reason": "At least one research-plan main figure is blocked by missing method code; search/reuse/generate method code before changing the figure claim.",
+            }
+        return {
+            "command": "diagnose-figure-execution",
+            "reason": "Research-plan main figure contracts are not satisfied; diagnose whether data or method repair is required.",
         }
     if not coverage.get("method_analysis"):
         return {
@@ -178,6 +279,19 @@ def _render_markdown(report: dict[str, Any]) -> str:
         lines.append("- No blocking evidence issue was detected. Human figure review is still required.")
     next_action = report.get("recommended_next_action") or {}
     lines.extend(["", "## Recommended Next Action", "", f"{next_action.get('command')}: {next_action.get('reason')}"])
+    coverage = report.get("figure_contract_coverage") or {}
+    if coverage:
+        lines.extend([
+            "",
+            "## Figure Contract Coverage",
+            "",
+            f"- Contracts: {coverage.get('contract_count')}",
+            f"- Satisfied: {coverage.get('satisfied_count')}",
+            f"- Missing: {coverage.get('missing_count')}",
+            f"- Substituted: {coverage.get('substituted_count')}",
+        ])
+        for item in coverage.get("missing_contracts") or []:
+            lines.append(f"- Missing contract `{item.get('storyboard_id')}`: {item.get('diagnosis_status')} -> {item.get('recommended_repair')}")
     return "\n".join(lines) + "\n"
 
 
@@ -192,6 +306,8 @@ def _set_manifest(project_path: Path) -> None:
         "data/data_quality_report.json",
         "data/data_feasibility_report.json",
         "results/figure_plan.json",
+        FIGURE_CONTRACTS_JSON,
+        FIGURE_EXECUTION_DIAGNOSIS_JSON,
         "results/figure_metadata.json",
         "methods/run_manifest.yaml",
         "results/result_validity_report.json",
@@ -205,11 +321,28 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     figure_plan = _read_json(state.path / "results" / "figure_plan.json", {})
     figure_metadata = _read_json(state.path / "results" / "figure_metadata.json", {})
+    contracts_payload = _read_json(state.path / FIGURE_CONTRACTS_JSON, {})
+    diagnosis = _read_json(state.path / FIGURE_EXECUTION_DIAGNOSIS_JSON, {})
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     figures = _figure_items(figure_plan if isinstance(figure_plan, dict) else {}, figure_metadata if isinstance(figure_metadata, dict) else {})
     issues = _reviewable_figure_issues(state.path, figures)
     coverage = _workflow_coverage(state.path, run_manifest if isinstance(run_manifest, dict) else {}, validity if isinstance(validity, dict) else {})
+    contract_coverage = _figure_contract_coverage(
+        state.path,
+        contracts_payload=contracts_payload if isinstance(contracts_payload, dict) else {},
+        figure_plan=figure_plan if isinstance(figure_plan, dict) else {},
+        figure_metadata=figure_metadata if isinstance(figure_metadata, dict) else {},
+        diagnosis=diagnosis if isinstance(diagnosis, dict) else {},
+    )
+    for item in contract_coverage.get("missing_contracts") or []:
+        issues.append(
+            f"Research-plan main figure contract is not satisfied: {item.get('storyboard_id')} ({item.get('diagnosis_status')})."
+        )
+    for item in contract_coverage.get("substituted_contracts") or []:
+        issues.append(
+            f"Research-plan main figure contract appears substituted by a supporting figure: {item.get('storyboard_id')}."
+        )
     for label, covered in coverage.items():
         if not covered:
             issues.append(f"Workflow coverage missing: {label}.")
@@ -224,8 +357,9 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         "figure_count": len(figures),
         "reviewable_figures": figures,
         "workflow_coverage": coverage,
+        "figure_contract_coverage": contract_coverage,
         "issues": issues,
-        "recommended_next_action": _recommended_next_action(decision, issues, coverage),
+        "recommended_next_action": _recommended_next_action(decision, issues, coverage, contract_coverage),
     }
     output_path = state.path / CORE_EVIDENCE_JSON
     _write_json(output_path, report)

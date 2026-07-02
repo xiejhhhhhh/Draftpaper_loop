@@ -190,6 +190,22 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
 
 
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
+    core_evidence = _read_report(project_path, "core_evidence/core_evidence_report.json")
+    if core_evidence and core_evidence.get("decision") not in {"pass", "passed"}:
+        action = (core_evidence.get("recommended_next_action") or {}).get("command")
+        if action in {"repair-figure-data", "repair-figure-method", "diagnose-figure-execution"}:
+            return {
+                "stage": "core_evidence",
+                "command": action,
+                "cli": _cli_for(project_path, action),
+                "reason": "Core evidence failed because research-plan main figure contracts are not satisfied; repair data or method code before manuscript writing continues.",
+            }
+        return {
+            "stage": "core_evidence",
+            "command": "assess-core-evidence",
+            "cli": _cli_for(project_path, "assess-core-evidence"),
+            "reason": "Core evidence has not passed; refresh the evidence report before manuscript writing continues.",
+        }
     integrity = _read_report(project_path, "integrity/integrity_report.json")
     if integrity and integrity.get("status") not in {"passed", "pass"}:
         return _review_sequence_action(project_path, "The integrity gate failed")
@@ -349,6 +365,15 @@ def _results_stage_command(project_path: Path) -> str:
     return "write-results"
 
 
+def _core_evidence_stage_command(project_path: Path) -> str:
+    report = _read_report(project_path, "core_evidence/core_evidence_report.json")
+    if report and report.get("decision") != "pass":
+        command = ((report.get("recommended_next_action") or {}).get("command") or "").strip()
+        if command in {"repair-figure-data", "repair-figure-method", "diagnose-figure-execution"}:
+            return command
+    return "assess-core-evidence"
+
+
 def _stage_command(project_path: Path, stage: str) -> str | None:
     if stage == "data":
         return _data_stage_command(project_path)
@@ -360,6 +385,8 @@ def _stage_command(project_path: Path, stage: str) -> str | None:
         return _methods_stage_command(project_path)
     if stage == "methods_writing":
         return _methods_writing_stage_command(project_path)
+    if stage == "core_evidence":
+        return _core_evidence_stage_command(project_path)
     if stage == "results":
         return _results_stage_command(project_path)
     return STAGE_COMMANDS.get(stage)

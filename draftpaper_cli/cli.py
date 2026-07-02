@@ -31,6 +31,7 @@ from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .figure_plan import FigurePlanError, plan_figures
+from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_figure_data, repair_figure_method
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
@@ -240,6 +241,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     core_evidence = subparsers.add_parser("assess-core-evidence", help="Assess data-method-figure-result evidence before manuscript writing.")
     core_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    figure_diagnosis = subparsers.add_parser("diagnose-figure-execution", help="Diagnose whether contracted main figures need data or method repair.")
+    figure_diagnosis.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    figure_data_repair = subparsers.add_parser("repair-figure-data", help="Plan data acquisition/integration repair for failed contracted figures.")
+    figure_data_repair.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    figure_method_repair = subparsers.add_parser("repair-figure-method", help="Plan method-code discovery/generation repair for failed contracted figures.")
+    figure_method_repair.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     results = subparsers.add_parser("write-results", help="Write results.tex from result_manifest.yaml.")
     results.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -815,6 +825,42 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = assess_core_evidence(args.project)
         except (CoreEvidenceError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "diagnose-figure-execution":
+        try:
+            result = diagnose_figure_execution(args.project)
+        except (FigureRepairError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "repair-figure-data":
+        try:
+            result = repair_figure_data(args.project)
+        except (FigureRepairError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "repair-figure-method":
+        try:
+            result = repair_figure_method(args.project)
+        except (FigureRepairError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:

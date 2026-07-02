@@ -24,6 +24,7 @@ ANALYSIS_CODE_INPUTS = [
     "methods/method_requirements.json",
     "data/data_inventory.json",
     "results/figure_plan.json",
+    "results/figure_contracts.json",
 ]
 
 ANALYSIS_CODE_OUTPUTS = [
@@ -53,6 +54,8 @@ REVIEW_TASK_COVERAGE_OUTPUT = "results/tables/review_task_coverage.csv"
 REVIEW_TASK_METRICS_OUTPUT = "results/tables/review_task_metrics.csv"
 
 BASE_RESULT_OUTPUTS = BASE_TABLE_OUTPUTS + [
+    "results/figure_execution_diagnosis.json",
+    "results/figure_execution_diagnosis.html",
     "results/figure_metadata.json",
     "results/figure_quality_report.json",
 ]
@@ -300,6 +303,103 @@ def write_review_task_metrics(root: Path, rows: list[dict[str, str]], numeric: l
     return str(path)
 
 
+def _advanced_method_missing(figure: dict[str, Any]) -> bool:
+    if figure.get("figure_role") != "main_result" or not figure.get("contract_locked"):
+        return False
+    methods = " ".join(str(item).lower() for item in figure.get("required_method") or [])
+    advanced_tokens = ["transformer", "cnn", "resnet", "tcn", "contrastive", "self_supervised", "deep_learning"]
+    if not any(token in methods for token in advanced_tokens):
+        return False
+    source_status = str(figure.get("method_source_status") or "").lower()
+    return source_status not in {{"implemented", "available", "project_code_available", "plugin_available"}}
+
+
+def _missing_data_for_figure(figure: dict[str, Any], rows: list[dict[str, str]]) -> list[str]:
+    if not rows:
+        return list(figure.get("required_data") or figure.get("required_columns") or [])
+    columns = {{str(column).lower().replace("_", " ") for column in rows[0].keys()}}
+    missing = []
+    for token in figure.get("required_data") or []:
+        normalized = str(token).lower().replace("_", " ")
+        if not any(normalized in column or column in normalized for column in columns):
+            missing.append(str(token))
+    return missing
+
+
+def _diagnose_figure_before_render(figure: dict[str, Any], rows: list[dict[str, str]]) -> dict[str, Any]:
+    missing_data = _missing_data_for_figure(figure, rows)
+    if missing_data:
+        return {{
+            "figure_id": figure.get("id") or figure.get("figure_id"),
+            "storyboard_id": figure.get("storyboard_id") or figure.get("id"),
+            "path": figure.get("path"),
+            "figure_role": figure.get("figure_role") or "main_result",
+            "status": "missing_data_repairing",
+            "missing_data": missing_data,
+            "required_data": figure.get("required_data") or [],
+            "required_method": figure.get("required_method") or [],
+            "recommended_repair": "repair-figure-data",
+            "next_command": "python -m draftpaper_cli.cli repair-figure-data --project <project>",
+        }}
+    if _advanced_method_missing(figure):
+        return {{
+            "figure_id": figure.get("id") or figure.get("figure_id"),
+            "storyboard_id": figure.get("storyboard_id") or figure.get("id"),
+            "path": figure.get("path"),
+            "figure_role": figure.get("figure_role") or "main_result",
+            "status": "missing_method_repairing",
+            "missing_method": figure.get("required_method") or [],
+            "required_data": figure.get("required_data") or [],
+            "required_method": figure.get("required_method") or [],
+            "recommended_repair": "repair-figure-method",
+            "next_command": "python -m draftpaper_cli.cli repair-figure-method --project <project>",
+        }}
+    return {{
+        "figure_id": figure.get("id") or figure.get("figure_id"),
+        "storyboard_id": figure.get("storyboard_id") or figure.get("id"),
+        "path": figure.get("path"),
+        "figure_role": figure.get("figure_role") or "main_result",
+        "status": "ready_to_render",
+        "required_data": figure.get("required_data") or [],
+        "required_method": figure.get("required_method") or [],
+    }}
+
+
+def write_figure_execution_diagnosis(root: Path, items: list[dict[str, Any]]) -> tuple[str, str]:
+    json_path = root / "results" / "figure_execution_diagnosis.json"
+    html_path = root / "results" / "figure_execution_diagnosis.html"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    status_counts = Counter(str(item.get("status") or "") for item in items)
+    payload = {{
+        "status": "written",
+        "policy": "failed_main_figures_must_repair_data_or_method_before_core_evidence_review",
+        "figures": items,
+        "status_counts": dict(status_counts),
+        "has_blocking_repairs": any(str(item.get("status") or "").endswith("_repairing") for item in items),
+    }}
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    rows = [
+        "<html><body><h1>Figure Execution Diagnosis</h1>",
+        "<p>Main figures are not allowed to degrade into substitute validation figures. Missing data and missing method code must be repaired first.</p>",
+        "<table border='1'><tr><th>Figure</th><th>Status</th><th>Recommended repair</th><th>Path</th></tr>",
+    ]
+    for item in items:
+        rows.append(
+            "<tr><td>"
+            + escape(str(item.get("storyboard_id") or item.get("figure_id") or ""))
+            + "</td><td>"
+            + escape(str(item.get("status") or ""))
+            + "</td><td>"
+            + escape(str(item.get("recommended_repair") or ""))
+            + "</td><td>"
+            + escape(str(item.get("path") or ""))
+            + "</td></tr>"
+        )
+    rows.append("</table></body></html>")
+    html_path.write_text("\\n".join(rows), encoding="utf-8")
+    return str(json_path), str(html_path)
+
+
 def infer_label_column(rows: list[dict[str, str]]) -> str | None:
     if not rows:
         return None
@@ -530,13 +630,25 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
         outputs.append(task_metrics_path)
     figure_metadata = []
     figure_errors = []
+    figure_diagnosis = []
     for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
+        diagnosis = _diagnose_figure_before_render(figure, rows)
+        if diagnosis.get("status") != "ready_to_render":
+            figure_diagnosis.append(diagnosis)
+            continue
         try:
             metadata = render_scientific_figure(root, figure, rows, metrics, numeric, label_column)
         except Exception as exc:
+            diagnosis["status"] = "runtime_error"
+            diagnosis["error"] = str(exc)
+            diagnosis["recommended_repair"] = "repair-figure-method"
+            figure_diagnosis.append(diagnosis)
             figure_errors.append(str(exc))
             continue
         if metadata:
+            diagnosis["status"] = "generated"
+            diagnosis["rendered_path"] = metadata.get("path")
+            figure_diagnosis.append(diagnosis)
             figure_metadata.append(metadata)
             outputs.append(str(root / metadata["path"]))
     primary_metric = str(PIPELINE_MANIFEST.get("primary_metric") or "").lower()
@@ -556,7 +668,8 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
             metrics["best_r2_figure"] = best_id
             write_key_value_csv(metrics_path, list(metrics.items()), ("metric", "value"))
     metadata_path, quality_path = write_figure_metadata_report(root, figure_metadata, figure_errors)
-    outputs.extend([metadata_path, quality_path])
+    diagnosis_path, diagnosis_html_path = write_figure_execution_diagnosis(root, figure_diagnosis)
+    outputs.extend([diagnosis_path, diagnosis_html_path, metadata_path, quality_path])
     if figure_errors:
         raise RuntimeError("Scientific figure rendering failed: " + "; ".join(figure_errors))
     return {{"metrics": metrics, "outputs": outputs}}

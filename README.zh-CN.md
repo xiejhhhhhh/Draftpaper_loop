@@ -146,6 +146,9 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 .\.venv\Scripts\draftpaper prepare-method-blueprint --project .\projects\your_project
 .\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
 .\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
+.\.venv\Scripts\draftpaper diagnose-figure-execution --project .\projects\your_project
+.\.venv\Scripts\draftpaper repair-figure-data --project .\projects\your_project
+.\.venv\Scripts\draftpaper repair-figure-method --project .\projects\your_project
 .\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage methods --kind method_rationale --text "Codex 已展示给用户的方法设计摘要..."
 .\.venv\Scripts\draftpaper build-method-context --project .\projects\your_project
 .\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
@@ -187,6 +190,8 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 `record-observation` 用于把 Codex 已经展示给用户的阶段性分析摘要保存到 `observations/observations.jsonl`，不会保存隐藏推理链。`build-data-context` 和 `build-method-context` 会把这些 observation、数据清单、可行性门、方法计划和验证结果合成为面向论文写作的 context。`write-data` 和 `write-methods` 只根据这些 context 写作，因此 Data 和 Methods 会描述数据来源、数据内容、变量组、处理流程、方法设计、验证和 claim boundary，而不是把本地文件名、路径、命令或 manifest 字段写进论文。
 
 `write-results` 现在会在结果正文中通过 LaTeX 标签显式指向对应图表，例如 `Figure~\ref{...}` 和 `Table~\ref{...}`。内部 loop 术语、本地路径约束、gate 名称、manifest 信息和项目管理式措辞不会写入论文正文，而是保留在日志、报告或致谢中。`assemble-latex` 会在参考文献之前默认加入致谢，说明 Draftpaper-loop 参与了分阶段文献组织、分析可追溯性、图表清单和论文初稿生成。
+
+主图生成现在采用“严格合同 + 修复优先”的执行逻辑。`plan-figures` 会把 research plan 中的 figure storyboard 写成 `results/figure_contracts.json`，并通过 `results/storyboard_alignment_report.json` 检查后续图表是否仍然对应原始研究计划。验证图、流程图和辅助诊断图可以保留为 supporting figures，但不能静默替代研究计划中要求的主结果图。`generate-analysis-code` 会额外输出 `results/figure_execution_diagnosis.json` 和 `.html`；如果某张主图无法生成，系统会优先判断是缺少数据还是缺少方法代码，然后推荐 `repair-figure-data` 或 `repair-figure-method`。前者会尝试沿用已有数据获取流程、公开数据库/API、远端服务器流程或用户补充 artifact；后者会尝试利用学科插件、项目已有代码、公开科研代码仓库、文献实现仓库或 Codex 生成的项目专属方法代码。只有这些自动修复仍无法产出核心图表时，才进入 `assess-core-evidence` 的人工确认阶段。
 
 ## 公开科研代码挖掘
 
@@ -265,6 +270,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 </table>
 
 ## 最近更新
+
+### v0.15.2 (2026-07-02) -- strict figure contracts and repair-first execution
+
+- 升级 `plan-figures`：research plan 中的 figure storyboard 会被视为严格的主结果图合同，并写入 `results/figure_contracts.json` 与 `results/storyboard_alignment_report.json`。
+- 升级 `generate-analysis-code`：生成流程会输出 `results/figure_execution_diagnosis.json` 和 `.html`；当主图缺少数据或缺少方法代码时，系统会明确诊断原因，而不是静默生成验证图、流程图或辅助图来替代主图。
+- 新增 `diagnose-figure-execution`、`repair-figure-data` 和 `repair-figure-method`。这些命令会根据现有数据连接器、公开数据库/API、远端服务器流程、学科插件、公开科研代码仓库、文献实现仓库或 Codex 生成的项目专属方法代码，形成数据或方法修复计划。
+- 升级 `assess-core-evidence`、`status`、`run-pipeline` 和最终 quality path：如果研究计划中的主图合同未满足，流程会优先推荐数据/方法修复；只有自动修复仍无法产出核心图表时，才进入人工 core evidence 确认。
 
 ### v0.15.1 (2026-07-01) -- evidence-first paper loop and core evidence gate
 
