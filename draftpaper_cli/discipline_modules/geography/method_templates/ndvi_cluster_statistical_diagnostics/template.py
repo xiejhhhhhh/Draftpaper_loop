@@ -19,11 +19,12 @@ def write_cluster_diagnostics(
     value_column: str,
 ) -> dict[str, int]:
     grouped: dict[str, list[float]] = defaultdict(list)
-    for row in csv.DictReader(input_csv.open("r", encoding="utf-8-sig", newline="")):
-        try:
-            grouped[str(row.get(cluster_column, "")).strip()].append(float(str(row.get(value_column, "")).strip()))
-        except ValueError:
-            continue
+    with input_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            try:
+                grouped[str(row.get(cluster_column, "")).strip()].append(float(str(row.get(value_column, "")).strip()))
+            except ValueError:
+                continue
     diagnostics = {}
     for cluster_id, values in sorted(grouped.items()):
         diagnostics[cluster_id] = {

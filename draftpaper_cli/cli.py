@@ -81,6 +81,7 @@ from .review_engines import ReviewEngineError, discover_review_workflow_gaps, pr
 from .result_validity import ResultValidityError, assess_result_validity
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
+from .template_registry import validate_template_registry
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
 
 
@@ -103,6 +104,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate-project", help="Validate project metadata and stage manifests.")
     validate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    template_registry = subparsers.add_parser("validate-template-registry", help="Validate discipline plugin manifests and template files.")
+    template_registry.add_argument("--root", default=None, help="Optional discipline_modules root for testing or contribution review.")
 
     status = subparsers.add_parser("status", help="Report orchestrated pipeline status and next action.")
     status.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -221,7 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
-    verify.add_argument("--command", required=True, dest="method_command", help="Command that verifies method code and outputs.")
+    verify.add_argument("--command", dest="method_command", help="Optional command override. Defaults to methods/method_code_manifest.json verify_command.")
     verify.add_argument("--output", action="append", default=[], help="Project-relative output file that must exist after the command.")
     verify.add_argument("--input", action="append", default=[], help="Project-relative input data file used by the method command.")
 
@@ -428,6 +432,11 @@ def main(argv: list[str] | None = None) -> int:
         report = validate_project(args.project)
         print(json.dumps(report, ensure_ascii=False))
         return 0 if report.get("status") == "passed" else 1
+
+    if args.command == "validate-template-registry":
+        result = validate_template_registry(Path(args.root) if args.root else None)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
 
     if args.command == "status":
         try:
@@ -709,7 +718,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
-        return 0
+        return 0 if result.get("status") == "success" else 1
 
     if args.command == "plan-figures":
         try:

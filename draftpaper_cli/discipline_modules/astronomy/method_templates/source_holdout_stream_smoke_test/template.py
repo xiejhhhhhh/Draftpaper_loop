@@ -17,7 +17,8 @@ def summarize_event_stream_inputs(
     group_column: str,
     output_completeness_csv: Path,
 ) -> dict[str, Any]:
-    rows = list(csv.DictReader(event_table.open("r", encoding="utf-8-sig", newline="")))
+    with event_table.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     label_counts = Counter(str(row.get(label_column, "")).strip() for row in rows if str(row.get(label_column, "")).strip())
     groups_by_label: dict[str, set[str]] = defaultdict(set)
     for row in rows:

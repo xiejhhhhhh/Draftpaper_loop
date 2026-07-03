@@ -27,7 +27,8 @@ def build_catalog_image_manifest(
     ignore_labels: set[str] | None = None,
 ) -> dict[str, int]:
     ignore = ignore_labels or set()
-    rows = list(csv.DictReader(catalog_csv.open("r", encoding="utf-8-sig", newline="")))
+    with catalog_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     catalog = {str(row.get(object_id_column, "")).strip(): row for row in rows}
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     matched = []

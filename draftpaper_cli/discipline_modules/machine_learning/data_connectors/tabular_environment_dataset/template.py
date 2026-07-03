@@ -10,7 +10,8 @@ from pathlib import Path
 
 
 def profile_tabular_dataset(*, input_csv: Path, target_column: str, output_json: Path) -> dict[str, object]:
-    rows = list(csv.DictReader(input_csv.open("r", encoding="utf-8-sig", newline="")))
+    with input_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     fieldnames = list(rows[0].keys()) if rows else []
     numeric_columns: list[str] = []
     missing_by_column: dict[str, int] = {column: 0 for column in fieldnames}

@@ -30,7 +30,8 @@ def extract_light_curve_features(
     flux_column: str = "flux",
     exposure_column: str = "exposure",
 ) -> dict[str, float]:
-    rows = list(csv.DictReader(light_curve_csv.open("r", encoding="utf-8-sig", newline="")))
+    with light_curve_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     fluxes = [value for value in (_to_float(row.get(flux_column)) for row in rows) if value is not None]
     times = [value for value in (_to_float(row.get(time_column)) for row in rows) if value is not None]
     exposures = [value for value in (_to_float(row.get(exposure_column)) for row in rows) if value is not None]

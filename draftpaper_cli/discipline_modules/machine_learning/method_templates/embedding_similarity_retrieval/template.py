@@ -31,7 +31,8 @@ def retrieve_similar_embeddings(
     embedding_prefix: str = "e",
     top_k: int = 5,
 ) -> dict[str, int]:
-    rows = list(csv.DictReader(embedding_csv.open("r", encoding="utf-8-sig", newline="")))
+    with embedding_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     columns = [col for col in (rows[0].keys() if rows else []) if col.startswith(embedding_prefix)]
     vectors = {row[sample_column]: [float(row[col]) for col in columns] for row in rows if row.get(sample_column)}
     query = vectors.get(query_sample_id)

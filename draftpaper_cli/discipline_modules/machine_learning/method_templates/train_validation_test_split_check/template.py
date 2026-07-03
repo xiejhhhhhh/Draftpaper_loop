@@ -10,7 +10,8 @@ from pathlib import Path
 
 
 def run_split_integrity_check(*, input_table: Path, split_column: str, target_column: str, output_table: Path) -> dict[str, float]:
-    rows = list(csv.DictReader(input_table.open("r", encoding="utf-8-sig", newline="")))
+    with input_table.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     split_counts: dict[str, int] = Counter(str(row.get(split_column, "")).strip() for row in rows)
     class_by_split: dict[str, Counter[str]] = defaultdict(Counter)
     for row in rows:

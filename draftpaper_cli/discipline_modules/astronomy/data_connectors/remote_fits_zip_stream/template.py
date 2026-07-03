@@ -40,7 +40,8 @@ def build_event_product_manifest(
     normalized identifiers and remote product paths without storing credentials.
     """
 
-    rows = list(csv.DictReader(input_csv.open("r", encoding="utf-8-sig", newline="")))
+    with input_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     suffixes = product_suffixes or DEFAULT_PRODUCT_SUFFIXES
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     input_fields = list(rows[0].keys()) if rows else list(column_map.values())
@@ -94,7 +95,8 @@ def inspect_zip_member_availability(
     """Inspect local or mounted ZIP paths without extracting full products."""
 
     suffixes = required_suffixes or [".cat", ".img", ".exp", ".lc", ".evt"]
-    rows = list(csv.DictReader(manifest_csv.open("r", encoding="utf-8-sig", newline="")))
+    with manifest_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     output_rows: list[dict[str, Any]] = []
     for row in rows:
         zip_path = Path(str(row.get(zip_path_column) or ""))
@@ -132,7 +134,8 @@ def select_dense_event_windows(
 ) -> dict[str, int]:
     """Select the shortest time-span window per source/object group."""
 
-    rows = list(csv.DictReader(header_report_csv.open("r", encoding="utf-8-sig", newline="")))
+    with header_report_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         groups[tuple(str(row.get(column, "")) for column in group_columns)].append(row)

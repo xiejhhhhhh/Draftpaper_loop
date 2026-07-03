@@ -235,7 +235,7 @@ Every project carries a DraftPaper Passport at `project_passport.yaml` plus appe
 
 When a tracked artifact hash changes, `status` reports `pipeline_state=drift_detected` and recommends `sync-artifact-stale`. That command maps changed artifact paths back to their source stages, marks downstream dependent stages stale, records the drift in `integrity_ledger.jsonl`, and refreshes the passport hash baseline.
 
-`prepare-method-blueprint` connects the inferred discipline module, data inventory, data-acquisition profile, method requirements, and reviewer/rescue tasks into `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`. `plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, method blueprint, and any supplied local result artifacts, then writes `results/figure_plan.json`, `results/figure_plan.html`, `results/figure_contracts.json`, and `results/storyboard_alignment_report.json`. Figure storyboard entries from the research plan are treated as strict main-result contracts: validation plots, workflow diagrams, or supporting diagnostics may be useful, but they cannot silently replace a planned main figure. Discipline modules can declare minimum/target main-figure counts and required figure groups; the default first-draft policy plans at least five generated main figures when data are available. With `--use-review-tasks`, `plan-figures` turns executable or partial reviewer/rescue tasks into revised figures while skipping blocked tasks. `generate-analysis-code` reads the figure plan and contracts, writes canonical project-local method code under `methods/scripts/` and `methods/src/`, plus `methods/method_code_manifest.json`; `code/` is retained only as a compatibility launcher/copy. The generated pipeline records `results/figure_execution_diagnosis.json` and `.html`; when a contracted figure cannot be produced, the loop records whether the blocker is missing data or missing method code and routes to `repair-figure-data` or `repair-figure-method` before entering human core-evidence confirmation. With `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` for cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` must still run the generated command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output and required review task coverage exists.
+`prepare-method-blueprint` connects the inferred discipline module, data inventory, data-acquisition profile, method requirements, and reviewer/rescue tasks into `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`. `plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, method blueprint, and any supplied local result artifacts, then writes `results/figure_plan.json`, `results/figure_plan.html`, `results/figure_contracts.json`, and `results/storyboard_alignment_report.json`. Figure storyboard entries from the research plan are treated as strict main-result contracts: validation plots, workflow diagrams, or supporting diagnostics may be useful, but they cannot silently replace a planned main figure. Discipline modules can declare minimum/target main-figure counts and required figure groups; the default first-draft policy plans at least five generated main figures when data are available. With `--use-review-tasks`, `plan-figures` turns executable or partial reviewer/rescue tasks into revised figures while skipping blocked tasks. `generate-analysis-code` reads the figure plan and contracts, writes canonical project-local method code under `methods/scripts/` and `methods/src/`, plus `methods/method_code_manifest.json`; `code/` is retained only as a compatibility launcher/copy. The generated pipeline records `results/figure_execution_diagnosis.json` and `.html`; when a contracted figure cannot be produced, the loop records whether the blocker is missing data or missing method code and routes to `repair-figure-data` or `repair-figure-method` before entering human core-evidence confirmation. With `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` for cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` can now read `methods/method_code_manifest.json` directly, run the generated verification command, record `methods/run_manifest.yaml`, and block Methods writing until every declared output, main figure contract, figure metadata item, and required review task coverage exists. The CLI exits non-zero when this hard gate records `status=failed`, so shell scripts, Codex automation, and CI cannot mistake a failed method run for success.
 
 Figure repair is intentionally repair-first rather than downgrade-first. `diagnose-figure-execution` summarizes planned main-figure contracts and execution state; `repair-figure-data` creates a data-repair plan using existing data acquisition connectors, public databases/APIs, remote-server workflows, or user-provided artifacts; `repair-figure-method` creates a method-repair plan that points Codex toward existing discipline plugins, project code, public research-code repositories, literature implementation repositories, or newly generated project-specific method code. Only after those repair attempts still cannot satisfy the figure contract should the project enter `assess-core-evidence` as a human confirmation checkpoint. Single-figure downgrades are avoided because claim reframing belongs in the research plan, not as a quiet substitute for a failed main result.
 
@@ -332,6 +332,48 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.15.9 (2026-07-03) -- pytest CI and discipline-template resource cleanup
+
+- Switched GitHub Actions to install `.[dev]` and run `python -m pytest`, matching the local verification path used during development.
+- Fixed direct `csv.DictReader(path.open(...))` patterns in built-in discipline templates so CSV inputs are opened through context managers.
+- Local verification: `python -m pytest`
+- Current suite: 219 tests
+
+### v0.15.8 (2026-07-03) -- discipline template registry validation
+
+- Added `draftpaper_cli/template_registry.py` and `draftpaper validate-template-registry` for validating built-in discipline plugin manifests, template files, fixtures, plugin identifiers, and maturity metadata.
+- Added tests so future discipline plugin contributions can be checked before promotion into the formal module library.
+
+### v0.15.7 (2026-07-03) -- shared IO, LaTeX, and citation utilities
+
+- Added `io_utils`, `latex_utils`, and `citation_utils` to reduce repeated JSON/text loading, LaTeX escaping, BibTeX parsing, and citation-key parsing logic.
+- Migrated high-risk manuscript and gate modules, including Methods, Results, Introduction, Discussion, LaTeX assembly, and quality checks, onto shared helpers.
+- Preserved support for common LaTeX citation commands such as `\cite{}` and `\citep{}`.
+
+### v0.15.6 (2026-07-03) -- audit-driven CLI and gate hardening groundwork
+
+- Added focused common-utility tests and aligned gate behavior around shared parsing helpers.
+- Kept `methods/` as the canonical generated-analysis-code location while retaining `code/` as compatibility output.
+
+### v0.15.5 (2026-07-03) -- manifest-driven method verification and figure contracts
+
+- `verify-methods` now reads `methods/method_code_manifest.json` when `--command` is not supplied, using the generated `verify_command`, declared outputs, and selected input data.
+- Method verification now checks `results/figure_contracts.json`; missing or placeholder contracted main figures fail the hard gate.
+- `generate-analysis-code` now writes `verify_command` and `install_plotting_command` into the manifest and recommends a shorter manifest-driven verification command.
+
+### v0.15.4 (2026-07-03) -- packaged paper-fetch fallback and fulltext extras
+
+- Packaged the paper-fetch runtime under `draftpaper_cli/_vendor/paper_fetch_skill` so wheel installs retain the fallback source instead of relying on a source-tree-only `third_party/` path.
+- Added a `fulltext` optional extra for heavier article/PDF extraction dependencies while keeping the default install lighter.
+- Verified with `python -m pip wheel . --no-deps` that the wheel contains the vendored paper-fetch CLI and third-party license.
+
+### v0.15.3 (2026-07-03) -- hard-gate exit codes and portable project metadata
+
+- Fixed `verify-methods` CLI semantics so failed method verification returns a non-zero process exit code while still printing the run manifest JSON. Automation can now treat the command as a real hard gate.
+- Removed the developer-local historical source path from newly generated `project.json` files and replaced it with a neutral `legacy_mvp_reference` note, improving project portability across machines and public examples.
+- Added regression tests for failed `verify-methods` exit codes and portable project scaffolding metadata.
+- Refreshed README workflow wording so the documented paper loop stays evidence-first: literature and planning are followed by data/method execution, figure generation, result validity, and core evidence review before manuscript writing.
 
 ### v0.15.2 (2026-07-02) -- strict figure contracts and repair-first execution
 

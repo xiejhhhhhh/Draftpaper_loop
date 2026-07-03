@@ -8,6 +8,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from draftpaper_cli.project_scaffold import create_project
 
@@ -84,6 +85,18 @@ class PaperFetchAdapterTests(unittest.TestCase):
             self.assertEqual(enriched, items)
             self.assertEqual(manifest["status"], "unavailable")
             self.assertTrue((project.path / "references" / "paper_fetch_manifest.json").exists())
+
+    def test_resolve_uses_packaged_vendored_runtime_when_path_command_is_missing(self) -> None:
+        from draftpaper_cli.paper_fetch_adapter import resolve_paper_fetch_command
+
+        with patch("draftpaper_cli.paper_fetch_adapter.shutil.which", return_value=None):
+            command, env, runtime_source = resolve_paper_fetch_command()
+
+        self.assertEqual(runtime_source, "vendored")
+        self.assertIsNotNone(command)
+        self.assertIn("PYTHONPATH", env)
+        self.assertIn("_vendor", env["PYTHONPATH"])
+        self.assertTrue((Path(env["PYTHONPATH"]) / "paper_fetch" / "cli.py").exists())
 
 
 if __name__ == "__main__":

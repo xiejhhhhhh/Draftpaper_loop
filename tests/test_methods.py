@@ -134,6 +134,117 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "written")
             self.assertTrue(Path(payload["methods"]).exists())
 
+    def test_cli_verify_methods_returns_nonzero_when_gate_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="CLI failed method gate", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            (project.path / "results" / "figure_plan.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "fig1",
+                            "path": "results/figures/generated.png",
+                            "generation_mode": "generated_code",
+                            "figure_type": "scatter_regression",
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            output = project.path / "results" / "tables" / "metrics.csv"
+            figure = project.path / "results" / "figures" / "generated.png"
+            command = (
+                f"{sys.executable} -c \"from pathlib import Path; "
+                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
+                f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
+                f"Path(r'{figure}').parent.mkdir(parents=True, exist_ok=True); "
+                f"Path(r'{figure}').write_bytes(b'fake image')\""
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "verify-methods",
+                    "--project",
+                    str(project.path),
+                    "--command",
+                    command,
+                    "--output",
+                    "results/tables/metrics.csv",
+                    "--output",
+                    "results/figures/generated.png",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(json.loads(completed.stdout)["status"], "failed")
+
+    def test_cli_verify_methods_uses_method_code_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Manifest driven method gate", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            output = project.path / "results" / "tables" / "metrics.csv"
+            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({
+                    "status": "written",
+                    "verify_command": command,
+                    "declared_outputs": ["results/tables/metrics.csv"],
+                    "selected_input_data": "data/raw/sample.csv",
+                }),
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "verify-methods",
+                    "--project",
+                    str(project.path),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout)["status"], "success")
+
+    def test_verify_methods_fails_unsatisfied_main_figure_contract(self) -> None:
+        from draftpaper_cli.methods import verify_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Main figure contract gate", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            output = project.path / "results" / "tables" / "metrics.csv"
+            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            (project.path / "results" / "figure_contracts.json").write_text(
+                json.dumps({
+                    "contracts": [
+                        {
+                            "storyboard_id": "fig_expected_main",
+                            "figure_id": "fig_expected_main",
+                            "path": "results/figures/expected_main.png",
+                            "figure_role": "main_result",
+                            "allowed_substitute": False,
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+
+            result = verify_methods(project.path, command=command, output_files=["results/tables/metrics.csv"])
+
+            self.assertEqual(result["status"], "failed")
+            self.assertTrue(result["figure_contract_issues"])
+            manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["figure_contract_checks"]["status"], "failed")
+
     def test_write_methods_excludes_windows_command_text_from_latex(self) -> None:
         from draftpaper_cli.methods import write_methods
 

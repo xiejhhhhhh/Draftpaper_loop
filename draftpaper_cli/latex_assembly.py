@@ -12,7 +12,9 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .citation_utils import bibtex_keys_in_text, citation_keys_in_text
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
+from .latex_utils import safe_latex_text
 from .metadata import GENERATOR_TEX_COMMENT
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -48,10 +50,6 @@ PDF_OUTPUTS = [
     "latex/main.compile.log",
     "latex/pdf_compile_manifest.json",
 ]
-
-CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{([^{}]+)\}", re.IGNORECASE)
-
-
 class LatexAssemblyError(RuntimeError):
     """Raised when final LaTeX assembly would use incomplete or stale inputs."""
 
@@ -61,32 +59,15 @@ class LatexCitationError(LatexAssemblyError):
 
 
 def _bibtex_keys(content: str) -> set[str]:
-    return set(re.findall(r"@\w+\s*\{\s*([^,\s]+)", content))
+    return bibtex_keys_in_text(content)
 
 
 def _latex_citation_keys(content: str) -> set[str]:
-    keys: set[str] = set()
-    for match in CITATION_PATTERN.finditer(content):
-        for key in match.group(1).split(","):
-            clean = key.strip()
-            if clean:
-                keys.add(clean)
-    return keys
+    return citation_keys_in_text(content)
 
 
 def _safe_latex_text(text: str) -> str:
-    replacements = {
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in str(text or ""))
+    return safe_latex_text(text)
 
 
 def _draftpaper_acknowledgments(*, aastex: bool = False) -> str:

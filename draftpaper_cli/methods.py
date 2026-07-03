@@ -13,6 +13,8 @@ from typing import Any
 
 from .data_feasibility import DataGateError, validate_data_feasibility_for_methods
 from .html_utils import write_html_report
+from .io_utils import read_json, read_text
+from .latex_utils import safe_latex_text
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
@@ -62,16 +64,11 @@ def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
-    if not path.exists():
-        return fallback
-    try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return fallback
+    return read_json(path, fallback)
 
 
 def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+    return read_text(path)
 
 
 def _ensure_method_plan(project_path: Path) -> Path:
@@ -105,10 +102,96 @@ def _missing_declared_outputs(project_path: Path, manifest: dict[str, Any]) -> l
     return missing
 
 
+def _method_code_manifest(project_path: Path) -> dict[str, Any]:
+    payload = _read_json(project_path / "methods" / "method_code_manifest.json", {})
+    return payload if isinstance(payload, dict) else {}
+
+
+def _manifest_list(payload: dict[str, Any], *keys: str) -> list[str]:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [str(item) for item in value if str(item).strip()]
+    return []
+
+
+def _resolve_verification_inputs(
+    project_path: Path,
+    command: str | None,
+    output_files: list[str] | None,
+    input_data: list[str] | None,
+) -> tuple[str, list[str], list[str], dict[str, Any]]:
+    manifest = _method_code_manifest(project_path)
+    resolved_command = command or str(manifest.get("verify_command") or manifest.get("command") or "").strip()
+    if not resolved_command:
+        raise MethodsGateError(
+            "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command."
+        )
+    resolved_outputs = output_files if output_files is not None else _manifest_list(manifest, "declared_outputs", "output_files")
+    resolved_inputs = input_data if input_data is not None else _manifest_list(manifest, "input_data", "input_files")
+    selected_input = manifest.get("selected_input_data")
+    if selected_input and str(selected_input) not in resolved_inputs:
+        resolved_inputs.append(str(selected_input))
+    return resolved_command, resolved_outputs, resolved_inputs, manifest
+
+
+def _figure_contract_issues(project_path: Path) -> tuple[list[str], dict[str, Any]]:
+    contracts_payload = _read_json(project_path / "results" / "figure_contracts.json", {})
+    contracts = contracts_payload.get("contracts") if isinstance(contracts_payload, dict) else []
+    if not isinstance(contracts, list) or not contracts:
+        return [], {"status": "not_applicable", "contract_count": 0, "satisfied_count": 0, "issues": []}
+    metadata = _read_json(project_path / "results" / "figure_metadata.json", {})
+    metadata_items = metadata.get("figures") if isinstance(metadata, dict) else []
+    if not isinstance(metadata_items, list):
+        metadata_items = []
+    metadata_by_path = {
+        str(item.get("path") or "").replace("\\", "/"): item
+        for item in metadata_items
+        if isinstance(item, dict) and item.get("path")
+    }
+    metadata_by_storyboard = {
+        str(item.get("storyboard_id") or item.get("figure_id") or ""): item
+        for item in metadata_items
+        if isinstance(item, dict) and (item.get("storyboard_id") or item.get("figure_id"))
+    }
+    issues: list[str] = []
+    satisfied = 0
+    for contract in contracts:
+        if not isinstance(contract, dict):
+            continue
+        path_text = str(contract.get("path") or "").replace("\\", "/")
+        storyboard_id = str(contract.get("storyboard_id") or contract.get("figure_id") or "")
+        if not path_text:
+            issues.append(f"{storyboard_id or 'main figure contract'} is missing a planned output path.")
+            continue
+        path = _project_relative_path(project_path, path_text)
+        if not _valid_png(path):
+            issues.append(f"{path_text} is required by the main figure contract but is missing or is not a valid PNG.")
+            continue
+        metadata_item = metadata_by_path.get(path_text) or metadata_by_storyboard.get(storyboard_id)
+        if not metadata_item:
+            issues.append(f"{path_text} is required by the main figure contract but has no matching figure metadata.")
+            continue
+        if storyboard_id and str(metadata_item.get("storyboard_id") or metadata_item.get("figure_id") or "") not in {storyboard_id, ""}:
+            issues.append(f"{path_text} metadata does not match storyboard contract {storyboard_id}.")
+            continue
+        if metadata_item.get("is_placeholder"):
+            issues.append(f"{path_text} is marked as placeholder and cannot satisfy a main figure contract.")
+            continue
+        satisfied += 1
+    checks = {
+        "status": "passed" if not issues else "failed",
+        "contract_count": len([item for item in contracts if isinstance(item, dict)]),
+        "satisfied_count": satisfied,
+        "issues": issues,
+    }
+    return issues, checks
+
+
 def verify_methods(
     project: str | Path,
     *,
-    command: str,
+    command: str | None = None,
     output_files: list[str] | None = None,
     input_data: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -121,22 +204,37 @@ def verify_methods(
     methods_dir = state.path / "methods"
     methods_dir.mkdir(parents=True, exist_ok=True)
     _ensure_method_plan(state.path)
+    command, declared_outputs, resolved_input_data, method_code_manifest = _resolve_verification_inputs(
+        state.path,
+        command,
+        output_files,
+        input_data,
+    )
 
     started_at = utc_now()
     completed = subprocess.run(command, cwd=state.path, shell=True, capture_output=True, text=True)
     finished_at = utc_now()
-    declared_outputs = output_files or []
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
     figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
+    figure_contract_issues, figure_contract_checks = _figure_contract_issues(state.path)
     review_task_coverage_issues = _review_task_coverage_issues(state.path)
-    status = "success" if completed.returncode == 0 and not missing_outputs and not figure_quality_issues and not review_task_coverage_issues else "failed"
+    status = (
+        "success"
+        if completed.returncode == 0
+        and not missing_outputs
+        and not figure_quality_issues
+        and not figure_contract_issues
+        and not review_task_coverage_issues
+        else "failed"
+    )
     parsed_metrics = _read_metrics_from_outputs(state.path, declared_outputs)
     manifest = {
         "status": status,
         "command": command,
         "returncode": completed.returncode,
-        "input_data": input_data or [],
+        "input_data": resolved_input_data,
         "output_files": declared_outputs,
+        "method_code_manifest": method_code_manifest,
         "metrics": parsed_metrics,
         "figures_generated": [item for item in declared_outputs if item.lower().endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg"))],
         "tables_generated": [item for item in declared_outputs if item.lower().endswith((".csv", ".tsv", ".xlsx", ".json"))],
@@ -146,6 +244,8 @@ def verify_methods(
         "stderr": completed.stderr[-4000:],
         "missing_outputs": missing_outputs,
         "figure_quality_issues": figure_quality_issues,
+        "figure_contract_issues": figure_contract_issues,
+        "figure_contract_checks": figure_contract_checks,
         "review_task_coverage_issues": review_task_coverage_issues,
     }
     _write_manifest(methods_dir / "run_manifest.yaml", manifest)
@@ -159,6 +259,8 @@ def verify_methods(
         "returncode": completed.returncode,
         "missing_outputs": missing_outputs,
         "figure_quality_issues": figure_quality_issues,
+        "figure_contract_issues": figure_contract_issues,
+        "figure_contract_checks": figure_contract_checks,
         "review_task_coverage_issues": review_task_coverage_issues,
     }
 
@@ -355,19 +457,7 @@ def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None
 
 
 def _safe_latex_text(text: Any) -> str:
-    replacements = {
-        "\\": r"\textbackslash{}",
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in str(text or ""))
+    return safe_latex_text(text)
 
 
 def _clean_sentence(text: Any) -> str:

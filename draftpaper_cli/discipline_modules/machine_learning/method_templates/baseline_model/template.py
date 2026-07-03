@@ -10,7 +10,8 @@ from pathlib import Path
 
 
 def run_majority_baseline(*, input_table: Path, target_column: str, output_table: Path) -> dict[str, float]:
-    rows = list(csv.DictReader(input_table.open("r", encoding="utf-8-sig", newline="")))
+    with input_table.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     counts = Counter(str(row.get(target_column, "")).strip() for row in rows if str(row.get(target_column, "")).strip())
     majority = max(counts.values()) if counts else 0
     accuracy = majority / len(rows) if rows else 0.0

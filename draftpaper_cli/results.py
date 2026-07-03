@@ -9,6 +9,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .citation_utils import has_citation_command
+from .io_utils import read_json
+from .latex_utils import safe_latex_text
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .result_validity import ResultValidityError, validate_result_validity_for_results
@@ -26,26 +29,13 @@ RESULT_OUTPUTS = [
 
 FIGURE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".svg"}
 TABLE_EXTENSIONS = {".csv", ".tsv", ".xlsx", ".json"}
-CITATION_PATTERN = re.compile(r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?\{", re.IGNORECASE)
-
 
 class ResultsGateError(RuntimeError):
     """Raised when Results writing would use unsupported or missing artifacts."""
 
 
 def _safe_latex_text(text: str) -> str:
-    replacements = {
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in str(text or ""))
+    return safe_latex_text(text)
 
 
 def _manuscript_result_text(text: str) -> str:
@@ -85,12 +75,7 @@ def _artifact_id(prefix: str, index: int, path: Path) -> str:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return {}
+    payload = read_json(path, {})
     return payload if isinstance(payload, dict) else {}
 
 
@@ -231,7 +216,7 @@ def _validate_manifest(project_path: Path, manifest: dict[str, Any]) -> list[tup
         if not _project_relative_path(project_path, relative).exists():
             missing.append(relative)
         text = " ".join(str(entry.get(key) or "") for key in ("caption_draft", "result_claim"))
-        if CITATION_PATTERN.search(text):
+        if has_citation_command(text):
             raise ResultsGateError(f"Results manifest entry {entry.get('id') or relative} contains a citation command.")
     if missing:
         raise ResultsGateError("Declared result artifacts are missing: " + ", ".join(missing))
@@ -331,7 +316,7 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
         for kind, entry in group:
             lines.extend([_render_figure(entry) if kind == "figure" else _render_table(entry), ""])
     tex = "\n".join(lines)
-    if CITATION_PATTERN.search(tex):
+    if has_citation_command(tex):
         raise ResultsGateError("Generated results.tex contains a citation command, which is forbidden.")
     return tex
 

@@ -891,11 +891,13 @@ def generate_analysis_code(
     (compat_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
     (compat_scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
     (compat_tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
+    verify_command = f"{_quote_command(sys.executable)} methods/scripts/run_analysis.py"
+    manifest["verify_command"] = verify_command
+    manifest["install_plotting_command"] = f"{_quote_command(sys.executable)} methods/scripts/install_plotting_requirements.py"
     _set_analysis_manifest(state.path, manifest)
     _set_code_stage_manifest(state.path)
     update_stage_status(state.path, "code", "draft")
 
-    verify_command = f"{_quote_command(sys.executable)} methods/scripts/run_analysis.py"
     return {
         "status": "written",
         "project_path": str(state.path),
@@ -907,10 +909,9 @@ def generate_analysis_code(
         "declared_outputs": declared_outputs,
         "verify_command": verify_command,
         "plotting_requirements": plotting_requirements,
-        "install_plotting_command": f"{_quote_command(sys.executable)} methods/scripts/install_plotting_requirements.py",
+        "install_plotting_command": manifest["install_plotting_command"],
         "next_command": (
             f'{_quote_command(sys.executable)} -m draftpaper_cli.cli verify-methods '
-            f'--project "{state.path}" --command "{verify_command}" '
-            + " ".join(f"--output {output}" for output in declared_outputs)
+            f'--project "{state.path}"'
         ),
     }

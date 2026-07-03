@@ -82,6 +82,10 @@ class ProjectScaffoldTests(unittest.TestCase):
             self.assertEqual(metadata["generated_by"]["name"], "Draftpaper-loop")
             self.assertEqual(metadata["generated_by"]["schema_family"], "dpl")
             self.assertIn("does not grant commercial use rights", metadata["generated_by"]["sponsorship_note"])
+            serialized_metadata = json.dumps(metadata, ensure_ascii=False)
+            self.assertNotIn("D:\\DraftAI_agent", serialized_metadata)
+            self.assertNotIn("source_mvp", metadata)
+            self.assertEqual(metadata["legacy_mvp_reference"], "legacy MVP design notes")
 
             references_manifest = json.loads((project.path / "references" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(references_manifest["dpl"]["schema_family"], "dpl")

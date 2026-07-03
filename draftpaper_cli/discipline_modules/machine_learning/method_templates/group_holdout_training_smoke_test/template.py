@@ -18,7 +18,8 @@ def assess_group_holdout_feasibility(
     output_table: Path,
     min_groups_per_class: int = 2,
 ) -> dict[str, Any]:
-    rows = list(csv.DictReader(input_table.open("r", encoding="utf-8-sig", newline="")))
+    with input_table.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
     class_counts = Counter(str(row.get(target_column, "")).strip() for row in rows if str(row.get(target_column, "")).strip())
     groups_by_class: dict[str, set[str]] = defaultdict(set)
     for row in rows:

@@ -19,8 +19,10 @@ def build_event_level_transformer_inputs(
     event_key: str = "event_id",
     class_column: str = "category",
 ) -> dict[str, int]:
-    events = list(csv.DictReader(event_manifest_csv.open("r", encoding="utf-8-sig", newline="")))
-    features = list(csv.DictReader(source_feature_csv.open("r", encoding="utf-8-sig", newline="")))
+    with event_manifest_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        events = list(csv.DictReader(handle))
+    with source_feature_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+        features = list(csv.DictReader(handle))
     feature_by_source = {str(row.get(source_key, "")).strip(): row for row in features}
     output_event_table.parent.mkdir(parents=True, exist_ok=True)
     output_completeness_csv.parent.mkdir(parents=True, exist_ok=True)

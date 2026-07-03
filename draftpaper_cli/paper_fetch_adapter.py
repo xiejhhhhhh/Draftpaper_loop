@@ -26,8 +26,11 @@ def _repo_root() -> Path:
 
 
 def _vendored_source() -> Path | None:
-    source = _repo_root() / "third_party" / "paper-fetch-skill" / "src"
-    return source if source.exists() else None
+    packaged = Path(__file__).resolve().parent / "_vendor" / "paper_fetch_skill"
+    if (packaged / "paper_fetch" / "cli.py").exists():
+        return packaged
+    source_tree = _repo_root() / "third_party" / "paper-fetch-skill" / "src"
+    return source_tree if source_tree.exists() else None
 
 
 def resolve_paper_fetch_command(command: list[str] | None = None) -> tuple[list[str] | None, dict[str, str], str]:

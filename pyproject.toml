@@ -39,6 +39,24 @@ plotting-full = [
   "reportlab",
   "scikit-plot",
 ]
+fulltext = [
+  "beautifulsoup4",
+  "cachetools",
+  "filelock",
+  "filetype",
+  "idutils",
+  "lxml",
+  "platformdirs",
+  "pydantic",
+  "PyMuPDF",
+  "python-dotenv",
+  "rapidfuzz",
+  "trafilatura",
+  "urllib3",
+]
+dev = [
+  "pytest>=8",
+]
 
 [project.scripts]
 draftpaper = "draftpaper_cli.cli:main"
@@ -46,6 +64,12 @@ draftpaper = "draftpaper_cli.cli:main"
 [tool.setuptools.packages.find]
 include = ["draftpaper_cli*"]
 exclude = ["codex_skills*", "third_party*", "tests*"]
+
+[tool.setuptools.package-data]
+"draftpaper_cli._vendor.paper_fetch_skill" = ["LICENSE"]
+"draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.resources.arxiv" = ["*.json"]
+"draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.resources.formula" = ["*.json", "*.mjs"]
+"draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.models" = ["*.pyi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
