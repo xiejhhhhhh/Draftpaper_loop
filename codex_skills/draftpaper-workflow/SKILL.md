@@ -54,23 +54,25 @@ Run stages in this order unless the user asks for a focused rerun:
 11. `prepare-method-blueprint`
 12. `plan-figures`
 13. `generate-analysis-code`
-14. `verify-methods`
-15. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
-16. `assess-result-validity`
-17. `assess-core-evidence`
-18. `checkpoint --stage core_evidence` for human figure/evidence confirmation
-19. `inventory-results`
-20. `write-results`
-21. `write-introduction`
-22. `build-data-context`
-23. `write-data`
-24. `build-method-context`
-25. `write-methods`
-26. `write-discussion`
-27. `assemble-latex`
-28. `run-integrity-gate`
-29. `quality-check`
-30. reviewer/rescue commands when gates fail
+14. `classify-code-ownership`, `route-stage-code`, `build-code-provenance`, `extract-method-formulas`, and `trace-figures-to-code` when project-specific or legacy code exists under `code/`
+15. `verify-methods`
+16. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
+17. `assess-result-validity`
+18. `assess-core-evidence`
+19. `checkpoint --stage core_evidence` for human figure/evidence confirmation
+20. `inventory-results`
+21. `write-results`
+22. `write-introduction`
+23. `build-data-context`
+24. `write-data`
+25. `build-method-context`
+26. `write-methods`
+27. `prepare-discussion-comparison`
+28. `write-discussion`
+29. `assemble-latex`
+30. `run-integrity-gate`
+31. `quality-check`
+32. reviewer/rescue commands when gates fail
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
@@ -80,11 +82,13 @@ If upstream artifacts change, rerun from the earliest affected stage through dow
 
 ## Gates
 
-Never generate the research plan before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`. The main loop is evidence-first: literature and plan -> data acquisition/integration -> method/code -> figures/metadata/run manifest/result validity -> `assess-core-evidence` -> human confirmation -> Results -> Introduction/Data/Methods/Discussion. Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`, both after core evidence and Results. Introduction/Data/Methods may frame expected mechanisms, hypotheses, and planned tests, but must not leak numeric Results conclusions before the Results section. Run `plan-figures` before `generate-analysis-code`; generated code must follow `results/figure_plan.json`, produce `results/figure_metadata.json` and `results/figure_quality_report.json`, and avoid workflow-diagram fallbacks for empirical Results. If raw data are remote/private/too large, use local processed/results artifacts and limit claims. Results require passed/conditional result validity, passed `assess-core-evidence`, and `inventory-results`; result validity uses metric semantics, so p-values use alpha thresholds, R2 is goodness of fit, and correlations are effect sizes. Results contain no citations and should interpret figure metadata rather than filenames. Discussion citations must come from BibTeX and citation evidence. Always run `run-integrity-gate` before final `quality-check`. Quality fails if core evidence is not passed, Data/Methods contain local filenames, paths, commands, manifest dumps, or generated empirical figures lack scientific metadata.
+Never generate the research plan before `resolve-journal-template`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`.
 
-For Zotero-backed references, first call `list-zotero-collections` after confirming `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, and `ZOTERO_API_KEY` are configured in the local environment. Then call `search-literature --zotero-collection "<collection name>"`; do not fall back to the full Zotero library. Treat imported Zotero records as user-curated references: they are preserved outside external-search ranking, recency, abstract/PDF filtering, and the external 30-reference cap, but must still appear in `literature_summaries/index.html` together with searched references and remain distinguishable by their Zotero source/origin metadata. Use `--zotero-context all` only when the user intends the selected collection to support Introduction, Data, and Methods evidence.
+The main loop is evidence-first: literature and plan -> data acquisition/integration -> method/code -> figures/metadata/run manifest/result validity -> `assess-core-evidence` -> human confirmation -> Results -> Introduction/Data/Methods/Discussion. `plan-figures` must precede `generate-analysis-code`; generated code must follow the figure plan and produce scientific PNGs, metadata, and quality reports. Project-specific code must be stage-owned: data acquisition/processing belongs under `data/scripts`; modelling, statistics, validation, ablation, and plotting belong under `methods/scripts`, `methods/src`, or `methods/plotting`; `code/` is compatibility/shared workspace only.
 
-Every project has `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. Treat these files as append-only audit state owned by the core CLI. Do not edit them manually; use `status`, `checkpoint`, `resume`, or stage commands.
+Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`, both after core evidence and Results. Before those writing stages, use code provenance, method formula extraction, and figure-code trace artifacts. Results require passed/conditional result validity, passed `assess-core-evidence`, and `inventory-results`; Results contain no citations. Discussion citations must come from BibTeX and citation evidence, and `prepare-discussion-comparison` should create the comparison matrix before `write-discussion`. Always run `run-integrity-gate` before final `quality-check`.
+
+For Zotero-backed references and append-only audit files, follow `references/commands.md`; do not edit CLI-owned ledgers or manifests manually.
 
 ## Review and Revision Loop
 

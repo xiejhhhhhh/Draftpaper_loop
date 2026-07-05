@@ -85,6 +85,8 @@ class MachineLearningModule(DisciplineModule):
             "few_label_protocol_underpowered",
         ],
         code_generation_constraints=[
+            "Stage-owned code layout is required: dataset preparation and split construction belong under data/scripts, while model training, evaluation, ablation, interpretation, and plotting code belongs under methods/scripts, methods/src, or methods/plotting.",
+            "Methods writing must use method_formula_manifest and figure_code_trace when losses, metrics, validation estimators, ablation deltas, or generated figures are present.",
             "Require a clear label or response column before supervised model code is generated.",
             "Prefer lightweight baselines before optional deep-learning training scaffolds.",
             "Treat DINOv2 or other foundation backbones as optional project-bound dependencies, not mandatory core imports.",

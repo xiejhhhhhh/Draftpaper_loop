@@ -528,6 +528,29 @@ def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any])
     return "The verified workflow uses the data artifacts approved by the data feasibility gate."
 
 
+def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest: dict[str, Any], figure_code_trace: dict[str, Any]) -> str:
+    files = analysis_manifest.get("files") if isinstance(analysis_manifest, dict) else []
+    formula_count = int(formula_manifest.get("formula_count") or len(formula_manifest.get("formulas") or [])) if isinstance(formula_manifest, dict) else 0
+    trace_count = int(figure_code_trace.get("trace_count") or len(figure_code_trace.get("traces") or [])) if isinstance(figure_code_trace, dict) else 0
+    pieces = []
+    if isinstance(files, list) and files:
+        roles = sorted({str(item.get("code_role") or "method_code") for item in files if isinstance(item, dict)})
+        pieces.append(
+            f"The method workflow is supported by {len(files)} stage-owned method code records covering "
+            + ", ".join(role.replace("_", " ") for role in roles[:5])
+            + "."
+        )
+    else:
+        pieces.append("No stage-owned method code records were found, so the method narrative must remain conservative.")
+    if formula_count:
+        pieces.append(f"The formula extraction layer identified {formula_count} method expression(s) that should organize the mathematical description.")
+    else:
+        pieces.append("No method formula has been extracted yet; formula-bearing methods should rerun extract-method-formulas before final Methods writing.")
+    if trace_count:
+        pieces.append(f"The figure-code trace links {trace_count} result figure(s) back to plotting or method scripts.")
+    return " ".join(pieces)
+
+
 def _render_method_context_md(context: dict[str, Any]) -> str:
     lines = [
         "# Method Writing Context",
@@ -543,6 +566,10 @@ def _render_method_context_md(context: dict[str, Any]) -> str:
         "## Data Role",
         "",
         context.get("data_role", ""),
+        "",
+        "## Stage-Owned Code and Formula Trace",
+        "",
+        context.get("code_trace_summary", ""),
         "",
         "## Verification",
         "",
@@ -566,31 +593,37 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     analysis_manifest = _read_json(state.path / "methods" / "method_code_manifest.json", {})
     if not analysis_manifest:
         analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
+    formula_manifest = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
+    figure_code_trace = _read_json(state.path / "results" / "figure_code_trace.json", {})
     method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
     if method_blueprint and "method_code_plan" not in analysis_manifest:
         analysis_manifest["method_code_plan"] = method_blueprint.get("method_code_plan") or {}
     family_summary = _method_family_text(requirements)
     analysis_steps = _strip_forbidden_paths(_analysis_steps_text(requirements, observations, analysis_manifest))
     data_role = _strip_forbidden_paths(_data_role_text(manifest, analysis_manifest))
+    code_trace_summary = _strip_forbidden_paths(_method_code_trace_text(analysis_manifest, formula_manifest, figure_code_trace))
     verification_summary = _strip_forbidden_paths(_metrics_text(manifest, requirements))
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
         claim_boundary = "Interpretation is bounded by the data feasibility gate: " + claim_boundary + "."
     else:
         claim_boundary = "Interpretation should remain aligned with the current data and result-validity gates."
-    narrative_summary = " ".join([family_summary, data_role, analysis_steps, verification_summary, claim_boundary]).strip()
+    narrative_summary = " ".join([family_summary, data_role, analysis_steps, code_trace_summary, verification_summary, claim_boundary]).strip()
     context = {
         "project_id": state.metadata.get("project_id"),
         "project_path": str(state.path),
         "method_family_summary": family_summary,
         "data_role": data_role,
         "analysis_steps": analysis_steps,
+        "code_trace_summary": code_trace_summary,
         "verification_summary": verification_summary,
         "claim_boundary": claim_boundary,
         "observation_count": len(observations),
         "observations": observations,
         "method_blueprint": method_blueprint,
         "method_code_manifest": analysis_manifest,
+        "formula_manifest": formula_manifest if isinstance(formula_manifest, dict) else {},
+        "figure_code_trace": figure_code_trace if isinstance(figure_code_trace, dict) else {},
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
     }
@@ -627,6 +660,7 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     data_role = _safe_latex_text(_strip_forbidden_paths(context.get("data_role", "")))
     analysis_steps = _safe_latex_text(_strip_forbidden_paths(context.get("analysis_steps", "")))
     verification = _safe_latex_text(_strip_forbidden_paths(context.get("verification_summary", "")))
+    code_trace = _safe_latex_text(_strip_forbidden_paths(context.get("code_trace_summary", "")))
     boundary = _safe_latex_text(_strip_forbidden_paths(context.get("claim_boundary", "")))
     family = _safe_latex_text(_strip_forbidden_paths(context.get("method_family_summary", "")))
     formulas = ""
@@ -656,8 +690,8 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     return (
         "\\section{Methods}\n"
         f"{family} {data_role} The methodological description is written from the verified analytical design rather than from local execution details, so the section should explain why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a purely procedural account of software operations.\n\n"
-        f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. If later verification changes the input data, validation split, model family, or primary metric, this section should be regenerated before the Results and Discussion are revised.\n\n"
-        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands, filenames, or manifest internals. The mathematical expressions below summarize the measurable quantities inferred from the verified outputs and should be expanded when the project uses additional estimators, loss functions, sampling assumptions, or domain-specific indices."
+        f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. {code_trace} If later verification changes the input data, validation split, model family, primary metric, or figure-generation code, this section should be regenerated before the Results and Discussion are revised.\n\n"
+        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands, filenames, or manifest internals. The mathematical expressions below are the organizing spine of the Methods section: each expression should be interpreted as a compact description of the model objective, statistical relationship, validation metric, or diagnostic quantity implemented by the verified method code, with the variables explained in the surrounding prose."
         f"{citation_block}"
         f"{formula_block}"
     )

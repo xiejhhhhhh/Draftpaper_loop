@@ -42,6 +42,8 @@ PROJECT_DIRECTORIES = [
     "methods",
     "methods/scripts",
     "methods/src",
+    "methods/plotting",
+    "methods/tests",
     "code",
     "code/shared",
     "code/src",

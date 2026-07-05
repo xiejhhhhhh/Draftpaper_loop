@@ -19,10 +19,18 @@ from .citation_repair import (
     re_audit_citations,
     run_citation_repair_loop,
 )
+from .code_ownership import (
+    CodeOwnershipError,
+    build_code_provenance,
+    classify_code_ownership,
+    extract_method_formulas,
+    route_stage_code,
+    trace_figures_to_code,
+)
 from .core_evidence import CoreEvidenceError, assess_core_evidence
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
-from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
+from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, prepare_discussion_comparison, write_discussion
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
 from .integrity_gate import IntegrityGateError, run_integrity_gate
 from .journal_profile import JournalProfileError, resolve_journal_template
@@ -223,6 +231,23 @@ def build_parser() -> argparse.ArgumentParser:
     codegen.add_argument("--auto-plan-figures", action="store_true", help="Generate results/figure_plan.json first if it is missing or stale.")
     codegen.add_argument("--use-review-tasks", action="store_true", help="Include review/actionable_analysis_tasks.json in generated analysis code.")
 
+    code_owner = subparsers.add_parser("classify-code-ownership", help="Classify project-local Python code into data, methods, plotting, or compatibility ownership.")
+    code_owner.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    route_code = subparsers.add_parser("route-stage-code", help="Copy or move legacy code/ scripts into stage-owned data and methods locations.")
+    route_code.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    route_code.add_argument("--mode", default="copy", choices=["copy", "move"], help="Copy keeps legacy files; move leaves compatibility launchers when requested.")
+    route_code.add_argument("--no-compat-launchers", action="store_true", help="Do not write code/ compatibility launchers when moving files.")
+
+    code_provenance = subparsers.add_parser("build-code-provenance", help="Build a project-level code provenance manifest.")
+    code_provenance.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    formulas = subparsers.add_parser("extract-method-formulas", help="Extract LaTeX method formulas from stage-owned method code.")
+    formulas.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    figure_trace = subparsers.add_parser("trace-figures-to-code", help="Trace result figures back to stage-owned plotting or method code.")
+    figure_trace.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     verify.add_argument("--command", dest="method_command", help="Optional command override. Defaults to methods/method_code_manifest.json verify_command.")
@@ -260,6 +285,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     discussion = subparsers.add_parser("write-discussion", help="Write a traceable LaTeX Discussion section.")
     discussion.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    discussion_comparison = subparsers.add_parser("prepare-discussion-comparison", help="Prepare a comparison-literature matrix before writing Discussion.")
+    discussion_comparison.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     latex = subparsers.add_parser("assemble-latex", help="Assemble staged sections into latex/main.tex.")
     latex.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -744,6 +772,70 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "classify-code-ownership":
+        try:
+            result = classify_code_ownership(args.project)
+        except (CodeOwnershipError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "route-stage-code":
+        try:
+            result = route_stage_code(
+                args.project,
+                mode=args.mode,
+                keep_compat_launchers=not args.no_compat_launchers,
+            )
+        except (CodeOwnershipError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "build-code-provenance":
+        try:
+            result = build_code_provenance(args.project)
+        except (CodeOwnershipError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "extract-method-formulas":
+        try:
+            result = extract_method_formulas(args.project)
+        except (CodeOwnershipError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "trace-figures-to-code":
+        try:
+            result = trace_figures_to_code(args.project)
+        except (CodeOwnershipError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "collect-method-plan":
         try:
             result = collect_method_plan(
@@ -893,6 +985,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "write-discussion":
         try:
             result = write_discussion(args.project)
+        except (MissingDiscussionInputsError, DiscussionCitationIntegrityError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "prepare-discussion-comparison":
+        try:
+            result = prepare_discussion_comparison(args.project)
         except (MissingDiscussionInputsError, DiscussionCitationIntegrityError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

@@ -69,6 +69,8 @@ class AstronomyModule(DisciplineModule):
             "missing_external_survey_validation",
         ],
         code_generation_constraints=[
+            "Stage-owned code layout is required: catalog, remote streaming, token construction, and data completeness scripts belong under data/scripts, while model training, ablation, validation, and figure generation belongs under methods/scripts, methods/src, or methods/plotting.",
+            "Methods writing must use method_formula_manifest and figure_code_trace when sequence tokenization, classification metrics, validation estimators, or generated figures are present.",
             "Treat remote mission APIs and server manifests as data connectors, not mandatory package dependencies.",
             "Require explicit class labels before supervised source-classification claims.",
         ],

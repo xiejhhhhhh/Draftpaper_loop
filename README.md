@@ -179,6 +179,11 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 python -m draftpaper_cli.cli prepare-method-blueprint --project <repo>\projects\your_project
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\your_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\your_project
+python -m draftpaper_cli.cli classify-code-ownership --project <repo>\projects\your_project
+python -m draftpaper_cli.cli route-stage-code --project <repo>\projects\your_project
+python -m draftpaper_cli.cli build-code-provenance --project <repo>\projects\your_project
+python -m draftpaper_cli.cli extract-method-formulas --project <repo>\projects\your_project
+python -m draftpaper_cli.cli trace-figures-to-code --project <repo>\projects\your_project
 python -m draftpaper_cli.cli diagnose-figure-execution --project <repo>\projects\your_project
 python -m draftpaper_cli.cli repair-figure-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli repair-figure-method --project <repo>\projects\your_project
@@ -193,6 +198,7 @@ python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_p
 python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
 python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
 python -m draftpaper_cli.cli write-methods --project <repo>\projects\your_project
+python -m draftpaper_cli.cli prepare-discussion-comparison --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-citation-repair-loop --project <repo>\projects\your_project
 python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
@@ -248,6 +254,10 @@ Figure repair is intentionally repair-first rather than downgrade-first. `diagno
 `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. The publication-readiness layer estimates target-journal submission risk from saved data, methods, result, figure, integrity, quality, and journal-profile artifacts, then writes a Codex/LLM-readable archive review packet at `review/codex_archive_review_context.json` and `.html`. The reviewer-engineering layer infers a discipline and runs a matching engine; geography covers remote-sensing, agricultural-geography, and spatial-analysis manuscripts, astronomy covers catalog/light-curve/source-classification review risks, machine learning covers leakage, validation, baseline, ablation, calibration, and imbalance risks, and unmatched projects use a default fallback. Its output includes user-confirmation requests plus a `codex_enhancement_context` extension point so Codex can append literature- and manuscript-specific reviewer suggestions on top of deterministic rules. The statistical rescue layer recommends robust statistics, missingness audits, method rebuilding, explicit success thresholds, domain-aware feature rebuilding, spatial validation, model validation checks, or claim reframing when weak data or weak results might still support a defensible exploratory paper. `prepare-analysis-revision` converts review/rescue advice into executable analysis tasks, checks required data roles, and blocks impossible reruns before new figure planning or code generation. When integrity or final quality reports failed, `status` and `run-pipeline` now walk through the review sequence: gate diagnosis, reviewer pass, publication readiness, review-engineering discovery and planning, statistical rescue, analysis-revision preparation, and revision planning.
 
 `record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
+
+Stage-owned code routing is now explicit. `classify-code-ownership` scans project-local Python code, `route-stage-code` copies or moves legacy `code/` scripts into `data/scripts/`, `methods/scripts/`, `methods/src/`, or `methods/plotting/`, and `build-code-provenance` records the project-level code trail. `extract-method-formulas` writes `methods/method_formula_manifest.json` and `methods/method_formulas.tex` from code annotations, static formula patterns, and figure metadata; `trace-figures-to-code` writes `results/figure_code_trace.json` and `.html`. `build-data-context` reads `data/data_code_manifest.json`, while `build-method-context` reads `methods/method_code_manifest.json`, `methods/method_formula_manifest.json`, and `results/figure_code_trace.json`, so Data and Methods writing can explain data construction, variables, formulas, validation, and figure provenance from stage-owned code rather than from a generic `code/` dump.
+
+Discussion writing now has a comparison-preparation step. `prepare-discussion-comparison` writes `discussion/comparison_literature_matrix.csv`, `discussion/comparison_evidence_notes.html`, and `discussion/innovation_limitations_plan.json` by anchoring confirmed Results claims or metrics to retained citation evidence and literature summaries. `write-discussion` can then compare the accepted local findings with prior studies, state innovation more narrowly, and define limitations without inventing unsupported literature contrasts.
 
 `classify-data-access`, `prepare-data-acquisition`, and `inventory-data-sources` add a discipline-neutral data acquisition layer before ordinary data inventory. The layer shares the same discipline profile used by the reviewer-engineering system, then detects connector types such as `local_files`, `api_access`, and `remote_server`. It writes a plan-first artifact set under `data/` and does not fetch external data or install field-specific packages by default. Domain-specific connectors such as astronomy archives, Google Earth Engine, or bioinformatics repositories can later plug into this interface while the core Data stage remains reusable across disciplines. After reviewer/rescue analysis creates blocked missing-data tasks, `prepare-data-acquisition` writes `data/data_acquisition_tasks.json` and `.html` so Codex can tell the user which data roles are missing, which connector type is suitable, and which confirmation is needed before fetching, linking, or server-side processing.
 
@@ -332,6 +342,15 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.15.10 (2026-07-05) -- stage-owned code provenance and formula-trace writing
+
+- Added `classify-code-ownership`, `route-stage-code`, `build-code-provenance`, `extract-method-formulas`, and `trace-figures-to-code` so project-specific or legacy scripts under `code/` can be routed into stage-owned `data/scripts/`, `methods/scripts/`, `methods/src/`, and `methods/plotting/` locations.
+- Added `data/data_code_manifest.json`, extended `methods/method_code_manifest.json`, added `methods/method_formula_manifest.json`, `methods/method_formulas.tex`, and `results/figure_code_trace.json` as manuscript-facing provenance inputs.
+- Upgraded `build-data-context` and `build-method-context` so Data and Methods writing must read stage-owned code manifests, formula extraction, and figure-code traces instead of treating `code/` as an undifferentiated script dump.
+- Added `prepare-discussion-comparison`, which writes a comparison-literature matrix, HTML evidence notes, and innovation/limitations prompts before `write-discussion`.
+- Extended astronomy, geography, and machine-learning discipline modules with stage-owned code-layout and formula/figure-trace constraints.
+- Revalidated the migration path on the local astronomy project: legacy `code/` scripts were classified, routed, formula-scanned, and traced to result figures; Methods context remained correctly blocked while the upstream method-plan stage was stale after artifact-drift synchronization.
 
 ### v0.15.9 (2026-07-03) -- pytest CI and discipline-template resource cleanup
 

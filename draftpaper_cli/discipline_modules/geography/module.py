@@ -57,6 +57,8 @@ class GeographyModule(DisciplineModule):
             "missing_external_or_spatial_validation",
         ],
         code_generation_constraints=[
+            "Stage-owned code layout is required: data acquisition and processing scripts belong under data/scripts, while statistical, spatial, modelling, validation, and plotting code belongs under methods/scripts, methods/src, or methods/plotting.",
+            "Methods writing must use method_formula_manifest and figure_code_trace when formulas, statistics, spatial validation, or generated figures are present.",
             "Prefer processed analysis tables when raw rasters or cloud data are unavailable locally.",
             "Require spatial coordinates or region groups before claiming spatial generalization.",
             "If spatial roles are missing, generate only non-spatial exploratory analysis and emit a blocked rescue task.",

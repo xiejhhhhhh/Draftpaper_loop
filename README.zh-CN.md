@@ -281,6 +281,15 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.15.10 (2026-07-05) -- stage-owned code provenance and formula-trace writing
+
+- 新增 `classify-code-ownership`、`route-stage-code`、`build-code-provenance`、`extract-method-formulas` 和 `trace-figures-to-code`，用于把项目专属或历史遗留的 `code/` 脚本归属到 `data/scripts/`、`methods/scripts/`、`methods/src/` 和 `methods/plotting/`。
+- 新增 `data/data_code_manifest.json`，扩展 `methods/method_code_manifest.json`，并新增 `methods/method_formula_manifest.json`、`methods/method_formulas.tex` 和 `results/figure_code_trace.json`，用于记录数据代码、方法代码、公式来源和图表代码溯源。
+- 升级 `build-data-context` 和 `build-method-context`，让 Data 和 Methods 写作读取阶段归属代码 manifest、公式提取结果和 figure-code trace，而不是把 `code/` 当成混杂脚本目录。
+- 新增 `prepare-discussion-comparison`，在 `write-discussion` 前生成比较文献矩阵、HTML 证据笔记和创新/不足写作提示。
+- 在 astronomy、geography 和 machine_learning 学科模块中补充阶段归属代码布局、公式提取和图表代码追踪约束。
+- 已用本地 astronomy 项目验证迁移链路：旧 `code/` 脚本完成分类、路由、公式扫描和结果图表追踪；在 artifact drift 同步后，Methods context 因上游 method-plan stale 被正确拦截，没有绕过状态机。
+
 ### v0.15.9 (2026-07-03) -- pytest CI and discipline-template resource cleanup
 
 - GitHub Actions 改为安装 `.[dev]` 并运行 `python -m pytest`，与本地开发验证路径保持一致。

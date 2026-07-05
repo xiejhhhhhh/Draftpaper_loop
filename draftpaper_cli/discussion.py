@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .citation_utils import bibtex_keys_in_text
+from .html_utils import write_html_report
 from .latex_utils import safe_latex_text
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -26,6 +27,9 @@ DISCUSSION_INPUTS = [
 ]
 
 DISCUSSION_OUTPUTS = [
+    "discussion/comparison_literature_matrix.csv",
+    "discussion/comparison_evidence_notes.html",
+    "discussion/innovation_limitations_plan.json",
     "discussion/discussion.tex",
 ]
 
@@ -162,6 +166,114 @@ def _result_signal(results_text: str) -> str:
     return "the registered local result artifacts"
 
 
+def _result_anchor(results_text: str) -> str:
+    metric_match = re.search(r"\b(?:F1|AUC|R\^?2|accuracy|balanced accuracy|r)\s*[=：:]\s*[-+]?\d+(?:\.\d+)?", results_text, flags=re.I)
+    figure_match = re.search(r"Figure~?\\ref\{([^{}]+)\}|Figures?~?\\ref\{([^{}]+)\}", results_text)
+    parts = []
+    if metric_match:
+        parts.append(metric_match.group(0))
+    if figure_match:
+        parts.append("figure " + next(group for group in figure_match.groups() if group))
+    return "; ".join(parts) or _compact(_manuscript_context_text(results_text), 220)
+
+
+def _load_literature_items(project_path: Path) -> dict[str, dict[str, Any]]:
+    path = project_path / "references" / "literature_items.json"
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return {}
+    items = payload if isinstance(payload, list) else payload.get("items") if isinstance(payload, dict) else []
+    result: dict[str, dict[str, Any]] = {}
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("bibtex_key") or item.get("citation_key") or "")
+        if key:
+            result[key] = item
+    return result
+
+
+def prepare_discussion_comparison(project: str | Path) -> dict[str, Any]:
+    """Prepare a comparison-literature matrix before writing Discussion."""
+    state = load_project(project)
+    plan_text, introduction_text, results_text, citation_rows = _require_inputs(state.path)
+    _ = plan_text, introduction_text
+    discussion_dir = state.path / "discussion"
+    discussion_dir.mkdir(parents=True, exist_ok=True)
+    literature = _load_literature_items(state.path)
+    result_anchor = _result_anchor(results_text)
+    matrix_path = discussion_dir / "comparison_literature_matrix.csv"
+    notes_path = discussion_dir / "comparison_evidence_notes.html"
+    plan_path = discussion_dir / "innovation_limitations_plan.json"
+    rows = []
+    for row in citation_rows:
+        key = str(row.get("citation_key") or "")
+        section = str(row.get("section") or "")
+        if section and section not in {"discussion", "introduction", "methods", "results", "data"}:
+            continue
+        item = literature.get(key, {})
+        summary = (
+            ((item.get("deep_summary") or {}).get("results") if isinstance(item.get("deep_summary"), dict) else "")
+            or row.get("evidence_summary")
+            or item.get("abstract")
+            or item.get("title")
+            or ""
+        )
+        comparison_mode = "method_or_result_comparison" if any(token in summary.lower() for token in ["metric", "result", "validation", "classification", "model"]) else "background_boundary"
+        rows.append({
+            "citation_key": key,
+            "result_anchor": result_anchor,
+            "comparison_mode": comparison_mode,
+            "prior_evidence_summary": _compact(str(summary), 420),
+            "discussion_use": "compare local result strength, method behavior, innovation boundary, or limitation",
+            "doi": row.get("doi") or item.get("doi") or "",
+            "url": row.get("url") or item.get("url") or "",
+        })
+    if not rows:
+        raise MissingDiscussionInputsError("No citation evidence rows are available for discussion comparison.")
+    with matrix_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    notes = [
+        "# Discussion Comparison Evidence",
+        "",
+        f"Result anchor: {result_anchor}",
+        "",
+        "| Citation | Comparison mode | Prior evidence |",
+        "| --- | --- | --- |",
+    ]
+    for item in rows:
+        notes.append(
+            f"| {item['citation_key']} | {item['comparison_mode']} | {item['prior_evidence_summary']} |"
+        )
+    write_html_report(notes_path, "\n".join(notes), title="Discussion Comparison Evidence")
+    _write_json(plan_path, {
+        "status": "written",
+        "result_anchor": result_anchor,
+        "comparison_count": len(rows),
+        "innovation_prompts": [
+            "State what the verified local results add relative to the comparison matrix.",
+            "Separate method novelty from dataset novelty and result strength.",
+        ],
+        "limitation_prompts": [
+            "Identify where local metrics, sample support, validation design, or data provenance are weaker than prior work.",
+            "Keep future-work claims tied to comparison evidence rather than broad promises.",
+        ],
+    })
+    return {
+        "status": "written",
+        "project_path": str(state.path),
+        "comparison_literature_matrix": str(matrix_path),
+        "comparison_evidence_notes": str(notes_path),
+        "innovation_limitations_plan": str(plan_path),
+        "comparison_count": len(rows),
+    }
+
+
 def _expected_contribution(plan_text: str) -> str:
     match = re.search(r"## Expected Contribution\s+(.*?)(?:\n## |\Z)", plan_text, flags=re.S)
     if match:
@@ -244,6 +356,7 @@ def write_discussion(project: str | Path) -> dict[str, Any]:
     plan_text, introduction_text, results_text, citation_rows = _require_inputs(state.path)
     discussion_dir = state.path / "discussion"
     discussion_dir.mkdir(parents=True, exist_ok=True)
+    prepare_discussion_comparison(state.path)
     output_path = discussion_dir / "discussion.tex"
     output_path.write_text(
         render_discussion_tex(state.metadata, plan_text, introduction_text, results_text, citation_rows, state.path),

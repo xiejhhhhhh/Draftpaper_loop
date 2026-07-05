@@ -193,6 +193,15 @@ def _load_json(project_path: Path, relative: str) -> dict[str, Any]:
     return payload
 
 
+def _read_optional_json(path: Path, fallback: Any) -> Any:
+    if not path.exists():
+        return fallback
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return fallback
+
+
 def assess_data_quality(project: str | Path, *, required_columns: list[str] | None = None, max_missing_ratio: float = 0.2) -> dict[str, Any]:
     """Assess basic local data quality from data_inventory.json."""
     state = load_project(project)
@@ -373,6 +382,20 @@ def _processing_summary(inventory: dict[str, Any], observations: list[dict[str, 
     return "No explicit preprocessing narrative has been recorded; omit detailed processing claims unless the user provides them."
 
 
+def _data_code_summary(data_code_manifest: dict[str, Any]) -> str:
+    files = data_code_manifest.get("files") if isinstance(data_code_manifest, dict) else []
+    if not isinstance(files, list) or not files:
+        return "No stage-owned data code manifest is available yet; data writing should rely on recorded observations and data inventory."
+    roles = sorted({str(item.get("code_role") or "data_processing") for item in files if isinstance(item, dict)})
+    canonical = [str(item.get("canonical_path") or "") for item in files if isinstance(item, dict) and item.get("canonical_path")]
+    role_text = ", ".join(role.replace("_", " ") for role in roles[:4]) or "data processing"
+    return (
+        f"The data workflow is supported by {len(files)} stage-owned data code records covering {role_text}. "
+        "These records should be interpreted as data acquisition, parsing, cleaning, or integration evidence rather than as manuscript-visible file names."
+        + (f" Canonical data-code records are tracked for {len(canonical)} script(s)." if canonical else "")
+    )
+
+
 def _render_data_context_md(context: dict[str, Any]) -> str:
     lines = [
         "# Data Writing Context",
@@ -393,6 +416,10 @@ def _render_data_context_md(context: dict[str, Any]) -> str:
         "",
         context.get("processing_summary", ""),
         "",
+        "## Stage-Owned Data Code",
+        "",
+        context.get("data_code_summary", ""),
+        "",
         context.get("claim_boundary", ""),
         "",
         "## Variable Groups",
@@ -410,10 +437,12 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     inventory = _load_json(state.path, DATA_INVENTORY_OUTPUT)
     feasibility = _load_json(state.path, DATA_FEASIBILITY_JSON)
     observations = load_observations(state.path, stage="data")
+    data_code_manifest = _read_optional_json(state.path / "data" / "data_code_manifest.json", {})
     groups = _variable_groups(list(inventory.get("files") or []))
     source_summary = _data_source_summary(inventory)
     content_summary = _data_content_summary(inventory, groups)
     processing_summary = _processing_summary(inventory, observations)
+    data_code_summary = _data_code_summary(data_code_manifest if isinstance(data_code_manifest, dict) else {})
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
         claim_boundary = "The data support level is bounded as follows: " + claim_boundary + "."
@@ -423,13 +452,17 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         source_summary,
         content_summary,
         processing_summary,
+        data_code_summary,
         claim_boundary,
     ]).strip()
     context = {
         "project_id": state.metadata.get("project_id"),
+        "project_path": str(state.path),
         "source_summary": source_summary,
         "content_summary": content_summary,
         "processing_summary": processing_summary,
+        "data_code_summary": data_code_summary,
+        "data_code_manifest": data_code_manifest if isinstance(data_code_manifest, dict) else {},
         "claim_boundary": claim_boundary,
         "variable_groups": groups,
         "observation_count": len(observations),
@@ -455,6 +488,7 @@ def render_data_tex(context: dict[str, Any]) -> str:
     source = _strip_forbidden_paths(context.get("source_summary", ""))
     content = _strip_forbidden_paths(context.get("content_summary", ""))
     processing = _strip_forbidden_paths(context.get("processing_summary", ""))
+    data_code = _strip_forbidden_paths(context.get("data_code_summary", ""))
     boundary = _strip_forbidden_paths(context.get("claim_boundary", ""))
     observations = [
         _strip_forbidden_paths(_clean_sentence(item.get("text")))
@@ -470,7 +504,7 @@ def render_data_tex(context: dict[str, Any]) -> str:
     paragraphs = [
         "\\section{Data}\n"
         f"{_safe_latex_text(source)} {_safe_latex_text(content)} The manuscript should describe these materials by their scientific role, source context, measured content, temporal or spatial coverage when available, and relationship to the stated research question rather than by local storage names.",
-        f"{_safe_latex_text(processing)} This construction step is important because the subsequent methods section can only make claims that are supported by analysis-ready variables and documented preprocessing decisions. When raw access is incomplete or the working material is a processed export, the text should state that boundary directly while still explaining what the processed records represent scientifically.",
+        f"{_safe_latex_text(processing)} {_safe_latex_text(data_code)} This construction step is important because the subsequent methods section can only make claims that are supported by analysis-ready variables and documented preprocessing decisions. When raw access is incomplete or the working material is a processed export, the text should state that boundary directly while still explaining what the processed records represent scientifically.",
         f"{_safe_latex_text(observation_text)} {_safe_latex_text(boundary)} These constraints define the scope of the empirical claims: the data section should make clear what evidence is available, how it was made usable, and which conclusions would require additional observations, external validation data, or more complete provenance before they could be stated more strongly.",
     ]
     project_path = context.get("project_path")
