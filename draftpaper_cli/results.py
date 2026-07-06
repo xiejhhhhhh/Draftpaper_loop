@@ -350,6 +350,12 @@ def _set_results_stage_manifest(project_path: Path) -> None:
     _write_json(manifest_path, manifest)
 
 
+def _existing_text(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def write_results(project: str | Path) -> dict[str, Any]:
     """Write results.tex only from existing artifacts declared in result_manifest.yaml."""
     state = load_project(project)
@@ -360,9 +366,29 @@ def write_results(project: str | Path) -> dict[str, Any]:
     manifest = _read_manifest(state.path)
     entries = _validate_manifest(state.path, manifest)
     output_path = state.path / "results" / "results.tex"
-    output_path.write_text(render_results_tex(state.metadata, entries), encoding="utf-8")
     summary_path = state.path / "results" / "results_summary_zh.md"
-    summary_path.write_text(render_results_summary_zh(entries), encoding="utf-8")
+    rendered_tex = render_results_tex(state.metadata, entries)
+    rendered_summary = render_results_summary_zh(entries)
+    results_stage = state.metadata.get("stages", {}).get("results", {})
+    outputs_unchanged = (
+        not results_stage.get("stale")
+        and results_stage.get("status") in {"draft", "approved", "completed"}
+        and _existing_text(output_path) == rendered_tex
+        and _existing_text(summary_path) == rendered_summary
+    )
+    if outputs_unchanged:
+        return {
+            "status": "unchanged",
+            "project_path": str(state.path),
+            "results": str(output_path),
+            "results_summary_zh": str(summary_path),
+            "artifact_count": len(entries),
+            "outputs": RESULT_OUTPUTS,
+            "message": "Results outputs are already current; downstream manuscript stages were not marked stale.",
+        }
+
+    output_path.write_text(rendered_tex, encoding="utf-8")
+    summary_path.write_text(rendered_summary, encoding="utf-8")
     update_stage_status(state.path, "results", "draft")
     _set_results_stage_manifest(state.path)
     return {

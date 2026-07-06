@@ -343,6 +343,14 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.15.11 (2026-07-06) -- idempotent Results writing after evidence confirmation
+
+- Fixed `write-results` so repeated calls no longer rewrite `results/results.tex` or `results/results_summary_zh.md` when the result manifest and generated text are unchanged.
+- Prevented accidental downstream stale propagation after confirmed Results writing: Introduction, Data, Methods, Discussion, LaTeX, and quality stages are no longer marked stale merely because `write-results` is called again during later manuscript assembly.
+- Added a regression test for the evidence-first writing order where Results are confirmed first and later writing stages continue without being invalidated by an unchanged Results rerun.
+- Local verification: `python -m pytest`
+- Current suite: 224 tests
+
 ### v0.15.10 (2026-07-05) -- stage-owned code provenance and formula-trace writing
 
 - Added `classify-code-ownership`, `route-stage-code`, `build-code-provenance`, `extract-method-formulas`, and `trace-figures-to-code` so project-specific or legacy scripts under `code/` can be routed into stage-owned `data/scripts/`, `methods/scripts/`, `methods/src/`, and `methods/plotting/` locations.

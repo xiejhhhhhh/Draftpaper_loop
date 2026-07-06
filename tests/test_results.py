@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.project_state import load_project, update_stage_status
 
 
 def prepare_passing_result_validity(project_path: Path) -> None:
@@ -123,6 +124,35 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertIn("results/result_manifest.yaml", manifest["input_files"])
             self.assertIn("results/results.tex", manifest["output_files"])
             self.assertIn("results/results_summary_zh.md", manifest["output_files"])
+
+    def test_write_results_is_idempotent_after_downstream_writing_when_inputs_are_unchanged(self) -> None:
+        from draftpaper_cli.results import inventory_results, write_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Confirmed result text", field="workflow engineering")
+            (project.path / "results" / "figures" / "risk_curve.png").write_bytes(b"fake image")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            prepare_passing_result_validity(project.path)
+            inventory_results(project.path)
+            first = write_results(project.path)
+            self.assertEqual(first["status"], "written")
+            results_tex = project.path / "results" / "results.tex"
+            first_text = results_tex.read_text(encoding="utf-8")
+
+            for stage in ["introduction", "data_writing", "methods_writing", "discussion"]:
+                update_stage_status(project.path, stage, "draft")
+            state_before = load_project(project.path)
+            for stage in ["introduction", "data_writing", "methods_writing", "discussion"]:
+                self.assertFalse(state_before.metadata["stages"][stage]["stale"], stage)
+
+            second = write_results(project.path)
+
+            self.assertEqual(second["status"], "unchanged")
+            self.assertEqual(results_tex.read_text(encoding="utf-8"), first_text)
+            state_after = load_project(project.path)
+            self.assertFalse(state_after.metadata["stages"]["results"]["stale"])
+            for stage in ["introduction", "data_writing", "methods_writing", "discussion"]:
+                self.assertFalse(state_after.metadata["stages"][stage]["stale"], stage)
 
     def test_write_results_rejects_citation_in_manifest_claim(self) -> None:
         from draftpaper_cli.results import ResultsGateError, write_results

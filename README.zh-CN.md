@@ -281,6 +281,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.15.11 (2026-07-06) -- Results 写作幂等化与确认后状态保护
+
+- 修复 `write-results`：当 `results/result_manifest.yaml` 和生成正文没有变化时，重复调用不会再重写 `results/results.tex` 或 `results/results_summary_zh.md`。
+- 避免核心图表与 Results 已经确认后，后续 Introduction、Data、Methods、Discussion、LaTeX 和 quality 阶段因为一次无变化的 `write-results` 被重新标记为 stale。
+- 新增回归测试，覆盖“先确认 Results，再继续写 Introduction/Data/Methods/Discussion”的 evidence-first 写作顺序。
+- 本地验证：`python -m pytest`
+- 当前测试规模：224 tests
+
 ### v0.15.10 (2026-07-05) -- stage-owned code provenance and formula-trace writing
 
 - 新增 `classify-code-ownership`、`route-stage-code`、`build-code-provenance`、`extract-method-formulas` 和 `trace-figures-to-code`，用于把项目专属或历史遗留的 `code/` 脚本归属到 `data/scripts/`、`methods/scripts/`、`methods/src/` 和 `methods/plotting/`。
