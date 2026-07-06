@@ -238,7 +238,7 @@ def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, 
         return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_supported_claim", "The citation is topically related, but the local claim should be narrowed or supplemented.", supporting, doi, url
     if topic_relevance >= 0.45:
         return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_contextual_citation", "The citation is highly relevant as context, method background, data-source background, or tool provenance, but the local claim is stronger than the stored evidence.", supporting, doi, url
-    return "unsupported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "remove_or_replace_if_irrelevant", "The local claim does not align with the stored evidence for this citation.", supporting, doi, url
+    return "unsupported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "rewrite_claim_relocate_citation_or_add_evidence", "The local claim does not align with the stored evidence for this citation; keep the retained reference and revise the surrounding claim, move the citation to a better-supported sentence, or add missing citation evidence.", supporting, doi, url
 
 
 def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> list[CitationUsage]:

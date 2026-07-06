@@ -277,6 +277,44 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertNotIn("run_method.py", tex)
             self.assertIn("f1\\_score", tex)
 
+    def test_write_methods_expands_time_aware_classification_formulas_and_sanitizes_internal_terms(self) -> None:
+        from draftpaper_cli.methods import verify_methods, write_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Time-aware Transformer classification", field="astronomy machine learning")
+            prepare_passing_data_gate(project.path)
+            (project.path / "methods" / "method_blueprint.json").write_text(
+                json.dumps({
+                    "method_code_plan": {
+                        "method_families": ["time_aware_transformer", "multimodal_classification"],
+                        "validation_checks": ["source_holdout_validation", "ablation_study", "roc_auc"],
+                    }
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({
+                    "files": [{"code_role": "time_aware_transformer_training", "canonical_path": "methods/code_templates/train.py"}],
+                    "selected_input_profile": {"columns": ["pha_file", "bkg_pha_file", "arf_file", "rmf_file", "light_curve"]},
+                }),
+                encoding="utf-8",
+            )
+            output = project.path / "results" / "tables" / "metrics.csv"
+            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1_macro,0.82\\nroc_auc,0.91\\n', encoding='utf-8')\""
+
+            verify_methods(project.path, command=command, output_files=["results/tables/metrics.csv"])
+            write_methods(project.path)
+
+            formulas = (project.path / "methods" / "method_formulas.tex").read_text(encoding="utf-8")
+            tex = (project.path / "methods" / "methods.tex").read_text(encoding="utf-8")
+            self.assertIn("Time2Vec", formulas)
+            self.assertIn("Cross-entropy", formulas)
+            self.assertIn("Macro averaging", formulas)
+            self.assertIn("Area under the ROC curve", formulas)
+            self.assertIn("source and background spectral products", tex)
+            for token in ["stage-owned", "formula extraction layer", "figure-code trace", "manifest internals", "pha_file", "bkg_pha_file", "arf_file", "rmf_file"]:
+                self.assertNotIn(token, tex)
+
     def test_verify_methods_fails_generated_png_without_metadata(self) -> None:
         from draftpaper_cli.methods import verify_methods
 

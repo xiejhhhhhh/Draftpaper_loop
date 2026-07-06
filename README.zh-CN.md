@@ -281,6 +281,16 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.15.12 (2026-07-06) -- 正文证据一致性与不删文献的引用核查
+
+- 加强 Data/Methods 正文生成逻辑：本地路径、文件名、workflow 产物、仅用于实现的脚本名称和内部 manifest 语言，会在进入论文正文前被清理成面向论文的科学表述。
+- 增加天文观测数据产品的正文表达转换：光谱、响应矩阵、光变曲线、事件、图像和曝光等数据产品会被写成可读的数据描述，避免把 PHA、ARF、RMF、LC 等字段名生硬写进论文。
+- 扩展方法公式提取：面向 time-aware classification 工作流补充 Time2Vec 式时间编码、序列位置编码、masked pooling、多模态分类 logits、交叉熵、macro-F1、ROC-AUC、混淆矩阵、ablation delta、相关性和拟合优度等公式，并为公式变量补充解释和对应图表关联。
+- 升级 integrity gate：新增正文语言 lint 和 Data/Results 样本数量一致性检查，会读取 `results/tables/sample_composition.csv`，防止 Data 与 Results 中事件数、样本数或源数量不一致时静默通过。
+- 重新定位 citation audit：它现在是正文完成后的引用论断收紧 loop，不作为参考文献质量过滤器。已确认文献会被保留，弱支撑或位置不合适的引用会通过收窄 claim、移动引用位置或补充证据 metadata 来修复；repair 阶段不再删除已确认参考文献，也不删除带引用的正文句子。
+- 本地验证：`python -m pytest`
+- 当前测试规模：228 tests
+
 ### v0.15.11 (2026-07-06) -- Results 写作幂等化与确认后状态保护
 
 - 修复 `write-results`：当 `results/result_manifest.yaml` 和生成正文没有变化时，重复调用不会再重写 `results/results.tex` 或 `results/results_summary_zh.md`。

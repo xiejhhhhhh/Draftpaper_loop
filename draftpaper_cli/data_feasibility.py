@@ -306,6 +306,34 @@ def _clean_sentence(text: Any) -> str:
     return re.sub(r"\s+", " ", str(text or "")).strip()
 
 
+ASTRONOMY_PRODUCT_REPLACEMENTS = [
+    (re.compile(r"\b(?:bkg[_-]?)?pha(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "source and background spectral products"),
+    (re.compile(r"\barf(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "effective-area response products"),
+    (re.compile(r"\brmf(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "energy-redistribution response products"),
+    (re.compile(r"\b(?:bkg[_-]?)?lc(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "source and background light-curve products"),
+    (re.compile(r"\bevt(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "event products"),
+    (re.compile(r"\bimg(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "image products"),
+    (re.compile(r"\bexp(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "exposure products"),
+]
+
+
+def _manuscript_clean_text(text: Any) -> str:
+    """Remove local implementation tokens before text can enter manuscript prose."""
+    cleaned = str(text or "")
+    for pattern, replacement in ASTRONOMY_PRODUCT_REPLACEMENTS:
+        cleaned = pattern.sub(replacement, cleaned)
+    cleaned = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "processed research materials", cleaned)
+    cleaned = re.sub(r"\b(?:data|results|code|methods|references)/(?:raw|processed|figures|tables|scripts|code_templates|literature_summaries)/[^\s,.;)]+", "processed research materials", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg|html|md|tex|fits|zip)\b", "processed research materials", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(?:training_)?smoke[_-]?test\b", "execution check", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(?:XRB|TDE|AGN)[_-]?verify\b", "class-specific verification subset", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(?:file|path|filename|pathname)\b", "record", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b\w+(?:_file|_path|_filename|_pathname)\b", "data-product descriptor", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b(local project artifact|DraftPaper project|stage-owned|manifest|workflow\.html)\b", "processed research evidence", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
 def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
     groups: dict[str, list[str]] = {
         "remote_sensing_indicators": [],
@@ -318,6 +346,12 @@ def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
         for column in item.get("columns") or []:
             name = str(column)
             lowered = name.lower()
+            if any(token in lowered for token in ["pha", "arf", "rmf", "lc", "evt", "exp", "flux", "hardness", "spectrum", "spectral", "wxt", "fxt"]):
+                target = "astronomical_observation_products"
+                label = _manuscript_clean_text(name)
+                if label and label not in groups.setdefault(target, []):
+                    groups[target].append(label)
+                continue
             if any(token in lowered for token in ["ndvi", "evi", "savi", "vegetation", "lai"]):
                 target = "remote_sensing_indicators"
             elif any(token in lowered for token in ["yield", "biomass", "production", "response", "target"]):
@@ -330,8 +364,9 @@ def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
                 target = "identifiers_or_metadata"
             else:
                 continue
-            if name not in groups[target]:
-                groups[target].append(name)
+            label = _manuscript_clean_text(name)
+            if label not in groups[target]:
+                groups[target].append(label)
     return {key: values[:12] for key, values in groups.items() if values}
 
 
@@ -341,7 +376,7 @@ def _data_source_summary(inventory: dict[str, Any]) -> str:
     raw = [item for item in local_files if item.get("kind") == "raw"]
     remote = inventory.get("remote_sources") or []
     if remote:
-        descriptions = [_clean_sentence(item.get("description") or item.get("local_summary")) for item in remote]
+        descriptions = [_manuscript_clean_text(item.get("description") or item.get("local_summary")) for item in remote]
         descriptions = [item for item in descriptions if item]
         if descriptions:
             return "The data source is represented by remote or server-side resources summarized for local manuscript writing: " + " ".join(descriptions[:2])
@@ -367,32 +402,34 @@ def _data_content_summary(inventory: dict[str, Any], groups: dict[str, list[str]
         parts.append("The response or outcome variables include " + ", ".join(groups["response_variables"][:5]) + ".")
     if groups.get("nitrogen_related_proxies"):
         parts.append("Nitrogen-related proxy variables include " + ", ".join(groups["nitrogen_related_proxies"][:5]) + ".")
+    if groups.get("astronomical_observation_products"):
+        parts.append("Astronomical observation products include " + ", ".join(groups["astronomical_observation_products"][:6]) + ".")
     if groups.get("environmental_covariates"):
         parts.append("Environmental covariates include " + ", ".join(groups["environmental_covariates"][:6]) + ".")
     return " ".join(parts) or "The available metadata are insufficient to describe the data content without additional user notes."
 
 
 def _processing_summary(inventory: dict[str, Any], observations: list[dict[str, Any]]) -> str:
-    notes = " ".join(_clean_sentence(item.get("text")) for item in observations if item.get("kind") in {"processing_note", "agent_analysis", "data_summary"})
+    notes = " ".join(_manuscript_clean_text(item.get("text")) for item in observations if item.get("kind") in {"processing_note", "agent_analysis", "data_summary"})
     if notes:
         return notes[:1200]
     processed_count = sum(1 for item in inventory.get("files") or [] if item.get("kind") == "processed")
     if processed_count:
-        return "Processed local artifacts are available and should be described as analysis-ready tables rather than as filesystem objects."
+        return "Processed analysis-ready records are available and should be described by their scientific content and provenance."
     return "No explicit preprocessing narrative has been recorded; omit detailed processing claims unless the user provides them."
 
 
 def _data_code_summary(data_code_manifest: dict[str, Any]) -> str:
     files = data_code_manifest.get("files") if isinstance(data_code_manifest, dict) else []
     if not isinstance(files, list) or not files:
-        return "No stage-owned data code manifest is available yet; data writing should rely on recorded observations and data inventory."
+        return "No dedicated data acquisition or preprocessing code summary is available yet; data writing should rely on recorded observations and data inventory."
     roles = sorted({str(item.get("code_role") or "data_processing") for item in files if isinstance(item, dict)})
     canonical = [str(item.get("canonical_path") or "") for item in files if isinstance(item, dict) and item.get("canonical_path")]
     role_text = ", ".join(role.replace("_", " ") for role in roles[:4]) or "data processing"
     return (
-        f"The data workflow is supported by {len(files)} stage-owned data code records covering {role_text}. "
-        "These records should be interpreted as data acquisition, parsing, cleaning, or integration evidence rather than as manuscript-visible file names."
-        + (f" Canonical data-code records are tracked for {len(canonical)} script(s)." if canonical else "")
+        f"The data construction process is supported by {len(files)} data acquisition or preprocessing code record(s) covering {role_text}. "
+        "These records should be interpreted as evidence for data acquisition, parsing, cleaning, or integration rather than as manuscript-visible storage details."
+        + (f" The documented code route covers {len(canonical)} reusable data-processing component(s)." if canonical else "")
     )
 
 
@@ -477,11 +514,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
 
 
 def _strip_forbidden_paths(text: str) -> str:
-    text = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "local project artifact", text)
-    text = re.sub(r"\b(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/[^\s,.;)]+", "local project artifact", text)
-    text = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b", "local project artifact", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    return _manuscript_clean_text(text)
 
 
 def render_data_tex(context: dict[str, Any]) -> str:
@@ -498,8 +531,7 @@ def render_data_tex(context: dict[str, Any]) -> str:
     observation_text = " ".join(observations[:3]).strip()
     if not observation_text:
         observation_text = (
-            "The data description should therefore be read as a manuscript-facing synthesis of the accessible evidence, "
-            "not as a listing of local artifacts."
+            "The data description should therefore synthesize the accessible evidence by source, content, and processing logic."
         )
     paragraphs = [
         "\\section{Data}\n"

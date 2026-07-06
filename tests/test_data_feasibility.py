@@ -156,6 +156,36 @@ class DataFeasibilityGateTests(unittest.TestCase):
             self.assertEqual(result["decision"], "conditional_pass")
             self.assertIn("processed data", result["supported_claim_level"])
 
+    def test_data_writing_sanitizes_paths_and_astronomy_product_fields(self) -> None:
+        from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, render_data_tex
+        from draftpaper_cli.observations import record_observation
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Astronomy data description", field="astronomy machine learning")
+            (project.path / "data" / "processed" / "events.csv").write_text(
+                "source_id,pha_file,bkg_pha_file,arf_file,rmf_file,lc_file,target\nS1,a,b,c,d,e,AGN\n",
+                encoding="utf-8",
+            )
+            inventory_data(project.path)
+            assess_data_quality(project.path)
+            assess_data_feasibility(project.path, min_rows=1)
+            record_observation(
+                project.path,
+                stage="data",
+                text=r"C:\private\server\training_smoke_test.csv links PHA/BKG_PHA/ARF/RMF paths with XRB_verify and TDE_verify subsets.",
+                kind="agent_analysis",
+            )
+
+            context = build_data_writing_context(project.path)
+            tex = render_data_tex(context)
+
+            self.assertIn("source and background spectral products", tex)
+            self.assertIn("effective-area response products", tex)
+            self.assertIn("energy-redistribution response products", tex)
+            forbidden = ["local project artifact", "training_smoke", "XRB_verify", "TDE_verify", "pha_file", "bkg_pha_file", "arf_file", "rmf_file", r"C:\\private"]
+            for token in forbidden:
+                self.assertNotIn(token, tex)
+
     def test_cli_data_feasibility_flow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI data gate", field="workflow engineering")

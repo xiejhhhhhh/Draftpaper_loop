@@ -123,6 +123,46 @@ class IntegrityGateTests(unittest.TestCase):
             self.assertIn("result_artifact_missing", codes)
             self.assertIn("result_claim_missing", codes)
 
+    def test_integrity_gate_fails_internal_manuscript_language(self) -> None:
+        from draftpaper_cli.integrity_gate import run_integrity_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = write_traceable_project(tmp)
+            (project_path / "methods" / "methods.tex").write_text(
+                "\\section{Methods}\nThe stage-owned workflow.html manifest internals and formula extraction layer describe the current draft should be revised.\n",
+                encoding="utf-8",
+            )
+
+            report = run_integrity_gate(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            self.assertGreater(report["manuscript_language"]["finding_count"], 0)
+            self.assertIn("manuscript_internal_language", {issue["code"] for issue in report["issues"]})
+
+    def test_integrity_gate_fails_data_result_sample_count_mismatch(self) -> None:
+        from draftpaper_cli.integrity_gate import run_integrity_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = write_traceable_project(tmp)
+            (project_path / "results" / "tables" / "sample_composition.csv").write_text(
+                "category,event_count,source_count\nAGN,500,5\nTDE,26,1\nXRB,499,5\n",
+                encoding="utf-8",
+            )
+            (project_path / "data" / "data.tex").write_text(
+                "\\section{Data}\nThe study uses 1025 events from 11 sources.\n",
+                encoding="utf-8",
+            )
+            (project_path / "results" / "results.tex").write_text(
+                "\\section{Results}\nThe analysis reports 6010 parsed events from 60 sources.\n",
+                encoding="utf-8",
+            )
+
+            report = run_integrity_gate(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["evidence_numbers"]["sample_composition"], {"event_count": 1025, "source_count": 11})
+            self.assertIn("evidence_number_mismatch", {issue["code"] for issue in report["issues"]})
+
     def test_cli_run_integrity_gate_uses_exit_code_for_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project_path = write_traceable_project(tmp)

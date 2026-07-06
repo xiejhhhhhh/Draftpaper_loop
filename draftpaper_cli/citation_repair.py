@@ -209,7 +209,7 @@ def _replacement_for_issue(issue: dict[str, Any]) -> str:
 
 
 def apply_citation_repair(project: str | Path, *, dry_run: bool = False) -> dict[str, Any]:
-    """Apply safe citation repairs by narrowing claims before last-resort deletion."""
+    """Apply safe citation repairs by narrowing claims; never delete retained references or citation-bearing claims."""
     try:
         state = load_project(project)
     except Exception as exc:
@@ -233,6 +233,8 @@ def apply_citation_repair(project: str | Path, *, dry_run: bool = False) -> dict
         if not text:
             continue
         replacement = _replacement_for_issue(issue)
+        if not replacement.strip():
+            continue
         new_text, count = _sentence_pattern(passage).subn(lambda _match: replacement, text, count=1)
         if count == 0:
             continue

@@ -380,54 +380,148 @@ def _validate_generated_figure_outputs(project_path: Path, output_files: list[st
     return issues
 
 
-def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any]) -> list[dict[str, str]]:
-    entries: list[dict[str, str]] = []
+def _entry(entry_id: str, name: str, latex: str, source: str, explanation: str, *, method_step: str = "", used_by_figures: list[str] | None = None) -> dict[str, Any]:
+    return {
+        "id": entry_id,
+        "name": name,
+        "latex": latex,
+        "source": source,
+        "variable_explanations": explanation,
+        "method_step": method_step,
+        "used_by_figures": used_by_figures or [],
+    }
+
+
+def _formula_context_text(manifest: dict[str, Any], figure_metadata: dict[str, Any], method_context: dict[str, Any]) -> str:
+    parts: list[str] = [json.dumps(manifest, ensure_ascii=False, default=str), json.dumps(figure_metadata, ensure_ascii=False, default=str)]
+    for relative in ["methods/method_code_manifest.json", "methods/analysis_code_manifest.json", "methods/method_blueprint.json", "methods/method_requirements.json", "research_plan/method_plan.json", "research_plan/figure_storyboard.json"]:
+        project_path = method_context.get("project_path")
+        if not project_path:
+            continue
+        payload = _read_json(Path(str(project_path)) / relative, {})
+        if payload:
+            parts.append(json.dumps(payload, ensure_ascii=False, default=str))
+    return " ".join(parts).lower()
+
+
+def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any], method_context: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    method_context = method_context or {}
+    entries: list[dict[str, Any]] = []
     metrics = {str(key).lower(): value for key, value in (manifest.get("metrics") or {}).items()}
-    if "f1" in metrics or "f1_score" in metrics:
-        entries.append({
-            "id": "f1_score",
-            "name": "F1 score",
-            "latex": r"\begin{equation}F_1 = 2\cdot \frac{\mathrm{precision}\cdot \mathrm{recall}}{\mathrm{precision}+\mathrm{recall}}.\end{equation}",
-            "source": "verified metric output",
-        })
+    context_text = _formula_context_text(manifest, figure_metadata, method_context)
+    has_transformer = any(token in context_text for token in ["transformer", "attention", "time-aware", "time aware", "time2vec", "sequence encoder", "light curve", "light-curve"])
+    has_classification = any(token in context_text for token in ["classification", "classifier", "softmax", "cross_entropy", "cross entropy", "class label", "confusion"])
+    has_ablation = "ablation" in context_text
+    has_auc = any(token in context_text for token in ["auc", "roc", "receiver operating"])
+    figure_ids = [str(item.get("figure_id") or item.get("id") or item.get("path") or "") for item in figure_metadata.get("figures") or [] if isinstance(item, dict)]
+    if has_transformer:
+        entries.append(_entry(
+            "time2vec_embedding",
+            "Time-aware embedding",
+            r"\begin{equation}\mathrm{Time2Vec}(t)=\left[\omega_0 t+\phi_0,\ \sin(\omega_1 t+\phi_1),\ldots,\sin(\omega_k t+\phi_k)\right].\end{equation}",
+            "method blueprint and code context",
+            r"Here $t$ denotes the observation time or relative time interval, $\omega_j$ and $\phi_j$ are learned frequency and phase parameters, and $k$ is the number of periodic time components used to encode irregular temporal structure.",
+            method_step="temporal feature encoding",
+            used_by_figures=figure_ids,
+        ))
+        entries.append(_entry(
+            "sinusoidal_position_encoding",
+            "Sinusoidal sequence position encoding",
+            r"\begin{equation}p_{i,2j}=\sin\left(i/10000^{2j/d}\right),\qquad p_{i,2j+1}=\cos\left(i/10000^{2j/d}\right).\end{equation}",
+            "method blueprint and code context",
+            r"The index $i$ is the sequence position, $j$ indexes paired encoding dimensions, and $d$ is the embedding dimension. The encoding lets the sequence model distinguish event order even when the input tokens are padded or irregularly sampled.",
+            method_step="sequence representation",
+            used_by_figures=figure_ids,
+        ))
+        entries.append(_entry(
+            "masked_sequence_pooling",
+            "Masked sequence pooling",
+            r"\begin{equation}\bar{\mathbf{h}}=\frac{\sum_{i=1}^{T}m_i\mathbf{h}_i}{\sum_{i=1}^{T}m_i+\epsilon}.\end{equation}",
+            "method blueprint and code context",
+            r"The hidden state $\mathbf{h}_i$ represents the encoded token at position $i$, $m_i\in\{0,1\}$ indicates whether that token is observed rather than padded, $T$ is the maximum sequence length, and $\epsilon$ prevents division by zero.",
+            method_step="sequence aggregation",
+            used_by_figures=figure_ids,
+        ))
+    if has_transformer or has_classification:
+        entries.append(_entry(
+            "multimodal_classifier",
+            "Multimodal classifier logits",
+            r"\begin{equation}\mathbf{z}=\mathbf{W}\,[\bar{\mathbf{h}};\mathbf{x}_{\mathrm{obs}};\mathbf{x}_{\mathrm{spec}}]+\mathbf{b},\qquad \hat{\mathbf{p}}=\mathrm{softmax}(\mathbf{z}).\end{equation}",
+            "method blueprint and code context",
+            r"The vector $\bar{\mathbf{h}}$ summarizes the long-term sequence, $\mathbf{x}_{\mathrm{obs}}$ stores current-observation descriptors, $\mathbf{x}_{\mathrm{spec}}$ stores spectral or hardness-ratio features when available, $\mathbf{W}$ and $\mathbf{b}$ are classifier parameters, and $\hat{\mathbf{p}}$ is the predicted class-probability vector.",
+            method_step="feature fusion and prediction",
+            used_by_figures=figure_ids,
+        ))
+        entries.append(_entry(
+            "cross_entropy_loss",
+            "Cross-entropy objective",
+            r"\begin{equation}\mathcal{L}_{\mathrm{CE}}=-\frac{1}{N}\sum_{i=1}^{N}\sum_{c=1}^{C}y_{ic}\log(\hat{p}_{ic}).\end{equation}",
+            "method blueprint and code context",
+            r"The sample index is $i$, $N$ is the number of labelled samples, $C$ is the number of classes, $y_{ic}$ is the one-hot class indicator, and $\hat{p}_{ic}$ is the model probability assigned to class $c$.",
+            method_step="model optimization",
+            used_by_figures=figure_ids,
+        ))
+    if "f1" in metrics or "f1_score" in metrics or "f1_macro" in metrics or has_classification:
+        entries.append(_entry(
+            "f1_score",
+            "F1 score",
+            r"\begin{equation}F_1 = 2\cdot \frac{\mathrm{precision}\cdot \mathrm{recall}}{\mathrm{precision}+\mathrm{recall}},\qquad F_{1,\mathrm{macro}}=\frac{1}{C}\sum_{c=1}^{C}F_{1,c}.\end{equation}",
+            "verified metric output",
+            r"Precision is the fraction of predicted positives that are correct, recall is the fraction of true positives recovered, $F_{1,c}$ is the class-wise F1 score, and $C$ is the number of classes. Macro averaging treats classes equally and is therefore useful when source classes have different support.",
+            method_step="classification evaluation",
+            used_by_figures=figure_ids,
+        ))
     if "baseline_accuracy" in metrics:
-        entries.append({
-            "id": "majority_baseline",
-            "name": "Majority-class baseline",
-            "latex": r"\begin{equation}\mathrm{Acc}_{\mathrm{baseline}} = \max_k \frac{n_k}{N}.\end{equation}",
-            "source": "verified metric output",
-        })
+        entries.append(_entry(
+            "majority_baseline",
+            "Majority-class baseline",
+            r"\begin{equation}\mathrm{Acc}_{\mathrm{baseline}} = \max_k \frac{n_k}{N}.\end{equation}",
+            "verified metric output",
+            r"The term $n_k$ is the number of samples in class $k$, and $N$ is the total number of samples. This baseline reports the accuracy obtained by always predicting the most frequent class.",
+            method_step="baseline comparison",
+            used_by_figures=figure_ids,
+        ))
+    if has_auc or "roc_auc" in metrics or "auc" in metrics:
+        entries.append(_entry(
+            "roc_auc",
+            "Area under the ROC curve",
+            r"\begin{equation}\mathrm{AUC}=\int_{0}^{1}\mathrm{TPR}(u)\,d\mathrm{FPR}(u).\end{equation}",
+            "verified metric output",
+            r"The true-positive rate $\mathrm{TPR}$ and false-positive rate $\mathrm{FPR}$ are evaluated across score thresholds $u$. For multiclass tasks, the manuscript should state whether one-vs-rest or macro-averaged AUC is used.",
+            method_step="threshold-independent evaluation",
+            used_by_figures=figure_ids,
+        ))
+    if has_classification:
+        entries.append(_entry(
+            "confusion_matrix",
+            "Confusion matrix",
+            r"\begin{equation}M_{ab}=\sum_{i=1}^{N}\mathbb{I}(y_i=a,\hat{y}_i=b).\end{equation}",
+            "classification diagnostics",
+            r"The element $M_{ab}$ counts samples whose true class is $a$ and predicted class is $b$, $y_i$ is the true label, $\hat{y}_i$ is the predicted label, and $\mathbb{I}(\cdot)$ is the indicator function.",
+            method_step="error structure analysis",
+            used_by_figures=figure_ids,
+        ))
+    if has_ablation:
+        entries.append(_entry(
+            "ablation_delta",
+            "Ablation effect size",
+            r"\begin{equation}\Delta s_j=s_{\mathrm{full}}-s_{\setminus j}.\end{equation}",
+            "ablation diagnostics",
+            r"The score $s_{\mathrm{full}}$ is the metric from the complete model, $s_{\setminus j}$ is the metric after removing feature group or module $j$, and $\Delta s_j$ estimates that component's contribution under the same validation protocol.",
+            method_step="component contribution analysis",
+            used_by_figures=figure_ids,
+        ))
     for item in figure_metadata.get("figures") or []:
         statistics = item.get("statistics") or {}
         figure_id = str(item.get("figure_id") or item.get("path") or "figure")
         if "pearson_r" in statistics:
-            entries.append({
-                "id": f"{figure_id}_pearson_r",
-                "name": "Pearson correlation",
-                "latex": r"\begin{equation}r = \frac{\sum_i (x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_i (x_i-\bar{x})^2}\sqrt{\sum_i (y_i-\bar{y})^2}}.\end{equation}",
-                "source": figure_id,
-            })
+            entries.append(_entry(f"{figure_id}_pearson_r", "Pearson correlation", r"\begin{equation}r = \frac{\sum_i (x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum_i (x_i-\bar{x})^2}\sqrt{\sum_i (y_i-\bar{y})^2}}.\end{equation}", figure_id, r"The variables $x_i$ and $y_i$ are paired observations for sample $i$, and $\bar{x}$ and $\bar{y}$ are their sample means. The statistic $r$ describes linear association rather than statistical confidence.", method_step="association analysis", used_by_figures=[figure_id]))
         if "r2" in statistics:
-            entries.append({
-                "id": f"{figure_id}_linear_r2",
-                "name": "Linear response and coefficient of determination",
-                "latex": r"\begin{equation}y_i = \beta_0+\beta_1x_i+\epsilon_i,\qquad R^2 = 1-\frac{\sum_i (y_i-\hat{y}_i)^2}{\sum_i (y_i-\bar{y})^2}.\end{equation}",
-                "source": figure_id,
-            })
+            entries.append(_entry(f"{figure_id}_linear_r2", "Linear response and coefficient of determination", r"\begin{equation}y_i = \beta_0+\beta_1x_i+\epsilon_i,\qquad R^2 = 1-\frac{\sum_i (y_i-\hat{y}_i)^2}{\sum_i (y_i-\bar{y})^2}.\end{equation}", figure_id, r"The coefficient $\beta_0$ is the intercept, $\beta_1$ is the fitted slope, $\epsilon_i$ is the residual, $\hat{y}_i$ is the fitted value, and $R^2$ measures explained variance rather than a significance threshold.", method_step="linear response modelling", used_by_figures=[figure_id]))
         if "correlation_matrix" in statistics:
-            entries.append({
-                "id": f"{figure_id}_correlation_matrix",
-                "name": "Pairwise correlation matrix",
-                "latex": r"\begin{equation}\mathbf{R}_{jk} = \mathrm{corr}(X_j, X_k).\end{equation}",
-                "source": figure_id,
-            })
+            entries.append(_entry(f"{figure_id}_correlation_matrix", "Pairwise correlation matrix", r"\begin{equation}\mathbf{R}_{jk} = \mathrm{corr}(X_j, X_k).\end{equation}", figure_id, r"The matrix element $\mathbf{R}_{jk}$ is the correlation between variables $X_j$ and $X_k$ and is used to diagnose association or redundancy among measured features.", method_step="feature association analysis", used_by_figures=[figure_id]))
         if "counts" in statistics:
-            entries.append({
-                "id": f"{figure_id}_class_support",
-                "name": "Class-support ratio",
-                "latex": r"\begin{equation}\rho_{\mathrm{imbalance}} = \frac{\max_k n_k}{\min_k n_k}.\end{equation}",
-                "source": figure_id,
-            })
+            entries.append(_entry(f"{figure_id}_class_support", "Class-support ratio", r"\begin{equation}\rho_{\mathrm{imbalance}} = \frac{\max_k n_k}{\min_k n_k}.\end{equation}", figure_id, r"The value $n_k$ is the number of samples in class $k$. The ratio $\rho_{\mathrm{imbalance}}$ summarizes imbalance across classes and helps interpret classification metrics.", method_step="sample composition analysis", used_by_figures=[figure_id]))
     seen: set[str] = set()
     unique = []
     for entry in entries:
@@ -440,7 +534,7 @@ def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any]) 
 
 def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None:
     figure_metadata = _read_json(project_path / "results" / "figure_metadata.json", {})
-    entries = _formula_entries(manifest, figure_metadata)
+    entries = _formula_entries(manifest, figure_metadata, {"project_path": str(project_path)})
     payload = {
         "status": "written",
         "generated_at": utc_now(),
@@ -450,7 +544,12 @@ def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None
     _write_json(project_path / "methods" / "method_formula_manifest.json", payload)
     lines = ["% Auto-generated from verified method metrics and figure metadata.", ""]
     for entry in entries:
-        lines.extend([f"% {entry['name']} ({entry['source']})", entry["latex"], ""])
+        lines.extend([
+            f"% {entry['name']} ({entry['source']})",
+            entry["latex"],
+            _safe_latex_text(entry.get("variable_explanations", "")),
+            "",
+        ])
     if not entries:
         lines.append("% No explicit mathematical formula was inferred from the verified outputs.")
     (project_path / "methods" / "method_formulas.tex").write_text("\n".join(lines), encoding="utf-8")
@@ -465,9 +564,21 @@ def _clean_sentence(text: Any) -> str:
 
 
 def _strip_forbidden_paths(text: str) -> str:
-    text = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "the verified local workflow", text)
-    text = re.sub(r"\b(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/[^\s,.;)]+", "the verified local workflow", text)
-    text = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b", "the verified local workflow", text, flags=re.IGNORECASE)
+    replacements = [
+        (r"\b(?:bkg[_-]?)?pha(?:[_-]?file|[_-]?path)?\b", "source and background spectral products"),
+        (r"\barf(?:[_-]?file|[_-]?path)?\b", "effective-area response products"),
+        (r"\brmf(?:[_-]?file|[_-]?path)?\b", "energy-redistribution response products"),
+        (r"\b(?:bkg[_-]?)?lc(?:[_-]?file|[_-]?path)?\b", "source and background light-curve products"),
+        (r"\b(?:training_)?smoke[_-]?test\b", "execution check"),
+        (r"\b(?:XRB|TDE|AGN)[_-]?verify\b", "class-specific verification subset"),
+        (r"\b(stage-owned|manifest internals|manifest|workflow\.html|formula extraction layer|figure-code trace)\b", "documented analysis evidence"),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    text = re.sub(r"[A-Za-z]:\\[^\s,.;)]+", "documented analysis evidence", text)
+    text = re.sub(r"\b(?:data|results|code|methods)/(?:raw|processed|figures|tables|scripts|code_templates)/[^\s,.;)]+", "documented analysis evidence", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg|html|md|tex|fits|zip)\b", "documented analysis evidence", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b\w+(?:_file|_path|_filename|_pathname)\b", "data-product descriptor", text, flags=re.IGNORECASE)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -510,22 +621,22 @@ def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[s
     method_families = ", ".join(str(item).replace("_", " ") for item in code_plan.get("method_families") or [])
     validation_checks = ", ".join(str(item).replace("_", " ") for item in code_plan.get("validation_checks") or [])
     if method_families or validation_checks:
-        return ("The verified method code follows the discipline-aware method blueprint. "
+        return ("The implemented method follows the discipline-aware method blueprint. "
                 f"Planned method families include {method_families or 'general analytical modelling'}; "
                 f"validation checks include {validation_checks or 'basic execution and output verification'}.")
-    return "The method should be described as a verified local analytical workflow whose steps are constrained by the method plan and available data."
+    return "The method should be described as an implemented analytical design whose steps are constrained by the method plan and available data."
 
 
 def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any]) -> str:
     selected = analysis_manifest.get("selected_input_profile") or {}
     columns = selected.get("columns") or []
-    column_text = ", ".join(str(column) for column in columns[:8])
+    column_text = ", ".join(_strip_forbidden_paths(str(column)) for column in columns[:8])
     if column_text:
-        return "The verified workflow uses the analysis-ready data variables " + column_text + " to connect the data evidence with the planned analysis."
+        return "The analysis uses the prepared scientific variables " + column_text + " to connect the data evidence with the planned analysis."
     inputs = manifest.get("input_data") or []
     if inputs:
-        return "The verified workflow uses user-specified analysis-ready input data rather than unverified raw-data access."
-    return "The verified workflow uses the data artifacts approved by the data feasibility gate."
+        return "The analysis uses user-specified, analysis-ready inputs rather than making unverified raw-data claims."
+    return "The analysis uses the evidence approved by the data feasibility gate."
 
 
 def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest: dict[str, Any], figure_code_trace: dict[str, Any]) -> str:
@@ -536,18 +647,18 @@ def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest:
     if isinstance(files, list) and files:
         roles = sorted({str(item.get("code_role") or "method_code") for item in files if isinstance(item, dict)})
         pieces.append(
-            f"The method workflow is supported by {len(files)} stage-owned method code records covering "
+            f"The implemented method is supported by {len(files)} documented method component(s) covering "
             + ", ".join(role.replace("_", " ") for role in roles[:5])
             + "."
         )
     else:
-        pieces.append("No stage-owned method code records were found, so the method narrative must remain conservative.")
+        pieces.append("No dedicated method-code summary was found, so the method narrative must remain conservative.")
     if formula_count:
-        pieces.append(f"The formula extraction layer identified {formula_count} method expression(s) that should organize the mathematical description.")
+        pieces.append(f"The mathematical description is organized around {formula_count} expression(s) derived from the implemented analysis.")
     else:
-        pieces.append("No method formula has been extracted yet; formula-bearing methods should rerun extract-method-formulas before final Methods writing.")
+        pieces.append("No method formula has been extracted yet; formula-bearing methods should regenerate the method context before final Methods writing.")
     if trace_count:
-        pieces.append(f"The figure-code trace links {trace_count} result figure(s) back to plotting or method scripts.")
+        pieces.append(f"The result figures are linked to {trace_count} documented analysis component(s), which constrains how the method can be described.")
     return " ".join(pieces)
 
 
@@ -567,7 +678,7 @@ def _render_method_context_md(context: dict[str, Any]) -> str:
         "",
         context.get("data_role", ""),
         "",
-        "## Stage-Owned Code and Formula Trace",
+        "## Method Code and Formula Trace",
         "",
         context.get("code_trace_summary", ""),
         "",
@@ -689,9 +800,9 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     citation_block = ("\n\n" + "\n\n".join(citation_paragraphs)) if citation_paragraphs else ""
     return (
         "\\section{Methods}\n"
-        f"{family} {data_role} The methodological description is written from the verified analytical design rather than from local execution details, so the section should explain why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a purely procedural account of software operations.\n\n"
+        f"{family} {data_role} The methodological description follows the implemented analytical design and explains why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a procedural account of software operations.\n\n"
         f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. {code_trace} If later verification changes the input data, validation split, model family, primary metric, or figure-generation code, this section should be regenerated before the Results and Discussion are revised.\n\n"
-        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands, filenames, or manifest internals. The mathematical expressions below are the organizing spine of the Methods section: each expression should be interpreted as a compact description of the model objective, statistical relationship, validation metric, or diagnostic quantity implemented by the verified method code, with the variables explained in the surrounding prose."
+        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands or storage details. The mathematical expressions below organize the Methods section: each expression is a compact description of the model objective, statistical relationship, validation metric, or diagnostic quantity implemented by the analysis code, with the variables explained in the surrounding prose."
         f"{citation_block}"
         f"{formula_block}"
     )

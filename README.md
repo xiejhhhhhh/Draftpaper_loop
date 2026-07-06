@@ -343,6 +343,16 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.15.12 (2026-07-06) -- manuscript evidence consistency and no-delete citation audit
+
+- Hardened Data/Methods manuscript generation so local paths, filenames, workflow artifacts, implementation-only script names, and internal manifest language are cleaned before they can enter paper prose.
+- Added astronomy-aware observation-product wording for spectral, response, light-curve, event, image, and exposure products, so technical columns such as PHA, ARF, RMF, and light-curve descriptors are translated into manuscript-facing data descriptions.
+- Expanded method-formula extraction for time-aware classification workflows: Time2Vec-style temporal encoding, sequence position encoding, masked pooling, multimodal classifier logits, cross-entropy, macro-F1, ROC-AUC, confusion matrices, ablation deltas, correlation, and goodness-of-fit formulas now include variable explanations and figure links.
+- Upgraded the integrity gate with manuscript-language linting and Data/Results sample-count consistency checks based on `results/tables/sample_composition.csv`, preventing stale or inflated evidence counts from passing silently.
+- Repositioned citation audit as a post-writing claim-tightening loop: retained references are preserved, unsupported or weak usages are repaired by narrowing claims, moving citations to better-supported sentences, or adding evidence metadata; citation-bearing claims are no longer deleted by the repair step.
+- Local verification: `python -m pytest`
+- Current suite: 228 tests
+
 ### v0.15.11 (2026-07-06) -- idempotent Results writing after evidence confirmation
 
 - Fixed `write-results` so repeated calls no longer rewrite `results/results.tex` or `results/results_summary_zh.md` when the result manifest and generated text are unchanged.

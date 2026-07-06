@@ -161,7 +161,7 @@ class StageOwnedCodeTests(unittest.TestCase):
             method_context = build_method_writing_context(project.path)
 
             self.assertIn("data_code_manifest", data_context)
-            self.assertIn("data code records", data_context["narrative_summary"])
+            self.assertIn("data acquisition or preprocessing code record", data_context["narrative_summary"])
             self.assertIn("method_code_manifest", method_context)
             self.assertIn("formula_manifest", method_context)
             self.assertIn("figure_code_trace", method_context)

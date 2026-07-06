@@ -194,7 +194,9 @@ class CitationAuditRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project_path = _write_minimal_citation_project(tmp)
 
-            audit_citations(project_path)
+            audit = audit_citations(project_path)
+            repair_hints = " ".join(str(usage.get("repair_hint") or "") for usage in audit["usages"])
+            self.assertNotRegex(repair_hints.lower(), r"\b(remove|delete)\b")
             plan = generate_citation_repair_plan(project_path)
 
             self.assertTrue(plan["issues"])
