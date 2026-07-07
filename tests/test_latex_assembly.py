@@ -25,6 +25,7 @@ from draftpaper_cli.references import write_reference_outputs
 from draftpaper_cli.research_plan import generate_research_plan
 from draftpaper_cli.result_validity import assess_result_validity
 from draftpaper_cli.results import inventory_results, write_results
+from tests.helpers import write_core_evidence_pass
 
 
 SAMPLE_ITEMS = [
@@ -86,7 +87,7 @@ def prepared_project(tmp: str) -> Path:
         output_files=["results/tables/metrics.csv", "results/figures/risk_curve.png"],
     )
     assess_result_validity(project.path)
-    _write_core_evidence_pass(project.path, figure_count=1)
+    write_core_evidence_pass(project.path, figure_count=1)
     inventory_results(project.path)
     write_results(project.path)
     write_introduction(project.path)
@@ -98,25 +99,6 @@ def prepared_project(tmp: str) -> Path:
     write_methods(project.path)
     write_discussion(project.path)
     return project.path
-
-
-def _write_core_evidence_pass(project_path: Path, *, figure_count: int) -> None:
-    (project_path / "core_evidence").mkdir(parents=True, exist_ok=True)
-    payload = {
-        "decision": "pass",
-        "requires_user_confirmation": True,
-        "figure_count": figure_count,
-        "workflow_coverage": {
-            "data_supplementation": True,
-            "data_integration": True,
-            "method_analysis": True,
-            "figure_production": True,
-            "result_validity": True,
-        },
-    }
-    (project_path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps(payload), encoding="utf-8")
-    (project_path / "core_evidence" / "core_evidence_report.html").write_text("<html><body>pass</body></html>", encoding="utf-8")
-    update_stage_status(project_path, "core_evidence", "draft")
 
 
 def _write_aas_html(base: Path) -> Path:

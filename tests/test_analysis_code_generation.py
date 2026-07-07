@@ -257,8 +257,15 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))
             method_manifest = json.loads((project.path / "methods" / "method_code_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(method_manifest["code_layout"], "stage_owned_methods_code_with_code_compatibility_launchers")
+            self.assertEqual(method_manifest["verify_command_argv"], ["{python}", "methods/scripts/run_analysis.py"])
+            self.assertEqual(manifest["verify_command_argv"], result["verify_command_argv"])
             self.assertEqual(method_manifest["verify_command"], result["verify_command"])
             self.assertEqual(manifest["verify_command"], result["verify_command"])
+            self.assertNotIn(sys.executable, method_manifest["verify_command"])
+            self.assertTrue(all(path.startswith("methods/") for path in manifest["canonical_code_outputs"]))
+            self.assertTrue(all(path.startswith("code/") for path in manifest["compatibility_code_outputs"]))
+            self.assertTrue(all("/methods/" in path.replace("\\", "/") for path in result["generated_files"]))
+            self.assertTrue(all("/code/" in path.replace("\\", "/") for path in result["compatibility_files"]))
             self.assertNotIn("--command", result["next_command"])
             self.assertNotIn("--output", result["next_command"])
             self.assertIn("time_series_deep_learning", manifest["method_families"])
@@ -274,7 +281,6 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
 
             verify_result = verify_methods(
                 project.path,
-                command=result["verify_command"],
                 output_files=result["declared_outputs"],
                 input_data=[manifest["selected_input_data"]],
             )

@@ -204,7 +204,7 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 主图生成现在采用“严格合同 + 修复优先”的执行逻辑。`plan-figures` 会把 research plan 中的 figure storyboard 写成 `results/figure_contracts.json`，并通过 `results/storyboard_alignment_report.json` 检查后续图表是否仍然对应原始研究计划。验证图、流程图和辅助诊断图可以保留为 supporting figures，但不能静默替代研究计划中要求的主结果图。`generate-analysis-code` 会额外输出 `results/figure_execution_diagnosis.json` 和 `.html`；如果某张主图无法生成，系统会优先判断是缺少数据还是缺少方法代码，然后推荐 `repair-figure-data` 或 `repair-figure-method`。前者会尝试沿用已有数据获取流程、公开数据库/API、远端服务器流程或用户补充 artifact；后者会尝试利用学科插件、项目已有代码、公开科研代码仓库、文献实现仓库或 Codex 生成的项目专属方法代码。只有这些自动修复仍无法产出核心图表时，才进入 `assess-core-evidence` 的人工确认阶段。
 
-`verify-methods` 现在可以直接读取 `methods/method_code_manifest.json`，使用其中的 `verify_command`、声明输出和输入数据完成方法验证，不再要求用户手动复制长命令和所有 `--output`。方法验证会写入 `methods/run_manifest.yaml`，并检查声明输出、主图合同、figure metadata 和 review task coverage；只要这些 hard gate 失败，CLI 就返回非零退出码，后续写作阶段不会把失败的方法或空图当成有效结果。
+`verify-methods` 现在可以直接读取 `methods/method_code_manifest.json`，优先使用其中的 `verify_command_argv`、声明输出和输入数据完成方法验证，不再要求用户手动复制长命令和所有 `--output`。方法验证会写入 `methods/run_manifest.yaml`，并检查声明输出、主图合同、figure metadata 和 review task coverage；只要这些 hard gate 失败，CLI 就返回非零退出码，后续写作阶段不会把失败的方法或空图当成有效结果。
 
 ## 公开科研代码挖掘
 
@@ -284,6 +284,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.16.2 (2026-07-07) -- 安全方法执行与规范代码输出契约
+
+- 根据本地代码审计结果加固 `verify-methods`：方法验证命令会先解析为 argv 列表，再以 `shell=False` 执行；shell 操作符和显式 shell runner 会被拒绝，`methods/run_manifest.yaml` 会记录 `shell_used=false`。
+- 新增 `verify_command_argv` 与 `{python}` 占位符，生成的 method-code manifest 不再固化开发机器上的 Python 绝对路径；旧版 `verify_command` 字符串仅作为兼容字段保留。
+- 将完整 stdout/stderr 写入项目本地 `methods/run_logs/`，run manifest 只保存截断摘要、日志路径和长度信息，避免 manifest 过大。
+- 收敛 analysis-code 输出契约：正式生成代码以 `methods/` 为 canonical location，`code/` 仅作为旧流程兼容副本。
+- 去除测试中的重复 core-evidence helper，并新增回归测试覆盖 manifest argv 执行、shell 拒绝、run log manifest 和 canonical/compatibility 输出分离。
+
 ### v0.16.1 (2026-07-07) -- 证据合同、可行性 gate 与更自由的论文正文写作
 
 - 新增 Data/Methods writing brief 层。`build-data-context` 和 `build-method-context` 会在生成正文前写出 `data/data_writing_brief.json/.html` 与 `methods/method_writing_brief.json/.html`。
@@ -355,9 +363,9 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ### v0.15.5 (2026-07-03) -- manifest-driven method verification and figure contracts
 
-- `verify-methods` 在未传入 `--command` 时会读取 `methods/method_code_manifest.json`，使用生成的 `verify_command`、declared outputs 和 selected input data 完成验证。
+- `verify-methods` 在未传入 `--command` 时会读取 `methods/method_code_manifest.json`，使用生成的验证 metadata、declared outputs 和 selected input data 完成验证。
 - 方法验证现在检查 `results/figure_contracts.json`；缺失、占位或 metadata 不匹配的主结果图会导致 hard gate 失败。
-- `generate-analysis-code` 会把 `verify_command` 和 `install_plotting_command` 写入 manifest，并推荐更短的 manifest-driven verification command。
+- `generate-analysis-code` 会把 manifest-driven 的验证和绘图安装 metadata 写入 manifest，并推荐更短的 manifest-driven verification command。
 
 ### v0.15.4 (2026-07-03) -- packaged paper-fetch fallback and fulltext extras
 

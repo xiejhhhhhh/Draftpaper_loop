@@ -75,6 +75,13 @@ class MethodsHardGateTests(unittest.TestCase):
             verify_result = verify_methods(project.path, command=command, output_files=["results/tables/metrics.csv"])
             self.assertEqual(verify_result["status"], "success")
             self.assertTrue((project.path / "methods" / "run_manifest.yaml").exists())
+            run_manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertFalse(run_manifest["shell_used"])
+            self.assertEqual(run_manifest["command_source"], "cli_override")
+            self.assertIsInstance(run_manifest["command_argv"], list)
+            self.assertTrue(run_manifest["stdout_log"]["path"].replace("\\", "/").startswith("methods/run_logs/"))
+            self.assertTrue(run_manifest["stderr_log"]["path"].replace("\\", "/").startswith("methods/run_logs/"))
+            self.assertIn("excerpt", run_manifest["stdout_log"])
 
             write_result = write_methods(project.path)
             self.assertEqual(write_result["status"], "written")
@@ -94,6 +101,53 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertIn("methods/method_writing_brief.json", manifest["input_files"])
             self.assertIn("methods/methods.tex", manifest["output_files"])
             self.assertIn("methods/method_writing_brief.json", manifest["output_files"])
+
+    def test_verify_methods_prefers_manifest_argv_over_legacy_string(self) -> None:
+        from draftpaper_cli.methods import verify_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Manifest argv method verification", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            output = project.path / "results" / "tables" / "metrics.csv"
+            code = (
+                "from pathlib import Path; "
+                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
+                f"Path(r'{output}').write_text('metric,value\\naccuracy,0.93\\n', encoding='utf-8')"
+            )
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({
+                    "verify_command_argv": ["{python}", "-c", code],
+                    "verify_command": "cmd.exe /c exit 99",
+                    "declared_outputs": ["results/tables/metrics.csv"],
+                }),
+                encoding="utf-8",
+            )
+
+            result = verify_methods(project.path)
+
+            self.assertEqual(result["status"], "success")
+            manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["command_source"], "method_code_manifest")
+            self.assertEqual(Path(manifest["command_argv"][0]).resolve(), Path(sys.executable).resolve())
+            self.assertFalse(manifest["shell_used"])
+            self.assertEqual(manifest["returncode"], 0)
+
+    def test_verify_methods_rejects_shell_operators_and_shell_runners(self) -> None:
+        from draftpaper_cli.methods import MethodsGateError, verify_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Unsafe shell method verification", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+
+            with self.assertRaises(MethodsGateError):
+                verify_methods(project.path, command=f"{sys.executable} -c \"print('ok')\" && echo unsafe")
+
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({"verify_command_argv": ["cmd.exe", "/c", "echo", "unsafe"]}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(MethodsGateError):
+                verify_methods(project.path)
 
     def test_cli_verify_and_write_methods(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

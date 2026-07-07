@@ -268,7 +268,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
-    verify.add_argument("--command", dest="method_command", help="Optional command override. Defaults to methods/method_code_manifest.json verify_command.")
+    verify.add_argument("--command", dest="method_command", help="Optional legacy string command override. Defaults to methods/method_code_manifest.json verify_command_argv, then legacy verify_command.")
     verify.add_argument("--output", action="append", default=[], help="Project-relative output file that must exist after the command.")
     verify.add_argument("--input", action="append", default=[], help="Project-relative input data file used by the method command.")
 

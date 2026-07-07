@@ -37,13 +37,15 @@ ANALYSIS_CODE_OUTPUTS = [
     "methods/tests/test_generated_pipeline.py",
     "methods/method_code_manifest.json",
     "methods/analysis_code_manifest.json",
+]
+
+ANALYSIS_COMPATIBILITY_OUTPUTS = [
     "code/scripts/run_analysis.py",
     "code/scripts/install_plotting_requirements.py",
     "code/requirements-publication.txt",
     "code/src/scientific_plotting.py",
     "code/src/generated_pipeline.py",
     "code/tests/test_generated_pipeline.py",
-    "methods/analysis_code_manifest.json",
 ]
 
 BASE_TABLE_OUTPUTS = [
@@ -756,6 +758,7 @@ def _set_code_stage_manifest(project_path: Path) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["input_files"] = ANALYSIS_CODE_INPUTS
     manifest["output_files"] = ANALYSIS_CODE_OUTPUTS
+    manifest["compatibility_output_files"] = ANALYSIS_COMPATIBILITY_OUTPUTS
     _write_json(manifest_path, manifest)
 
 
@@ -848,6 +851,8 @@ def generate_analysis_code(
         "generated_at": utc_now(),
         "generator": "draftpaper_cli.analysis_code.generate_analysis_code",
         "code_layout": "stage_owned_methods_code_with_code_compatibility_launchers",
+        "canonical_code_outputs": ANALYSIS_CODE_OUTPUTS,
+        "compatibility_code_outputs": ANALYSIS_COMPATIBILITY_OUTPUTS,
         "selected_input_data": selected_input.get("path"),
         "selected_input_profile": selected_input,
         "method_families": method_families,
@@ -869,12 +874,22 @@ def generate_analysis_code(
         "review_task_coverage": review_task_coverage,
         "declared_outputs": declared_outputs,
         "generated_files": ANALYSIS_CODE_OUTPUTS,
+        "compatibility_files": ANALYSIS_COMPATIBILITY_OUTPUTS,
         "notes": [
             "Generated code follows results/figure_plan.json rather than a fixed plotting template.",
             "Review the generated code before treating outputs as final science.",
-            "Run verify-methods with verify_command before writing Methods or Results.",
+            "Run verify-methods with verify_command_argv before writing Methods or Results.",
         ],
     }
+
+    verify_command_argv = ["{python}", "methods/scripts/run_analysis.py"]
+    install_plotting_command_argv = ["{python}", "methods/scripts/install_plotting_requirements.py"]
+    verify_command = "{python} methods/scripts/run_analysis.py"
+    install_plotting_command = "{python} methods/scripts/install_plotting_requirements.py"
+    manifest["verify_command_argv"] = verify_command_argv
+    manifest["verify_command"] = verify_command
+    manifest["install_plotting_command_argv"] = install_plotting_command_argv
+    manifest["install_plotting_command"] = install_plotting_command
 
     method_scripts_dir = state.path / "methods" / "scripts"
     method_src_dir = state.path / "methods" / "src"
@@ -911,9 +926,6 @@ def generate_analysis_code(
     (compat_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
     (compat_scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")
     (compat_tests_dir / "test_generated_pipeline.py").write_text(_render_generated_test(), encoding="utf-8")
-    verify_command = f"{_quote_command(sys.executable)} methods/scripts/run_analysis.py"
-    manifest["verify_command"] = verify_command
-    manifest["install_plotting_command"] = f"{_quote_command(sys.executable)} methods/scripts/install_plotting_requirements.py"
     _set_analysis_manifest(state.path, manifest)
     _set_code_stage_manifest(state.path)
     update_stage_status(state.path, "code", "draft")
@@ -924,12 +936,15 @@ def generate_analysis_code(
         "method_code_manifest": str(state.path / "methods" / "method_code_manifest.json"),
         "analysis_code_manifest": str(state.path / "methods" / "analysis_code_manifest.json"),
         "figure_plan": str(state.path / "results" / "figure_plan.json"),
-        "generated_files": [str(state.path / relative) for relative in ANALYSIS_CODE_OUTPUTS[:-1]],
+        "generated_files": [str(state.path / relative) for relative in ANALYSIS_CODE_OUTPUTS],
+        "compatibility_files": [str(state.path / relative) for relative in ANALYSIS_COMPATIBILITY_OUTPUTS],
         "selected_input_data": selected_input.get("path"),
         "declared_outputs": declared_outputs,
+        "verify_command_argv": verify_command_argv,
         "verify_command": verify_command,
         "plotting_requirements": plotting_requirements,
-        "install_plotting_command": manifest["install_plotting_command"],
+        "install_plotting_command_argv": install_plotting_command_argv,
+        "install_plotting_command": install_plotting_command,
         "next_command": (
             f'{_quote_command(sys.executable)} -m draftpaper_cli.cli verify-methods '
             f'--project "{state.path}"'

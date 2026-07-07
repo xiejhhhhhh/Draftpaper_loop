@@ -7,7 +7,9 @@ from __future__ import annotations
 import csv
 import json
 import re
+import shlex
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +56,11 @@ METHOD_OUTPUTS = [
 
 class MethodsGateError(RuntimeError):
     """Raised when Methods writing is attempted before successful code verification."""
+
+
+SHELL_OPERATOR_TOKENS = {"&&", "||", "|", ";", "&", ">", ">>", "<", "2>", "1>"}
+SHELL_EXECUTABLE_NAMES = {"cmd", "cmd.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe", "bash", "bash.exe", "sh", "sh.exe"}
+VERIFY_LOG_LIMIT = 4000
 
 
 def _read_manifest(path: Path) -> dict[str, Any]:
@@ -119,24 +126,112 @@ def _manifest_list(payload: dict[str, Any], *keys: str) -> list[str]:
     return []
 
 
+def _strip_outer_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
+def _split_legacy_command(command: str) -> list[str]:
+    try:
+        argv = shlex.split(command, posix=False)
+    except ValueError as exc:
+        raise MethodsGateError(f"Method verification command is not parseable as argv: {exc}") from exc
+    normalized = []
+    for token in argv:
+        text = _strip_outer_quotes(token.strip())
+        if not text:
+            continue
+        normalized.append(sys.executable if text in {"{python}", "${PYTHON}", "$PYTHON"} else text)
+    if not normalized:
+        raise MethodsGateError("Method verification command is empty after parsing.")
+    shell_tokens = [token for token in normalized if token in SHELL_OPERATOR_TOKENS]
+    if shell_tokens:
+        raise MethodsGateError(
+            "Method verification command contains shell operators that are not allowed under v0.16.2 safe execution: "
+            + ", ".join(shell_tokens)
+            + ". Use methods/method_code_manifest.json verify_command_argv or a single Python runner script instead."
+        )
+    _reject_shell_runner(normalized)
+    return normalized
+
+
+def _normalize_verify_argv(argv: list[Any]) -> list[str]:
+    normalized = []
+    for token in argv:
+        text = _strip_outer_quotes(str(token).strip())
+        if not text:
+            continue
+        if text in {"{python}", "${PYTHON}", "$PYTHON"}:
+            normalized.append(sys.executable)
+        else:
+            normalized.append(text)
+    if not normalized:
+        raise MethodsGateError("verify_command_argv is empty.")
+    shell_tokens = [token for token in normalized if token in SHELL_OPERATOR_TOKENS]
+    if shell_tokens:
+        raise MethodsGateError(
+            "verify_command_argv contains shell operators that are not allowed: " + ", ".join(shell_tokens)
+        )
+    _reject_shell_runner(normalized)
+    return normalized
+
+
+def _reject_shell_runner(argv: list[str]) -> None:
+    first = Path(argv[0]).name.lower() if argv else ""
+    if first in SHELL_EXECUTABLE_NAMES:
+        raise MethodsGateError(
+            "Method verification cannot invoke an interactive shell runner. "
+            "Use verify_command_argv with a direct Python runner such as ['{python}', 'methods/scripts/run_analysis.py']."
+        )
+
+
+def _command_display(argv: list[str]) -> str:
+    return subprocess.list2cmdline(argv)
+
+
 def _resolve_verification_inputs(
     project_path: Path,
     command: str | None,
     output_files: list[str] | None,
     input_data: list[str] | None,
-) -> tuple[str, list[str], list[str], dict[str, Any]]:
+) -> tuple[list[str], str, str, list[str], list[str], dict[str, Any]]:
     manifest = _method_code_manifest(project_path)
-    resolved_command = command or str(manifest.get("verify_command") or manifest.get("command") or "").strip()
-    if not resolved_command:
+    command_source = "cli_override" if command else "method_code_manifest"
+    if command:
+        resolved_argv = _split_legacy_command(command)
+    elif isinstance(manifest.get("verify_command_argv"), list):
+        resolved_argv = _normalize_verify_argv(manifest.get("verify_command_argv") or [])
+    else:
+        legacy_command = str(manifest.get("verify_command") or manifest.get("command") or "").strip()
+        if not legacy_command:
+            raise MethodsGateError(
+                "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
+            )
+        resolved_argv = _split_legacy_command(legacy_command)
+        command_source = "method_code_manifest_legacy_string"
+    if not resolved_argv:
         raise MethodsGateError(
-            "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command."
+            "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
         )
     resolved_outputs = output_files if output_files is not None else _manifest_list(manifest, "declared_outputs", "output_files")
     resolved_inputs = input_data if input_data is not None else _manifest_list(manifest, "input_data", "input_files")
     selected_input = manifest.get("selected_input_data")
     if selected_input and str(selected_input) not in resolved_inputs:
         resolved_inputs.append(str(selected_input))
-    return resolved_command, resolved_outputs, resolved_inputs, manifest
+    return resolved_argv, _command_display(resolved_argv), command_source, resolved_outputs, resolved_inputs, manifest
+
+
+def _write_process_log(log_dir: Path, name: str, text: str) -> dict[str, Any]:
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / name
+    path.write_text(text or "", encoding="utf-8", errors="replace")
+    return {
+        "path": str(path.relative_to(log_dir.parents[1])),
+        "characters": len(text or ""),
+        "truncated_in_manifest": len(text or "") > VERIFY_LOG_LIMIT,
+        "excerpt": (text or "")[-VERIFY_LOG_LIMIT:],
+    }
 
 
 def _figure_contract_issues(project_path: Path) -> tuple[list[str], dict[str, Any]]:
@@ -208,7 +303,7 @@ def verify_methods(
     methods_dir = state.path / "methods"
     methods_dir.mkdir(parents=True, exist_ok=True)
     _ensure_method_plan(state.path)
-    command, declared_outputs, resolved_input_data, method_code_manifest = _resolve_verification_inputs(
+    command_argv, command_display, command_source, declared_outputs, resolved_input_data, method_code_manifest = _resolve_verification_inputs(
         state.path,
         command,
         output_files,
@@ -216,8 +311,12 @@ def verify_methods(
     )
 
     started_at = utc_now()
-    completed = subprocess.run(command, cwd=state.path, shell=True, capture_output=True, text=True)
+    completed = subprocess.run(command_argv, cwd=state.path, shell=False, capture_output=True, text=True)
     finished_at = utc_now()
+    log_stamp = re.sub(r"[^0-9A-Za-z_-]", "", started_at)[:24] or "latest"
+    run_log_dir = methods_dir / "run_logs"
+    stdout_log = _write_process_log(run_log_dir, f"verify_methods_{log_stamp}.stdout.txt", completed.stdout)
+    stderr_log = _write_process_log(run_log_dir, f"verify_methods_{log_stamp}.stderr.txt", completed.stderr)
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
     figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
     figure_contract_issues, figure_contract_checks = _figure_contract_issues(state.path)
@@ -234,7 +333,10 @@ def verify_methods(
     parsed_metrics = _read_metrics_from_outputs(state.path, declared_outputs)
     manifest = {
         "status": status,
-        "command": command,
+        "command": command_display,
+        "command_argv": command_argv,
+        "command_source": command_source,
+        "shell_used": False,
         "returncode": completed.returncode,
         "input_data": resolved_input_data,
         "output_files": declared_outputs,
@@ -244,8 +346,10 @@ def verify_methods(
         "tables_generated": [item for item in declared_outputs if item.lower().endswith((".csv", ".tsv", ".xlsx", ".json"))],
         "started_at": started_at,
         "finished_at": finished_at,
-        "stdout": completed.stdout[-4000:],
-        "stderr": completed.stderr[-4000:],
+        "stdout": stdout_log["excerpt"],
+        "stderr": stderr_log["excerpt"],
+        "stdout_log": stdout_log,
+        "stderr_log": stderr_log,
         "missing_outputs": missing_outputs,
         "figure_quality_issues": figure_quality_issues,
         "figure_contract_issues": figure_contract_issues,
