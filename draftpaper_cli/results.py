@@ -108,6 +108,9 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, str]]:
                 or figure.get("scientific_question")
             or "This figure shows an empirical pattern from the current analysis and should be interpreted in relation to the plotted variables."
             ),
+            "figure_role": str(figure.get("figure_role") or "main_result"),
+            "manuscript_role": str(figure.get("manuscript_role") or ("appendix" if figure.get("figure_role") != "main_result" else "main")),
+            "supporting_reason": str(figure.get("supporting_reason") or ""),
         }
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
     method_families = ", ".join(str(item).replace("_", " ") for item in (analysis_manifest.get("method_families") or []))
@@ -138,6 +141,9 @@ def _figure_entry(project_path: Path, path: Path, index: int, context: dict[str,
     return {
         "id": _artifact_id("fig", index, path),
         "path": relative,
+        "figure_role": details.get("figure_role") or "main_result",
+        "manuscript_role": details.get("manuscript_role") or "main",
+        "supporting_reason": details.get("supporting_reason") or "",
         "caption_draft": _manuscript_result_text(details.get("caption") or f"Result figure {index}: {path.stem.replace('_', ' ')}."),
         "result_claim": _manuscript_result_text(details.get("claim") or "The figure provides visual evidence for one result and should be interpreted directly from the plotted empirical pattern."),
     }
@@ -261,7 +267,10 @@ def _entry_label(kind: str, entry: dict[str, Any]) -> str:
 
 
 def _entry_reference(kind: str, entry: dict[str, Any]) -> str:
-    name = "Figure" if kind == "figure" else "Table"
+    if kind == "figure" and str(entry.get("manuscript_role") or "") == "appendix":
+        name = "Appendix Figure"
+    else:
+        name = "Figure" if kind == "figure" else "Table"
     return f"{name}~\\ref{{{_entry_label(kind, entry)}}}"
 
 
@@ -305,9 +314,12 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
         else:
             second_claim = claims[1][0].lower() + claims[1][1:] if claims[1] else claims[1]
             refs = " and ".join(_entry_reference(kind, entry) for kind, entry in group)
+            has_appendix = any(kind == "figure" and str(entry.get("manuscript_role") or "") == "appendix" for kind, entry in group)
+            reliability_sentence = " The appendix evidence is cited here because it checks reliability or diagnostic stability without replacing the main result." if has_appendix else ""
             paragraph = (
                 f"{claims[0]} In the same result block, {second_claim} The corresponding evidence is shown in {refs}. "
                 "Reading these artifacts together is useful because the first establishes the main empirical pattern while the second checks whether the same conclusion is stable across a complementary diagnostic view."
+                f"{reliability_sentence}"
             )
         lines.extend([
             paragraph,

@@ -20,15 +20,36 @@ DATA_DEGRADATION_RECOMMENDATIONS_JSON = "data/data_degradation_recommendations.j
 
 
 ROLE_ALIASES = {
+    "source": "source_catalog",
+    "source_id": "source_catalog",
+    "source_identifier": "source_catalog",
+    "catalog": "source_catalog",
+    "catalog_id": "source_catalog",
     "target": "label_or_response",
     "response": "label_or_response",
     "label": "label_or_response",
     "class": "label_or_response",
+    "category": "label_or_response",
+    "class_label": "label_or_response",
     "classification_label": "label_or_response",
+    "probability": "prediction_score",
+    "prediction": "prediction_score",
+    "prediction_score": "prediction_score",
+    "score": "prediction_score",
+    "logit": "prediction_score",
     "time": "time_series",
     "date": "time_series",
     "timestamp": "time_series",
     "event_time": "time_series",
+    "mjd": "light_curve",
+    "rate": "light_curve",
+    "delta_time_days": "light_curve",
+    "light_curve": "light_curve",
+    "history_lc": "light_curve",
+    "history_lc_tokens": "light_curve",
+    "current_observation": "current_observation_tokens",
+    "current_observation_tokens": "current_observation_tokens",
+    "current_lc_tokens": "current_observation_tokens",
     "ra": "spatial_or_sky_coordinates",
     "dec": "spatial_or_sky_coordinates",
     "lat": "spatial_or_sky_coordinates",
@@ -38,6 +59,11 @@ ROLE_ALIASES = {
     "region": "spatial_or_sky_coordinates",
     "region_id": "spatial_or_sky_coordinates",
     "flux": "spectral_or_remote_sensing_features",
+    "pha": "spectral_or_remote_sensing_features",
+    "bkg_pha": "spectral_or_remote_sensing_features",
+    "arf": "spectral_or_remote_sensing_features",
+    "rmf": "spectral_or_remote_sensing_features",
+    "channel": "spectral_or_remote_sensing_features",
     "hardness": "spectral_or_remote_sensing_features",
     "spectral": "spectral_or_remote_sensing_features",
     "band": "spectral_or_remote_sensing_features",
@@ -66,6 +92,14 @@ def normalize_role(value: Any) -> str:
     for key, role in ROLE_ALIASES.items():
         if len(key) >= 4 and key in text:
             return role
+    if any(token in text for token in ["source_catalog", "ra_dec", "skycoord"]):
+        return "source_catalog"
+    if any(token in text for token in ["lightcurve", "light_curve", "lc_token", "mjd", "cadence"]):
+        return "light_curve"
+    if any(token in text for token in ["current_observation", "current_token", "observation_token"]):
+        return "current_observation_tokens"
+    if any(token in text for token in ["auc", "f1", "accuracy", "prob", "score", "logit"]):
+        return "prediction_score"
     if "validation" in text or "split" in text:
         return "validation_design"
     if "identifier" in text or text.endswith("_id") or text == "id":

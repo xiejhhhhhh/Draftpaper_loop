@@ -315,13 +315,14 @@ def _clean_sentence(text: Any) -> str:
 
 
 ASTRONOMY_PRODUCT_REPLACEMENTS = [
-    (re.compile(r"\b(?:bkg[_-]?)?pha(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "source and background spectral products"),
-    (re.compile(r"\barf(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "effective-area response products"),
-    (re.compile(r"\brmf(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "energy-redistribution response products"),
-    (re.compile(r"\b(?:bkg[_-]?)?lc(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "source and background light-curve products"),
-    (re.compile(r"\bevt(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "event products"),
-    (re.compile(r"\bimg(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "image products"),
-    (re.compile(r"\bexp(?:[_-]?file|[_-]?path)?\b", re.IGNORECASE), "exposure products"),
+    (re.compile(r"\bbkg[_-]?pha(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "background spectra (PHA)"),
+    (re.compile(r"\bpha(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "source spectra (PHA)"),
+    (re.compile(r"\barf(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "effective-area response products (ARF)"),
+    (re.compile(r"\brmf(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "redistribution response matrices (RMF)"),
+    (re.compile(r"\b(?:bkg[_-]?)?lc(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "source and background light-curve products"),
+    (re.compile(r"\bevt(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "event products"),
+    (re.compile(r"\bimg(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "image products"),
+    (re.compile(r"\bexp(?:[_-]?(?:file|path|filename|pathname))\b", re.IGNORECASE), "exposure products"),
 ]
 
 
@@ -513,6 +514,36 @@ def _data_code_summary(data_code_manifest: dict[str, Any]) -> str:
     )
 
 
+def _evidence_number_roles(inventory: dict[str, Any], data_code_manifest: dict[str, Any]) -> dict[str, Any]:
+    files = inventory.get("files") if isinstance(inventory, dict) else []
+    files = files if isinstance(files, list) else []
+    readable = [item for item in files if isinstance(item, dict) and item.get("readable") is True]
+    roles: dict[str, Any] = {
+        "inventory_total_rows": int(inventory.get("total_rows") or 0) if isinstance(inventory, dict) else 0,
+        "readable_table_count": len(readable),
+        "processed_table_count": sum(1 for item in files if isinstance(item, dict) and item.get("kind") == "processed"),
+        "raw_table_count": sum(1 for item in files if isinstance(item, dict) and item.get("kind") == "raw"),
+        "remote_source_count": int(inventory.get("remote_source_count") or 0) if isinstance(inventory, dict) else 0,
+    }
+    for item in readable:
+        name = str(item.get("path") or item.get("name") or "").lower()
+        rows = int(item.get("rows") or item.get("row_count") or 0)
+        columns = [str(column).lower() for column in item.get("columns") or []]
+        haystack = " ".join(columns + [name])
+        if rows and any(token in name for token in ["event", "sample", "training", "model"]):
+            roles["main_modeling_sample"] = max(int(roles.get("main_modeling_sample") or 0), rows)
+        if rows and any(token in haystack for token in ["token", "light_curve", "lc", "mjd", "rate"]):
+            roles["token_record_count"] = max(int(roles.get("token_record_count") or 0), rows)
+        if any(token in haystack for token in ["pha", "arf", "rmf", "spectral", "hardness"]):
+            roles["spectral_readiness_table_count"] = int(roles.get("spectral_readiness_table_count") or 0) + 1
+        if rows and any(token in haystack for token in ["source_id", "source", "catalog"]):
+            roles["source_catalog_record_count"] = max(int(roles.get("source_catalog_record_count") or 0), rows)
+    manifest_files = data_code_manifest.get("files") if isinstance(data_code_manifest, dict) else []
+    if isinstance(manifest_files, list):
+        roles["data_stage_code_file_count"] = len([item for item in manifest_files if isinstance(item, dict)])
+    return {key: value for key, value in roles.items() if value not in {0, "", None}}
+
+
 def _render_data_context_md(context: dict[str, Any]) -> str:
     lines = [
         "# Data Writing Context",
@@ -560,6 +591,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     content_summary = _data_content_summary(inventory, groups)
     processing_summary = _processing_summary(inventory, observations)
     data_code_summary = _data_code_summary(data_code_manifest if isinstance(data_code_manifest, dict) else {})
+    number_roles = _evidence_number_roles(inventory if isinstance(inventory, dict) else {}, data_code_manifest if isinstance(data_code_manifest, dict) else {})
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
         claim_boundary = "The data support level is bounded as follows: " + claim_boundary + "."
@@ -582,6 +614,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "processing_summary": processing_summary,
         "data_code_summary": data_code_summary,
         "data_code_manifest": data_code_manifest if isinstance(data_code_manifest, dict) else {},
+        "evidence_number_roles": number_roles,
         "claim_boundary": claim_boundary,
         "variable_groups": groups,
         "observation_count": len(observations),
@@ -671,6 +704,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
     data_code = _strip_forbidden_paths(context.get("data_code_summary", ""))
     boundary = _strip_forbidden_paths(guidance.get("claim_boundary") or context.get("claim_boundary", ""))
     groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
+    number_roles = context.get("evidence_number_roles") if isinstance(context.get("evidence_number_roles"), dict) else {}
     feature_sentence = ""
     if groups:
         group_names = [str(name).replace("_", " ") for name in groups.keys() if groups.get(name)]
@@ -689,13 +723,26 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
         feature_sentence = "The available variables are grouped by their measurement role so that later analyses can distinguish predictors, responses, identifiers, and diagnostic quantities."
     if not boundary:
         boundary = "Claims based on these data should remain tied to the verified coverage of the available sample and should avoid unsupported population-level generalization."
+    number_sentence = ""
+    if number_roles:
+        role_parts = []
+        if number_roles.get("inventory_total_rows"):
+            role_parts.append(f"{number_roles.get('inventory_total_rows')} inventoried tabular records")
+        if number_roles.get("main_modeling_sample"):
+            role_parts.append(f"{number_roles.get('main_modeling_sample')} records in the main modeling sample")
+        if number_roles.get("token_record_count"):
+            role_parts.append(f"{number_roles.get('token_record_count')} time-series or token-level records")
+        if number_roles.get("spectral_readiness_table_count"):
+            role_parts.append(f"{number_roles.get('spectral_readiness_table_count')} table(s) carrying spectral-readiness descriptors")
+        if role_parts:
+            number_sentence = "The reported counts are interpreted by role rather than as interchangeable sample sizes: " + "; ".join(role_parts) + "."
     boundary_note = (
         "This boundary is reported as part of the data description because sample coverage, missing measurements, "
         "and available variable groups determine which hypotheses can be examined later in the manuscript."
     )
     paragraphs = [
         _join_scientific_sentences(source, content),
-        _join_scientific_sentences(processing, data_code, feature_sentence),
+        _join_scientific_sentences(processing, data_code, feature_sentence, number_sentence),
         _join_scientific_sentences(observation_text, boundary, boundary_note),
     ]
     return [paragraph for paragraph in paragraphs if paragraph]

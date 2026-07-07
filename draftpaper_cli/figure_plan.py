@@ -172,11 +172,33 @@ def _add_unique(figures: list[dict[str, Any]], item: dict[str, Any]) -> None:
 def _mark_supporting_figure(item: dict[str, Any], *, reason: str) -> dict[str, Any]:
     updated = dict(item)
     updated["figure_role"] = "supporting"
+    updated.setdefault("manuscript_role", "appendix")
     updated["counts_toward_main_figures"] = False
     updated["contract_locked"] = False
     updated["allowed_substitute"] = False
     updated["supporting_reason"] = reason
     return updated
+
+
+def _main_figure_group_key(item: dict[str, Any]) -> str:
+    return str(
+        item.get("storyboard_id")
+        or item.get("figure_group")
+        or item.get("id")
+        or item.get("path")
+        or ""
+    ).strip()
+
+
+def _main_figure_groups(figures: list[dict[str, Any]]) -> list[str]:
+    groups: list[str] = []
+    for item in figures:
+        if item.get("figure_role") != "main_result" or item.get("counts_toward_main_figures") is False:
+            continue
+        key = _main_figure_group_key(item)
+        if key and key not in groups:
+            groups.append(key)
+    return groups
 
 
 def _generated_group_set(figures: list[dict[str, Any]]) -> set[str]:
@@ -251,6 +273,11 @@ def _generic_figure_for_group(
         "scientific_question": f"What evidence does the {group.replace('_', ' ')} figure provide for the current study?",
         "caption_draft": f"{title}.",
         "result_claim_template": "This figure provides one required piece of the discipline-specific evidence chain and should be interpreted only within the verified data and method boundary.",
+        "figure_role": "main_result",
+        "manuscript_role": "main",
+        "counts_toward_main_figures": True,
+        "contract_locked": False,
+        "allowed_substitute": False,
     }
 
 
@@ -534,6 +561,8 @@ def _apply_discipline_figure_policy(
         )
         if storyboard_locked:
             item = _mark_supporting_figure(item, reason="discipline_required_group_supports_storyboard_but_cannot_replace_main_result")
+        elif len(_main_figure_groups(figures)) >= target:
+            item = _mark_supporting_figure(item, reason="discipline_required_group_kept_as_appendix_beyond_main_figure_group_target")
         _add_unique(figures, item)
         groups.add(group)
         added_groups.append(group)
@@ -545,9 +574,8 @@ def _apply_discipline_figure_policy(
         "metric_summary",
         "predictor_correlation_structure",
     ]
-    generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
     for group in ([] if storyboard_locked else fallback_groups):
-        if not storyboard_locked and generated_count >= minimum:
+        if not storyboard_locked and len(_main_figure_groups(figures)) >= minimum:
             break
         if group in groups:
             continue
@@ -561,10 +589,11 @@ def _apply_discipline_figure_policy(
         )
         if storyboard_locked:
             item = _mark_supporting_figure(item, reason="discipline_fallback_supports_storyboard_but_cannot_replace_main_result")
+        elif len(_main_figure_groups(figures)) >= target:
+            item = _mark_supporting_figure(item, reason="discipline_fallback_kept_as_appendix_beyond_main_figure_group_target")
         _add_unique(figures, item)
         groups.add(group)
         added_groups.append(group)
-        generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
     return {
         "discipline": module_spec.get("module_id"),
         "minimum_main_figures": minimum,
@@ -576,6 +605,7 @@ def _apply_discipline_figure_policy(
 
 def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any]) -> dict[str, Any]:
     contracts: list[dict[str, Any]] = []
+    main_groups = _main_figure_groups(figures)
     for item in figures:
         if item.get("figure_role") != "main_result":
             continue
@@ -606,7 +636,10 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
         "status": "written",
         "source": "research_plan/figure_storyboard.json",
         "strict_contract_policy": "main_result_figures_must_not_be_silently_substituted",
+        "main_figure_group_policy": "5_to_6_main_figure_groups_are_the_primary_contract; generated PNG count may exceed this when panels, diagnostics, or appendix figures are needed.",
         "storyboard_figure_count": len((storyboard or {}).get("figures") or []),
+        "main_figure_group_count": len(main_groups),
+        "main_figure_groups": main_groups,
         "main_contract_count": len(contracts),
         "contracts": contracts,
     }
@@ -625,6 +658,7 @@ def _storyboard_alignment_report(figures: list[dict[str, Any]], storyboard: dict
             "id": item.get("id"),
             "title": item.get("title"),
             "path": item.get("path"),
+            "manuscript_role": item.get("manuscript_role") or "appendix",
             "reason": item.get("supporting_reason") or "supporting_or_appendix_figure",
         }
         for item in figures
@@ -638,7 +672,8 @@ def _storyboard_alignment_report(figures: list[dict[str, Any]], storyboard: dict
         "missing_storyboard_figures": missing,
         "extra_main_figures": extra_main,
         "supporting_figures": supporting,
-        "rule": "Fallback or validation figures may support the evidence package, but they cannot replace research-plan main figures.",
+        "appendix_figures": [item for item in supporting if str(item.get("manuscript_role") or "") == "appendix"],
+        "rule": "Fallback, reliability, or validation figures may support the evidence package and can be cited as appendix figures, but they cannot replace research-plan main figure groups.",
     }
 
 
@@ -659,6 +694,9 @@ def _render_plan_html_markdown(plan: dict[str, Any]) -> str:
         f"Discipline: `{(plan.get('discipline_profile') or {}).get('discipline', 'default')}`",
         f"Minimum main figures: `{(plan.get('figure_policy') or {}).get('minimum_main_figures', '')}`",
         f"Target main figures: `{(plan.get('figure_policy') or {}).get('target_main_figures', '')}`",
+        f"Main figure groups planned: `{plan.get('main_figure_group_count', plan.get('main_figure_count', ''))}`",
+        f"Generated PNG/artifact count: `{plan.get('generated_figure_count', '')}` (may exceed the main-group target when panels or appendix diagnostics are needed)",
+        f"Appendix/supporting figures: `{plan.get('appendix_figure_count', 0)}`",
         f"Required figure groups: `{', '.join((plan.get('figure_policy') or {}).get('required_figure_groups') or [])}`",
         f"Auto-added figure groups: `{', '.join((plan.get('figure_policy') or {}).get('added_figure_groups') or [])}`",
         "",
@@ -746,7 +784,10 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         storyboard_locked=used_research_storyboard,
     )
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
+    main_groups = _main_figure_groups(figures)
     main_figure_count = sum(1 for item in figures if item.get("figure_role") == "main_result" and item.get("counts_toward_main_figures") is not False)
+    supporting_count = sum(1 for item in figures if item.get("figure_role") != "main_result" or item.get("counts_toward_main_figures") is False)
+    appendix_count = sum(1 for item in figures if str(item.get("manuscript_role") or "") == "appendix" or item.get("figure_role") != "main_result")
     provided_count = sum(1 for item in figures if item.get("generation_mode") == "provided_artifact")
     next_action = "Run generate-analysis-code, then verify-methods, inventory-results, and write-results."
     if generated_count == 0 and provided_count:
@@ -771,6 +812,10 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         "figure_policy": figure_policy,
         "figures": figures,
         "main_figure_count": main_figure_count,
+        "main_figure_group_count": len(main_groups),
+        "main_figure_groups": main_groups,
+        "supporting_figure_count": supporting_count,
+        "appendix_figure_count": appendix_count,
         "generated_figure_count": generated_count,
         "provided_figure_count": provided_count,
         "next_action": next_action,

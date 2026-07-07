@@ -34,6 +34,42 @@ def _diagnosis_items(project_path: Path) -> list[dict[str, Any]]:
     return [item for item in payload.get("figures") or [] if isinstance(item, dict)]
 
 
+def _gate_items(project_path: Path, repair_kind: str) -> list[dict[str, Any]]:
+    """Convert figure-contract gate failures into repairable diagnosis items."""
+    payload = _read_json(project_path / "results" / "figure_contract_gate_report.json", {})
+    if not isinstance(payload, dict):
+        return []
+    items: list[dict[str, Any]] = []
+    for check in payload.get("contract_checks") or []:
+        if not isinstance(check, dict):
+            continue
+        issue_kinds = {str(issue.get("kind") or "") for issue in check.get("issues") or [] if isinstance(issue, dict)}
+        storyboard_id = str(check.get("figure_id") or check.get("storyboard_id") or "")
+        if repair_kind == "data":
+            missing = list(check.get("missing_data_roles") or [])
+            if missing or issue_kinds.intersection({"missing_data_role", "partial_data_role"}):
+                items.append({
+                    "storyboard_id": storyboard_id,
+                    "figure_id": storyboard_id,
+                    "status": "missing_data_from_contract_gate",
+                    "missing_data": missing,
+                    "recommended_repair": "repair-figure-data",
+                    "source": "results/figure_contract_gate_report.json",
+                })
+        elif repair_kind == "method":
+            missing_methods = list(check.get("required_method_roles") or [])
+            if issue_kinds.intersection({"missing_method_feasibility", "missing_method_role"}):
+                items.append({
+                    "storyboard_id": storyboard_id,
+                    "figure_id": storyboard_id,
+                    "status": "missing_method_from_contract_gate",
+                    "missing_method": missing_methods,
+                    "recommended_repair": "repair-figure-method",
+                    "source": "results/figure_contract_gate_report.json",
+                })
+    return items
+
+
 def _contracts_by_id(project_path: Path) -> dict[str, dict[str, Any]]:
     payload = _read_json(project_path / "results" / "figure_contracts.json", {})
     indexed: dict[str, dict[str, Any]] = {}
@@ -49,6 +85,21 @@ def _contracts_by_id(project_path: Path) -> dict[str, dict[str, Any]]:
 def _contract_for(item: dict[str, Any], contracts: dict[str, dict[str, Any]]) -> dict[str, Any]:
     key = str(item.get("storyboard_id") or item.get("figure_id") or "")
     return contracts.get(key, {})
+
+
+def _dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in items:
+        key = (
+            str(item.get("storyboard_id") or item.get("figure_id") or ""),
+            str(item.get("recommended_repair") or item.get("status") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def _render_plan_markdown(title: str, payload: dict[str, Any]) -> str:
@@ -83,12 +134,12 @@ def repair_figure_data(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     contracts = _contracts_by_id(state.path)
     tasks: list[dict[str, Any]] = []
-    for item in _diagnosis_items(state.path):
+    for item in _dedupe_items(_diagnosis_items(state.path) + _gate_items(state.path, "data")):
         status = str(item.get("status") or "")
         if "missing_data" not in status and item.get("recommended_repair") != "repair-figure-data":
             continue
         contract = _contract_for(item, contracts)
-        missing = list(item.get("missing_data") or contract.get("required_data") or [])
+        missing = list(item.get("missing_data") or contract.get("required_data") or contract.get("required_data_roles") or [])
         storyboard_id = str(item.get("storyboard_id") or contract.get("storyboard_id") or item.get("figure_id") or "")
         tasks.append({
             "task_id": f"data_repair_{len(tasks) + 1}",
@@ -101,6 +152,11 @@ def repair_figure_data(project: str | Path) -> dict[str, Any]:
                 "public database/API connectors already declared by the discipline module",
                 "remote server/API workflows previously configured for the project",
                 "user-provided processed tables or result artifacts when raw data cannot be downloaded",
+            ],
+            "connector_routes": [
+                "prepare-data-acquisition reviews discipline data connector specs and project-local acquisition plans",
+                "inventory-data and assess-data-feasibility verify whether repaired data satisfy the missing roles",
+                "requires_user_confirmation is used only after connector/API/server repair attempts fail or need credentials",
             ],
             "recommended_command": "python -m draftpaper_cli.cli prepare-data-acquisition --project <project>",
             "followup_commands": [
@@ -142,12 +198,12 @@ def repair_figure_method(project: str | Path) -> dict[str, Any]:
         if isinstance(item, dict) and item.get("title")
     ][:8]
     tasks: list[dict[str, Any]] = []
-    for item in _diagnosis_items(state.path):
+    for item in _dedupe_items(_diagnosis_items(state.path) + _gate_items(state.path, "method")):
         status = str(item.get("status") or "")
         if "missing_method" not in status and item.get("recommended_repair") != "repair-figure-method":
             continue
         contract = _contract_for(item, contracts)
-        missing = list(item.get("missing_method") or contract.get("required_method") or [])
+        missing = list(item.get("missing_method") or contract.get("required_method") or contract.get("required_method_roles") or [])
         storyboard_id = str(item.get("storyboard_id") or contract.get("storyboard_id") or item.get("figure_id") or "")
         query_terms = " ".join(str(value) for value in missing + [contract.get("title") or "", state.metadata.get("field") or ""]).strip()
         tasks.append({
@@ -168,6 +224,11 @@ def repair_figure_method(project: str | Path) -> dict[str, Any]:
                 "public GitHub research-code repositories",
                 "paper implementation repositories linked by retrieved literature",
                 "Codex-generated project-specific method code when no reusable implementation is available",
+            ],
+            "method_routes": [
+                "reuse local discipline method templates when they match the contracted figure method",
+                "inspect public research-code repositories or linked paper implementations when the method is absent locally",
+                "generate project-specific code only after reusable method routes are exhausted",
             ],
             "recommended_command": "python -m draftpaper_cli.cli generate-analysis-code --project <project>",
             "agent_instruction": (

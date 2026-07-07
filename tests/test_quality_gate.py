@@ -172,6 +172,34 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertIn("required_artifact_missing", codes)
             self.assertIn("citation_audit_not_passed", codes)
 
+    def test_quality_check_fails_when_citation_reference_coverage_fails(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            coverage = {
+                "coverage_status": "failed",
+                "summarized_reference_count": 2,
+                "unique_cited_reference_count": 1,
+                "uncited_summary_keys": ["Lee2023Multimodal1"],
+            }
+            (project_path / "citation_audit" / "reference_coverage_report.json").write_text(json.dumps(coverage), encoding="utf-8")
+            (project_path / "citation_audit" / "final_citation_audit_report.json").write_text(
+                json.dumps({
+                    "status": "passed",
+                    "summary": {"blocking_issue_count": 0},
+                    "reference_coverage": coverage,
+                }),
+                encoding="utf-8",
+            )
+
+            report = run_quality_check(project_path)
+
+            self.assertEqual(report["status"], "failed")
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertIn("citation_reference_coverage_failed", codes)
+            self.assertEqual(report["citation_audit"]["reference_coverage_status"], "failed")
+
     def test_quality_check_fails_results_citations_and_missing_artifacts(self) -> None:
         from draftpaper_cli.quality_gate import run_quality_check
 

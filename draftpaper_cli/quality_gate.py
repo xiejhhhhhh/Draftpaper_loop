@@ -469,8 +469,10 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
 
 def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
     report = _read_json(project_path / "citation_audit" / "final_citation_audit_report.json")
+    coverage_report = _read_json(project_path / "citation_audit" / "reference_coverage_report.json")
     status = report.get("status")
     summary = report.get("summary") or {}
+    coverage = report.get("reference_coverage") or coverage_report or {}
     if status != "passed":
         issues.append(QualityIssue(
             "error",
@@ -486,9 +488,24 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
             f"Final citation audit still has blocking source-support issues: {blocking}.",
             "citation_audit/final_citation_audit_report.json",
         ))
+    if coverage and coverage.get("coverage_status") == "failed":
+        missing = int(coverage.get("summarized_but_uncited_count") or 0)
+        issues.append(QualityIssue(
+            "error",
+            "citation_reference_coverage_failed",
+            (
+                f"Citation audit preserves the retained reference library, but {missing} summarized reference(s) are still uncited. "
+                "Revise Introduction, Data, Methods, or Discussion to use the retained references accurately instead of deleting them."
+            ),
+            "citation_audit/reference_coverage_report.json",
+        ))
     return {
         "status": status,
         "blocking_issue_count": blocking,
+        "reference_coverage_status": coverage.get("coverage_status"),
+        "summarized_reference_count": coverage.get("summarized_reference_count"),
+        "unique_cited_reference_count": coverage.get("unique_cited_reference_count"),
+        "summarized_but_uncited_count": coverage.get("summarized_but_uncited_count"),
         "average_match_score": summary.get("average_match_score"),
         "unsupported": summary.get("unsupported"),
         "unverifiable": summary.get("unverifiable"),

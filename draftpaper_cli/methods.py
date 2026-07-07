@@ -190,6 +190,51 @@ def _command_display(argv: list[str]) -> str:
     return subprocess.list2cmdline(argv)
 
 
+def _existing_output_check_argv(project_path: Path, outputs: list[str]) -> list[str]:
+    payload = json.dumps({"project": str(project_path), "outputs": outputs})
+    code = (
+        "import json, sys; from pathlib import Path; "
+        f"payload=json.loads({payload!r}); root=Path(payload['project']); "
+        "missing=[p for p in payload['outputs'] if not (root / p).exists()]; "
+        "sys.exit(1 if missing else 0)"
+    )
+    return [sys.executable, "-c", code]
+
+
+def _infer_verify_command_argv(project_path: Path, manifest: dict[str, Any]) -> tuple[list[str], str, dict[str, Any]] | None:
+    """Infer a safe verification route for old projects that predate verify_command_argv."""
+    candidates = [
+        project_path / "methods" / "scripts" / "run_analysis.py",
+        project_path / "code" / "scripts" / "run_analysis.py",
+    ]
+    plotting_dir = project_path / "methods" / "plotting"
+    if plotting_dir.exists():
+        candidates.extend(sorted(plotting_dir.glob("run_*pipeline.py")))
+    for candidate in candidates:
+        if candidate.exists():
+            relative = candidate.relative_to(project_path).as_posix()
+            return [sys.executable, relative], "inferred_project_runner", {"inferred_runner": relative}
+
+    run_manifest_path = project_path / "methods" / "run_manifest.yaml"
+    if run_manifest_path.exists():
+        run_manifest = _read_manifest(run_manifest_path)
+        legacy = str(run_manifest.get("command") or "").strip()
+        if legacy:
+            try:
+                return _split_legacy_command(legacy), "inferred_from_previous_run_manifest", {"source": "methods/run_manifest.yaml"}
+            except MethodsGateError:
+                pass
+        outputs = _manifest_list(run_manifest, "output_files", "declared_outputs")
+        result_validity = _read_json(project_path / "results" / "result_validity_report.json", {})
+        if run_manifest.get("status") == "success" and outputs and str((result_validity or {}).get("decision") or "").lower() in {"pass", "passed", "conditional"}:
+            return _existing_output_check_argv(project_path, outputs), "inferred_existing_output_check", {"source": "methods/run_manifest.yaml + results/result_validity_report.json", "outputs": outputs}
+
+    outputs = _manifest_list(manifest, "declared_outputs", "output_files")
+    if outputs:
+        return _existing_output_check_argv(project_path, outputs), "inferred_manifest_output_check", {"source": "methods/method_code_manifest.json", "outputs": outputs}
+    return None
+
+
 def _resolve_verification_inputs(
     project_path: Path,
     command: str | None,
@@ -204,12 +249,18 @@ def _resolve_verification_inputs(
         resolved_argv = _normalize_verify_argv(manifest.get("verify_command_argv") or [])
     else:
         legacy_command = str(manifest.get("verify_command") or manifest.get("command") or "").strip()
-        if not legacy_command:
-            raise MethodsGateError(
-                "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
-            )
-        resolved_argv = _split_legacy_command(legacy_command)
-        command_source = "method_code_manifest_legacy_string"
+        if legacy_command:
+            resolved_argv = _split_legacy_command(legacy_command)
+            command_source = "method_code_manifest_legacy_string"
+        else:
+            inferred = _infer_verify_command_argv(project_path, manifest)
+            if not inferred:
+                raise MethodsGateError(
+                    "No safe method verification command was found. Add methods/method_code_manifest.json verify_command_argv, "
+                    "or provide a project runner such as methods/scripts/run_analysis.py."
+                )
+            resolved_argv, command_source, migration_note = inferred
+            manifest.setdefault("migration_note", migration_note)
     if not resolved_argv:
         raise MethodsGateError(
             "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
@@ -683,10 +734,11 @@ def _clean_sentence(text: Any) -> str:
 
 def _strip_forbidden_paths(text: str) -> str:
     replacements = [
-        (r"\b(?:bkg[_-]?)?pha(?:[_-]?file|[_-]?path)?\b", "source and background spectral products"),
-        (r"\barf(?:[_-]?file|[_-]?path)?\b", "effective-area response products"),
-        (r"\brmf(?:[_-]?file|[_-]?path)?\b", "energy-redistribution response products"),
-        (r"\b(?:bkg[_-]?)?lc(?:[_-]?file|[_-]?path)?\b", "source and background light-curve products"),
+        (r"\bbkg[_-]?pha(?:[_-]?(?:file|path|filename|pathname))\b", "background spectra (PHA)"),
+        (r"\bpha(?:[_-]?(?:file|path|filename|pathname))\b", "source spectra (PHA)"),
+        (r"\barf(?:[_-]?(?:file|path|filename|pathname))\b", "effective-area response products (ARF)"),
+        (r"\brmf(?:[_-]?(?:file|path|filename|pathname))\b", "redistribution response matrices (RMF)"),
+        (r"\b(?:bkg[_-]?)?lc(?:[_-]?(?:file|path|filename|pathname))\b", "source and background light-curve products"),
         (r"\b(?:training_)?smoke[_-]?test\b", "execution check"),
         (r"\b(?:XRB|TDE|AGN)[_-]?verify\b", "class-specific verification subset"),
         (r"\b(stage-owned|manifest internals|manifest|workflow\.html|formula extraction layer|figure-code trace)\b", "documented analysis evidence"),
@@ -718,6 +770,14 @@ def _drop_internal_method_sentences(text: str) -> str:
         "workflow",
         "software operations",
         "documented method component",
+        "the method section should",
+        "write this section",
+        "define the modeled samples",
+        "explain how",
+        "describe the statistical",
+        "describe held-out",
+        "define the reported metrics",
+        "state the optimization target",
     ]
     for piece in pieces:
         lowered = piece.lower()
@@ -774,6 +834,40 @@ def _method_role_label(role: str) -> str:
         "spatial_block_validation": "spatially blocked validation",
     }
     return labels.get(normalized, normalized.replace("_", " ") or "method implementation")
+
+
+def _section_profile_for_methods(context: dict[str, Any], formula_entries: list[dict[str, Any]]) -> dict[str, str]:
+    blob = " ".join(
+        str(value or "")
+        for value in [
+            context.get("method_family_summary"),
+            context.get("data_role"),
+            context.get("analysis_steps"),
+            context.get("code_trace_summary"),
+        ]
+    ).lower()
+    formula_blob = " ".join(str(item.get("method_step") or item.get("name") or "") for item in formula_entries).lower()
+    combined = blob + " " + formula_blob
+    if any(token in combined for token in ["transformer", "light-curve", "light curve", "spectral", "astronom", "current-observation", "time2vec"]):
+        return {
+            "design": "Sample Construction and Observation Products",
+            "model": "Temporal, Spectral, and Tabular Representation",
+            "validation": "Classifier Objective, Validation, and Ablation",
+            "bridge": "The method follows the evidence chain used to generate the main figures: event-level sample construction, current-observation tokens, historical time-series context, spectral or tabular features, temporal encoding, feature fusion, validation, ablation, and metrics.",
+        }
+    if any(token in combined for token in ["random forest", "xgboost", "classification", "regression", "ablation", "baseline"]):
+        return {
+            "design": "Sample Construction and Feature Sets",
+            "model": "Model Formulation and Training Objective",
+            "validation": "Validation, Baselines, Ablation, and Metrics",
+            "bridge": "The method is organized around sample construction, feature representation, model fitting, validation design, baseline comparison, ablation, and diagnostic metrics.",
+        }
+    return {
+        "design": "Sample Construction and Analytical Design",
+        "model": "Model and Feature Formulation",
+        "validation": "Validation and Metrics",
+        "bridge": "The method is organized around sample construction, representation, model formulation, optimization, validation, and diagnostic metrics so that each empirical claim remains tied to the verified inputs and outputs.",
+    }
 
 
 def _latex_formula_entries(context: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1032,6 +1126,7 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     boundary_raw = _drop_internal_method_sentences(context.get("claim_boundary", ""))
     family_raw = _drop_internal_method_sentences(context.get("method_family_summary", ""))
     formula_entries = _latex_formula_entries(context)
+    section_profile = _section_profile_for_methods(context, formula_entries)
     step_tokens = _formula_step_tokens(formula_entries)
     project_path = context.get("project_path")
     citation_paragraphs: list[str] = []
@@ -1044,7 +1139,7 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
             part for part in [
                 family_raw,
                 data_role_raw,
-                "The method is organized around sample construction, representation, model formulation, optimization, validation, and diagnostic metrics so that each empirical claim remains tied to the verified inputs and outputs.",
+                section_profile["bridge"],
             ] if part
         )
     )
@@ -1054,7 +1149,7 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
             part for part in [
                 analysis_steps_raw,
                 stage_sentence,
-                "The design therefore treats data construction, feature representation, model fitting, and validation as linked parts of the same empirical test.",
+                "Data construction, feature representation, model fitting, and validation are therefore treated as linked parts of the same empirical test rather than as separate bookkeeping steps.",
             ] if part
         )
     )
@@ -1095,11 +1190,11 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     return (
         "\\section{Methods}\n"
         f"{introduction}\n\n"
-        "\\subsection{Study Design and Input Representation}\n"
+        f"\\subsection{{{section_profile['design']}}}\n"
         f"{design} {trace}\n\n"
-        "\\subsection{Model Formulation}\n"
+        f"\\subsection{{{section_profile['model']}}}\n"
         f"{_safe_latex_text(representation_sentence)}{model_formula_block}{citation_block}\n\n"
-        "\\subsection{Validation and Metrics}\n"
+        f"\\subsection{{{section_profile['validation']}}}\n"
         f"{_safe_latex_text(validation_sentence.replace('verified outputs and declared metrics', 'held-out evaluation outputs and model metrics'))}{validation_formula_block}\n"
     )
 

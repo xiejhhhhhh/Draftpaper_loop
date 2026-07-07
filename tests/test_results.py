@@ -125,6 +125,49 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertIn("results/results.tex", manifest["output_files"])
             self.assertIn("results/results_summary_zh.md", manifest["output_files"])
 
+    def test_write_results_can_cite_appendix_diagnostic_figures(self) -> None:
+        from draftpaper_cli.results import write_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Appendix diagnostics", field="machine learning astronomy")
+            (project.path / "results" / "figures" / "main_panel.png").write_bytes(b"fake main image")
+            (project.path / "results" / "figures" / "diagnostic_panel.png").write_bytes(b"fake appendix image")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            prepare_passing_result_validity(project.path)
+            (project.path / "results" / "result_manifest.yaml").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "main_panel",
+                            "path": "results/figures/main_panel.png",
+                            "caption_draft": "Main result panel",
+                            "result_claim": "The main panel reports the central empirical pattern for the planned result.",
+                            "manuscript_role": "main",
+                            "figure_role": "main_result",
+                        },
+                        {
+                            "id": "diagnostic_panel",
+                            "path": "results/figures/diagnostic_panel.png",
+                            "caption_draft": "Appendix diagnostic panel",
+                            "result_claim": "The diagnostic panel evaluates whether the main pattern remains stable under a complementary reliability check.",
+                            "manuscript_role": "appendix",
+                            "figure_role": "supporting_diagnostic",
+                            "supporting_reason": "reliability check",
+                        },
+                    ],
+                    "tables": [],
+                }),
+                encoding="utf-8",
+            )
+
+            result = write_results(project.path)
+
+            self.assertEqual(result["status"], "written")
+            tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
+            self.assertIn("Figure~\\ref{fig:main-panel}", tex)
+            self.assertIn("Appendix Figure~\\ref{fig:diagnostic-panel}", tex)
+            self.assertIn("checks reliability or diagnostic stability", tex)
+
     def test_write_results_is_idempotent_after_downstream_writing_when_inputs_are_unchanged(self) -> None:
         from draftpaper_cli.results import inventory_results, write_results
 

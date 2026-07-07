@@ -346,6 +346,16 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.16.3 (2026-07-07) -- main figure groups, appendix diagnostics, and repair-driven figure execution
+
+- Reframed the figure contract around 5-6 main figure groups instead of a hard cap on generated PNG files. A main figure group may contain multiple panels or generated artifacts, so extra generated outputs are valid when they serve the planned figure story.
+- Added main/supporting/appendix figure accounting to `figure_plan.json` and `figure_contracts.json`. Supporting diagnostics no longer replace main results, but can be cited as Appendix Figures when they strengthen reliability or validation arguments in Results and Discussion.
+- Updated `assess-figure-contracts` so it checks the number of main figure groups, allows additional panels and appendix diagnostics, and reports generated/supporting/appendix counts separately.
+- Connected figure-contract failures to `repair-figure-data` and `repair-figure-method`, so missing data or missing method coverage produces concrete acquisition or method-repair tasks before the loop asks for human confirmation.
+- Strengthened Data/Methods manuscript generation for astronomy and machine-learning projects with role-aware evidence numbers, safer product terminology, stage-specific Methods subsection profiles, and instruction-residue filtering.
+- Made final `quality-check` fail when citation reference coverage fails, preserving the no-delete citation audit principle that retained literature summaries must be represented in the manuscript rather than silently dropped.
+- Added regression tests for main-figure-group accounting, contract-gate repair tasks, appendix figure citations in Results, citation coverage quality gating, and astronomy Methods prose cleanup.
+
 ### v0.16.2 (2026-07-07) -- safe method execution and canonical code contracts
 
 - Hardened `verify-methods` after the local code audit: verification now resolves commands to an argv list, executes with `shell=False`, rejects shell operators and explicit shell runners, and records `shell_used=false` in `methods/run_manifest.yaml`.

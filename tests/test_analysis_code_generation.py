@@ -144,6 +144,20 @@ def write_storyboard_contract(project_path: Path) -> None:
                 "downstream_stage_dependency": ["code", "results", "discussion"],
                 "fallback_if_data_missing": "Use per-class support and metric summary.",
             },
+            {
+                "figure_id": "fig_6_validation_stability",
+                "proposed_title": "Validation stability across held-out flaring-source splits",
+                "research_question": "Are model-performance claims stable across the planned validation design?",
+                "expected_finding": "The validation view should show whether the main performance pattern is stable enough to support the manuscript claim.",
+                "scientific_claim_boundary": "Stability claims remain limited to the available held-out split design and sample support.",
+                "required_data": ["features", "class_label"],
+                "required_method": ["validation_design", "metric_uncertainty"],
+                "suggested_plot_type": "metric_summary",
+                "validation_metric": "f1_interval",
+                "supporting_literature_keys": ["Smith2024Transformer1"],
+                "downstream_stage_dependency": ["code", "verify_methods", "result_validity", "discussion"],
+                "fallback_if_data_missing": "Report split-level metric availability and keep claims conditional.",
+            },
         ],
         "tables": [
             {
@@ -162,6 +176,7 @@ def write_storyboard_contract(project_path: Path) -> None:
             {"task_id": "method_2", "figure_id": "fig_3_feature_space", "method_family": "feature_space_diagnostic"},
             {"task_id": "method_3", "figure_id": "fig_4_model_performance", "method_family": "baseline_model"},
             {"task_id": "method_4", "figure_id": "fig_5_error_analysis", "method_family": "error_analysis"},
+            {"task_id": "method_5", "figure_id": "fig_6_validation_stability", "method_family": "validation_stability"},
         ],
     }
     (project_path / "research_plan").mkdir(parents=True, exist_ok=True)

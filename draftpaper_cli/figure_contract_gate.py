@@ -67,6 +67,21 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     if not main_contracts:
         issues.append({"severity": "blocking", "kind": "missing_main_figure_contract", "detail": "No main figure contracts were found."})
 
+    figure_policy = figure_plan.get("figure_policy") if isinstance(figure_plan, dict) else {}
+    if isinstance(figure_policy, dict) and figure_policy:
+        minimum_groups = int(figure_policy.get("minimum_main_figures") or 5)
+        main_group_count = int(
+            figure_plan.get("main_figure_group_count")
+            or contracts.get("main_figure_group_count")
+            or len(main_contracts)
+        )
+        if main_group_count < minimum_groups:
+            issues.append({
+                "severity": "blocking",
+                "kind": "insufficient_main_figure_groups",
+                "detail": f"Research-plan evidence contract has {main_group_count} main figure group(s); expected at least {minimum_groups}. Supporting or appendix figures cannot fill this main-result contract.",
+            })
+
     missing_storyboard = _missing_storyboard(alignment)
     for figure_id in missing_storyboard:
         issues.append({"severity": "blocking", "kind": "missing_storyboard_alignment", "detail": figure_id})
@@ -84,12 +99,16 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
         "project_id": state.metadata.get("project_id"),
         "decision": decision,
         "main_contract_count": len(main_contracts),
+        "main_figure_group_count": int(figure_plan.get("main_figure_group_count") or contracts.get("main_figure_group_count") or len(main_contracts)) if isinstance(figure_plan, dict) else len(main_contracts),
+        "generated_figure_count": int(figure_plan.get("generated_figure_count") or 0) if isinstance(figure_plan, dict) else 0,
+        "supporting_figure_count": int(figure_plan.get("supporting_figure_count") or 0) if isinstance(figure_plan, dict) else 0,
+        "appendix_figure_count": int(figure_plan.get("appendix_figure_count") or 0) if isinstance(figure_plan, dict) else 0,
         "method_feasibility_decision": method_status,
         "contract_checks": contract_checks,
         "storyboard_alignment_missing": missing_storyboard,
         "issues": issues,
         "recommended_next_action": next_action,
-        "policy": "Every planned main figure must keep its research-plan contract before code generation. Validation or diagnostic figures cannot replace contracted main results.",
+        "policy": "Every planned main figure group must keep its research-plan contract before code generation. The contract is 5-6 main figure groups; generated PNG/panel count may exceed six when supporting or appendix diagnostics are scientifically useful. Validation or diagnostic figures cannot replace contracted main results.",
     }
     results_dir = state.path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -135,6 +154,8 @@ def _next_action(decision: str, issues: list[dict[str, str]]) -> dict[str, str]:
         return {"command": "repair-figure-data", "reason": "At least one contracted main figure lacks required data roles."}
     if any(item.get("kind") == "missing_method_feasibility" for item in issues):
         return {"command": "repair-figure-method", "reason": "At least one contracted main figure lacks executable method support."}
+    if any(item.get("kind") == "insufficient_main_figure_groups" for item in issues):
+        return {"command": "generate-plan", "reason": "The research plan must define enough main figure groups before figure execution."}
     return {"command": "revise-research-plan", "reason": "The research plan and figure contracts are misaligned."}
 
 
