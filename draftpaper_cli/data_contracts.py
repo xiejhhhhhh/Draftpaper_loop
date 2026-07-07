@@ -64,7 +64,7 @@ def normalize_role(value: Any) -> str:
     if text in ROLE_ALIASES:
         return ROLE_ALIASES[text]
     for key, role in ROLE_ALIASES.items():
-        if key in text:
+        if len(key) >= 4 and key in text:
             return role
     if "validation" in text or "split" in text:
         return "validation_design"

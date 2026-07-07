@@ -220,6 +220,58 @@ class DataAcquisitionTests(unittest.TestCase):
             self.assertIn("spatial", review_task["needed_data"][0])
             self.assertTrue(review_task["requires_user_confirmation"])
 
+    def test_prepare_data_acquisition_turns_role_coverage_into_connector_tasks(self) -> None:
+        from draftpaper_cli.data_acquisition import prepare_data_acquisition
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=Path(tmp) / "projects",
+                idea="Time-aware X-ray source classification using long-term light curves",
+                field="astronomy machine learning",
+                target_journal="APJS",
+            )
+            (project.path / "data" / "data_role_coverage_report.json").write_text(
+                json.dumps(
+                    {
+                        "status": "written",
+                        "decision": "blocked",
+                        "source": "research_plan/figure_storyboard.json + data/data_inventory.json",
+                        "required_roles": ["time_series", "label_or_response", "spectral_or_remote_sensing_features"],
+                        "available_roles": ["time_series"],
+                        "missing_roles": ["label_or_response", "spectral_or_remote_sensing_features"],
+                        "blocking_missing_roles": ["label_or_response", "spectral_or_remote_sensing_features"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (project.path / "research_plan" / "research_plan_feasibility_report.json").write_text(
+                json.dumps(
+                    {
+                        "decision": "conditional",
+                        "figure_assessments": [
+                            {"figure_id": "fig_main_1", "missing_data_roles": ["label_or_response"], "repair_route": "prepare-data-acquisition"}
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            result = prepare_data_acquisition(project.path)
+            tasks = json.loads((project.path / "data" / "data_acquisition_tasks.json").read_text(encoding="utf-8"))["tasks"]
+
+            self.assertEqual(result["data_acquisition_task_count"], 2)
+            coverage_task = next(task for task in tasks if task["source"] == "data_role_coverage")
+            self.assertIn("label_or_response", coverage_task["needed_data"])
+            self.assertIn("spectral_or_remote_sensing_features", coverage_task["needed_data"])
+            self.assertIn("fits_zip_stream", coverage_task["suggested_connectors"])
+            figure_task = next(task for task in tasks if task["source"] == "research_plan_feasibility")
+            self.assertEqual(figure_task["source_code"], "fig_main_1")
+            self.assertTrue(figure_task["requires_user_confirmation"])
+
 
 if __name__ == "__main__":
     unittest.main()

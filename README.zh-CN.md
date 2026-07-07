@@ -290,13 +290,17 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 重构 Data 和 Methods 写作逻辑：正文由证据角色、方法阶段、公式、图表 trace 和 claim boundary 引导，而不是机械拼接 context 字段。
 - 新增 research feasibility 与 research-plan feasibility gate，在后续数据、方法和图表代码生成前先判断研究设想是否具备必要的数据角色、方法意图和图表故事板证据。
 - 新增 data role coverage、method feasibility、method repair 和 method degradation 报告，让缺失数据或缺失方法能力先被诊断，再进入图表和代码执行。
+- `prepare-data-acquisition` 现在会读取 data role coverage 与 research-plan feasibility 中的数据缺口，把缺失数据角色转换成带 connector 建议的数据补充任务，而不是等到后续审稿 loop 才发现。
 - 新增 figure contract gate。`generate-analysis-code` 在主图合同被阻断时会拒绝继续执行，避免用验证图、诊断图或降级占位图静默替代研究计划中的核心结果图。
+- `revise-research-plan` 现在会在 `research_plan/` 下写出可人工阅读的修订建议包，明确先补数据、补方法，再考虑收窄研究问题和重新生成研究计划。
+- `assess-result-validity` 现在会读取 figure contracts、figure contract gate 与 figure execution diagnosis；即使表格指标通过，只要计划主图被阻断或缺失，也会回到数据/方法/图表修复路线。
 - `status` 与 `run-pipeline` 已接入 repair-first 路线：优先补数据、补方法或修订 research plan，再考虑收窄科学问题。
+- 修复 data role 归一化：`ra` 这类短别名不再误伤 spectral 或 remote-sensing features 等较长角色名称。
 - 收紧 composite discipline method blueprint：完整插件目录仍然保留，但当前论文的 method data contract 会优先基于 research plan、figure storyboard、method requirements 和 review tasks 选中的模板生成。
 - 升级 integrity gate：新增 writing brief 覆盖检查、Methods 公式渲染检查和公式变量解释检查，同时保留 Codex 写出自然科研段落的空间。
 - 本地验证：`python -m pytest tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
 - 本地验证：`python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
-- 全量验证：`python -m pytest`，237 tests passed。
+- 全量验证：`python -m pytest`，240 tests passed。
 
 ### v0.15.12 (2026-07-06) -- 正文证据一致性与不删文献的引用核查
 

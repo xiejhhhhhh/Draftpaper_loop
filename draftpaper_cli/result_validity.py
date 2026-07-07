@@ -16,6 +16,9 @@ RESULT_VALIDITY_INPUTS = [
     "methods/run_manifest.yaml",
     "methods/method_requirements.json",
     "data/data_feasibility_report.json",
+    "results/figure_contracts.json",
+    "results/figure_contract_gate_report.json",
+    "results/figure_execution_diagnosis.json",
 ]
 
 RESULT_VALIDITY_OUTPUTS = [
@@ -212,6 +215,48 @@ def _diagnose_failure(
     return sorted(set(causes)), actions
 
 
+def _figure_contract_issues(
+    *,
+    project_path: Path,
+    figure_contracts: dict[str, Any],
+    figure_contract_gate: dict[str, Any],
+    figure_execution_diagnosis: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    issues: list[str] = []
+    actions: list[str] = []
+    if figure_contracts and not figure_contract_gate:
+        issues.append("Figure contracts exist, but the figure contract gate report is missing.")
+        actions.append("Run assess-figure-contracts before generating or accepting Results figures.")
+    gate_decision = str(figure_contract_gate.get("decision") or "").lower()
+    if gate_decision in {"blocked", "failed", "revise_required"}:
+        issues.append(f"Figure contract gate is {gate_decision}; planned main figures are not executable yet.")
+        next_action = figure_contract_gate.get("recommended_next_action") or {}
+        command = next_action.get("command") if isinstance(next_action, dict) else next_action
+        if command:
+            actions.append(f"Follow figure contract gate repair route: {command}.")
+        else:
+            actions.append("Repair missing figure data or method code, then rerun assess-figure-contracts.")
+    if figure_execution_diagnosis:
+        if figure_execution_diagnosis.get("has_blocking_repairs"):
+            issues.append("Figure execution diagnosis still contains blocking data or method repairs.")
+        for item in figure_execution_diagnosis.get("figures") or []:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("figure_role") or "main_result")
+            status = str(item.get("status") or "")
+            path = str(item.get("path") or "")
+            if role == "main_result" and status.endswith("_repairing"):
+                figure_id = item.get("storyboard_id") or item.get("figure_id") or "planned figure"
+                issues.append(f"Main figure {figure_id} is still in {status} state.")
+                if item.get("next_command"):
+                    actions.append(str(item.get("next_command")))
+            if role == "main_result" and status == "ready_to_render" and path and not _project_relative_path(project_path, path).exists():
+                figure_id = item.get("storyboard_id") or item.get("figure_id") or "planned figure"
+                issues.append(f"Main figure {figure_id} was declared ready but output is missing: {path}.")
+                actions.append("Regenerate analysis code and figures, then rerun assess-result-validity.")
+    return issues, actions
+
+
 def _render_md(report: dict[str, Any]) -> str:
     lines = [
         "# Result Validity Report",
@@ -235,6 +280,10 @@ def _render_md(report: dict[str, Any]) -> str:
     ]
     for cause in report.get("failure_causes") or ["None."]:
         lines.append(f"- {cause}")
+    if report.get("figure_contract_issues"):
+        lines.extend(["", "## Figure Contract Issues", ""])
+        for issue in report.get("figure_contract_issues") or []:
+            lines.append(f"- {issue}")
     lines.extend(["", "## Recommended Backtracking", ""])
     for action in report.get("recommended_actions") or ["Proceed to Results writing."]:
         lines.append(f"- {action}")
@@ -261,6 +310,9 @@ def assess_result_validity(
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml")
     requirements = _read_json(state.path / "methods" / "method_requirements.json")
     data_feasibility = _read_json(state.path / "data" / "data_feasibility_report.json")
+    figure_contracts = _read_json(state.path / "results" / "figure_contracts.json")
+    figure_contract_gate = _read_json(state.path / "results" / "figure_contract_gate_report.json")
+    figure_execution_diagnosis = _read_json(state.path / "results" / "figure_execution_diagnosis.json")
     metric = (primary_metric or requirements.get("primary_metric") or "f1").strip().lower()
     threshold = minimum_value if minimum_value is not None else requirements.get("minimum_primary_metric")
     threshold_float = _default_threshold(metric, threshold)
@@ -277,6 +329,13 @@ def assess_result_validity(
     if review_task_coverage_issues:
         issues.append("Review task coverage failed: " + "; ".join(str(item) for item in review_task_coverage_issues))
     issues.extend(metric_interpretation["metric_issues"])
+    contract_issues, contract_actions = _figure_contract_issues(
+        project_path=state.path,
+        figure_contracts=figure_contracts,
+        figure_contract_gate=figure_contract_gate,
+        figure_execution_diagnosis=figure_execution_diagnosis,
+    )
+    issues.extend(contract_issues)
 
     evidence_strength = str(metric_interpretation["evidence_strength"])
     if not issues and threshold_float is not None:
@@ -301,6 +360,13 @@ def assess_result_validity(
         evidence_strength=evidence_strength,
         missing_outputs=missing_outputs,
     ) if decision == "revise_required" else ([], ["Proceed to Results writing while keeping claim strength aligned with the validity decision."])
+    if contract_actions:
+        if decision != "revise_required":
+            decision = "revise_required"
+            causes = sorted(set(causes + ["figure_contracts"]))
+        actions.extend(action for action in contract_actions if action not in actions)
+    if contract_issues and "figure_contracts" not in causes:
+        causes = sorted(set(causes + ["figure_contracts"]))
 
     report = {
         "project_id": state.metadata.get("project_id"),
@@ -316,6 +382,9 @@ def assess_result_validity(
         "recommended_actions": actions,
         "missing_outputs": missing_outputs,
         "review_task_coverage_issues": review_task_coverage_issues,
+        "figure_contract_gate_decision": figure_contract_gate.get("decision"),
+        "figure_contract_issues": contract_issues,
+        "figure_execution_has_blocking_repairs": figure_execution_diagnosis.get("has_blocking_repairs"),
         "data_feasibility_decision": data_feasibility.get("decision"),
         "stale_if_changed": ["results", "discussion", "latex", "quality_checks"],
     }

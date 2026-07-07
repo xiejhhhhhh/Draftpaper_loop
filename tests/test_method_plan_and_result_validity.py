@@ -137,6 +137,39 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             self.assertEqual(report["minimum_value"], 0.05)
             self.assertEqual(report["evidence_strength"], "statistically_significant")
 
+    def test_result_validity_blocks_failed_figure_contract_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Contracted figure evidence", field="machine learning astronomy")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="f1", minimum_primary_metric=0.8)
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.91\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "output_files": ["results/tables/metrics.csv"], "metrics": {"f1": 0.91}}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_contracts.json").write_text(
+                json.dumps({"status": "written", "contracts": [{"figure_id": "fig_main_1", "figure_role": "main_result"}]}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_contract_gate_report.json").write_text(
+                json.dumps(
+                    {
+                        "status": "written",
+                        "decision": "blocked",
+                        "recommended_next_action": {"command": "repair-figure-data", "reason": "label data missing"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+
+            self.assertEqual(result["decision"], "revise_required")
+            report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
+            self.assertIn("figure_contracts", report["failure_causes"])
+            self.assertTrue(any("Figure contract gate is blocked" in issue for issue in report["figure_contract_issues"]))
+            self.assertTrue(any("repair-figure-data" in action for action in report["recommended_actions"]))
+
     def test_cli_collect_method_plan_and_assess_result_validity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI validity", field="workflow engineering")

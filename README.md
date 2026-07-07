@@ -352,13 +352,17 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Reworked Data and Methods writing so section text is guided by required evidence roles and method stages instead of mechanically dumping context fields into the manuscript.
 - Added research feasibility and research-plan feasibility gates before downstream data/method/figure work. The loop now records whether the proposed study has enough data roles, method intent, and figure-storyboard evidence before code generation.
 - Added data role coverage, method feasibility, method repair, and method degradation reports so missing data or method capability is diagnosed before figure/code execution.
+- `prepare-data-acquisition` now consumes data role coverage and research-plan feasibility gaps, turning missing data roles into connector-aware acquisition tasks instead of waiting for a later reviewer loop.
 - Added a figure contract gate. `generate-analysis-code` now refuses blocked main-figure contracts instead of silently replacing planned result figures with validation or diagnostic fallback plots.
+- `revise-research-plan` now writes a human-readable revision packet under `research_plan/` so data/method repair, scope fallback, and regeneration instructions are visible before the plan is rerun.
+- `assess-result-validity` now reads figure contracts, the figure contract gate, and figure execution diagnosis; blocked or missing planned main figures force a repair route even when tabular metrics pass.
 - Connected `status` and `run-pipeline` to the new repair-first route: repair data, repair methods, or revise the research plan before narrowing the scientific claim.
+- Fixed data-role canonicalization so short aliases such as `ra` do not corrupt broader roles such as spectral or remote-sensing features.
 - Tightened composite-discipline method blueprints: the full plugin catalog remains available, but the method data contract is now built from templates selected for the current research plan, storyboard, method requirements, and review tasks.
 - Added integrity checks for writing-brief coverage, Methods formula rendering, and formula-variable explanation while keeping prose style open enough for Codex to write natural scientific paragraphs.
 - Local verification: `python -m pytest tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
 - Local verification: `python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
-- Full local verification: `python -m pytest`, 237 tests passed.
+- Full local verification: `python -m pytest`, 240 tests passed.
 
 ### v0.15.12 (2026-07-06) -- manuscript evidence consistency and no-delete citation audit
 

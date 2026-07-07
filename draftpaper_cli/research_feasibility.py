@@ -22,6 +22,7 @@ PLAN_FEASIBILITY_JSON = "research_plan/research_plan_feasibility_report.json"
 PLAN_FEASIBILITY_HTML = "research_plan/research_plan_feasibility_report.html"
 DEGRADATION_OPTIONS_JSON = "research_plan/research_degradation_options.json"
 REVISION_SUGGESTIONS_JSON = "research_plan/research_plan_revision_suggestions.json"
+REVISION_SUGGESTIONS_MD = "research_plan/research_plan_revision_suggestions.md"
 SCOPE_DECISION_JSON = "research_plan/research_scope_decision.json"
 
 
@@ -170,10 +171,11 @@ def assess_research_plan_feasibility(project: str | Path) -> dict[str, Any]:
     _write_json(state.path / PLAN_FEASIBILITY_JSON, report)
     _write_json(state.path / DEGRADATION_OPTIONS_JSON, {"status": "written", "generated_at": utc_now(), "options": degradation})
     _write_json(state.path / REVISION_SUGGESTIONS_JSON, suggestions)
+    (state.path / REVISION_SUGGESTIONS_MD).write_text(_render_revision_suggestions_md(suggestions), encoding="utf-8")
     _write_json(state.path / SCOPE_DECISION_JSON, scope_decision)
     write_html_report(state.path / PLAN_FEASIBILITY_HTML, _render_report_md("Research Plan Feasibility", report), title="Research Plan Feasibility")
     update_stage_status(state.path, "research_plan_feasibility", "draft" if decision != "blocked" else "failed")
-    _set_stage_manifest(state.path, "research_plan_feasibility", ["research_plan/research_blueprint.json", "research_plan/figure_storyboard.json", "research_plan/method_plan.json", "data/data_inventory.json"], [PLAN_FEASIBILITY_JSON, PLAN_FEASIBILITY_HTML, DEGRADATION_OPTIONS_JSON, REVISION_SUGGESTIONS_JSON, SCOPE_DECISION_JSON])
+    _set_stage_manifest(state.path, "research_plan_feasibility", ["research_plan/research_blueprint.json", "research_plan/figure_storyboard.json", "research_plan/method_plan.json", "data/data_inventory.json"], [PLAN_FEASIBILITY_JSON, PLAN_FEASIBILITY_HTML, DEGRADATION_OPTIONS_JSON, REVISION_SUGGESTIONS_JSON, REVISION_SUGGESTIONS_MD, SCOPE_DECISION_JSON])
     return {
         "status": "written",
         "project_path": str(state.path),
@@ -204,6 +206,7 @@ def revise_research_plan(project: str | Path) -> dict[str, Any]:
         "degradation_options": report.get("degradation_options") or [],
     }
     _write_json(state.path / REVISION_SUGGESTIONS_JSON, suggestions)
+    (state.path / REVISION_SUGGESTIONS_MD).write_text(_render_revision_suggestions_md(suggestions), encoding="utf-8")
     _write_json(state.path / SCOPE_DECISION_JSON, {
         "status": "written",
         "generated_at": utc_now(),
@@ -215,8 +218,43 @@ def revise_research_plan(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "project_path": str(state.path),
         "research_plan_revision_suggestions": str(state.path / REVISION_SUGGESTIONS_JSON),
+        "research_plan_revision_suggestions_md": str(state.path / REVISION_SUGGESTIONS_MD),
         "research_scope_decision": str(state.path / SCOPE_DECISION_JSON),
     }
+
+
+def _render_revision_suggestions_md(suggestions: dict[str, Any]) -> str:
+    lines = [
+        "# Research Plan Revision Suggestions",
+        "",
+        f"Source decision: `{suggestions.get('source_report_decision')}`",
+        "",
+        "## Revision Policy",
+        "",
+    ]
+    for item in suggestions.get("instructions") or []:
+        lines.append(f"- {item}")
+    lines.extend(["", "## Data/Method Repair Before Scope Reduction", ""])
+    options = suggestions.get("degradation_options") or []
+    if not options:
+        lines.append("No degradation option was reported. Keep the original research scope.")
+    for option in options:
+        lines.extend([
+            f"### {option.get('missing_role') or option.get('level') or 'scope item'}",
+            "",
+            f"- Level: `{option.get('level') or 'unspecified'}`",
+            f"- Stage: `{option.get('stage') or 'unspecified'}`",
+            f"- First action: {option.get('recommendation') or 'Repair data or methods before rewriting the plan.'}",
+            f"- Scope fallback: {option.get('fallback') or 'Narrow the affected research claim only after repair fails.'}",
+            "",
+        ])
+    lines.extend([
+        "## Required Next Step",
+        "",
+        "Run `prepare-data-acquisition` or `assess-method-feasibility` when repair is possible. Use `generate-plan` again only after the research scope, data availability, and method feasibility are aligned.",
+        "",
+    ])
+    return "\n".join(lines)
 
 
 def _figure_assessments(storyboard: dict[str, Any], available_roles: list[str], method_roles: list[str]) -> list[dict[str, Any]]:

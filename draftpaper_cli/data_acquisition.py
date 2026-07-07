@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .data_contracts import normalize_roles
 from .discipline import infer_discipline_from_text
 from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
@@ -423,10 +424,83 @@ def _task_from_review_issue(raw: dict[str, Any], *, source: str, discipline: str
     }
 
 
+def _task_from_missing_roles(
+    *,
+    source: str,
+    source_code: str,
+    title: str,
+    missing_roles: list[str],
+    discipline: str,
+    available_connectors: list[str],
+    confirmation_question: str,
+) -> dict[str, Any] | None:
+    needed = normalize_roles(missing_roles)
+    if not needed:
+        return None
+    suggested: list[str] = []
+    for need in needed:
+        for connector in _suggest_connectors_for_need(need, discipline, available_connectors):
+            if connector not in suggested:
+                suggested.append(connector)
+    return {
+        "task_id": _task_id(source, source_code, needed),
+        "source": source,
+        "source_id": source_code,
+        "source_code": source_code,
+        "title": title,
+        "needed_data": needed,
+        "suggested_connectors": suggested,
+        "requires_user_confirmation": True,
+        "confirmation_question": confirmation_question,
+        "recommended_next_command": "prepare-data-acquisition",
+        "status": "pending_user_confirmation",
+    }
+
+
+def _tasks_from_data_role_coverage(project_path: Path, *, discipline: str, available_connectors: list[str]) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    coverage = _read_json(project_path / "data" / "data_role_coverage_report.json")
+    if coverage:
+        task = _task_from_missing_roles(
+            source="data_role_coverage",
+            source_code=str(coverage.get("source") or "data_role_coverage_report"),
+            title="Acquire data roles required by the research-plan figure contracts",
+            missing_roles=list(coverage.get("blocking_missing_roles") or coverage.get("missing_roles") or []),
+            discipline=discipline,
+            available_connectors=available_connectors,
+            confirmation_question="Confirm whether these missing data roles can be supplied, queried, or replaced by documented processed artifacts before figure code generation.",
+        )
+        if task:
+            tasks.append(task)
+
+    feasibility = _read_json(project_path / "research_plan" / "research_plan_feasibility_report.json")
+    for item in feasibility.get("figure_assessments") or []:
+        if not isinstance(item, dict):
+            continue
+        missing_roles = list(item.get("missing_data_roles") or [])
+        if not missing_roles:
+            continue
+        figure_id = str(item.get("figure_id") or "planned_figure")
+        task = _task_from_missing_roles(
+            source="research_plan_feasibility",
+            source_code=figure_id,
+            title=f"Acquire data needed for planned main figure {figure_id}",
+            missing_roles=missing_roles,
+            discipline=discipline,
+            available_connectors=available_connectors,
+            confirmation_question="Confirm whether the missing figure-level data roles can be obtained before rerunning plan-figures and assess-figure-contracts.",
+        )
+        if task:
+            tasks.append(task)
+    return tasks
+
+
 def _data_acquisition_tasks(project_path: Path, profile: dict[str, Any]) -> dict[str, Any]:
     discipline = str((profile.get("discipline_profile") or {}).get("discipline") or "default")
     available = _connector_names(profile)
     tasks: list[dict[str, Any]] = []
+
+    tasks.extend(_tasks_from_data_role_coverage(project_path, discipline=discipline, available_connectors=available))
 
     analysis_revision = _read_json(project_path / "review" / "actionable_analysis_tasks.json")
     for raw in analysis_revision.get("tasks") or []:
