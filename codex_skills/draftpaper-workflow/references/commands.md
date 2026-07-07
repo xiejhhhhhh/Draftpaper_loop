@@ -30,8 +30,11 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\my_proj
 python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --target-journal APJS
 python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --overleaf-url "https://www.overleaf.com/latex/templates/..."
 python -m draftpaper_cli.cli resolve-journal-template --project <repo>\projects\my_project --guideline-url "https://journal.example/author-guidelines"
+python -m draftpaper_cli.cli preflight-research-feasibility --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-plan --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-plan --project <repo>\projects\my_project --allow-high-similarity
+python -m draftpaper_cli.cli assess-research-plan-feasibility --project <repo>\projects\my_project
+python -m draftpaper_cli.cli revise-research-plan --project <repo>\projects\my_project
 ```
 
 `search-literature` builds separate `idea`, `data`, and `methods` search queries, writes them to `references/search_queries.json`, and tags each retained paper with `search_context` and `search_query`. Data and methods use three to five precise queries crossed with the discipline/field name, not necessarily the full research direction or target journal. Methods queries should preserve user-provided method phrases such as `1D CNN / ResNet`, `Transformer`, `Temporal Convolutional Network`, multimodal networks, and contrastive/self-supervised learning instead of collapsing them into one broad keyword string. Each data/methods query fetches only one to two top records, then the context is ranked separately by query relevance, citation authority, and journal authority before the final set is assembled.
@@ -40,7 +43,7 @@ The command writes `references/literature_summaries/index.html` plus one HTML su
 
 `citation_evidence.csv` maps context to manuscript section: idea -> introduction, data -> data, methods -> methods. If later Data or Methods drafts do not cite any evidence keys from their matching context, `quality-check` reports a context-reference warning. Literature candidates without abstracts are first sent through DraftPaper's project-level `paper_fetch_adapter` when data/methods usable evidence is below five. The adapter writes `references/paper_fetch_queries.txt`, `references/paper_fetch_manifest.json`, and fetched files under `references/fulltext/`. If paper-fetch cannot recover readable evidence, keep the usable data/methods references that exist and let idea-context papers fill the remaining reference budget.
 
-`generate-plan` also writes target-journal anchor papers and a novelty-overlap report. If it returns `blocked_high_similarity`, stop and ask the user whether to continue, revise, or abandon the current framing before rerunning with `--allow-high-similarity`.
+`preflight-research-feasibility` runs before `generate-plan` and records whether the idea, literature, journal profile, and currently known data roles can support a concrete research blueprint. `generate-plan` also writes target-journal anchor papers and a novelty-overlap report. If it returns `blocked_high_similarity`, stop and ask the user whether to continue, revise, or abandon the current framing before rerunning with `--allow-high-similarity`. `assess-research-plan-feasibility` then checks the generated figure storyboard and method/data roles before downstream acquisition and code generation. If it blocks, `revise-research-plan` writes `research_plan/research_plan_revision_suggestions.json`, `research_plan/research_plan_revision_suggestions.md`, and `research_plan/research_scope_decision.json`; the repair policy is to try data/method repair first, then narrow the research plan only when the missing evidence cannot be supplied.
 
 ## Writing Stages
 
@@ -53,7 +56,9 @@ python -m draftpaper_cli.cli assess-data-quality --project <repo>\projects\my_pr
 python -m draftpaper_cli.cli assess-data-feasibility --project <repo>\projects\my_project --min-rows 30
 python -m draftpaper_cli.cli collect-method-plan --project <repo>\projects\my_project --method-note "Use a multimodal classifier" --primary-metric f1 --minimum-primary-metric 0.75
 python -m draftpaper_cli.cli prepare-method-blueprint --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-method-feasibility --project <repo>\projects\my_project
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-figure-contracts --project <repo>\projects\my_project
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project
 python -m draftpaper_cli.cli plan-figures --project <repo>\projects\my_project --use-review-tasks
 python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\my_project --use-review-tasks

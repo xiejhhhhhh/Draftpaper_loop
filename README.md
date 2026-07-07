@@ -357,6 +357,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - `revise-research-plan` now writes a human-readable revision packet under `research_plan/` so data/method repair, scope fallback, and regeneration instructions are visible before the plan is rerun.
 - `assess-result-validity` now reads figure contracts, the figure contract gate, and figure execution diagnosis; blocked or missing planned main figures force a repair route even when tabular metrics pass.
 - Connected `status` and `run-pipeline` to the new repair-first route: repair data, repair methods, or revise the research plan before narrowing the scientific claim.
+- Synchronized the bundled Draftpaper workflow skill and command reference with the new preflight, research-plan feasibility, method feasibility, and figure-contract stages.
 - Fixed data-role canonicalization so short aliases such as `ra` do not corrupt broader roles such as spectral or remote-sensing features.
 - Tightened composite-discipline method blueprints: the full plugin catalog remains available, but the method data contract is now built from templates selected for the current research plan, storyboard, method requirements, and review tasks.
 - Added integrity checks for writing-brief coverage, Methods formula rendering, and formula-variable explanation while keeping prose style open enough for Codex to write natural scientific paragraphs.

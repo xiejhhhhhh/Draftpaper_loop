@@ -61,6 +61,7 @@ MINIMUM_STAGE_OUTPUTS = {
         "research_plan/research_plan_feasibility_report.html",
         "research_plan/research_degradation_options.json",
         "research_plan/research_plan_revision_suggestions.json",
+        "research_plan/research_plan_revision_suggestions.md",
         "research_plan/research_scope_decision.json",
     ],
     "method_feasibility": [

@@ -295,6 +295,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - `revise-research-plan` 现在会在 `research_plan/` 下写出可人工阅读的修订建议包，明确先补数据、补方法，再考虑收窄研究问题和重新生成研究计划。
 - `assess-result-validity` 现在会读取 figure contracts、figure contract gate 与 figure execution diagnosis；即使表格指标通过，只要计划主图被阻断或缺失，也会回到数据/方法/图表修复路线。
 - `status` 与 `run-pipeline` 已接入 repair-first 路线：优先补数据、补方法或修订 research plan，再考虑收窄科学问题。
+- 同步更新内置 Draftpaper workflow skill 与命令参考，使其遵循新的 preflight、research-plan feasibility、method feasibility 和 figure-contract 阶段顺序。
 - 修复 data role 归一化：`ra` 这类短别名不再误伤 spectral 或 remote-sensing features 等较长角色名称。
 - 收紧 composite discipline method blueprint：完整插件目录仍然保留，但当前论文的 method data contract 会优先基于 research plan、figure storyboard、method requirements 和 review tasks 选中的模板生成。
 - 升级 integrity gate：新增 writing brief 覆盖检查、Methods 公式渲染检查和公式变量解释检查，同时保留 Codex 写出自然科研段落的空间。
