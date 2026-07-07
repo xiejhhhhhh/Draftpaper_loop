@@ -78,6 +78,8 @@ class MethodsHardGateTests(unittest.TestCase):
 
             write_result = write_methods(project.path)
             self.assertEqual(write_result["status"], "written")
+            self.assertTrue((project.path / "methods" / "method_writing_brief.json").exists())
+            self.assertTrue((project.path / "methods" / "method_writing_brief.html").exists())
             methods_tex = (project.path / "methods" / "methods.tex").read_text(encoding="utf-8")
             self.assertIn("\\section{Methods}", methods_tex)
             self.assertNotIn("results/tables/metrics.csv", methods_tex)
@@ -89,7 +91,9 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "draft")
             self.assertIn("methods/method_requirements.json", manifest["input_files"])
             self.assertIn("methods/run_manifest.yaml", manifest["input_files"])
+            self.assertIn("methods/method_writing_brief.json", manifest["input_files"])
             self.assertIn("methods/methods.tex", manifest["output_files"])
+            self.assertIn("methods/method_writing_brief.json", manifest["output_files"])
 
     def test_cli_verify_and_write_methods(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -294,7 +298,10 @@ class MethodsHardGateTests(unittest.TestCase):
             )
             (project.path / "methods" / "method_code_manifest.json").write_text(
                 json.dumps({
-                    "files": [{"code_role": "time_aware_transformer_training", "canonical_path": "methods/code_templates/train.py"}],
+                    "files": [
+                        {"code_role": "time_aware_transformer_training", "canonical_path": "methods/code_templates/train.py"},
+                        {"code_role": "figure_generation", "canonical_path": "methods/code_templates/plot.py"},
+                    ],
                     "selected_input_profile": {"columns": ["pha_file", "bkg_pha_file", "arf_file", "rmf_file", "light_curve"]},
                 }),
                 encoding="utf-8",
@@ -311,9 +318,72 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertIn("Cross-entropy", formulas)
             self.assertIn("Macro averaging", formulas)
             self.assertIn("Area under the ROC curve", formulas)
+            self.assertIn("\\subsection{Study Design and Input Representation}", tex)
+            self.assertIn("\\subsection{Model Formulation}", tex)
+            self.assertIn("\\subsection{Validation and Metrics}", tex)
             self.assertIn("source and background spectral products", tex)
-            for token in ["stage-owned", "formula extraction layer", "figure-code trace", "manifest internals", "pha_file", "bkg_pha_file", "arf_file", "rmf_file"]:
+            self.assertIn("Here $t$ denotes", tex)
+            for token in ["stage-owned", "formula extraction layer", "figure-code trace", "manifest internals", "pha_file", "bkg_pha_file", "arf_file", "rmf_file", "documented method component", "figure generation", "software operations"]:
                 self.assertNotIn(token, tex)
+            self.assertIn("scientific figure synthesis", tex)
+            self.assertNotIn("Auto-generated", tex)
+            self.assertNotIn("retained method-oriented references", tex)
+
+    def test_build_method_context_refreshes_stale_formula_manifest_from_project_context(self) -> None:
+        from draftpaper_cli.methods import build_method_writing_context, write_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Time-aware Transformer classification of X-ray flaring sources", field="astronomy machine learning")
+            prepare_passing_data_gate(project.path)
+            output = project.path / "results" / "tables" / "metrics.csv"
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text("metric,value\nf1_macro,0.82\nroc_auc,0.91\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "command": "manual",
+                    "input_data": ["data/raw/sample.csv"],
+                    "output_files": ["results/tables/metrics.csv"],
+                    "metrics": {"f1_macro": "0.82", "roc_auc": "0.91"},
+                    "figures_generated": [],
+                    "tables_generated": ["results/tables/metrics.csv"],
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_formula_manifest.json").write_text(
+                json.dumps({
+                    "status": "written",
+                    "formula_count": 1,
+                    "formulas": [{"id": "old_softmax", "name": "Softmax", "latex": "s=\\mathrm{softmax}(z)"}],
+                }),
+                encoding="utf-8",
+            )
+            requirements = json.loads((project.path / "methods" / "method_requirements.json").read_text(encoding="utf-8"))
+            requirements["user_method"] = "Build from event_level_samples, current_observation_tokens, history_lc_tokens, and event_spectral_quick_features. Restrict claims to feasible binary classification."
+            (project.path / "methods" / "method_requirements.json").write_text(json.dumps(requirements), encoding="utf-8")
+
+            context = build_method_writing_context(project.path)
+            write_methods(project.path)
+
+            self.assertGreaterEqual(context["formula_manifest"]["formula_count"], 5)
+            formulas = (project.path / "methods" / "method_formulas.tex").read_text(encoding="utf-8")
+            tex = (project.path / "methods" / "methods.tex").read_text(encoding="utf-8")
+            self.assertIn("Time2Vec", formulas)
+            self.assertIn("Cross-entropy", formulas)
+            self.assertIn("Area under the ROC curve", formulas)
+            self.assertIn("Here $t$ denotes", tex)
+            self.assertIn("event-level sample table", tex)
+            self.assertIn("current-observation tokens", tex)
+            self.assertIn("The model is built from", tex)
+            self.assertIn("Claims are restricted to", tex)
+            self.assertNotIn("event_level_samples", tex)
+            self.assertNotIn("current_observation_tokens", tex)
+            self.assertNotIn("Build from", tex)
+            self.assertNotIn("Restrict claims to", tex)
+            self.assertNotIn("expression(s)", tex)
+            self.assertNotIn("verification run", tex.lower())
+            self.assertNotIn("data feasibility gate", tex.lower())
+            self.assertNotIn("declared metrics", tex.lower())
 
     def test_verify_methods_fails_generated_png_without_metadata(self) -> None:
         from draftpaper_cli.methods import verify_methods

@@ -134,25 +134,68 @@ def _sample_composition_totals(project_path: Path) -> dict[str, int]:
     return {key: value for key, value in totals.items() if value > 0}
 
 
-def _extract_declared_count(text: str, unit: str) -> set[int]:
+def _sentences(text: str) -> list[str]:
+    return [piece.strip() for piece in re.split(r"(?<=[.!?])\s+|\n+", text) if piece.strip()]
+
+
+def _count_role(sentence: str, unit: str, start: int = 0, end: int | None = None) -> str:
+    lowered_sentence = sentence.lower()
+    end = len(sentence) if end is None else end
+    lowered = sentence[max(0, start - 80): min(len(sentence), end + 80)].lower()
+    if re.search(r"\b(?:row|rows|table rows|records after join|joined records)\b", lowered):
+        return "row_count"
+    if re.search(r"\b(?:parser|parsed|parse|smoke|sanity|diagnostic|manual check|quality check|subset)\b", lowered):
+        return "parser_validation_subset"
+    if re.search(r"\b(?:train|training|validation|test|held-out|holdout|split|fold|cross-validation)\b", lowered):
+        return "model_validation_subset"
+    if re.search(r"\b(?:history|source-history|token|tokens|sequence|sequences)\b", lowered):
+        return "history_token_count"
+    if re.search(r"\b(?:agn|xrb|tde|qpe|ulx|class-specific|per-class|category)\b", lowered):
+        return "class_specific_count"
+    if re.search(r"\b(?:coverage|matched|counterpart|cross-match|crossmatched)\b", lowered):
+        return "coverage_count"
+    if unit == "event_count" and re.search(
+        r"\b(?:study uses|study includes|dataset contains|data set contains|evidence base contains|sample comprises|sample contains|analysis uses|research sample contains|cohort contains|consists of)\b",
+        lowered_sentence,
+    ):
+        return "main_modeling_sample"
+    if unit == "source_count" and re.search(
+        r"\b(?:study uses|study includes|dataset contains|data set contains|evidence base contains|sample comprises|sample contains|analysis uses|research sample contains|cohort contains|from)\b",
+        lowered_sentence,
+    ):
+        return "main_modeling_sample"
+    return "context_specific_count"
+
+
+def _extract_declared_counts(text: str, unit: str) -> list[dict[str, Any]]:
     if unit == "event_count":
         patterns = [
-            r"\b(\d{2,8})\s+(?:parsed\s+|labelled\s+|labeled\s+|training\s+)?(?:event|events|observations|records)\b",
+            r"\b(\d{2,8})\s+(?:parsed\s+|labelled\s+|labeled\s+)?(?:event|events|observations|records)\b",
             r"\b(?:event|events|observations|records)\s*(?:=|:|total(?:ed)?\s*)\s*(\d{2,8})\b",
         ]
     else:
         patterns = [
-            r"\b(\d{1,8})\s+(?:unique\s+|parsed\s+)?(?:source|sources|objects)\b",
-            r"\b(?:source|sources|objects)\s*(?:=|:|total(?:ed)?\s*)\s*(\d{1,8})\b",
+            r"\b(\d{1,8})\s+source-history\s+tokens\b",
+            r"\b(\d{1,8})\s+(?:unique\s+)?(?:source|sources|objects)(?!-)\b",
+            r"\b(?:source|sources|objects)(?!-)\s*(?:=|:|total(?:ed)?\s*)\s*(\d{1,8})\b",
         ]
-    values: set[int] = set()
-    for pattern in patterns:
-        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
-            try:
-                values.add(int(match.group(1)))
-            except Exception:
-                continue
-    return values
+    counts: list[dict[str, Any]] = []
+    seen: set[tuple[int, str, str]] = set()
+    for sentence in _sentences(text):
+        for pattern in patterns:
+            for match in re.finditer(pattern, sentence, flags=re.IGNORECASE):
+                try:
+                    value = int(match.group(1))
+                except Exception:
+                    continue
+                matched_text = match.group(0).lower()
+                role = "history_token_count" if "source-history" in matched_text else _count_role(sentence, unit, match.start(), match.end())
+                key = (value, role, sentence)
+                if key in seen:
+                    continue
+                seen.add(key)
+                counts.append({"value": value, "role": role, "sentence": sentence})
+    return counts
 
 
 def _check_manuscript_language(project_path: Path, issues: list[IntegrityIssue]) -> dict[str, Any]:
@@ -176,23 +219,115 @@ def _check_manuscript_language(project_path: Path, issues: list[IntegrityIssue])
     return {"finding_count": len(findings), "findings": findings}
 
 
+def _check_writing_brief_coverage(project_path: Path, issues: list[IntegrityIssue]) -> dict[str, Any]:
+    findings: list[dict[str, Any]] = []
+    data_brief = _read_json(project_path / "data" / "data_writing_brief.json")
+    data_text = _read_text(project_path / "data" / "data.tex") if (project_path / "data" / "data.tex").exists() else ""
+    if data_brief and data_text:
+        lowered = data_text.lower()
+        role_terms = {
+            "data_source": ["source", "survey", "database", "record", "observation"],
+            "processed_dataset": ["processed", "analysis-ready", "dataset", "data set", "sample"],
+            "feature_content_groups": ["variable", "feature", "covariate", "index", "token", "spectral"],
+            "missingness_coverage": ["missing", "coverage", "quality", "available", "complete"],
+            "claim_boundary": ["bounded", "boundary", "limited", "support", "claim"],
+        }
+        missing_roles = []
+        for role in data_brief.get("required_coverage") or []:
+            terms = role_terms.get(str(role), [])
+            if terms and not any(term in lowered for term in terms):
+                missing_roles.append(role)
+        if missing_roles:
+            findings.append({"section": "data", "missing_roles": missing_roles})
+            issues.append(IntegrityIssue(
+                "warning",
+                "data_writing_brief_coverage_gap",
+                "Data text may not cover all required writing-brief roles: " + ", ".join(str(item) for item in missing_roles),
+                "data/data.tex",
+                "data",
+            ))
+    method_brief = _read_json(project_path / "methods" / "method_writing_brief.json")
+    method_text = _read_text(project_path / "methods" / "methods.tex") if (project_path / "methods" / "methods.tex").exists() else ""
+    formula_manifest = _read_json(project_path / "methods" / "method_formula_manifest.json")
+    formula_count = int(formula_manifest.get("formula_count") or len(formula_manifest.get("formulas") or [])) if formula_manifest else 0
+    method_findings: dict[str, Any] = {}
+    if method_brief and method_text:
+        lowered = method_text.lower()
+        stage_terms = {
+            "sample_construction": ["sample", "cohort", "observation", "event"],
+            "feature_or_token_construction": ["feature", "token", "representation", "variable"],
+            "model_architecture": ["model", "classifier", "regression", "architecture", "estimator"],
+            "training_objective": ["loss", "objective", "optimization", "fit", "training"],
+            "validation_design": ["validation", "held-out", "cross-validation", "split", "blocked"],
+            "metrics_and_ablation": ["metric", "auc", "accuracy", "f1", "r2", "ablation", "baseline"],
+        }
+        missing_stages = []
+        for stage in method_brief.get("required_coverage") or []:
+            terms = stage_terms.get(str(stage), [])
+            if terms and not any(term in lowered for term in terms):
+                missing_stages.append(stage)
+        if missing_stages:
+            method_findings["missing_stages"] = missing_stages
+            issues.append(IntegrityIssue(
+                "warning",
+                "method_writing_brief_coverage_gap",
+                "Methods text may not cover all required writing-brief stages: " + ", ".join(str(item) for item in missing_stages),
+                "methods/methods.tex",
+                "methods",
+            ))
+    if formula_count and method_text:
+        if "\\begin{equation}" not in method_text:
+            method_findings["missing_equation_blocks"] = True
+            issues.append(IntegrityIssue(
+                "error",
+                "method_formula_not_rendered",
+                "A method formula manifest exists, but methods.tex does not contain displayed equation blocks.",
+                "methods/methods.tex",
+                "methods",
+            ))
+        if not re.search(r"\b(?:denotes|represents|is the|are the|variables? include)\b", method_text, flags=re.IGNORECASE):
+            method_findings["missing_variable_explanation"] = True
+            issues.append(IntegrityIssue(
+                "error",
+                "method_formula_variables_not_explained",
+                "Formula-bearing Methods text must explain the variables near the displayed equations.",
+                "methods/methods.tex",
+                "methods",
+            ))
+    if method_findings:
+        findings.append({"section": "methods", **method_findings})
+    return {"finding_count": len(findings), "findings": findings}
+
+
 def _check_evidence_number_consistency(project_path: Path, issues: list[IntegrityIssue]) -> dict[str, Any]:
     totals = _sample_composition_totals(project_path)
     if not totals:
-        return {"sample_composition": None, "checked": False, "mismatches": []}
+        return {"sample_composition": None, "checked": False, "mismatches": [], "observed_counts": []}
     data_text = "\n".join(_read_text(project_path / relative) for relative in ["data/data.tex", "latex/sections/data.tex"] if (project_path / relative).exists())
     result_text = "\n".join(_read_text(project_path / relative) for relative in RESULT_FILES if (project_path / relative).exists())
     combined = {"data": data_text, "results": result_text}
     mismatches: list[dict[str, Any]] = []
+    observed_counts: list[dict[str, Any]] = []
     for unit, expected in totals.items():
         for section, text in combined.items():
             if not text:
                 continue
-            declared = _extract_declared_count(text, unit)
-            for value in sorted(declared):
+            declared = _extract_declared_counts(text, unit)
+            for count in declared:
+                value = int(count["value"])
+                role = str(count["role"])
+                observed_counts.append({
+                    "section": section,
+                    "unit": unit,
+                    "value": value,
+                    "role": role,
+                    "checked_against_sample_composition": role == "main_modeling_sample",
+                })
+                if role != "main_modeling_sample":
+                    continue
                 if value != expected:
                     label = "events" if unit == "event_count" else "sources"
-                    mismatch = {"section": section, "unit": unit, "declared": value, "expected": expected}
+                    mismatch = {"section": section, "unit": unit, "role": role, "declared": value, "expected": expected}
                     mismatches.append(mismatch)
                     issues.append(IntegrityIssue(
                         "error",
@@ -201,7 +336,7 @@ def _check_evidence_number_consistency(project_path: Path, issues: list[Integrit
                         f"{section}/{section}.tex" if section != "results" else "results/results.tex",
                         section,
                     ))
-    return {"sample_composition": totals, "checked": True, "mismatches": mismatches}
+    return {"sample_composition": totals, "checked": True, "mismatches": mismatches, "observed_counts": observed_counts}
 
 
 def _project_relative_path(project_path: Path, relative: str, issues: list[IntegrityIssue], *, code: str) -> Path | None:
@@ -382,6 +517,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "## Manuscript Language",
         "",
         f"Internal-language findings: {report['manuscript_language']['finding_count']}",
+        f"Writing-brief findings: {report.get('writing_briefs', {}).get('finding_count', 0)}",
         "",
         "## Evidence Number Consistency",
         "",
@@ -432,6 +568,7 @@ def run_integrity_gate(project: str | Path) -> dict[str, Any]:
     citations = _check_citations(state.path, issues)
     results = _check_results(state.path, issues)
     manuscript_language = _check_manuscript_language(state.path, issues)
+    writing_briefs = _check_writing_brief_coverage(state.path, issues)
     evidence_numbers = _check_evidence_number_consistency(state.path, issues)
     error_count = sum(1 for issue in issues if issue.severity == "error")
     warning_count = sum(1 for issue in issues if issue.severity == "warning")
@@ -446,6 +583,7 @@ def run_integrity_gate(project: str | Path) -> dict[str, Any]:
         "citations": citations,
         "results": results,
         "manuscript_language": manuscript_language,
+        "writing_briefs": writing_briefs,
         "evidence_numbers": evidence_numbers,
     }
 

@@ -24,6 +24,8 @@ The project follows the loop-engineering shift from prompting an agent turn by t
 
 Draftpaper-loop is also intended to become a learning research workflow rather than a fixed template library. The goal is to preserve paper revision experience, reviewer-response logic, data-analysis methods, and code implementation patterns as reusable discipline modules. It should not replace scientific judgment; it should structure accumulated methods and review experience so later researchers can enter a field faster, understand its basic research patterns, and judge whether cross-disciplinary combinations are scientifically plausible.
 
+Current manuscript generation separates evidence control from prose control. Draftpaper-loop builds the auditable research evidence first, generates section-level writing briefs for Data and Methods, lets Codex compose natural scientific prose from those briefs, and then applies integrity, citation, formula, and result-evidence gates after writing.
+
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
 ## What It Does
@@ -73,6 +75,7 @@ The loop is designed around five engineering components:
 - Result validity gate before Results writing.
 - Core evidence gate before manuscript writing, checking data supplementation, data integration, method execution, figure production, figure metadata, and result validity before human figure confirmation.
 - Evidence-first manuscript writing: Results are written from confirmed figures first, then Introduction, Data, Methods, and Discussion are generated without leaking numeric results into earlier sections.
+- Brief-guided Data and Methods writing: the loop preserves hard evidence contracts while avoiding rigid context dumping, local paths, script names, and internal workflow language in manuscript prose.
 - Results no-citation enforcement with explicit `Figure~\ref{...}` and `Table~\ref{...}` references in result prose.
 - Chinese Results review summary at `results/results_summary_zh.md` for quick human inspection of figure-level interpretation.
 - LaTeX assembly with optional local PDF compilation.
@@ -342,6 +345,20 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.16.1 (2026-07-07) -- evidence contracts, feasibility gates, and freer manuscript writing
+
+- Added a Data/Methods writing-brief layer. `build-data-context` and `build-method-context` now write `data/data_writing_brief.json/.html` and `methods/method_writing_brief.json/.html` before manuscript prose is generated.
+- Reworked Data and Methods writing so section text is guided by required evidence roles and method stages instead of mechanically dumping context fields into the manuscript.
+- Added research feasibility and research-plan feasibility gates before downstream data/method/figure work. The loop now records whether the proposed study has enough data roles, method intent, and figure-storyboard evidence before code generation.
+- Added data role coverage, method feasibility, method repair, and method degradation reports so missing data or method capability is diagnosed before figure/code execution.
+- Added a figure contract gate. `generate-analysis-code` now refuses blocked main-figure contracts instead of silently replacing planned result figures with validation or diagnostic fallback plots.
+- Connected `status` and `run-pipeline` to the new repair-first route: repair data, repair methods, or revise the research plan before narrowing the scientific claim.
+- Tightened composite-discipline method blueprints: the full plugin catalog remains available, but the method data contract is now built from templates selected for the current research plan, storyboard, method requirements, and review tasks.
+- Added integrity checks for writing-brief coverage, Methods formula rendering, and formula-variable explanation while keeping prose style open enough for Codex to write natural scientific paragraphs.
+- Local verification: `python -m pytest tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
+- Local verification: `python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
+- Full local verification: `python -m pytest`, 237 tests passed.
 
 ### v0.15.12 (2026-07-06) -- manuscript evidence consistency and no-delete citation audit
 

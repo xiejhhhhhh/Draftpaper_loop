@@ -30,6 +30,8 @@ class ProjectScaffold:
 PROJECT_DIRECTORIES = [
     "idea",
     "research_plan",
+    "research_feasibility",
+    "research_plan_feasibility",
     "references",
     "journal_profile",
     "data/acquisition",
@@ -38,7 +40,9 @@ PROJECT_DIRECTORIES = [
     "data/scripts",
     "observations",
     "method_plan",
+    "method_feasibility",
     "figure_plan",
+    "figure_contracts",
     "methods",
     "methods/scripts",
     "methods/src",
@@ -68,10 +72,14 @@ STAGE_ORDER = [
     "idea",
     "references",
     "journal_profile",
+    "research_feasibility",
     "research_plan",
+    "research_plan_feasibility",
     "data",
     "method_plan",
+    "method_feasibility",
     "figure_plan",
+    "figure_contracts",
     "code",
     "methods",
     "result_validity",
@@ -109,11 +117,15 @@ def _build_stage_metadata() -> dict[str, dict[str, Any]]:
 
     stages["references"]["depends_on"] = ["idea"]
     stages["journal_profile"]["depends_on"] = ["idea"]
-    stages["research_plan"]["depends_on"] = ["references", "journal_profile"]
-    stages["data"]["depends_on"] = ["research_plan"]
-    stages["method_plan"]["depends_on"] = ["research_plan", "references", "data"]
-    stages["figure_plan"]["depends_on"] = ["method_plan", "data", "references", "journal_profile"]
-    stages["code"]["depends_on"] = ["figure_plan", "method_plan", "data", "references"]
+    stages["research_feasibility"]["depends_on"] = ["references", "journal_profile"]
+    stages["research_plan"]["depends_on"] = ["research_feasibility"]
+    stages["research_plan_feasibility"]["depends_on"] = ["research_plan"]
+    stages["data"]["depends_on"] = ["research_plan_feasibility"]
+    stages["method_plan"]["depends_on"] = ["research_plan_feasibility", "references", "data"]
+    stages["method_feasibility"]["depends_on"] = ["method_plan", "data"]
+    stages["figure_plan"]["depends_on"] = ["method_feasibility", "data", "references", "journal_profile"]
+    stages["figure_contracts"]["depends_on"] = ["figure_plan", "method_feasibility", "data"]
+    stages["code"]["depends_on"] = ["figure_contracts", "method_plan", "data", "references"]
     stages["methods"]["depends_on"] = ["method_plan", "data", "code"]
     stages["result_validity"]["depends_on"] = ["methods", "method_plan", "data"]
     stages["core_evidence"]["depends_on"] = ["result_validity", "figure_plan", "methods", "data"]

@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Jinray Xie
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -25,6 +25,7 @@ ANALYSIS_CODE_INPUTS = [
     "data/data_inventory.json",
     "results/figure_plan.json",
     "results/figure_contracts.json",
+    "results/figure_contract_gate_report.json",
 ]
 
 ANALYSIS_CODE_OUTPUTS = [
@@ -758,6 +759,22 @@ def _set_code_stage_manifest(project_path: Path) -> None:
     _write_json(manifest_path, manifest)
 
 
+
+def _validate_figure_contract_gate(project_path: Path) -> dict[str, Any]:
+    payload = _read_json(project_path / "results" / "figure_contract_gate_report.json", {})
+    if not isinstance(payload, dict) or not payload:
+        raise AnalysisCodeGenerationError(
+            "results/figure_contract_gate_report.json is required before code generation. Run assess-figure-contracts after plan-figures."
+        )
+    decision = str(payload.get("decision") or "").lower()
+    if decision == "blocked":
+        action = payload.get("recommended_next_action") or {}
+        command = action.get("command") or "repair-figure-data / repair-figure-method / revise-research-plan"
+        reason = action.get("reason") or "contracted main figures are not executable"
+        raise AnalysisCodeGenerationError(f"Figure contract gate is blocked: {reason}. Next command: {command}.")
+    if decision not in {"pass", "conditional"}:
+        raise AnalysisCodeGenerationError("Figure contract gate has an unknown decision. Rerun assess-figure-contracts.")
+    return payload
 def generate_analysis_code(
     project: str | Path,
     *,
@@ -779,6 +796,8 @@ def generate_analysis_code(
             raise AnalysisCodeGenerationError("results/figure_plan.json is required. Run plan-figures first, or use --auto-plan-figures.")
         plan_figures(state.path)
         figure_plan = validate_figure_plan_for_codegen(state.path)
+
+    figure_contract_gate = _validate_figure_contract_gate(state.path)
 
     inventory = _read_json(state.path / "data" / "data_inventory.json", {})
     if not isinstance(inventory, dict) or not inventory:
@@ -845,6 +864,7 @@ def generate_analysis_code(
         "method_code_plan": method_blueprint.get("method_code_plan") if isinstance(method_blueprint, dict) else {},
         "method_formula_plan": method_blueprint.get("method_formula_plan") if isinstance(method_blueprint, dict) else {},
         "figure_plan": figure_plan,
+        "figure_contract_gate": figure_contract_gate,
         "plotting_requirements": plotting_requirements,
         "review_task_coverage": review_task_coverage,
         "declared_outputs": declared_outputs,

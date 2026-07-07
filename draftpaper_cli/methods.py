@@ -20,6 +20,7 @@ from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
+from .writing_brief import METHOD_WRITING_BRIEF_HTML, METHOD_WRITING_BRIEF_JSON, build_method_writing_brief
 
 
 METHOD_INPUTS = [
@@ -37,11 +38,14 @@ METHOD_WRITING_INPUTS = [
     "methods/method_code_manifest.json",
     "methods/run_manifest.yaml",
     "methods/method_writing_context.json",
+    METHOD_WRITING_BRIEF_JSON,
 ]
 
 METHOD_OUTPUTS = [
     "methods/method_writing_context.json",
     "methods/method_writing_context.html",
+    METHOD_WRITING_BRIEF_JSON,
+    METHOD_WRITING_BRIEF_HTML,
     "methods/method_formula_manifest.json",
     "methods/method_formulas.tex",
     "methods/methods.tex",
@@ -394,7 +398,17 @@ def _entry(entry_id: str, name: str, latex: str, source: str, explanation: str, 
 
 def _formula_context_text(manifest: dict[str, Any], figure_metadata: dict[str, Any], method_context: dict[str, Any]) -> str:
     parts: list[str] = [json.dumps(manifest, ensure_ascii=False, default=str), json.dumps(figure_metadata, ensure_ascii=False, default=str)]
-    for relative in ["methods/method_code_manifest.json", "methods/analysis_code_manifest.json", "methods/method_blueprint.json", "methods/method_requirements.json", "research_plan/method_plan.json", "research_plan/figure_storyboard.json"]:
+    for relative in [
+        "project.json",
+        "project.yaml",
+        "methods/method_code_manifest.json",
+        "methods/analysis_code_manifest.json",
+        "methods/method_blueprint.json",
+        "methods/method_requirements.json",
+        "research_plan/method_plan.json",
+        "research_plan/figure_storyboard.json",
+        "results/figure_plan.json",
+    ]:
         project_path = method_context.get("project_path")
         if not project_path:
             continue
@@ -487,7 +501,7 @@ def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any], 
             "Area under the ROC curve",
             r"\begin{equation}\mathrm{AUC}=\int_{0}^{1}\mathrm{TPR}(u)\,d\mathrm{FPR}(u).\end{equation}",
             "verified metric output",
-            r"The true-positive rate $\mathrm{TPR}$ and false-positive rate $\mathrm{FPR}$ are evaluated across score thresholds $u$. For multiclass tasks, the manuscript should state whether one-vs-rest or macro-averaged AUC is used.",
+            r"The true-positive rate $\mathrm{TPR}$ and false-positive rate $\mathrm{FPR}$ are evaluated across score thresholds $u$. For multiclass tasks, the reported AUC must specify whether one-vs-rest or macro-averaged aggregation is used.",
             method_step="threshold-independent evaluation",
             used_by_figures=figure_ids,
         ))
@@ -583,6 +597,136 @@ def _strip_forbidden_paths(text: str) -> str:
     return text.strip()
 
 
+def _drop_internal_method_sentences(text: str) -> str:
+    cleaned = _strip_forbidden_paths(_clean_sentence(text))
+    if not cleaned:
+        return ""
+    pieces = re.split(r"(?<=[.!?])\s+", cleaned)
+    kept = []
+    forbidden = [
+        "method notes are maintained",
+        "synchronized by",
+        "this section should be regenerated",
+        "manuscript should",
+        "if later verification changes",
+        "documented analysis evidence",
+        "manifest",
+        "workflow",
+        "software operations",
+        "documented method component",
+    ]
+    for piece in pieces:
+        lowered = piece.lower()
+        if any(token in lowered for token in forbidden):
+            continue
+        if piece and piece not in kept:
+            kept.append(piece)
+    return " ".join(kept).strip()
+
+
+METHOD_TOKEN_LABELS = {
+    "event_level_samples": "event-level sample table",
+    "current_observation_tokens": "current-observation tokens",
+    "history_lc_tokens": "historical light-curve tokens",
+    "event_spectral_quick_features": "event-level spectral summary features",
+    "history_light_curve": "historical light curves",
+    "history_lc": "historical light curves",
+    "class_label": "class labels",
+    "source_id": "source identifier",
+    "event_id": "event identifier",
+    "train_validation_test_split": "train-validation-test split",
+    "source_holdout_validation": "source-level holdout validation",
+    "ablation_study": "ablation study",
+    "roc_auc": "ROC-AUC",
+    "f1_macro": "macro-F1",
+}
+
+
+def _humanize_method_text(text: str) -> str:
+    output = str(text or "")
+    for token, label in METHOD_TOKEN_LABELS.items():
+        output = re.sub(rf"\b{re.escape(token)}\b", label, output)
+    output = output.replace("software operations", "analytical steps")
+    output = re.sub(r"(^|(?<=[.!?])\s+)Use\s+", r"\1The analysis uses ", output)
+    output = re.sub(r"(^|(?<=[.!?])\s+)Build\s+from\s+", r"\1The model is built from ", output)
+    output = re.sub(r"(^|(?<=[.!?])\s+)Build\s+", r"\1The model is built to support ", output)
+    output = re.sub(r"(^|(?<=[.!?])\s+)Treat\s+", r"\1The planned comparisons treat ", output)
+    output = re.sub(r"(^|(?<=[.!?])\s+)Restrict claims to\s+", r"\1Claims are restricted to ", output)
+    output = re.sub(r";\s*do not claim\s+", "; claims do not extend to ", output)
+    output = output.replace("as planned model comparisons", "as model-comparison axes")
+    output = output.replace("Current planned modeling route:", "The modeling route combines")
+    return output
+
+
+def _method_role_label(role: str) -> str:
+    normalized = str(role or "").strip().lower()
+    labels = {
+        "figure_generation": "scientific figure synthesis",
+        "method_model_or_analysis": "model fitting and statistical analysis",
+        "method_support_library": "reusable analytical utilities",
+        "time_aware_transformer_training": "time-aware sequence classification",
+        "baseline_model": "baseline model comparison",
+        "ablation_study": "ablation analysis",
+        "spatial_block_validation": "spatially blocked validation",
+    }
+    return labels.get(normalized, normalized.replace("_", " ") or "method implementation")
+
+
+def _latex_formula_entries(context: dict[str, Any]) -> list[dict[str, Any]]:
+    payload = context.get("formula_manifest") if isinstance(context.get("formula_manifest"), dict) else {}
+    entries = payload.get("formulas") if isinstance(payload, dict) else []
+    if not isinstance(entries, list):
+        return []
+    return [entry for entry in entries if isinstance(entry, dict) and str(entry.get("latex") or "").strip()]
+
+
+def _render_formula_block(entries: list[dict[str, Any]], *, only_steps: set[str] | None = None) -> str:
+    rendered: list[str] = []
+    for entry in entries:
+        haystack = " ".join(str(entry.get(key) or "") for key in ["id", "name", "method_step", "source"]).lower()
+        if only_steps and not any(token in haystack for token in only_steps):
+            continue
+        name = _safe_latex_text(entry.get("name") or "Method expression")
+        latex = str(entry.get("latex") or "").strip()
+        if latex and "\\begin{equation}" not in latex:
+            latex = "\\begin{equation}" + latex + "\\end{equation}"
+        variable_text = _drop_internal_method_sentences(entry.get("variable_explanations") or "")
+        if not variable_text and entry.get("variables"):
+            variable_text = "Variables in this expression include " + ", ".join(str(item) for item in entry.get("variables") or []) + "."
+        variables = variable_text if ("$" in variable_text or "\\" in variable_text) else _safe_latex_text(variable_text)
+        rendered.append(f"{name}:\n{latex}\n{variables}".strip())
+    return "\n\n".join(rendered)
+
+
+def _formula_step_tokens(entries: list[dict[str, Any]]) -> set[str]:
+    text = " ".join(str(entry.get("id") or "") + " " + str(entry.get("method_step") or "") + " " + str(entry.get("name") or "") for entry in entries).lower()
+    tokens: set[str] = set()
+    if any(term in text for term in ["time", "position", "sequence", "pooling", "embedding"]):
+        tokens.add("sequence")
+    if any(term in text for term in ["classifier", "softmax", "cross-entropy", "loss", "prediction"]):
+        tokens.add("model")
+    if any(term in text for term in ["macro", "auc", "confusion", "ablation", "validation", "metric", "pearson", "correlation", "r2"]):
+        tokens.add("validation")
+    return tokens
+
+
+def _method_citation_paragraphs(project_dir: Path, existing: str) -> list[str]:
+    ensure_reference_usage_plan(project_dir)
+    entries = missing_entries_for_section(project_dir, "methods", existing)
+    if not entries:
+        return []
+    paragraphs: list[str] = []
+    sentences: list[str] = []
+    for entry in entries:
+        key = str(entry.get("citation_key") or "")
+        evidence = _drop_internal_method_sentences(entry.get("evidence_summary") or entry.get("title"))
+        if key and evidence:
+            sentences.append(f"{_safe_latex_text(evidence)} \\citep{{{key}}}.")
+    for index in range(0, len(sentences), 4):
+        paragraphs.append(" ".join(sentences[index:index + 4]))
+    return paragraphs
+
+
 def _method_family_text(requirements: dict[str, Any]) -> str:
     families = [str(item).replace("_", " ") for item in requirements.get("method_families") or []]
     if not families or families == ["method family requires user confirmation"]:
@@ -596,27 +740,27 @@ def _metrics_text(manifest: dict[str, Any], requirements: dict[str, Any]) -> str
     observed = metrics.get(primary)
     threshold = requirements.get("minimum_primary_metric")
     if observed is not None and threshold is not None:
-        return f"The verification run reports {primary}={observed} against a configured minimum value of {threshold}."
+        return f"Model evaluation reports {_humanize_method_text(str(primary))}={observed} against a predefined acceptance value of {threshold}."
     if observed is not None:
-        return f"The verification run reports {primary}={observed}; interpretation should remain conditional because no explicit threshold was configured."
+        return f"Model evaluation reports {_humanize_method_text(str(primary))}={observed}; interpretation remains conditional because no explicit acceptance value was configured."
     if metrics:
-        compact = ", ".join(f"{key}={value}" for key, value in list(metrics.items())[:5])
-        return "The verification run reports scalar outputs including " + compact + "."
-    return "The verification run completed without parsed scalar metrics, so the method narrative should focus on the validated workflow rather than performance magnitude."
+        compact = ", ".join(f"{_humanize_method_text(str(key))}={value}" for key, value in list(metrics.items())[:5])
+        return "Model evaluation reports scalar outputs including " + compact + "."
+    return "The implemented analysis completed without parsed scalar metrics, so the method narrative should focus on validated inputs, outputs, and claim boundaries rather than performance magnitude."
 
 
 def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[str, Any]], analysis_manifest: dict[str, Any]) -> str:
     observed = " ".join(_clean_sentence(item.get("text")) for item in observations if item.get("kind") in {"method_rationale", "agent_analysis", "code_design", "method_summary"})
     user_method = _clean_sentence(requirements.get("user_method"))
     if observed and user_method:
-        return (user_method + " " + observed)[:1600]
+        return _humanize_method_text(user_method + " " + observed)[:1600]
     if observed:
-        return observed[:1400]
+        return _humanize_method_text(observed)[:1400]
     if user_method:
-        return user_method
+        return _humanize_method_text(user_method)
     method_excerpt = _clean_sentence(analysis_manifest.get("method_plan_excerpt"))
     if method_excerpt:
-        return method_excerpt[:1000]
+        return _humanize_method_text(method_excerpt[:1000])
     code_plan = analysis_manifest.get("method_code_plan") or {}
     method_families = ", ".join(str(item).replace("_", " ") for item in code_plan.get("method_families") or [])
     validation_checks = ", ".join(str(item).replace("_", " ") for item in code_plan.get("validation_checks") or [])
@@ -630,7 +774,7 @@ def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[s
 def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any]) -> str:
     selected = analysis_manifest.get("selected_input_profile") or {}
     columns = selected.get("columns") or []
-    column_text = ", ".join(_strip_forbidden_paths(str(column)) for column in columns[:8])
+    column_text = ", ".join(_humanize_method_text(_strip_forbidden_paths(str(column))) for column in columns[:8])
     if column_text:
         return "The analysis uses the prepared scientific variables " + column_text + " to connect the data evidence with the planned analysis."
     inputs = manifest.get("input_data") or []
@@ -647,18 +791,18 @@ def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest:
     if isinstance(files, list) and files:
         roles = sorted({str(item.get("code_role") or "method_code") for item in files if isinstance(item, dict)})
         pieces.append(
-            f"The implemented method is supported by {len(files)} documented method component(s) covering "
-            + ", ".join(role.replace("_", " ") for role in roles[:5])
+            "The implemented analysis scripts cover "
+            + ", ".join(_method_role_label(role) for role in roles[:5])
             + "."
         )
     else:
         pieces.append("No dedicated method-code summary was found, so the method narrative must remain conservative.")
     if formula_count:
-        pieces.append(f"The mathematical description is organized around {formula_count} expression(s) derived from the implemented analysis.")
+        pieces.append("The mathematical specification covers representation, prediction, optimization, validation, and diagnostic metrics where supported by the implemented analysis.")
     else:
         pieces.append("No method formula has been extracted yet; formula-bearing methods should regenerate the method context before final Methods writing.")
     if trace_count:
-        pieces.append(f"The result figures are linked to {trace_count} documented analysis component(s), which constrains how the method can be described.")
+        pieces.append("Figure-linked summaries are used to align validation metrics and diagnostic quantities with the empirical outputs.")
     return " ".join(pieces)
 
 
@@ -704,6 +848,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     analysis_manifest = _read_json(state.path / "methods" / "method_code_manifest.json", {})
     if not analysis_manifest:
         analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
+    _write_method_formulas(state.path, manifest)
     formula_manifest = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
     figure_code_trace = _read_json(state.path / "results" / "figure_code_trace.json", {})
     method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
@@ -716,9 +861,9 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     verification_summary = _strip_forbidden_paths(_metrics_text(manifest, requirements))
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
-        claim_boundary = "Interpretation is bounded by the data feasibility gate: " + claim_boundary + "."
+        claim_boundary = "Interpretation is bounded by current data support: " + claim_boundary + "."
     else:
-        claim_boundary = "Interpretation should remain aligned with the current data and result-validity gates."
+        claim_boundary = "Interpretation remains aligned with the available data and validated empirical outputs."
     narrative_summary = " ".join([family_summary, data_role, analysis_steps, code_trace_summary, verification_summary, claim_boundary]).strip()
     context = {
         "project_id": state.metadata.get("project_id"),
@@ -738,6 +883,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
     }
+    context["writing_brief"] = build_method_writing_brief(state.path, context)
     context_path = state.path / "methods" / "method_writing_context.json"
     _write_json(context_path, context)
     write_html_report(state.path / "methods" / "method_writing_context.html", _render_method_context_md(context), title="Method Writing Context")
@@ -768,43 +914,89 @@ def _validate_successful_manifest(project_path: Path) -> dict[str, Any]:
 
 
 def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], context: dict[str, Any]) -> str:
-    data_role = _safe_latex_text(_strip_forbidden_paths(context.get("data_role", "")))
-    analysis_steps = _safe_latex_text(_strip_forbidden_paths(context.get("analysis_steps", "")))
-    verification = _safe_latex_text(_strip_forbidden_paths(context.get("verification_summary", "")))
-    code_trace = _safe_latex_text(_strip_forbidden_paths(context.get("code_trace_summary", "")))
-    boundary = _safe_latex_text(_strip_forbidden_paths(context.get("claim_boundary", "")))
-    family = _safe_latex_text(_strip_forbidden_paths(context.get("method_family_summary", "")))
-    formulas = ""
+    brief = context.get("writing_brief") if isinstance(context.get("writing_brief"), dict) else {}
+    stage_briefs = brief.get("stage_briefs") if isinstance(brief.get("stage_briefs"), list) else []
+    stage_goals = [
+        _drop_internal_method_sentences(item.get("writing_goal"))
+        for item in stage_briefs[:6]
+        if isinstance(item, dict) and item.get("writing_goal")
+    ]
+    data_role_raw = _drop_internal_method_sentences(context.get("data_role", ""))
+    analysis_steps_raw = _drop_internal_method_sentences(context.get("analysis_steps", ""))
+    verification_raw = _drop_internal_method_sentences(context.get("verification_summary", ""))
+    code_trace_raw = _drop_internal_method_sentences(context.get("code_trace_summary", ""))
+    boundary_raw = _drop_internal_method_sentences(context.get("claim_boundary", ""))
+    family_raw = _drop_internal_method_sentences(context.get("method_family_summary", ""))
+    formula_entries = _latex_formula_entries(context)
+    step_tokens = _formula_step_tokens(formula_entries)
     project_path = context.get("project_path")
-    if project_path:
-        formulas = _read_text(Path(str(project_path)) / "methods" / "method_formulas.tex").strip()
     citation_paragraphs: list[str] = []
     if project_path:
-        project_dir = Path(str(project_path))
-        ensure_reference_usage_plan(project_dir)
-        existing = "\n\n".join([family, data_role, analysis_steps, verification, boundary])
-        entries = missing_entries_for_section(project_dir, "methods", existing)
-        if entries:
-            sentences = []
-            for entry in entries:
-                key = str(entry.get("citation_key") or "")
-                evidence = _strip_forbidden_paths(_clean_sentence(entry.get("evidence_summary") or entry.get("title")))
-                if key and evidence:
-                    sentences.append(f"{_safe_latex_text(evidence)} \\citep{{{key}}}.")
-            for index in range(0, len(sentences), 4):
-                citation_paragraphs.append(
-                    "The retained method-oriented references define the methodological context for the verified analysis route. "
-                    + " ".join(sentences[index:index + 4])
-                )
-    formula_block = f"\n\n{formulas}\n" if formulas else "\n"
-    citation_block = ("\n\n" + "\n\n".join(citation_paragraphs)) if citation_paragraphs else ""
+        existing = "\n\n".join([family_raw, data_role_raw, analysis_steps_raw, verification_raw, boundary_raw])
+        citation_paragraphs = _method_citation_paragraphs(Path(str(project_path)), existing)
+
+    introduction = _safe_latex_text(
+        " ".join(
+            part for part in [
+                family_raw,
+                data_role_raw,
+                "The method is organized around sample construction, representation, model formulation, optimization, validation, and diagnostic metrics so that each empirical claim remains tied to the verified inputs and outputs.",
+            ] if part
+        )
+    )
+    stage_sentence = " ".join(stage_goals[:3])
+    design = _safe_latex_text(
+        " ".join(
+            part for part in [
+                analysis_steps_raw,
+                stage_sentence,
+                "The design therefore treats data construction, feature representation, model fitting, and validation as linked parts of the same empirical test.",
+            ] if part
+        )
+    )
+    trace = _safe_latex_text(code_trace_raw) if code_trace_raw else ""
+    model_formula_block = _render_formula_block(
+        formula_entries,
+        only_steps={"temporal", "sequence", "feature", "prediction", "optimization", "model", "softmax", "classifier", "loss"},
+    )
+    validation_formula_block = _render_formula_block(
+        formula_entries,
+        only_steps={"validation", "metric", "ablation", "classification", "association", "pearson", "correlation", "auc"},
+    )
+    if not model_formula_block and formula_entries:
+        split = max(1, len(formula_entries) // 2)
+        model_formula_block = _render_formula_block(formula_entries[:split])
+    if not validation_formula_block and len(formula_entries) > 1:
+        split = max(1, len(formula_entries) // 2)
+        validation_formula_block = _render_formula_block(formula_entries[split:])
+    if model_formula_block:
+        model_formula_block = "\n\n" + model_formula_block
+    if validation_formula_block:
+        validation_formula_block = "\n\n" + validation_formula_block
+    citation_block = ""
+    if citation_paragraphs:
+        citation_block = "\n\n" + "\n\n".join(citation_paragraphs)
+    representation_sentence = "Sequence or temporal representations are defined explicitly because the ordering, cadence, and masking of observations affect the information available to the model."
+    if "sequence" not in step_tokens:
+        representation_sentence = "Feature construction is described before model fitting so that the input variables and claim boundary remain clear."
+    if stage_goals:
+        representation_sentence += " " + " ".join(stage_goals[3:5])
+    validation_sentence = "Validation uses the verified outputs and declared metrics to determine whether the fitted model supports the planned empirical comparison."
+    if stage_goals[5:]:
+        validation_sentence += " " + " ".join(stage_goals[5:])
+    if boundary_raw:
+        validation_sentence += " " + boundary_raw
+    if verification_raw:
+        validation_sentence += " " + verification_raw
     return (
         "\\section{Methods}\n"
-        f"{family} {data_role} The methodological description follows the implemented analytical design and explains why the chosen model or statistical route is appropriate for the available variables, expected response, and scientific question. This keeps the method tied to the research plan while avoiding a procedural account of software operations.\n\n"
-        f"{analysis_steps} In manuscript form, these steps define the transformation from prepared data to interpretable empirical evidence: variables are selected or engineered according to the data gate, the analysis model is fitted or evaluated under the declared validation logic, and the resulting metrics and figures are interpreted only inside the claim boundary established by the project. {code_trace} If later verification changes the input data, validation split, model family, primary metric, or figure-generation code, this section should be regenerated before the Results and Discussion are revised.\n\n"
-        f"{verification} {boundary} The method description is therefore tied to successful execution and to the scientific structure of the analysis rather than to commands or storage details. The mathematical expressions below organize the Methods section: each expression is a compact description of the model objective, statistical relationship, validation metric, or diagnostic quantity implemented by the analysis code, with the variables explained in the surrounding prose."
-        f"{citation_block}"
-        f"{formula_block}"
+        f"{introduction}\n\n"
+        "\\subsection{Study Design and Input Representation}\n"
+        f"{design} {trace}\n\n"
+        "\\subsection{Model Formulation}\n"
+        f"{_safe_latex_text(representation_sentence)}{model_formula_block}{citation_block}\n\n"
+        "\\subsection{Validation and Metrics}\n"
+        f"{_safe_latex_text(validation_sentence.replace('verified outputs and declared metrics', 'held-out evaluation outputs and model metrics'))}{validation_formula_block}\n"
     )
 
 

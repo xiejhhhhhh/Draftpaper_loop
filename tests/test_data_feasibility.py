@@ -163,7 +163,7 @@ class DataFeasibilityGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Astronomy data description", field="astronomy machine learning")
             (project.path / "data" / "processed" / "events.csv").write_text(
-                "source_id,pha_file,bkg_pha_file,arf_file,rmf_file,lc_file,target\nS1,a,b,c,d,e,AGN\n",
+                "source_id,photon_dir,pha_file,bkg_pha_file,arf_file,rmf_file,lc_file,target\nS1,/private,a,b,c,d,e,AGN\n",
                 encoding="utf-8",
             )
             inventory_data(project.path)
@@ -179,10 +179,27 @@ class DataFeasibilityGateTests(unittest.TestCase):
             context = build_data_writing_context(project.path)
             tex = render_data_tex(context)
 
+            self.assertTrue((project.path / "data" / "data_writing_brief.json").exists())
+            self.assertTrue((project.path / "data" / "data_writing_brief.html").exists())
+            self.assertEqual(context["writing_brief"]["writing_mode"], "brief_guided_natural_prose")
             self.assertIn("source and background spectral products", tex)
             self.assertIn("effective-area response products", tex)
             self.assertIn("energy-redistribution response products", tex)
-            forbidden = ["local project artifact", "training_smoke", "XRB_verify", "TDE_verify", "pha_file", "bkg_pha_file", "arf_file", "rmf_file", r"C:\\private"]
+            forbidden = [
+                "local project artifact",
+                "training_smoke",
+                "XRB_verify",
+                "TDE_verify",
+                "pha_file",
+                "bkg_pha_file",
+                "arf_file",
+                "rmf_file",
+                "photon_dir",
+                "Environmental covariates include photon",
+                "The manuscript should",
+                "processed research processed research",
+                r"C:\\private",
+            ]
             for token in forbidden:
                 self.assertNotIn(token, tex)
 

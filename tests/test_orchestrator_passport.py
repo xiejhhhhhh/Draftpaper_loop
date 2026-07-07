@@ -363,11 +363,26 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "data" / "data_acquisition_tasks.json", {"status": "tasks_written", "task_count": 1, "tasks": []})
             refresh_project_passport(project.path, event="test_data_acquisition_tasks_written")
             plan_after_data_tasks = run_pipeline(project.path)
-            self.assertEqual(plan_after_data_tasks["next_action"]["command"], "plan-figures")
-            self.assertIn("--use-review-tasks", plan_after_data_tasks["next_action"]["cli"])
+            self.assertEqual(plan_after_data_tasks["next_action"]["command"], "prepare-method-blueprint")
+
+            _write_json(project.path / "methods" / "method_blueprint.json", {"status": "written"})
+            refresh_project_passport(project.path, event="test_method_blueprint_written")
+            method_feasibility = run_pipeline(project.path)
+            self.assertEqual(method_feasibility["next_action"]["command"], "assess-method-feasibility")
+
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"status": "written", "decision": "pass"})
+            refresh_project_passport(project.path, event="test_method_feasibility_written")
+            plan_after_method_gate = run_pipeline(project.path)
+            self.assertEqual(plan_after_method_gate["next_action"]["command"], "plan-figures")
+            self.assertIn("--use-review-tasks", plan_after_method_gate["next_action"]["cli"])
 
             _write_json(project.path / "results" / "figure_plan.json", {"status": "written", "used_review_tasks": True, "figures": []})
             refresh_project_passport(project.path, event="test_review_figure_plan_written")
+            contract_gate = run_pipeline(project.path)
+            self.assertEqual(contract_gate["next_action"]["command"], "assess-figure-contracts")
+
+            _write_json(project.path / "results" / "figure_contract_gate_report.json", {"status": "written", "decision": "pass"})
+            refresh_project_passport(project.path, event="test_review_figure_contract_gate_written")
             code_after_figures = run_pipeline(project.path)
             self.assertEqual(code_after_figures["next_action"]["command"], "generate-analysis-code")
             self.assertIn("--use-review-tasks", code_after_figures["next_action"]["cli"])

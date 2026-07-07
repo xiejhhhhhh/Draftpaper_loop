@@ -16,7 +16,7 @@ from draftpaper_cli.project_state import load_project
 from draftpaper_cli.result_validity import assess_result_validity
 from draftpaper_cli.results import inventory_results, write_results
 
-from tests.test_analysis_code_generation import prepare_codegen_project
+from tests.test_analysis_code_generation import prepare_codegen_project, write_passing_figure_contract_gate
 
 
 class MethodsResultsPipelineTests(unittest.TestCase):
@@ -25,6 +25,7 @@ class MethodsResultsPipelineTests(unittest.TestCase):
             project = create_project(root=tmp, idea="Pipeline coupling", field="astronomy machine learning")
             prepare_codegen_project(project.path)
             figure_plan = plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
             codegen = generate_analysis_code(project.path)
             verify_methods(
                 project.path,

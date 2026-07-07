@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Jinray Xie
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -25,14 +25,19 @@ from .stale_sync import detect_artifact_drift
 
 
 COMPLETE_STATUSES = {"draft", "approved", "completed"}
+BACKFILL_COMPATIBLE_STAGES = {"research_feasibility", "research_plan_feasibility", "method_feasibility", "figure_contracts"}
 
 STAGE_COMMANDS = {
     "references": "search-literature",
     "journal_profile": "resolve-journal-template",
+    "research_feasibility": "preflight-research-feasibility",
     "research_plan": "generate-plan",
+    "research_plan_feasibility": "assess-research-plan-feasibility",
     "data": "inventory-data",
     "method_plan": "collect-method-plan",
+    "method_feasibility": "assess-method-feasibility",
     "figure_plan": "plan-figures",
+    "figure_contracts": "assess-figure-contracts",
     "code": "generate-analysis-code",
     "methods": "verify-methods",
     "result_validity": "assess-result-validity",
@@ -47,6 +52,27 @@ STAGE_COMMANDS = {
 }
 
 MINIMUM_STAGE_OUTPUTS = {
+    "research_feasibility": [
+        "research_plan/research_preflight_feasibility.json",
+        "research_plan/research_preflight_feasibility.html",
+    ],
+    "research_plan_feasibility": [
+        "research_plan/research_plan_feasibility_report.json",
+        "research_plan/research_plan_feasibility_report.html",
+        "research_plan/research_degradation_options.json",
+        "research_plan/research_plan_revision_suggestions.json",
+        "research_plan/research_scope_decision.json",
+    ],
+    "method_feasibility": [
+        "methods/method_feasibility_report.json",
+        "methods/method_feasibility_report.html",
+        "methods/method_repair_plan.json",
+        "methods/method_degradation_options.json",
+    ],
+    "figure_contracts": [
+        "results/figure_contract_gate_report.json",
+        "results/figure_contract_gate_report.html",
+    ],
     "data": [
         "data/data_acquisition_plan.json",
         "data/data_inventory.json",
@@ -125,6 +151,20 @@ def _review_execution_action(project_path: Path, prefix: str) -> dict[str, Any] 
             "cli": _cli_for(project_path, "prepare-data-acquisition"),
             "reason": f"{prefix}; reviewer/rescue analysis tasks exist and missing-data requests need connector-aware acquisition tasks.",
         }
+    if not (project_path / "methods" / "method_blueprint.json").exists():
+        return {
+            "stage": "method_plan",
+            "command": "prepare-method-blueprint",
+            "cli": _cli_for(project_path, "prepare-method-blueprint"),
+            "reason": f"{prefix}; reviewer/rescue tasks need a method blueprint before revised figure contracts are executed.",
+        }
+    if not (project_path / "methods" / "method_feasibility_report.json").exists():
+        return {
+            "stage": "method_feasibility",
+            "command": "assess-method-feasibility",
+            "cli": _cli_for(project_path, "assess-method-feasibility"),
+            "reason": f"{prefix}; reviewer/rescue method support must be checked before revised figure contracts are executed.",
+        }
     figure_plan = _read_report(project_path, "results/figure_plan.json")
     if not figure_plan.get("used_review_tasks"):
         return {
@@ -132,6 +172,13 @@ def _review_execution_action(project_path: Path, prefix: str) -> dict[str, Any] 
             "command": "plan-figures",
             "cli": _cli_for(project_path, "plan-figures") + " --use-review-tasks",
             "reason": f"{prefix}; reviewer/rescue tasks exist and need a revised figure plan.",
+        }
+    if not (project_path / "results" / "figure_contract_gate_report.json").exists():
+        return {
+            "stage": "figure_contracts",
+            "command": "assess-figure-contracts",
+            "cli": _cli_for(project_path, "assess-figure-contracts"),
+            "reason": f"{prefix}; revised main figures need a passing or conditional figure-contract gate before code generation.",
         }
     analysis_manifest = _read_report(project_path, "methods/method_code_manifest.json") or _read_report(project_path, "methods/analysis_code_manifest.json")
     coverage = analysis_manifest.get("review_task_coverage") or {}
@@ -190,6 +237,40 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
 
 
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
+    plan_feasibility = _read_report(project_path, "research_plan/research_plan_feasibility_report.json")
+    if plan_feasibility and plan_feasibility.get("decision") == "blocked":
+        command = str(plan_feasibility.get("recommended_next_action") or "revise-research-plan")
+        if command not in {"prepare-data-acquisition", "assess-method-feasibility", "revise-research-plan"}:
+            command = "revise-research-plan"
+        return {
+            "stage": "research_plan_feasibility",
+            "command": command,
+            "cli": _cli_for(project_path, command),
+            "reason": "Research-plan feasibility is blocked; repair data/method support or revise the research scope before execution.",
+        }
+    method_feasibility = _read_report(project_path, "methods/method_feasibility_report.json")
+    if method_feasibility and method_feasibility.get("decision") == "blocked":
+        command = str(method_feasibility.get("recommended_next_action") or "prepare-method-blueprint")
+        if command not in {"prepare-data-acquisition", "collect-method-plan", "prepare-method-blueprint"}:
+            command = "prepare-method-blueprint"
+        return {
+            "stage": "method_feasibility",
+            "command": command,
+            "cli": _cli_for(project_path, command),
+            "reason": "Method feasibility is blocked; repair missing data roles or method templates before figure planning/code generation.",
+        }
+    figure_contracts = _read_report(project_path, "results/figure_contract_gate_report.json")
+    if figure_contracts and figure_contracts.get("decision") == "blocked":
+        action = figure_contracts.get("recommended_next_action") or {}
+        command = str(action.get("command") or "revise-research-plan")
+        if command not in {"repair-figure-data", "repair-figure-method", "revise-research-plan", "assess-figure-contracts"}:
+            command = "revise-research-plan"
+        return {
+            "stage": "figure_contracts",
+            "command": command,
+            "cli": _cli_for(project_path, command),
+            "reason": "Figure contract gate is blocked; contracted main results need data/method repair before code generation.",
+        }
     core_evidence = _read_report(project_path, "core_evidence/core_evidence_report.json")
     if core_evidence and core_evidence.get("decision") not in {"pass", "passed"}:
         action = (core_evidence.get("recommended_next_action") or {}).get("command")
@@ -296,6 +377,16 @@ def _review_sequence_action(project_path: Path, prefix: str) -> dict[str, Any]:
     }
 
 
+def _has_downstream_progress(stages: dict[str, Any], stage: str) -> bool:
+    if stage not in STAGE_ORDER:
+        return False
+    for later_stage in STAGE_ORDER[STAGE_ORDER.index(stage) + 1:]:
+        later_meta = stages.get(later_stage) or {}
+        if later_meta.get("status") in COMPLETE_STATUSES and not later_meta.get("stale"):
+            return True
+    return False
+
+
 def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
     stages = metadata.get("stages") or {}
     for stage in STAGE_ORDER:
@@ -303,6 +394,8 @@ def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
             continue
         stage_meta = stages.get(stage) or {}
         if not _stage_is_current(project_path, stage, stage_meta):
+            if stage in BACKFILL_COMPATIBLE_STAGES and _has_downstream_progress(stages, stage):
+                continue
             return stage
     return None
 
@@ -349,6 +442,19 @@ def _methods_writing_stage_command(project_path: Path) -> str:
     return "write-methods"
 
 
+
+def _method_feasibility_stage_command(project_path: Path) -> str:
+    if not (project_path / "methods" / "method_blueprint.json").exists():
+        return "prepare-method-blueprint"
+    return "assess-method-feasibility"
+
+
+def _figure_contract_stage_command(project_path: Path) -> str:
+    if not (project_path / "results" / "figure_contracts.json").exists():
+        return "plan-figures"
+    if not (project_path / "methods" / "method_feasibility_report.json").exists():
+        return "assess-method-feasibility"
+    return "assess-figure-contracts"
 def _figure_plan_stage_command(project_path: Path) -> str:
     if not (project_path / "methods" / "method_blueprint.json").exists():
         return "prepare-method-blueprint"
@@ -379,8 +485,12 @@ def _stage_command(project_path: Path, stage: str) -> str | None:
         return _data_stage_command(project_path)
     if stage == "data_writing":
         return _data_writing_stage_command(project_path)
+    if stage == "method_feasibility":
+        return _method_feasibility_stage_command(project_path)
     if stage == "figure_plan":
         return _figure_plan_stage_command(project_path)
+    if stage == "figure_contracts":
+        return _figure_contract_stage_command(project_path)
     if stage == "methods":
         return _methods_stage_command(project_path)
     if stage == "methods_writing":

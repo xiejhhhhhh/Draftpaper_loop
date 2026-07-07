@@ -153,7 +153,7 @@ class IntegrityGateTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (project_path / "results" / "results.tex").write_text(
-                "\\section{Results}\nThe analysis reports 6010 parsed events from 60 sources.\n",
+                "\\section{Results}\nThe final evidence base contains 6010 events from 60 sources.\n",
                 encoding="utf-8",
             )
 
@@ -162,6 +162,36 @@ class IntegrityGateTests(unittest.TestCase):
             self.assertEqual(report["status"], "failed")
             self.assertEqual(report["evidence_numbers"]["sample_composition"], {"event_count": 1025, "source_count": 11})
             self.assertIn("evidence_number_mismatch", {issue["code"] for issue in report["issues"]})
+
+    def test_integrity_gate_does_not_compare_context_specific_counts_to_main_sample(self) -> None:
+        from draftpaper_cli.integrity_gate import run_integrity_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = write_traceable_project(tmp)
+            (project_path / "results" / "tables" / "sample_composition.csv").write_text(
+                "category,event_count,source_count\nAGN,500,5\nTDE,26,1\nXRB,499,5\n",
+                encoding="utf-8",
+            )
+            (project_path / "data" / "data.tex").write_text(
+                "\\section{Data}\nThe study uses 1025 events from 11 sources. "
+                "A parser validation subset contains 26 parsed events.\n",
+                encoding="utf-8",
+            )
+            (project_path / "results" / "results.tex").write_text(
+                "\\section{Results}\nThe validation split contains 6010 events from 60 sources, "
+                "and the temporal encoder receives 49825 source-history tokens.\n",
+                encoding="utf-8",
+            )
+
+            report = run_integrity_gate(project_path)
+
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["evidence_numbers"]["mismatches"], [])
+            roles = {count["role"] for count in report["evidence_numbers"]["observed_counts"]}
+            self.assertIn("main_modeling_sample", roles)
+            self.assertIn("parser_validation_subset", roles)
+            self.assertIn("model_validation_subset", roles)
+            self.assertIn("history_token_count", roles)
 
     def test_cli_run_integrity_gate_uses_exit_code_for_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

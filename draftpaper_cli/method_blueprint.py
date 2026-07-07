@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +91,96 @@ def _missing_roles(required: list[str], available: list[str]) -> list[str]:
     return missing
 
 
+def _tokenize(text: Any) -> set[str]:
+    return {token for token in re.split(r"[^a-z0-9]+", str(text or "").lower()) if len(token) >= 3}
+
+
+def _template_search_text(template: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in ["template_id", "display_name", "discipline", "method_family"]:
+        parts.append(str(template.get(key) or ""))
+    for key in ["input_roles", "optional_roles", "figure_groups", "formula_families", "validation_checks", "aliases", "variants"]:
+        value = template.get(key)
+        if isinstance(value, list):
+            parts.extend(str(item) for item in value)
+    return " ".join(parts)
+
+
+def _context_search_text(context: dict[str, Any]) -> str:
+    pieces = [json.dumps(context.get("method_requirements") or {}, ensure_ascii=False, default=str)]
+    storyboard = context.get("research_storyboard") if isinstance(context.get("research_storyboard"), dict) else {}
+    method_plan = context.get("research_method_plan") if isinstance(context.get("research_method_plan"), dict) else {}
+    pieces.append(json.dumps(storyboard.get("figures") or [], ensure_ascii=False, default=str))
+    pieces.append(json.dumps(method_plan.get("method_tasks") or [], ensure_ascii=False, default=str))
+    review_tasks = context.get("review_tasks") if isinstance(context.get("review_tasks"), dict) else {}
+    pieces.append(json.dumps(review_tasks.get("tasks") or [], ensure_ascii=False, default=str))
+    pieces.append(str(context.get("research_plan_excerpt") or ""))
+    return " ".join(pieces)
+
+
+def _select_method_templates(hints: dict[str, Any], context: dict[str, Any], *, max_templates: int = 8) -> list[dict[str, Any]]:
+    templates = [dict(item) for item in hints.get("method_template_hints") or [] if isinstance(item, dict)]
+    if not templates:
+        return []
+    context_text = _context_search_text(context)
+    context_tokens = _tokenize(context_text)
+    requested_families = {
+        str(item).lower()
+        for item in (context.get("method_requirements") or {}).get("method_families") or []
+    }
+    scored: list[tuple[int, int, dict[str, Any]]] = []
+    for index, template in enumerate(templates):
+        template_text = _template_search_text(template)
+        template_tokens = _tokenize(template_text)
+        score = len(context_tokens & template_tokens)
+        family = str(template.get("method_family") or "").lower()
+        template_id = str(template.get("template_id") or "").lower()
+        if family in requested_families or template_id in requested_families:
+            score += 8
+        for alias in template.get("aliases") or []:
+            alias_text = str(alias).lower()
+            if alias_text and alias_text in context_text.lower():
+                score += 5
+        for group in template.get("figure_groups") or []:
+            if str(group).lower().replace("_", " ") in context_text.lower().replace("_", " "):
+                score += 4
+        if score > 0:
+            scored.append((score, -index, template))
+    if not scored:
+        primary_module = str((context.get("metadata") or {}).get("field") or "").lower()
+        primary_matches = [template for template in templates if str(template.get("discipline") or "").lower() in primary_module]
+        return primary_matches[:max_templates] if primary_matches else templates[: min(3, len(templates))]
+    scored.sort(reverse=True, key=lambda item: (item[0], item[1]))
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for _, _, template in scored:
+        template_id = str(template.get("template_id") or "")
+        if template_id in seen:
+            continue
+        selected.append(template)
+        seen.add(template_id)
+        if len(selected) >= max_templates:
+            break
+    return selected
+
+
+def _selected_template_values(templates: list[dict[str, Any]], key: str) -> list[str]:
+    values: list[str] = []
+    for template in templates:
+        raw = template.get(key)
+        if isinstance(raw, list):
+            candidates = raw
+        elif raw:
+            candidates = [raw]
+        else:
+            candidates = []
+        for item in candidates:
+            text = str(item).strip()
+            if text and text not in values:
+                values.append(text)
+    return values
+
+
 def _render_blueprint_markdown(blueprint: dict[str, Any]) -> str:
     module = blueprint.get("discipline_module") or {}
     lines = [
@@ -110,6 +201,10 @@ def _render_blueprint_markdown(blueprint: dict[str, Any]) -> str:
     lines.append(f"Missing roles: {', '.join(contract.get('missing_roles') or []) or 'none'}")
     lines.extend(["", "## Method Code Plan", ""])
     code_plan = blueprint.get("method_code_plan") or {}
+    selected = code_plan.get("selected_method_templates") or []
+    if selected:
+        lines.append("Selected method templates: " + ", ".join(str(item) for item in selected))
+        lines.append("")
     for family in code_plan.get("method_families") or []:
         lines.append(f"- {family}")
     lines.extend(["", "## Validation Checks", ""])
@@ -162,9 +257,18 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     }
     hints = module.method_blueprint_hints(context)
     available_roles = _available_data_roles(inventory, acquisition_plan)
-    required_roles = list(hints.get("data_contract_hints") or [])
+    selected_templates = _select_method_templates(hints, context)
+    selected_roles = _selected_template_values(selected_templates, "input_roles")
+    required_roles = selected_roles or list(hints.get("data_contract_hints") or [])
     missing_roles = _missing_roles(required_roles, available_roles)
-    method_families = list(dict.fromkeys(list(requirements.get("method_families") or []) + list(hints.get("method_code_hints") or [])))
+    selected_method_families = _selected_template_values(selected_templates, "method_family")
+    selected_template_ids = _selected_template_values(selected_templates, "template_id")
+    method_families = list(dict.fromkeys(list(requirements.get("method_families") or []) + selected_method_families + selected_template_ids))
+    if not method_families:
+        method_families = list(hints.get("method_code_hints") or [])
+    validation_checks = list(dict.fromkeys(_selected_template_values(selected_templates, "validation_checks") or list(hints.get("validation_hints") or [])))
+    figure_families = list(dict.fromkeys(_selected_template_values(selected_templates, "figure_groups") or list(hints.get("figure_hints") or [])))
+    formula_families = list(dict.fromkeys(_selected_template_values(selected_templates, "formula_families") or list(hints.get("formula_hints") or [])))
     method_data_contract = {
         "status": "conditional" if missing_roles else "ready",
         "required_roles": required_roles,
@@ -172,12 +276,14 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "missing_roles": missing_roles,
         "selected_input_hint": ((inventory.get("files") or [{}])[0].get("path") if isinstance(inventory, dict) and inventory.get("files") else ""),
         "data_to_method_principle": "Data artifacts must enter method code through declared roles before any figure or claim is generated.",
+        "selection_policy": "Required roles are taken from method templates selected for this research plan, not from the full composite discipline catalog.",
     }
     method_code_plan = {
         "status": "planned",
         "method_families": method_families,
-        "validation_checks": list(hints.get("validation_hints") or []),
-        "figure_families": list(hints.get("figure_hints") or []),
+        "validation_checks": validation_checks,
+        "figure_families": figure_families,
+        "selected_method_templates": selected_template_ids,
         "storyboard_method_tasks": list(research_method_plan.get("method_tasks") or []) if isinstance(research_method_plan, dict) else [],
         "storyboard_figures": list(research_storyboard.get("figures") or []) if isinstance(research_storyboard, dict) else [],
         "figure_policy": hints.get("figure_policy") or {},
@@ -187,7 +293,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     }
     method_formula_plan = {
         "status": "planned",
-        "formula_families": list(hints.get("formula_hints") or []),
+        "formula_families": formula_families,
         "source": "discipline_module_and_verified_method_outputs",
     }
     blueprint = {
@@ -205,6 +311,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "method_formula_plan": method_formula_plan,
         "data_acquisition_hints": hints.get("data_acquisition_hints") or [],
         "method_template_hints": hints.get("method_template_hints") or [],
+        "selected_method_template_hints": selected_templates,
         "review_rule_hints": hints.get("review_rule_hints") or [],
         "composite_discipline": hints.get("composite_discipline") or {},
         "review_task_count": len(review_tasks.get("tasks") or []) if isinstance(review_tasks, dict) else 0,

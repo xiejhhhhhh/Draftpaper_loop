@@ -30,6 +30,8 @@ class ProjectScaffoldTests(unittest.TestCase):
             expected_dirs = [
                 "idea",
                 "research_plan",
+                "research_feasibility",
+                "research_plan_feasibility",
                 "references",
                 "journal_profile",
                 "introduction",
@@ -38,6 +40,9 @@ class ProjectScaffoldTests(unittest.TestCase):
                 "data/processed",
                 "data/scripts",
                 "method_plan",
+                "method_feasibility",
+                "figure_plan",
+                "figure_contracts",
                 "methods",
                 "methods/scripts",
                 "methods/src",
@@ -69,8 +74,14 @@ class ProjectScaffoldTests(unittest.TestCase):
             self.assertEqual(metadata["stages"]["research_plan"]["status"], "pending")
             self.assertEqual(metadata["stages"]["references"]["status"], "pending")
             self.assertEqual(metadata["stages"]["journal_profile"]["depends_on"], ["idea"])
-            self.assertEqual(metadata["stages"]["research_plan"]["depends_on"], ["references", "journal_profile"])
-            self.assertEqual(metadata["stages"]["method_plan"]["depends_on"], ["research_plan", "references", "data"])
+            self.assertEqual(metadata["stages"]["research_feasibility"]["depends_on"], ["references", "journal_profile"])
+            self.assertEqual(metadata["stages"]["research_plan"]["depends_on"], ["research_feasibility"])
+            self.assertEqual(metadata["stages"]["research_plan_feasibility"]["depends_on"], ["research_plan"])
+            self.assertEqual(metadata["stages"]["method_plan"]["depends_on"], ["research_plan_feasibility", "references", "data"])
+            self.assertEqual(metadata["stages"]["method_feasibility"]["depends_on"], ["method_plan", "data"])
+            self.assertEqual(metadata["stages"]["figure_plan"]["depends_on"], ["method_feasibility", "data", "references", "journal_profile"])
+            self.assertEqual(metadata["stages"]["figure_contracts"]["depends_on"], ["figure_plan", "method_feasibility", "data"])
+            self.assertEqual(metadata["stages"]["code"]["depends_on"], ["figure_contracts", "method_plan", "data", "references"])
             self.assertEqual(metadata["stages"]["core_evidence"]["depends_on"], ["result_validity", "figure_plan", "methods", "data"])
             self.assertEqual(metadata["stages"]["results"]["depends_on"], ["core_evidence"])
             self.assertEqual(metadata["stages"]["introduction"]["depends_on"], ["research_plan", "references", "journal_profile", "core_evidence"])

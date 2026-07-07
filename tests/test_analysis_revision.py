@@ -13,6 +13,7 @@ from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import update_stage_status
+from tests.test_analysis_code_generation import write_passing_figure_contract_gate
 
 
 def write_inventory(project_path: Path, columns: list[str]) -> None:
@@ -235,6 +236,7 @@ class AnalysisRevisionTests(unittest.TestCase):
             write_review_inputs(project.path)
             prepare_analysis_revision(project.path)
             plan_figures(project.path, use_review_tasks=True)
+            write_passing_figure_contract_gate(project.path)
 
             result = generate_analysis_code(project.path, use_review_tasks=True)
             manifest = json.loads((project.path / "methods" / "analysis_code_manifest.json").read_text(encoding="utf-8"))

@@ -169,6 +169,46 @@ def write_storyboard_contract(project_path: Path) -> None:
     (project_path / "research_plan" / "method_plan.json").write_text(json.dumps(method_plan), encoding="utf-8")
 
 
+def write_passing_figure_contract_gate(project_path: Path) -> None:
+    from draftpaper_cli.figure_contract_gate import assess_figure_contracts
+
+    contracts_path = project_path / "results" / "figure_contracts.json"
+    contracts = json.loads(contracts_path.read_text(encoding="utf-8")) if contracts_path.exists() else {"contracts": []}
+    required_roles: list[str] = []
+    for contract in contracts.get("contracts") or []:
+        if not isinstance(contract, dict):
+            continue
+        required_roles.extend(str(role) for role in contract.get("required_data") or [])
+        required_roles.extend(str(role) for role in contract.get("required_data_roles") or [])
+    available_roles = list(dict.fromkeys(required_roles + [
+        "local_data",
+        "tabular_data",
+        "sample_records",
+        "processed_dataset",
+        "label_or_response",
+        "spectral_or_remote_sensing_features",
+        "time_series",
+        "validation_design",
+    ]))
+    (project_path / "data" / "data_role_coverage_report.json").write_text(
+        json.dumps({
+            "status": "written",
+            "decision": "pass",
+            "required_roles": required_roles,
+            "available_roles": available_roles,
+            "missing_roles": [],
+            "blocking_missing_roles": [],
+            "partial_missing_roles": [],
+        }, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (project_path / "methods" / "method_feasibility_report.json").write_text(
+        json.dumps({"status": "written", "decision": "pass", "issues": []}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    assess_figure_contracts(project_path)
+
+
 class AnalysisCodeGenerationTests(unittest.TestCase):
     def test_generate_analysis_code_writes_manifest_and_runnable_code(self) -> None:
         from draftpaper_cli.analysis_code import generate_analysis_code
@@ -178,6 +218,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             project = create_project(root=tmp, idea="X-ray flaring source classification", field="astronomy machine learning")
             prepare_codegen_project(project.path)
             figure_plan = plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
 
             result = generate_analysis_code(project.path)
 
@@ -273,6 +314,8 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI codegen", field="astronomy machine learning")
             prepare_codegen_project(project.path)
+            plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
 
             completed = subprocess.run(
                 [
@@ -315,6 +358,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
                 minimum_primary_metric=0.05,
             )
             plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
 
             generate_analysis_code(project.path)
 
@@ -338,6 +382,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
                     self.assertEqual(item["required_inputs"], ["data/processed/wheat_ndvi_yield_proxy.csv"])
                     self.assertNotIn("cluster", " ".join(item.get("required_columns") or []).lower())
             self.assertTrue(all(item.get("no_flowchart_fallback") is True for item in figure_specs if item.get("generation_mode") == "generated_code"))
+            write_passing_figure_contract_gate(project.path)
 
             codegen = generate_analysis_code(project.path)
             requirements_text = (project.path / "methods" / "requirements-publication.txt").read_text(encoding="utf-8")
@@ -368,6 +413,7 @@ class AnalysisCodeGenerationTests(unittest.TestCase):
             write_storyboard_contract(project.path)
 
             plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
             figure_plan = json.loads((project.path / "results" / "figure_plan.json").read_text(encoding="utf-8"))
             storyboard_figures = [item for item in figure_plan["figures"] if item.get("source") == "research_storyboard"]
             self.assertGreaterEqual(len(storyboard_figures), 5)

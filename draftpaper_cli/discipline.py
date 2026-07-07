@@ -238,12 +238,52 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         "engineering": engineering_score,
     }
 
+    def select_primary_discipline() -> str:
+        """Choose the subject discipline before method-only secondaries.
+
+        The discipline profile is later used to select data, method, and review
+        plugins. A project can mention generic method terms such as
+        classification, validation, treatment, or signal while still being an
+        astronomy or geography paper. The primary module should therefore be the
+        strongest subject domain, while method families such as machine learning
+        remain secondary modules unless no subject domain is detected.
+        """
+
+        subject_priority = [
+            "astronomy",
+            "geography",
+            "medicine",
+            "biology",
+            "bioinformatics",
+            "finance",
+            "engineering",
+            "ecology",
+        ]
+        subject_scores = {
+            discipline: scores.get(discipline, 0)
+            for discipline in subject_priority
+            if scores.get(discipline, 0) >= 2
+        }
+        if subject_scores:
+            return max(
+                subject_scores,
+                key=lambda item: (subject_scores[item], -subject_priority.index(item)),
+            )
+        if machine_learning_score >= 2:
+            return "machine_learning"
+        return "default"
+
+    primary_discipline = select_primary_discipline()
+
     def with_composite_fields(profile: dict[str, Any]) -> dict[str, Any]:
         primary = str(profile.get("discipline") or "default")
-        secondaries = [
-            discipline for discipline, score in scores.items()
-            if discipline != primary and score >= 2
-        ]
+        secondaries = []
+        for discipline, score in scores.items():
+            if discipline == primary:
+                continue
+            threshold = 2 if discipline == "machine_learning" else 4
+            if score >= threshold:
+                secondaries.append(discipline)
         modules = ["default"]
         if primary != "default":
             modules.append(primary)
@@ -257,7 +297,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         profile["is_composite"] = len([item for item in modules if item != "default"]) > 1
         return profile
 
-    if bioinformatics_score >= 2:
+    if primary_discipline == "bioinformatics":
         subdisciplines = []
         if any(term in lowered for term in ("geo", "sra", "ena")):
             subdisciplines.append("public_repository")
@@ -272,7 +312,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in bioinformatics_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["bioinformatics"],
         })
-    if medicine_score >= 2:
+    if primary_discipline == "medicine":
         subdisciplines = []
         if any(term in lowered for term in ("ehr", "patient", "cohort")):
             subdisciplines.append("clinical_cohort")
@@ -287,7 +327,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in medicine_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["medicine"],
         })
-    if biology_score >= 2:
+    if primary_discipline == "biology":
         subdisciplines = []
         if any(term in lowered for term in ("gene", "differential expression", "fold change", "fdr")):
             subdisciplines.append("molecular_analysis")
@@ -302,7 +342,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in biology_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["biology"],
         })
-    if finance_score >= 2:
+    if primary_discipline == "finance":
         subdisciplines = []
         if any(term in lowered for term in ("event study", "return", "stock", "market")):
             subdisciplines.append("empirical_asset_pricing")
@@ -317,7 +357,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in finance_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["finance"],
         })
-    if engineering_score >= 2:
+    if primary_discipline == "engineering":
         subdisciplines = []
         if any(term in lowered for term in ("sensor", "signal")):
             subdisciplines.append("signal_processing")
@@ -332,7 +372,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in engineering_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["engineering"],
         })
-    if ecology_score >= 2:
+    if primary_discipline == "ecology":
         subdisciplines = []
         if any(term in lowered for term in ("environmental monitoring", "water quality", "pollution")):
             subdisciplines.append("environmental_monitoring")
@@ -347,7 +387,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in ecology_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["ecology"],
         })
-    if geography_score >= 2:
+    if primary_discipline == "geography":
         subdisciplines = []
         if any(term in lowered for term in ("remote sensing", "ndvi", "vegetation index", "raster", "google earth engine", "gee", "geotiff")):
             subdisciplines.append("remote_sensing")
@@ -362,7 +402,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in geography_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["geography"],
         })
-    if astronomy_score >= 2:
+    if primary_discipline == "astronomy":
         subdisciplines = []
         if any(term in lowered for term in ("light curve", "flare", "time series", "transient", "tde")):
             subdisciplines.append("time_series")
@@ -381,7 +421,7 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "matched_terms": [term for term in astronomy_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["astronomy"],
         })
-    if machine_learning_score >= 2:
+    if primary_discipline == "machine_learning":
         subdisciplines = []
         if any(term in lowered for term in ("classification", "classifier", "f1", "accuracy")):
             subdisciplines.append("supervised_learning")

@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Jinray Xie
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -38,7 +38,9 @@ from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pd
 from .literature_search import search_literature_for_project
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
+from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
 from .figure_plan import FigurePlanError, plan_figures
+from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
 from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_figure_data, repair_figure_method
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
@@ -75,6 +77,7 @@ from .research_code_mining import (
     score_research_repos,
 )
 from .research_plan import MissingReferencesError, NoveltyOverlapError, generate_research_plan
+from .research_feasibility import ResearchFeasibilityError, assess_research_plan_feasibility, preflight_research_feasibility, revise_research_plan
 from .review_revision import (
     ReviewRevisionError,
     apply_revision,
@@ -168,9 +171,18 @@ def build_parser() -> argparse.ArgumentParser:
     journal.add_argument("--guideline-url", default=None, help="Journal author-guidelines URL when no Overleaf template exists.")
     journal.add_argument("--from-html", default=None, help="Use a local HTML file as the template/guideline source.")
 
+    preflight = subparsers.add_parser("preflight-research-feasibility", help="Assess whether the idea, literature, and available data can support planning.")
+    preflight.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     plan = subparsers.add_parser("generate-plan", help="Generate a literature-informed formal research plan.")
     plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     plan.add_argument("--allow-high-similarity", action="store_true", help="Continue even when a highly similar prior paper is detected.")
+
+    plan_feasibility = subparsers.add_parser("assess-research-plan-feasibility", help="Check research-plan figure/storyboard feasibility before data and method execution.")
+    plan_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    revise_plan = subparsers.add_parser("revise-research-plan", help="Write scope-revision suggestions from feasibility reports.")
+    revise_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     intro = subparsers.add_parser("write-introduction", help="Write a traceable LaTeX Introduction section.")
     intro.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -224,6 +236,9 @@ def build_parser() -> argparse.ArgumentParser:
     figures = subparsers.add_parser("plan-figures", help="Observe project state and plan project-specific scientific figures.")
     figures.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     figures.add_argument("--use-review-tasks", action="store_true", help="Include review/actionable_analysis_tasks.json hints when planning figures.")
+
+    figure_contracts = subparsers.add_parser("assess-figure-contracts", help="Gate planned main figures against data, method, and storyboard contracts before code generation.")
+    figure_contracts.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     codegen = subparsers.add_parser("generate-analysis-code", help="Generate project-local analysis code from literature and method requirements.")
     codegen.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -600,6 +615,17 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "preflight-research-feasibility":
+        try:
+            result = preflight_research_feasibility(args.project)
+        except (ResearchFeasibilityError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked" else 1
     if args.command == "generate-plan":
         try:
             result = generate_research_plan(args.project, allow_high_similarity=args.allow_high_similarity)
@@ -619,6 +645,29 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "assess-research-plan-feasibility":
+        try:
+            result = assess_research_plan_feasibility(args.project)
+        except (ResearchFeasibilityError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked" else 1
+
+    if args.command == "revise-research-plan":
+        try:
+            result = revise_research_plan(args.project)
+        except (ResearchFeasibilityError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     if args.command == "write-introduction":
         try:
             result = write_introduction(args.project)
@@ -760,6 +809,17 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "assess-figure-contracts":
+        try:
+            result = assess_figure_contracts(args.project)
+        except (FigureContractGateError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked" else 1
     if args.command == "generate-analysis-code":
         try:
             result = generate_analysis_code(args.project, output_files=args.output, auto_plan_figures=args.auto_plan_figures, use_review_tasks=args.use_review_tasks)
@@ -865,6 +925,17 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "assess-method-feasibility":
+        try:
+            result = assess_method_feasibility(args.project)
+        except (MethodFeasibilityError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked" else 1
     if args.command == "write-methods":
         try:
             result = write_methods(args.project)
