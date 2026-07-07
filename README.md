@@ -361,9 +361,9 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Fixed data-role canonicalization so short aliases such as `ra` do not corrupt broader roles such as spectral or remote-sensing features.
 - Tightened composite-discipline method blueprints: the full plugin catalog remains available, but the method data contract is now built from templates selected for the current research plan, storyboard, method requirements, and review tasks.
 - Added integrity checks for writing-brief coverage, Methods formula rendering, and formula-variable explanation while keeping prose style open enough for Codex to write natural scientific paragraphs.
-- Local verification: `python -m pytest tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
+- Local verification: `python -m pytest tests/test_cli_feasibility_commands.py tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
 - Local verification: `python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
-- Full local verification: `python -m pytest`, 240 tests passed.
+- Full local verification: `python -m pytest`, 241 tests passed.
 
 ### v0.15.12 (2026-07-06) -- manuscript evidence consistency and no-delete citation audit
 

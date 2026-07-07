@@ -299,9 +299,9 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 修复 data role 归一化：`ra` 这类短别名不再误伤 spectral 或 remote-sensing features 等较长角色名称。
 - 收紧 composite discipline method blueprint：完整插件目录仍然保留，但当前论文的 method data contract 会优先基于 research plan、figure storyboard、method requirements 和 review tasks 选中的模板生成。
 - 升级 integrity gate：新增 writing brief 覆盖检查、Methods 公式渲染检查和公式变量解释检查，同时保留 Codex 写出自然科研段落的空间。
-- 本地验证：`python -m pytest tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
+- 本地验证：`python -m pytest tests/test_cli_feasibility_commands.py tests/test_research_feasibility.py tests/test_research_plan_feasibility_gate.py tests/test_method_feasibility.py tests/test_figure_contract_gate.py tests/test_orchestrator_research_feasibility_routing.py`
 - 本地验证：`python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
-- 全量验证：`python -m pytest`，240 tests passed。
+- 全量验证：`python -m pytest`，241 tests passed。
 
 ### v0.15.12 (2026-07-06) -- 正文证据一致性与不删文献的引用核查
 

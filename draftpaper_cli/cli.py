@@ -233,6 +233,9 @@ def build_parser() -> argparse.ArgumentParser:
     method_blueprint = subparsers.add_parser("prepare-method-blueprint", help="Build a discipline-aware data-to-method code blueprint.")
     method_blueprint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    method_feasibility = subparsers.add_parser("assess-method-feasibility", help="Check method data contracts and executable method support before figure planning.")
+    method_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     figures = subparsers.add_parser("plan-figures", help="Observe project state and plan project-specific scientific figures.")
     figures.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     figures.add_argument("--use-review-tasks", action="store_true", help="Include review/actionable_analysis_tasks.json hints when planning figures.")
