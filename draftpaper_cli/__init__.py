@@ -57,6 +57,7 @@ from .review_revision import (
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, infer_review_discipline, propose_review_engineering_plan
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
+from .writing_style import WritingStyleError, learn_writing_style_from_draft
 
 __all__ = [
     "InvalidStageStatusError",
@@ -87,6 +88,7 @@ __all__ = [
     "IntegrityGateError",
     "ReviewRevisionError",
     "ReviewEngineError",
+    "WritingStyleError",
     "UnknownStageError",
     "create_project",
     "load_project",
@@ -143,4 +145,5 @@ __all__ = [
     "generate_revision_plan",
     "apply_revision",
     "re_review",
+    "learn_writing_style_from_draft",
 ]

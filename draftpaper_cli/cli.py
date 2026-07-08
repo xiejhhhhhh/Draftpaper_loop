@@ -93,6 +93,7 @@ from .result_validity import ResultValidityError, assess_result_validity
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .template_registry import validate_template_registry
+from .writing_style import WritingStyleError, learn_writing_style_from_draft
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
 
 
@@ -269,8 +270,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify = subparsers.add_parser("verify-methods", help="Run method code and write methods/run_manifest.yaml.")
     verify.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     verify.add_argument("--command", dest="method_command", help="Optional legacy string command override. Defaults to methods/method_code_manifest.json verify_command_argv, then legacy verify_command.")
-    verify.add_argument("--output", action="append", default=[], help="Project-relative output file that must exist after the command.")
-    verify.add_argument("--input", action="append", default=[], help="Project-relative input data file used by the method command.")
+    verify.add_argument("--output", action="append", default=None, help="Project-relative output file that must exist after the command.")
+    verify.add_argument("--input", action="append", default=None, help="Project-relative input data file used by the method command.")
 
     methods = subparsers.add_parser("write-methods", help="Write methods.tex after successful method verification.")
     methods.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -423,6 +424,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     rereview = subparsers.add_parser("re-review", help="Rerun gate diagnosis, reviewer pass, and revision planning.")
     rereview.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    style = subparsers.add_parser("learn-writing-style-from-draft", help="Extract non-verbatim writing style signals from an approved draft.")
+    style.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    style.add_argument("--draft", required=True, help="Path to an approved .tex or text draft used only for style-signal extraction.")
     return parser
 
 
@@ -1389,6 +1394,15 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = re_review(args.project)
         except ReviewRevisionError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "learn-writing-style-from-draft":
+        try:
+            result = learn_writing_style_from_draft(args.project, args.draft)
+        except (WritingStyleError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

@@ -150,6 +150,10 @@ def _generated_figure_outputs(figure_plan: dict[str, Any]) -> list[str]:
     for item in figure_plan.get("figures") or []:
         if item.get("generation_mode") != "generated_code":
             continue
+        if str(item.get("manuscript_role") or "").lower() == "appendix":
+            continue
+        if item.get("counts_toward_main_figures") is False:
+            continue
         path = str(item.get("path") or "").replace("\\", "/").strip()
         if path:
             outputs.append(path)
@@ -221,6 +225,60 @@ from scientific_plotting import render_scientific_figure, write_figure_metadata_
 
 
 PIPELINE_MANIFEST: dict[str, Any] = json.loads({manifest_literal!r})
+
+
+def _normalized_tokens(values: list[Any] | set[Any] | tuple[Any, ...]) -> set[str]:
+    tokens = set()
+    for value in values or []:
+        text = str(value or "").strip().lower()
+        if not text:
+            continue
+        tokens.add(text)
+        tokens.add(text.replace("_", " "))
+        tokens.add(text.replace(" ", "_"))
+    return tokens
+
+
+def _available_data_roles() -> set[str]:
+    coverage = PIPELINE_MANIFEST.get("data_role_coverage") or {{}}
+    roles = coverage.get("available_roles") if isinstance(coverage, dict) else []
+    return _normalized_tokens(roles if isinstance(roles, list) else [])
+
+
+DATA_ROLE_ALIASES = {{
+    "class_label": ["label_or_response", "category", "target_or_label", "source_class"],
+    "current_observation_tokens": ["current_n_tokens", "token_count", "sample_records", "processed_dataset"],
+    "features": ["feature_matrix", "spectral_or_remote_sensing_features", "processed_dataset"],
+    "flux": ["cat_net_counts", "cat_src_significance", "evt_soft_counts", "evt_hard_counts", "light_curve", "time_series"],
+    "hardness": ["evt_soft_counts", "evt_hard_counts", "evt_pi_median", "spectral_or_remote_sensing_features"],
+    "light_curve": ["time_series", "lc_file", "n_lc_points", "n_lc_bins", "source/background light curves"],
+    "modality_availability": ["has_pha", "has_arf", "has_rmf", "has_photon_lc", "pha_file", "arf_file", "rmf_file"],
+    "predicted_label": ["label_or_response", "category", "target_or_label", "baseline_accuracy"],
+    "prediction_score": ["baseline_accuracy", "f1", "feature_matrix", "metrics"],
+    "spectral_features": ["spectral_or_remote_sensing_features", "pha_file", "arf_file", "rmf_file", "evt_pi_median", "evt_soft_counts", "evt_hard_counts", "features"],
+    "source_catalog": ["cat_file", "cat_n_rows", "source_or_object_group", "spatial_or_sky_coordinates"],
+    "validation_split": ["sample_records", "sample_group", "source_or_object_group", "label_or_response", "target_or_label"],
+}}
+
+
+def _data_token_available(token: Any, columns: set[str], available_roles: set[str]) -> bool:
+    normalized_options = _normalized_tokens([token])
+    alias_options = []
+    for option in normalized_options:
+        alias_options.extend(DATA_ROLE_ALIASES.get(option.replace(" ", "_"), []))
+        alias_options.extend(DATA_ROLE_ALIASES.get(option.replace("_", " "), []))
+    normalized_options |= _normalized_tokens(alias_options)
+    if normalized_options & available_roles:
+        return True
+    return any(option in column or column in option for option in normalized_options for column in columns)
+
+
+def _is_main_contract_figure(figure: dict[str, Any]) -> bool:
+    if str(figure.get("manuscript_role") or "").strip().lower() == "appendix":
+        return False
+    if figure.get("counts_toward_main_figures") is False:
+        return False
+    return str(figure.get("figure_role") or "main_result").strip().lower() in {{"main_result", "main", "result"}}
 
 
 def _delimiter_for(path: Path) -> str:
@@ -314,17 +372,24 @@ def _advanced_method_missing(figure: dict[str, Any]) -> bool:
     if not any(token in methods for token in advanced_tokens):
         return False
     source_status = str(figure.get("method_source_status") or "").lower()
+    if not source_status:
+        return False
     return source_status not in {{"implemented", "available", "project_code_available", "plugin_available"}}
 
 
 def _missing_data_for_figure(figure: dict[str, Any], rows: list[dict[str, str]]) -> list[str]:
+    available_roles = _available_data_roles()
     if not rows:
-        return list(figure.get("required_data") or figure.get("required_columns") or [])
-    columns = {{str(column).lower().replace("_", " ") for column in rows[0].keys()}}
+        required = list(figure.get("required_data") or figure.get("required_columns") or [])
+        return [str(item) for item in required if str(item).strip().lower() not in available_roles]
+    columns = _normalized_tokens(list(rows[0].keys()))
     missing = []
     for token in figure.get("required_data") or []:
-        normalized = str(token).lower().replace("_", " ")
-        if not any(normalized in column or column in normalized for column in columns):
+        if not _data_token_available(token, columns, available_roles):
+            missing.append(str(token))
+    for token in figure.get("required_columns") or []:
+        normalized_options = _normalized_tokens([token])
+        if not any(option == column for option in normalized_options for column in columns):
             missing.append(str(token))
     return missing
 
@@ -378,7 +443,10 @@ def write_figure_execution_diagnosis(root: Path, items: list[dict[str, Any]]) ->
         "policy": "failed_main_figures_must_repair_data_or_method_before_core_evidence_review",
         "figures": items,
         "status_counts": dict(status_counts),
-        "has_blocking_repairs": any(str(item.get("status") or "").endswith("_repairing") for item in items),
+        "has_blocking_repairs": any(
+            item.get("blocks_core_evidence") is True and str(item.get("status") or "").endswith("_repairing")
+            for item in items
+        ),
     }}
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     rows = [
@@ -635,9 +703,13 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
     figure_errors = []
     figure_diagnosis = []
     for figure in PIPELINE_MANIFEST.get("figure_plan", {{}}).get("figures", []):
+        blocks_core_evidence = _is_main_contract_figure(figure)
         diagnosis = _diagnose_figure_before_render(figure, rows)
+        diagnosis["blocks_core_evidence"] = blocks_core_evidence
         if diagnosis.get("status") != "ready_to_render":
             figure_diagnosis.append(diagnosis)
+            if blocks_core_evidence:
+                figure_errors.append(f"Figure {{diagnosis.get('figure_id') or diagnosis.get('storyboard_id')}} requires repair: {{diagnosis.get('status')}}")
             continue
         try:
             metadata = render_scientific_figure(root, figure, rows, metrics, numeric, label_column)
@@ -646,7 +718,8 @@ def run_pipeline(project_root: Path | None = None) -> dict[str, Any]:
             diagnosis["error"] = str(exc)
             diagnosis["recommended_repair"] = "repair-figure-method"
             figure_diagnosis.append(diagnosis)
-            figure_errors.append(str(exc))
+            if blocks_core_evidence:
+                figure_errors.append(str(exc))
             continue
         if metadata:
             diagnosis["status"] = "generated"
@@ -844,6 +917,7 @@ def generate_analysis_code(
         method_text=method_plan_text,
     )
     method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
+    data_role_coverage = _read_json(state.path / "data" / "data_role_coverage_report.json", {})
 
     manifest = {
         "status": "written",
@@ -865,6 +939,7 @@ def generate_analysis_code(
         "research_storyboard": research_storyboard if isinstance(research_storyboard, dict) else {},
         "research_method_plan": research_method_plan if isinstance(research_method_plan, dict) else {},
         "method_blueprint": method_blueprint,
+        "data_role_coverage": data_role_coverage if isinstance(data_role_coverage, dict) else {},
         "method_data_contract": method_blueprint.get("method_data_contract") if isinstance(method_blueprint, dict) else {},
         "method_code_plan": method_blueprint.get("method_code_plan") if isinstance(method_blueprint, dict) else {},
         "method_formula_plan": method_blueprint.get("method_formula_plan") if isinstance(method_blueprint, dict) else {},

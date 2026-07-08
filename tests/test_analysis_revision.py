@@ -218,6 +218,9 @@ class AnalysisRevisionTests(unittest.TestCase):
             self.assertIn("baseline_ablation", operations)
             self.assertIn("spatial_block_validation", operations)
             self.assertTrue(all(item.get("review_task_id") for item in review_figures))
+            self.assertTrue(all(item.get("figure_role") == "supporting" for item in review_figures))
+            self.assertTrue(all(item.get("manuscript_role") == "appendix" for item in review_figures))
+            self.assertTrue(all(item.get("counts_toward_main_figures") is False for item in review_figures))
 
     def test_generate_analysis_code_uses_review_tasks_and_declares_coverage_output(self) -> None:
         from draftpaper_cli.analysis_code import generate_analysis_code

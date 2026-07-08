@@ -265,8 +265,8 @@ def _resolve_verification_inputs(
         raise MethodsGateError(
             "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
         )
-    resolved_outputs = output_files if output_files is not None else _manifest_list(manifest, "declared_outputs", "output_files")
-    resolved_inputs = input_data if input_data is not None else _manifest_list(manifest, "input_data", "input_files")
+    resolved_outputs = output_files if output_files else _manifest_list(manifest, "declared_outputs", "output_files")
+    resolved_inputs = input_data if input_data else _manifest_list(manifest, "input_data", "input_files")
     selected_input = manifest.get("selected_input_data")
     if selected_input and str(selected_input) not in resolved_inputs:
         resolved_inputs.append(str(selected_input))
@@ -306,9 +306,15 @@ def _figure_contract_issues(project_path: Path) -> tuple[list[str], dict[str, An
     }
     issues: list[str] = []
     satisfied = 0
+    checked_contracts = []
     for contract in contracts:
         if not isinstance(contract, dict):
             continue
+        if str(contract.get("manuscript_role") or "").strip().lower() == "appendix":
+            continue
+        if contract.get("counts_toward_main_figures") is False:
+            continue
+        checked_contracts.append(contract)
         path_text = str(contract.get("path") or "").replace("\\", "/")
         storyboard_id = str(contract.get("storyboard_id") or contract.get("figure_id") or "")
         if not path_text:
@@ -331,7 +337,7 @@ def _figure_contract_issues(project_path: Path) -> tuple[list[str], dict[str, An
         satisfied += 1
     checks = {
         "status": "passed" if not issues else "failed",
-        "contract_count": len([item for item in contracts if isinstance(item, dict)]),
+        "contract_count": len(checked_contracts),
         "satisfied_count": satisfied,
         "issues": issues,
     }
@@ -447,6 +453,10 @@ def _read_metrics_from_outputs(project_path: Path, output_files: list[str]) -> d
 
 
 def _review_task_coverage_issues(project_path: Path) -> list[str]:
+    manifest = _method_code_manifest(project_path)
+    coverage_policy = manifest.get("review_task_coverage") if isinstance(manifest, dict) else None
+    if isinstance(coverage_policy, dict) and coverage_policy.get("enabled") is False:
+        return []
     tasks_path = project_path / "review" / "actionable_analysis_tasks.json"
     if not tasks_path.exists():
         return []
@@ -792,12 +802,32 @@ METHOD_TOKEN_LABELS = {
     "event_level_samples": "event-level sample table",
     "current_observation_tokens": "current-observation tokens",
     "history_lc_tokens": "historical light-curve tokens",
+    "history_event_id": "historical event identifier",
+    "history_obs_id": "historical observation identifier",
+    "history_detnam": "historical detector designation",
+    "current_n_tokens": "current-observation token count",
+    "history_n_tokens": "historical token count",
+    "has_pha": "availability of source spectral products",
+    "has_bkg_pha": "availability of background spectral products",
+    "has_arf": "availability of effective-area response products",
+    "has_rmf": "availability of redistribution response matrices",
+    "has_photon_lc": "availability of photon light-curve products",
     "event_spectral_quick_features": "event-level spectral summary features",
     "history_light_curve": "historical light curves",
     "history_lc": "historical light curves",
-    "class_label": "class labels",
+    "class_label": "class label",
+    "label": "class label",
     "source_id": "source identifier",
     "event_id": "event identifier",
+    "obs_id": "observation identifier",
+    "detnam": "detector metadata",
+    "category": "class label",
+    "classification": "classification target",
+    "version": "processing-version metadata",
+    "lv_version": "processing-version metadata",
+    "source_in_det": "detector-level source availability",
+    "obs_start_mjd": "observation start time",
+    "obs_end_mjd": "observation end time",
     "train_validation_test_split": "train-validation-test split",
     "source_holdout_validation": "source-level holdout validation",
     "ablation_study": "ablation study",
@@ -810,6 +840,9 @@ def _humanize_method_text(text: str) -> str:
     output = str(text or "")
     for token, label in METHOD_TOKEN_LABELS.items():
         output = re.sub(rf"\b{re.escape(token)}\b", label, output)
+        output = re.sub(rf"\b{re.escape(token.replace('_', '-'))}\b", label, output)
+    output = re.sub(r"\b(?:history|current)_[A-Za-z0-9_]+_id\b", "observation identifier", output, flags=re.I)
+    output = re.sub(r"\b[A-Za-z0-9_]+_(?:file|path|filename|pathname)\b", "data-product descriptor", output, flags=re.I)
     output = output.replace("software operations", "analytical steps")
     output = re.sub(r"(^|(?<=[.!?])\s+)Use\s+", r"\1The analysis uses ", output)
     output = re.sub(r"(^|(?<=[.!?])\s+)Build\s+from\s+", r"\1The model is built from ", output)
@@ -819,7 +852,75 @@ def _humanize_method_text(text: str) -> str:
     output = re.sub(r";\s*do not claim\s+", "; claims do not extend to ", output)
     output = output.replace("as planned model comparisons", "as model-comparison axes")
     output = output.replace("Current planned modeling route:", "The modeling route combines")
+    output = _canonicalize_method_label_text(output)
     return output
+
+
+def _canonicalize_method_label_text(text: str) -> str:
+    """Clean repeated labels created by layered field-name normalization."""
+    output = str(text or "")
+    replacements = {
+        "classification target target": "classification target",
+        "class label label": "class label",
+        "processing-processing-version metadata metadata": "processing-version metadata",
+        "processing-version metadata metadata": "processing-version metadata",
+        "metadata metadata": "metadata",
+        "detector detector metadata": "detector metadata",
+        "observation observation identifier": "observation identifier",
+        "identifier identifier": "identifier",
+        "products products": "products",
+        "processed research processed research materials": "processed research materials",
+    }
+    for old, new in replacements.items():
+        output = re.sub(re.escape(old), new, output, flags=re.I)
+    return output
+
+
+def _canonical_method_column_label(column: str) -> str:
+    """Map an input column or data role to a prose-safe scientific label."""
+    raw = _strip_forbidden_paths(str(column or "")).strip()
+    if not raw:
+        return ""
+    normalized = raw.lower().replace("-", "_")
+    if normalized in METHOD_TOKEN_LABELS:
+        return METHOD_TOKEN_LABELS[normalized]
+    label = _humanize_method_text(raw).strip()
+    label = re.sub(r"\b[A-Za-z0-9]+_[A-Za-z0-9_]+\b", lambda match: match.group(0).replace("_", " "), label)
+    return _canonicalize_method_label_text(label).strip()
+
+
+def _dedupe_method_labels(labels: list[str]) -> list[str]:
+    kept: list[str] = []
+    seen: set[str] = set()
+    for label in labels:
+        cleaned = _canonicalize_method_label_text(label).strip(" ,;.")
+        if not cleaned:
+            continue
+        key = re.sub(r"\s+", " ", cleaned.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(cleaned)
+    return kept
+
+
+def _code_output_role_labels(outputs: list[Any]) -> list[str]:
+    labels: list[str] = []
+    for item in outputs:
+        text = str(item or "").replace("\\", "/").lower()
+        if not text:
+            continue
+        if "generated_pipeline" in text or "run_analysis" in text:
+            labels.append("stage-owned analysis pipeline")
+        elif "scientific_plotting" in text or "plot" in text:
+            labels.append("publication figure utilities")
+        elif "test_" in text or "/tests/" in text:
+            labels.append("execution smoke tests")
+        elif "requirements" in text:
+            labels.append("declared analysis dependencies")
+        elif "manifest" in text:
+            labels.append("method-output trace records")
+    return _dedupe_method_labels(labels)
 
 
 def _method_role_label(role: str) -> str:
@@ -972,9 +1073,15 @@ def _analysis_steps_text(requirements: dict[str, Any], observations: list[dict[s
 def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any]) -> str:
     selected = analysis_manifest.get("selected_input_profile") or {}
     columns = selected.get("columns") or []
-    column_text = ", ".join(_humanize_method_text(_strip_forbidden_paths(str(column))) for column in columns[:8])
-    if column_text:
-        return "The analysis uses the prepared scientific variables " + column_text + " to connect the data evidence with the planned analysis."
+    role_labels: list[str] = []
+    for column in columns:
+        label = _canonical_method_column_label(str(column))
+        if label:
+            role_labels.append(label)
+    role_labels = _dedupe_method_labels(role_labels)
+    if role_labels:
+        column_text = ", ".join(role_labels[:10])
+        return "The analysis uses prepared scientific variable groups, including " + column_text + ", to connect the data evidence with the planned analysis."
     inputs = manifest.get("input_data") or []
     if inputs:
         return "The analysis uses user-specified, analysis-ready inputs rather than making unverified raw-data claims."
@@ -993,6 +1100,16 @@ def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest:
             + ", ".join(_method_role_label(role) for role in roles[:5])
             + "."
         )
+    elif isinstance(analysis_manifest, dict) and analysis_manifest.get("canonical_code_outputs"):
+        role_labels = _code_output_role_labels(analysis_manifest.get("canonical_code_outputs") or [])
+        if role_labels:
+            pieces.append(
+                "The implemented method package covers "
+                + ", ".join(role_labels[:5])
+                + "."
+            )
+        else:
+            pieces.append("The implemented method package records stage-owned analysis outputs, so the method narrative remains tied to verified execution rather than unrun design notes.")
     else:
         pieces.append("No dedicated method-code summary was found, so the method narrative must remain conservative.")
     if formula_count:

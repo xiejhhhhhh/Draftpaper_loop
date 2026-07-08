@@ -54,6 +54,11 @@ class ResultsManifestWriterTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["figures"][0]["path"], "results/figures/fig1.png")
             self.assertEqual(manifest["tables"][0]["path"], "results/tables/metrics.csv")
+            self.assertEqual(manifest["schema_version"], "v0.16.5")
+            self.assertIn("main_figures", manifest)
+            self.assertIn("appendix_figures", manifest)
+            self.assertIn("supporting_links", manifest)
+            self.assertIn("claim_boundaries", manifest)
             self.assertIn("result_claim", manifest["figures"][0])
 
     def test_write_results_requires_manifest_and_existing_files(self) -> None:
@@ -100,13 +105,16 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertTrue(tex.startswith("\\section{Results}"))
             self.assertIn("\\includegraphics", tex)
             self.assertIn("results/figures/risk_curve.png", tex)
-            self.assertIn("results/tables/metrics.csv", tex)
+            self.assertNotIn("results/tables/metrics.csv", tex)
+            self.assertNotIn("\\texttt", tex)
             self.assertNotIn("\\cite", tex)
             self.assertNotIn("\\subsection", tex)
             self.assertRegex(tex, r"Figure~\\ref\{fig:[^{}]+\}")
             self.assertLess(tex.index("The figure provides visual evidence"), tex.index("\\includegraphics"))
             self.assertLess(tex.index("risk_curve.png"), tex.index("\\end{figure}"))
             self.assertTrue(tex.rstrip().endswith("\\end{table}"))
+            self.assertIn("\\begin{minipage}{0.86\\linewidth}", tex)
+            self.assertNotIn("p{0.86\\linewidth}", tex)
             self.assertNotIn("This section does not use literature citations", tex)
             self.assertNotIn("local filenames", tex)
             self.assertNotIn("storage paths", tex)
@@ -166,7 +174,85 @@ class ResultsManifestWriterTests(unittest.TestCase):
             tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
             self.assertIn("Figure~\\ref{fig:main-panel}", tex)
             self.assertIn("Appendix Figure~\\ref{fig:diagnostic-panel}", tex)
-            self.assertIn("checks reliability or diagnostic stability", tex)
+            self.assertIn("Diagnostic or supporting evidence", tex)
+            self.assertNotIn("first establishes the main empirical pattern", tex)
+
+    def test_write_results_humanizes_internal_identifier_statistics(self) -> None:
+        from draftpaper_cli.results import write_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Identifier statistic cleanup", field="astronomy machine learning")
+            (project.path / "results" / "figures" / "coverage.png").write_bytes(b"fake image")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            prepare_passing_result_validity(project.path)
+            (project.path / "results" / "result_manifest.yaml").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "coverage-panel",
+                            "path": "results/figures/coverage.png",
+                            "caption_draft": "Coverage panel. The plotted evidence uses n=5980 usable observations.",
+                            "scientific_question": "What data coverage and label support are available?",
+                            "result_claim": "source_id has 5980 usable observations with mean 4.03e+04 and range 3.74e+04 to 1.97e+05.",
+                        }
+                    ],
+                    "tables": [
+                        {
+                            "id": "metrics-table",
+                            "path": "results/tables/metrics.csv",
+                            "caption_draft": "Metrics summary.",
+                            "result_claim": "The metric summary reports row_count=5.98e+03 with 5 numeric metrics available.",
+                        }
+                    ],
+                }),
+                encoding="utf-8",
+            )
+
+            write_results(project.path)
+            tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
+
+            self.assertIn("source-level coverage across 5980 usable observations", tex)
+            self.assertIn("the data coverage and label support", tex)
+            self.assertNotIn("source_id has", tex)
+            self.assertNotIn("row_count", tex)
+            self.assertNotIn("results/tables/metrics.csv", tex)
+
+    def test_write_results_interprets_nested_metric_statistics(self) -> None:
+        from draftpaper_cli.results import write_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Weak classifier evidence", field="astronomy machine learning")
+            (project.path / "results" / "figures" / "performance.png").write_bytes(b"fake image")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.50\n", encoding="utf-8")
+            prepare_passing_result_validity(project.path)
+            (project.path / "results" / "result_manifest.yaml").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "performance-panel",
+                            "path": "results/figures/performance.png",
+                            "caption_draft": "Baseline versus model performance. The plotted evidence uses n=5 usable observations.",
+                            "scientific_question": "Which data modality or method component contributes most to the result?",
+                            "result_claim": "The metric summary reports row_count=5.98e+03 and feature_column_count=11 with 5 numeric metrics available.",
+                            "metrics": {"row_count": 5980.0, "feature_column_count": 11, "class_count": 2, "f1": 0.500167, "counts": {"AGN": 2989, "XRB": 2991}},
+                        }
+                    ],
+                    "tables": [],
+                }),
+                encoding="utf-8",
+            )
+
+            write_results(project.path)
+            tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
+
+            self.assertIn("baseline-level decision boundary", tex)
+            self.assertIn("F1=0.5", tex)
+            self.assertIn("feature count=11", tex)
+            self.assertNotIn("unhashable", tex)
+            self.assertNotIn("row_count", tex)
+            self.assertNotIn(r"row\_count", tex)
+            self.assertNotIn("feature_column_count", tex)
+            self.assertNotIn(r"feature\_column\_count", tex)
 
     def test_write_results_is_idempotent_after_downstream_writing_when_inputs_are_unchanged(self) -> None:
         from draftpaper_cli.results import inventory_results, write_results
@@ -196,6 +282,87 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertFalse(state_after.metadata["stages"]["results"]["stale"])
             for stage in ["introduction", "data_writing", "methods_writing", "discussion"]:
                 self.assertFalse(state_after.metadata["stages"][stage]["stale"], stage)
+
+
+    def test_inventory_results_excludes_stale_unrendered_planned_figures(self) -> None:
+        from draftpaper_cli.results import inventory_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Stale supporting figure", field="astronomy machine learning")
+            figures_dir = project.path / "results" / "figures"
+            figures_dir.mkdir(parents=True, exist_ok=True)
+            (figures_dir / "main.png").write_bytes(b"fresh main image")
+            (figures_dir / "stale_supporting.png").write_bytes(b"old supporting image")
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            (project.path / "results" / "figure_plan.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "id": "main",
+                            "path": "results/figures/main.png",
+                            "generation_mode": "generated_code",
+                            "figure_role": "main_result",
+                            "manuscript_role": "main",
+                            "counts_toward_main_figures": True,
+                            "caption_draft": "Main empirical panel.",
+                            "result_claim_template": "The main panel supports the planned result.",
+                        },
+                        {
+                            "id": "stale_supporting",
+                            "path": "results/figures/stale_supporting.png",
+                            "generation_mode": "generated_code",
+                            "figure_role": "supporting",
+                            "manuscript_role": "appendix",
+                            "counts_toward_main_figures": False,
+                            "caption_draft": "Supporting diagnostic panel.",
+                            "result_claim_template": "This panel should only be used if it was rendered in the current run.",
+                        },
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "path": "results/figures/main.png",
+                            "n": 10,
+                            "statistics": {"f1": 0.88},
+                            "interpretation_summary": "The main panel reports F1=0.88.",
+                        }
+                    ]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_execution_diagnosis.json").write_text(
+                json.dumps({
+                    "figures": [
+                        {
+                            "figure_id": "main",
+                            "path": "results/figures/main.png",
+                            "status": "generated",
+                            "rendered_path": "results/figures/main.png",
+                        },
+                        {
+                            "figure_id": "stale_supporting",
+                            "path": "results/figures/stale_supporting.png",
+                            "status": "missing_data_repairing",
+                            "missing_data": ["history_detnam"],
+                        },
+                    ]
+                }),
+                encoding="utf-8",
+            )
+
+            result = inventory_results(project.path)
+
+            self.assertEqual(result["figure_count"], 1)
+            self.assertEqual(result["excluded_unrendered_figure_count"], 1)
+            manifest = json.loads((project.path / "results" / "result_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertEqual([item["path"] for item in manifest["figures"]], ["results/figures/main.png"])
+            self.assertEqual(manifest["excluded_unrendered_figures"][0]["path"], "results/figures/stale_supporting.png")
+            self.assertEqual(manifest["main_figures"][0]["path"], "results/figures/main.png")
+            self.assertEqual(manifest["appendix_figures"], [])
 
     def test_write_results_rejects_citation_in_manifest_claim(self) -> None:
         from draftpaper_cli.results import ResultsGateError, write_results

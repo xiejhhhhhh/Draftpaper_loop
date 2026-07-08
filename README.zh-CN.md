@@ -284,6 +284,42 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.16.9 (2026-07-08) -- 写作风格学习与完整天文学回归验证
+
+- 新增 `learn-writing-style-from-draft` 路径和 `writing_style.py` 风格画像，让已经人工认可的文稿提供非逐字复用的写作风格信号，同时不削弱证据门控。
+- 使用本地 time-aware flaring-source 天文学项目完成完整回归：重新刷新 research plan、data、method、figure、methods verification、APJS/AAS PDF 编译、integrity gate 和最终 quality gate。
+- 回归结果确认 6/6 个主图合同满足、13 张实际渲染科研图进入证据清单、4 张未渲染 supporting 图被排除在 result manifest 外、12/12 条 BibTeX 文献被正文覆盖，并且 Results 保持无引用、无小标题。
+
+### v0.16.8 (2026-07-08) -- Discussion 写作器重写与 artifact 清洗
+
+- 重写 Discussion 生成逻辑，禁止文件路径、图表路径、表格路径、manifest 名称和 Draftpaper-loop 实现语言进入论文正文。
+- 增加 Discussion 比较文献准备和 citation evidence 覆盖，让讨论部分可以对比结果与已有研究，同时延续“引用核查只修 claim 和引用位置，不删除已确认参考文献”的原则。
+- 新增 Discussion artifact sanitizer 和引用证据扩展的回归测试。
+
+### v0.16.7 (2026-07-08) -- Data/Methods 写作证据升级
+
+- 升级 Data 写作：保留样本角色、类别平衡、token 覆盖、模态可用性和 claim boundary 等科研细节，同时避免路径、文件名、脚本名和原始字段堆砌进入正文。
+- 升级 Methods 写作：读取阶段代码 manifest、公式提取、公式变量解释和 figure-code trace，使方法部分围绕样本构建、特征/token 构建、模型逻辑、验证设计、指标和 ablation 证据展开。
+- 增加 AASTeX 友好的 LaTeX 装配 fallback，包括作者信息占位、表格渲染和本地缺失 bibliography style 的回退，保证本地 review PDF 更稳定编译。
+
+### v0.16.6 (2026-07-08) -- Results Writer 重写
+
+- 将 Results 生成改为围绕 `results/result_manifest.yaml`、figure metadata、metrics、caption、scientific question 和 claim boundary 展开，而不是泛化总结 artifact。
+- Results 现在会按角色引用主图和附录诊断图，不生成文献引用，不生成小标题，并把 `row_count`、`source_id` 等内部标识转换为面向论文的科学表达。
+- 保留 Results 幂等写作：当结果证据没有变化时，后续 Introduction/Data/Methods/Discussion 重跑不会再次改写已经确认的 Results。
+
+### v0.16.5 (2026-07-08) -- Result Manifest 升级
+
+- 升级 `inventory-results`，写出 v0.16.5 结构化 result manifest，包含 `main_figures`、`appendix_figures`、`supporting_links`、`claim_boundaries`、内部表格和 figure-code trace。
+- 修复旧图污染问题：计划内但本轮没有渲染成功的 generated figures 会进入 `excluded_unrendered_figures`，不会因为磁盘上残留旧 PNG 就被写入 Results 或质量门。
+- 新增回归测试，确保未渲染的 supporting/appendix 图保留在诊断和修复语境中，但不会进入正式科学结果清单。
+
+### v0.16.4 (2026-07-08) -- Data Role 和 Figure Contract 修复
+
+- 扩展 Data Role aliases，覆盖 event-level samples、sample groups、current-observation tokens、historical sequence tokens、modality availability、feature matrices、天文学观测产品和模型评估字段。
+- 强化 figure contract validation：5-6 个主图组与 supporting/appendix diagnostics 分开检查，计划中的主结果图不能被验证图或中间诊断图静默替代。
+- 打通 method feasibility、figure execution diagnosis、result validity 和 core evidence 检查；缺数据或缺方法时先进入 repair 路线，再进入人工确认。
+
 ### v0.16.3 (2026-07-07) -- 主图组合同、附录诊断图与修复驱动的图表执行
 
 - 将图表硬性合同从“最多生成 5-6 张 PNG”调整为“默认 5-6 个主图组”。每个主图组可以由多个 panel 或多个生成图像构成，因此 `generated_figure_count > 6` 本身不再被视为失败。

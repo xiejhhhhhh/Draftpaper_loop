@@ -25,6 +25,7 @@ DATA_FEASIBILITY_JSON = "data/data_feasibility_report.json"
 DATA_FEASIBILITY_MD = "data/data_feasibility_report.md"
 DATA_WRITING_CONTEXT_JSON = "data/data_writing_context.json"
 DATA_WRITING_CONTEXT_HTML = "data/data_writing_context.html"
+DATA_KEY_FACTS_JSON = "data/data_key_facts.json"
 DATA_TEX = "data/data.tex"
 REMOTE_SOURCE_FILES = ["data/remote_sources.json", "data/source_manifest.json"]
 
@@ -43,6 +44,7 @@ DATA_OUTPUTS = [
 DATA_WRITING_OUTPUTS = [
     DATA_WRITING_CONTEXT_JSON,
     DATA_WRITING_CONTEXT_HTML,
+    DATA_KEY_FACTS_JSON,
     DATA_WRITING_BRIEF_JSON,
     DATA_WRITING_BRIEF_HTML,
     DATA_TEX,
@@ -544,6 +546,40 @@ def _evidence_number_roles(inventory: dict[str, Any], data_code_manifest: dict[s
     return {key: value for key, value in roles.items() if value not in {0, "", None}}
 
 
+def _data_key_facts(inventory: dict[str, Any], observations: list[dict[str, Any]], number_roles: dict[str, Any]) -> dict[str, Any]:
+    """Extract manuscript-facing sample facts without exposing local file names."""
+    text_sources = [
+        str(item.get("text") or "")
+        for item in observations
+        if isinstance(item, dict) and item.get("kind") in {"processing_note", "agent_analysis", "data_summary", "method_summary"}
+    ]
+    text_sources.extend([str(inventory.get("description") or ""), str(inventory.get("summary") or "")])
+    blob = " ".join(text_sources)
+    facts: dict[str, Any] = {}
+    patterns = {
+        "event_count": r"\b(\d[\d,]*)\s+(?:events?|event-level samples?)\b",
+        "source_count": r"\b(\d[\d,]*)\s+(?:sources?|objects?)\b",
+        "token_bin_count": r"\b(\d(?:[\d,]*|\.\d+)\s*(?:M|million)?|\d[\d,]*)\s+(?:token bins?|tokens?)\b",
+    }
+    for key, pattern in patterns.items():
+        match = re.search(pattern, blob, flags=re.I)
+        if match:
+            facts[key] = match.group(1).replace(",", "")
+    balance = re.search(r"\b(\d+)\s*AGN\s*(?:/|and|,)?\s*(\d+)\s*XRB\b", blob, flags=re.I)
+    if balance:
+        facts["class_balance"] = f"{balance.group(1)} AGN and {balance.group(2)} XRB sources"
+    if re.search(r"\bTDE\b", blob, flags=re.I):
+        facts["stress_test_boundary"] = "TDE cases are treated as a stress-testing or boundary-evaluation group unless the verified design states that they are part of primary supervised training."
+    for source_key, target_key in [
+        ("main_modeling_sample", "main_modeling_sample"),
+        ("token_record_count", "token_record_count"),
+        ("source_catalog_record_count", "source_catalog_record_count"),
+    ]:
+        if number_roles.get(source_key) and target_key not in facts:
+            facts[target_key] = number_roles[source_key]
+    return facts
+
+
 def _render_data_context_md(context: dict[str, Any]) -> str:
     lines = [
         "# Data Writing Context",
@@ -592,6 +628,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     processing_summary = _processing_summary(inventory, observations)
     data_code_summary = _data_code_summary(data_code_manifest if isinstance(data_code_manifest, dict) else {})
     number_roles = _evidence_number_roles(inventory if isinstance(inventory, dict) else {}, data_code_manifest if isinstance(data_code_manifest, dict) else {})
+    key_facts = _data_key_facts(inventory if isinstance(inventory, dict) else {}, observations, number_roles)
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
         claim_boundary = "The data support level is bounded as follows: " + claim_boundary + "."
@@ -615,6 +652,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "data_code_summary": data_code_summary,
         "data_code_manifest": data_code_manifest if isinstance(data_code_manifest, dict) else {},
         "evidence_number_roles": number_roles,
+        "data_key_facts": key_facts,
         "claim_boundary": claim_boundary,
         "variable_groups": groups,
         "observation_count": len(observations),
@@ -624,6 +662,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     }
     context["writing_brief"] = build_data_writing_brief(state.path, context)
     _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
+    _write_json(state.path / DATA_KEY_FACTS_JSON, key_facts)
     write_html_report(state.path / DATA_WRITING_CONTEXT_HTML, _render_data_context_md(context), title="Data Writing Context")
     _set_data_writing_manifest(state.path)
     return context
@@ -705,6 +744,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
     boundary = _strip_forbidden_paths(guidance.get("claim_boundary") or context.get("claim_boundary", ""))
     groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
     number_roles = context.get("evidence_number_roles") if isinstance(context.get("evidence_number_roles"), dict) else {}
+    key_facts = context.get("data_key_facts") if isinstance(context.get("data_key_facts"), dict) else {}
     feature_sentence = ""
     if groups:
         group_names = [str(name).replace("_", " ") for name in groups.keys() if groups.get(name)]
@@ -736,13 +776,28 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
             role_parts.append(f"{number_roles.get('spectral_readiness_table_count')} table(s) carrying spectral-readiness descriptors")
         if role_parts:
             number_sentence = "The reported counts are interpreted by role rather than as interchangeable sample sizes: " + "; ".join(role_parts) + "."
+    key_fact_sentence = ""
+    if key_facts:
+        fact_parts = []
+        if key_facts.get("event_count"):
+            fact_parts.append(f"{key_facts.get('event_count')} events")
+        if key_facts.get("source_count"):
+            fact_parts.append(f"{key_facts.get('source_count')} sources")
+        if key_facts.get("class_balance"):
+            fact_parts.append(str(key_facts.get("class_balance")))
+        if key_facts.get("token_bin_count"):
+            fact_parts.append(f"{key_facts.get('token_bin_count')} token bins")
+        if fact_parts:
+            key_fact_sentence = "The manuscript-facing sample facts are " + ", ".join(fact_parts) + "."
+        if key_facts.get("stress_test_boundary"):
+            key_fact_sentence = _join_scientific_sentences(key_fact_sentence, str(key_facts.get("stress_test_boundary")))
     boundary_note = (
         "This boundary is reported as part of the data description because sample coverage, missing measurements, "
         "and available variable groups determine which hypotheses can be examined later in the manuscript."
     )
     paragraphs = [
         _join_scientific_sentences(source, content),
-        _join_scientific_sentences(processing, data_code, feature_sentence, number_sentence),
+        _join_scientific_sentences(processing, data_code, feature_sentence, key_fact_sentence, number_sentence),
         _join_scientific_sentences(observation_text, boundary, boundary_note),
     ]
     return [paragraph for paragraph in paragraphs if paragraph]

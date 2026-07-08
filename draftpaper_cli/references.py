@@ -603,8 +603,13 @@ def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
     rows = []
     for item in items:
         contexts = item.get("search_contexts") or [item.get("search_context") or "idea"]
-        for context_value in contexts:
-            context = str(context_value or "idea").lower()
+        # Retained references must remain usable during Discussion writing.  The
+        # citation audit loop is intended to narrow claims and move citations, not
+        # silently remove references because no section-specific evidence row was
+        # generated for the final interpretive section.
+        normalized_contexts = {str(context_value or "idea").lower() for context_value in contexts}
+        normalized_contexts.add("discussion")
+        for context in sorted(normalized_contexts):
             section = {
                 "idea": "introduction",
                 "introduction": "introduction",

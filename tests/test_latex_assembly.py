@@ -172,8 +172,19 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertIn("\\graphicspath{{../}}", content)
             self.assertIn("\\input{sections/introduction}", content)
             self.assertIn("Draftpaper-loop", content)
+            self.assertNotIn("Draft Author", content)
+            self.assertNotIn("Draft affiliation", content)
+            self.assertNotIn("author@example.com", content)
+            self.assertIn("\\author{Manuscript author to be supplied}", content)
+            self.assertIn("\\affiliation{Affiliation to be supplied by the authors}", content)
+            self.assertIn("\\email{corresponding.author@placeholder.invalid}", content)
             self.assertIn("https://github.com/xiejhhhhhh/Draftpaper\\_loop", content)
             self.assertIn("\\bibliography{library}", content)
+            self.assertIn("\\bibliographystyle{aasjournal}", content)
+            self.assertIn("\\begin{acknowledgments}", content)
+            self.assertIn("\\end{acknowledgments}", content)
+            self.assertNotIn("\\acknowledgments\n", content)
+            self.assertNotIn("\\bibliography{library}{ }", content)
             self.assertLess(content.index("Draftpaper-loop"), content.index("\\bibliography{library}"))
             self.assertIn("Long-term AGN outburst prediction", content)
 
@@ -197,6 +208,28 @@ class LatexAssemblyTests(unittest.TestCase):
 
             with self.assertRaises(LatexCitationError):
                 assemble_latex(project_path)
+
+    def test_assemble_latex_replaces_empty_aastex_author_without_control_character(self) -> None:
+        from draftpaper_cli.latex_assembly import assemble_latex
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_project(tmp)
+            template = project_path / "latex" / "template" / "main.tex"
+            template.write_text(
+                template.read_text(encoding="utf-8").replace(
+                    "\\title{%%DRAFTPAPER_TITLE%%}",
+                    "\\title{%%DRAFTPAPER_TITLE%%}\n\\author{}",
+                ),
+                encoding="utf-8",
+            )
+
+            assemble_latex(project_path)
+
+            content = (project_path / "latex" / "main.tex").read_text(encoding="utf-8")
+            self.assertNotIn("\a", content)
+            self.assertIn("\\author{Manuscript author to be supplied}", content)
+            self.assertIn("\\affiliation{Affiliation to be supplied by the authors}", content)
+            self.assertIn("\\email{corresponding.author@placeholder.invalid}", content)
 
     def test_cli_assemble_latex_outputs_main_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -258,6 +291,27 @@ class LatexAssemblyTests(unittest.TestCase):
             manifest = json.loads((project_path / "latex" / "pdf_compile_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "success")
             self.assertIn("xelatex", manifest["engine"])
+            skipped = [item for item in manifest["commands"] if item.get("status") == "skipped"]
+            self.assertEqual(skipped[0]["reason"], "aux file does not request BibTeX")
+
+    def test_local_bibstyle_fallback_copies_available_natbib_style(self) -> None:
+        from draftpaper_cli.latex_assembly import _ensure_local_bibstyle_fallback
+
+        with tempfile.TemporaryDirectory() as tmp:
+            latex_dir = Path(tmp)
+            tex = latex_dir / "main.tex"
+            tex.write_text("\\bibliographystyle{missingjournal}\n\\bibliography{library}\n", encoding="utf-8")
+            (latex_dir / "plainnat.bst").write_text("ENTRY{}{}{}\n", encoding="utf-8")
+
+            fallback = _ensure_local_bibstyle_fallback(latex_dir, tex)
+
+            self.assertIsNotNone(fallback)
+            assert fallback is not None
+            self.assertEqual(fallback["status"], "used")
+            self.assertEqual(fallback["requested_style"], "missingjournal")
+            self.assertEqual(fallback["fallback_style"], "plainnat")
+            self.assertTrue((latex_dir / "missingjournal.bst").exists())
+            self.assertIn("\\bibliographystyle{missingjournal}", tex.read_text(encoding="utf-8"))
 
     def test_cli_assemble_latex_can_compile_pdf_for_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

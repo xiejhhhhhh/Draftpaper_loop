@@ -346,6 +346,42 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.16.9 (2026-07-08) -- style learning and full astronomy regression
+
+- Added the `learn-writing-style-from-draft` path and `writing_style.py` profile so approved drafts can provide non-verbatim style signals without weakening evidence gates.
+- Completed a full astronomy regression on the local time-aware flaring-source project: refreshed plan/data/method/figure stages, verified methods, compiled the APJS/AAS PDF, passed the integrity gate, and passed the final quality gate.
+- Confirmed the regression keeps 6/6 main figure contracts satisfied, records 13 rendered scientific figures, excludes 4 unrendered supporting figures from the result manifest, preserves 12/12 BibTeX references in the assembled manuscript, and keeps Results free of citations and subsections.
+
+### v0.16.8 (2026-07-08) -- Discussion writer artifact cleanup
+
+- Reworked Discussion generation so filesystem artifacts, figure paths, table paths, manifest names, and Draftpaper-loop implementation language are sanitized before they can enter manuscript prose.
+- Added discussion comparison preparation and citation-evidence coverage so Discussion can compare results with literature while preserving the post-writing citation audit principle: repair weak claims and placements, do not delete confirmed references.
+- Added regression coverage for discussion artifact sanitization and citation-evidence expansion.
+
+### v0.16.7 (2026-07-08) -- Data and Methods writer evidence upgrade
+
+- Upgraded Data writing to preserve scientific detail such as sample roles, class balance, token coverage, modality availability, and claim boundaries while keeping paths, filenames, script names, and raw field dumps out of manuscript text.
+- Upgraded Methods writing to use method-stage manifests, extracted formulas, formula-variable explanations, and figure-code traces, so Methods prose is organized around sample construction, feature/token construction, model logic, validation, metrics, and ablation evidence.
+- Added AASTeX-safe LaTeX assembly fallbacks for author metadata, table rendering, and missing local bibliography styles so local review PDFs can compile reliably.
+
+### v0.16.6 (2026-07-08) -- Results writer rewrite
+
+- Rewrote Results generation around `results/result_manifest.yaml`, figure metadata, metrics, captions, scientific questions, and claim boundaries instead of generic artifact summaries.
+- Results now cites main figures and appendix diagnostics by role, removes literature citations, avoids subsections, and converts internal identifiers such as `row_count` or `source_id` into manuscript-facing scientific wording.
+- Added idempotent Results behavior so confirmed Results are not rewritten when downstream manuscript stages rerun with unchanged result evidence.
+
+### v0.16.5 (2026-07-08) -- result manifest upgrade
+
+- Upgraded `inventory-results` to write a structured v0.16.5 result manifest with `main_figures`, `appendix_figures`, `supporting_links`, `claim_boundaries`, internal tables, and figure-code traces.
+- Fixed stale-output handling: planned generated figures that were not rendered in the current run are listed under `excluded_unrendered_figures` and no longer enter Results or quality checks merely because an old PNG remains on disk.
+- Added regression coverage to ensure unrendered supporting/appendix figures remain in diagnosis/repair context but are excluded from the scientific result inventory.
+
+### v0.16.4 (2026-07-08) -- Data Role and Figure Contract repair
+
+- Expanded Data Role aliases for event-level samples, sample groups, current-observation tokens, historical sequence tokens, modality availability, feature matrices, astronomy products, and model-evaluation fields.
+- Strengthened figure contract validation so 5-6 main figure groups are checked separately from supporting or appendix diagnostics, and planned main results cannot be silently replaced by validation artifacts.
+- Connected method feasibility, figure execution diagnosis, result validity, and core evidence checks so missing data or method coverage routes to repair before human confirmation.
+
 ### v0.16.3 (2026-07-07) -- main figure groups, appendix diagnostics, and repair-driven figure execution
 
 - Reframed the figure contract around 5-6 main figure groups instead of a hard cap on generated PNG files. A main figure group may contain multiple panels or generated artifacts, so extra generated outputs are valid when they serve the planned figure story.

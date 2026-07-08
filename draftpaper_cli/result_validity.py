@@ -237,7 +237,13 @@ def _figure_contract_issues(
         else:
             actions.append("Repair missing figure data or method code, then rerun assess-figure-contracts.")
     if figure_execution_diagnosis:
-        if figure_execution_diagnosis.get("has_blocking_repairs"):
+        blocking_items = [
+            item for item in figure_execution_diagnosis.get("figures") or []
+            if isinstance(item, dict)
+            and item.get("blocks_core_evidence") is True
+            and str(item.get("status") or "").endswith("_repairing")
+        ]
+        if figure_execution_diagnosis.get("has_blocking_repairs") or blocking_items:
             issues.append("Figure execution diagnosis still contains blocking data or method repairs.")
         for item in figure_execution_diagnosis.get("figures") or []:
             if not isinstance(item, dict):
@@ -245,12 +251,13 @@ def _figure_contract_issues(
             role = str(item.get("figure_role") or "main_result")
             status = str(item.get("status") or "")
             path = str(item.get("path") or "")
-            if role == "main_result" and status.endswith("_repairing"):
+            blocks_core = item.get("blocks_core_evidence") is True
+            if role == "main_result" and blocks_core and status.endswith("_repairing"):
                 figure_id = item.get("storyboard_id") or item.get("figure_id") or "planned figure"
                 issues.append(f"Main figure {figure_id} is still in {status} state.")
                 if item.get("next_command"):
                     actions.append(str(item.get("next_command")))
-            if role == "main_result" and status == "ready_to_render" and path and not _project_relative_path(project_path, path).exists():
+            if role == "main_result" and blocks_core and status == "ready_to_render" and path and not _project_relative_path(project_path, path).exists():
                 figure_id = item.get("storyboard_id") or item.get("figure_id") or "planned figure"
                 issues.append(f"Main figure {figure_id} was declared ready but output is missing: {path}.")
                 actions.append("Regenerate analysis code and figures, then rerun assess-result-validity.")

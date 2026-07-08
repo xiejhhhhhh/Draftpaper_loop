@@ -77,7 +77,7 @@ def _draftpaper_acknowledgments(*, aastex: bool = False) -> str:
         r"\texttt{https://github.com/xiejhhhhhh/Draftpaper\_loop}."
     )
     if aastex:
-        return "\\acknowledgments\n" + text
+        return "\\begin{acknowledgments}\n" + text + "\n\\end{acknowledgments}"
     return "\\section*{Acknowledgments}\n" + text
 
 
@@ -90,6 +90,31 @@ def _insert_acknowledgments(main_tex: str, acknowledgments: str) -> str:
     if "\\end{document}" in main_tex:
         return main_tex.replace("\\end{document}", acknowledgments + "\n\n\\end{document}", 1)
     return main_tex.rstrip() + "\n\n" + acknowledgments + "\n"
+
+
+def _ensure_aastex_author_block(main_tex: str) -> str:
+    """AASTeX 7 requires every author to carry an affiliation.
+
+    Public templates often ship with placeholder author fields, while local
+    Draftpaper-loop projects may not know final author metadata yet.  Keep the
+    placeholder explicit and review-oriented so PDF compilation works without
+    pretending that the manuscript metadata is final.
+    """
+    if not re.search(r"\\documentclass(?:\[[^\]]*\])?\{aastex", main_tex, flags=re.I):
+        return main_tex
+    author_block = (
+        "\\author{Manuscript author to be supplied}\n"
+        "\\affiliation{Affiliation to be supplied by the authors}\n"
+        "\\email{corresponding.author@placeholder.invalid}"
+    )
+    if re.search(r"\\author\{\s*\}", main_tex):
+        return re.sub(r"\\author\{\s*\}", lambda _match: author_block, main_tex, count=1)
+    if re.search(r"\\author\{[^{}]+\}", main_tex) and re.search(r"\\affiliation\{[^{}]+\}", main_tex):
+        return main_tex
+    title_match = re.search(r"\\title\{[^{}]*\}", main_tex)
+    if title_match:
+        return main_tex[:title_match.end()] + "\n" + author_block + main_tex[title_match.end():]
+    return main_tex
 
 
 def _require_inputs(project_path: Path) -> None:
@@ -212,14 +237,16 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
     ])
     journal_profile = _read_journal_profile(project_path)
     bibliography_style = journal_profile.get("bibliography_style") or "plainnat"
-    if "aastex" in str(journal_profile.get("documentclass") or "").lower():
-        bibliography = "\n".join([r"\bibliography{library}{ }", rf"\bibliographystyle{{{bibliography_style}}}"])
-    else:
-        bibliography = "\n".join([rf"\bibliographystyle{{{bibliography_style}}}", r"\bibliography{library}"])
+    bibliography = "\n".join([rf"\bibliographystyle{{{bibliography_style}}}", r"\bibliography{library}"])
     title = _safe_latex_text(project_meta.get("title") or project_meta.get("idea") or "Draft Paper")
     rendered = template.replace("%%DRAFTPAPER_TITLE%%", title)
     rendered = rendered.replace("%%DRAFTPAPER_SECTIONS%%", sections)
     rendered = rendered.replace("%%DRAFTPAPER_BIBLIOGRAPHY%%", bibliography)
+    rendered = re.sub(r"\\author\{\s*Draft Author\s*\}", r"\\author{}", rendered, flags=re.I)
+    rendered = re.sub(r"\\affiliation\{\s*Draft affiliation\s*\}\s*", "", rendered, flags=re.I)
+    rendered = re.sub(r"\\email\{\s*author@example\.com\s*\}\s*", "", rendered, flags=re.I)
+    rendered = re.sub(r"placeholder abstract", "", rendered, flags=re.I)
+    rendered = re.sub(r"\\bibliography\{library\}\s*\{\s*\}", r"\\bibliography{library}", rendered)
     if "%%DRAFTPAPER_SECTIONS%%" not in template and "\\input{sections/" not in rendered:
         rendered = rendered.rstrip() + "\n\n" + sections + "\n"
     if "%%DRAFTPAPER_BIBLIOGRAPHY%%" not in template and "\\bibliography{" not in rendered:
@@ -228,6 +255,7 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         rendered = rendered.replace("\\begin{document}", "\\graphicspath{{../}}\n\\begin{document}", 1)
     acknowledgments = _draftpaper_acknowledgments(aastex="aastex" in str(journal_profile.get("documentclass") or "").lower())
     rendered = _insert_acknowledgments(rendered, acknowledgments)
+    rendered = _ensure_aastex_author_block(rendered)
     if "Generated with Draftpaper-loop" not in rendered:
         rendered = GENERATOR_TEX_COMMENT + rendered
     return rendered.rstrip() + "\n"
@@ -276,6 +304,74 @@ def _write_pdf_manifest(project_path: Path, payload: dict[str, Any]) -> None:
     _set_latex_manifest(project_path)
 
 
+def _aux_requests_bibtex(aux_path: Path) -> bool:
+    """Return True when the LaTeX aux file explicitly requests a BibTeX pass."""
+    if not aux_path.exists():
+        return False
+    content = aux_path.read_text(encoding="utf-8", errors="ignore")
+    return "\\bibdata" in content and "\\bibstyle" in content
+
+
+def _bibstyle_from_tex(tex_file: Path) -> str | None:
+    content = tex_file.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(r"\\bibliographystyle\{([^{}]+)\}", content)
+    if not match:
+        return None
+    style = match.group(1).strip()
+    return style or None
+
+
+def _find_bst_file(latex_dir: Path, style: str) -> Path | None:
+    local = latex_dir / f"{style}.bst"
+    if local.exists():
+        return local
+    kpsewhich = _find_latex_executable(["kpsewhich", "kpsewhich.exe"])
+    if not kpsewhich:
+        return None
+    try:
+        completed = subprocess.run(
+            [kpsewhich, f"{style}.bst"],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        return None
+    if completed.returncode != 0:
+        return None
+    candidate = Path(completed.stdout.strip())
+    return candidate if candidate.exists() else None
+
+
+def _ensure_local_bibstyle_fallback(latex_dir: Path, tex_file: Path) -> dict[str, Any] | None:
+    requested = _bibstyle_from_tex(tex_file)
+    if not requested or _find_bst_file(latex_dir, requested):
+        return None
+    for fallback_style in ["plainnat", "abbrvnat", "unsrtnat"]:
+        fallback = _find_bst_file(latex_dir, fallback_style)
+        if not fallback:
+            continue
+        target = latex_dir / f"{requested}.bst"
+        shutil.copyfile(fallback, target)
+        return {
+            "status": "used",
+            "requested_style": requested,
+            "fallback_style": fallback_style,
+            "local_bst": str(target),
+            "reason": f"{requested}.bst was not available in the local TeX installation.",
+        }
+    return {
+        "status": "unavailable",
+        "requested_style": requested,
+        "fallback_style": None,
+        "local_bst": None,
+        "reason": f"{requested}.bst was not available and no natbib fallback style was found.",
+    }
+
+
 def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dict[str, Any]:
     """Compile latex/main.tex into latex/main.pdf when a local LaTeX engine is available."""
     state = load_project(project)
@@ -311,19 +407,14 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
         }
 
     bibtex = _find_latex_executable(["bibtex", "bibtex.exe"])
-    commands = [
-        [engine, "-interaction=nonstopmode", "-halt-on-error", tex_file.name],
-    ]
-    if bibtex and bib_file.exists():
-        commands.append([bibtex, tex_file.stem])
-    commands.extend([
-        [engine, "-interaction=nonstopmode", "-halt-on-error", tex_file.name],
-        [engine, "-interaction=nonstopmode", "-halt-on-error", tex_file.name],
-    ])
+    latex_command = [engine, "-interaction=nonstopmode", "-halt-on-error", tex_file.name]
+    aux_file = tex_file.with_suffix(".aux")
+    bst_fallback = _ensure_local_bibstyle_fallback(tex_file.parent, tex_file)
 
     command_reports: list[dict[str, Any]] = []
     log_chunks: list[str] = []
-    for command in commands:
+    commands: list[list[str]] = [latex_command]
+    for index, command in enumerate(commands):
         try:
             completed = subprocess.run(
                 command,
@@ -346,6 +437,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "engine": str(engine),
                 "bibtex": str(bibtex) if bibtex else None,
                 "commands": command_reports,
+                "bst_fallback": bst_fallback,
                 "pdf": None,
                 "log": str(log_file),
             }
@@ -358,6 +450,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "pdf_compile_manifest": str(state.path / "latex" / "pdf_compile_manifest.json"),
                 "message": message,
             }
+
         command_reports.append({"command": command, "returncode": completed.returncode})
         log_chunks.append(
             f"$ {' '.join(command)}\n"
@@ -374,6 +467,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "engine": str(engine),
                 "bibtex": str(bibtex) if bibtex else None,
                 "commands": command_reports,
+                "bst_fallback": bst_fallback,
                 "pdf": None,
                 "log": str(log_file),
             }
@@ -386,6 +480,26 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "pdf_compile_manifest": str(state.path / "latex" / "pdf_compile_manifest.json"),
                 "message": message,
             }
+
+        if index == 0:
+            if bibtex and bib_file.exists() and _aux_requests_bibtex(aux_file):
+                commands.append([bibtex, tex_file.stem])
+            else:
+                reason = (
+                    "aux file does not request BibTeX"
+                    if bibtex and bib_file.exists()
+                    else "BibTeX executable or library.bib is unavailable"
+                )
+                command_reports.append(
+                    {
+                        "command": ["bibtex", tex_file.stem],
+                        "returncode": None,
+                        "status": "skipped",
+                        "reason": reason,
+                    }
+                )
+                log_chunks.append(f"$ bibtex {tex_file.stem}\nskipped: {reason}")
+            commands.extend([latex_command, latex_command])
 
     log_file.write_text("\n\n".join(log_chunks), encoding="utf-8")
     pdf_file = tex_file.with_suffix(".pdf")
@@ -401,6 +515,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
         "engine": str(engine),
         "bibtex": str(bibtex) if bibtex else None,
         "commands": command_reports,
+        "bst_fallback": bst_fallback,
         "pdf": str(pdf_file) if pdf_file.exists() else None,
         "log": str(log_file),
     }

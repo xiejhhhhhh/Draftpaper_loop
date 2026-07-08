@@ -130,9 +130,20 @@ def _main_contracts(contracts: dict[str, Any], figure_plan: dict[str, Any]) -> l
     for key in ["main_contracts", "contracts", "figures"]:
         value = contracts.get(key)
         if isinstance(value, list) and value:
-            return [item for item in value if isinstance(item, dict)]
+            return [
+                item for item in value
+                if isinstance(item, dict)
+                and item.get("counts_toward_main_figures") is not False
+                and str(item.get("manuscript_role") or "main").lower() != "appendix"
+            ]
     figures = figure_plan.get("figures") if isinstance(figure_plan, dict) else []
-    return [item for item in figures or [] if isinstance(item, dict) and str(item.get("role") or item.get("figure_role") or "main").lower() != "supporting"]
+    return [
+        item for item in figures or []
+        if isinstance(item, dict)
+        and str(item.get("role") or item.get("figure_role") or "main").lower() != "supporting"
+        and item.get("counts_toward_main_figures") is not False
+        and str(item.get("manuscript_role") or "main").lower() != "appendix"
+    ]
 
 
 def _missing_storyboard(alignment: dict[str, Any]) -> list[str]:

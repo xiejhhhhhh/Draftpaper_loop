@@ -80,6 +80,16 @@ def _safe_latex_text(text: str) -> str:
 
 def _paragraph(text: str) -> str:
     escaped = _safe_latex_text(text)
+    escaped = re.sub(
+        r"(Appendix\s+Figure|Figure)\\textasciitilde\{\}\\textbackslash\{\}ref\\\{([^{}]+)\\\}",
+        r"\1~\\ref{\2}",
+        escaped,
+    )
+    escaped = re.sub(
+        r"(Figures)\\textasciitilde\{\}\\textbackslash\{\}ref\\\{([^{}]+)\\\}",
+        r"\1~\\ref{\2}",
+        escaped,
+    )
     escaped = re.sub(r"\\textbackslash\{\}citep\\\{([^{}\\]+)\\\}", r"\\citep{\1}", escaped)
     escaped = re.sub(r"\\citep\\\{([^{}\\]+)\\\}", r"\\citep{\1}", escaped)
     return escaped
@@ -125,7 +135,7 @@ def _reference_coverage_paragraphs(project_path: Path, section: str, existing_te
     paragraphs = []
     for index in range(0, len(sentences), 4):
         paragraphs.append(
-            "Additional retained references help delimit how the present findings should be compared with prior work and where the current interpretation should remain cautious. "
+            "Additional retained references delimit how the present findings compare with prior work and where the current interpretation remains cautious. "
             + " ".join(sentences[index:index + 4])
         )
     return paragraphs
@@ -156,14 +166,36 @@ def _manuscript_context_text(text: str) -> str:
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
+def _sanitize_discussion_artifacts(text: str) -> str:
+    cleaned = _manuscript_context_text(str(text or ""))
+    replacements = [
+        (r"\bresults[/\\]figures[/\\][^\s{}]+", "the corresponding result figure"),
+        (r"\bresults[/\\]tables[/\\][^\s{}]+", "the corresponding quantitative table"),
+        (r"\bdata[/\\](?:raw|processed)[/\\][^\s{}]+", "the verified data product"),
+        (r"\bmethods[/\\][^\s{}]+", "the implemented method evidence"),
+        (r"\b[A-Za-z]:[/\\][^\s{}]+", "the local empirical evidence"),
+        (r"\b[\w.-]+\.(?:png|jpg|jpeg|pdf|svg)\b", "the result figure"),
+        (r"\b[\w.-]+\.(?:csv|tsv|xlsx|json|yaml|yml|py|html|md|tex|fits|zip)\b", "the analysis evidence"),
+    ]
+    for pattern, replacement in replacements:
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.I)
+    cleaned = re.sub(r"\b(?:manifest|artifact|file path|filename|local file)\b", "evidence record", cleaned, flags=re.I)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def _result_signal(results_text: str) -> str:
     subsection_match = re.search(r"\\subsection\{([^{}]+)\}", results_text)
     if subsection_match:
-        return subsection_match.group(1)
+        return _sanitize_discussion_artifacts(subsection_match.group(1))
+    refs = re.findall(r"(?:Appendix\s+)?Figure~?\\ref\{([^{}]+)\}", results_text)
+    if refs:
+        main_refs = [item for item in refs if "appendix" not in item.lower()]
+        selected = main_refs[:2] or refs[:2]
+        return "the classification and diagnostic evidence summarized in " + " and ".join(f"Figure~\\ref{{{item}}}" for item in selected)
     figure_match = re.search(r"\\includegraphics(?:\[[^\]]+\])?\{([^{}]+)\}", results_text)
     if figure_match:
-        return f"the result artifact {figure_match.group(1)}"
-    return "the registered local result artifacts"
+        return "the primary result figure"
+    return "the verified result figures and diagnostic evidence"
 
 
 def _result_anchor(results_text: str) -> str:
@@ -174,7 +206,7 @@ def _result_anchor(results_text: str) -> str:
         parts.append(metric_match.group(0))
     if figure_match:
         parts.append("figure " + next(group for group in figure_match.groups() if group))
-    return "; ".join(parts) or _compact(_manuscript_context_text(results_text), 220)
+    return _sanitize_discussion_artifacts("; ".join(parts) or _compact(_manuscript_context_text(results_text), 220))
 
 
 def _load_literature_items(project_path: Path) -> dict[str, dict[str, Any]]:
@@ -310,36 +342,43 @@ def render_discussion_tex(
     paragraphs = [
         "\\section{Discussion}",
         (
-            f"The findings should be interpreted as evidence for a reproducible empirical design for {idea} rather than as an isolated modelling result. "
-            f"In {field}, the literature basis identified a concrete gap: {_evidence(gap)} {_cite(gap)}. The local results, especially {result_signal}, "
-            f"therefore matter because they connect the planned research question to evidence generated from the current analysis rather than to unsupported narrative claims."
+            f"The findings provide evidence for a reproducible empirical design for {idea} rather than an isolated modelling result. "
+            f"In {field}, the literature basis identifies a concrete gap: {_evidence(gap)} {_cite(gap)}. The local results, especially {result_signal}, "
+            f"matter because they connect the planned research question to empirical evidence from the current analysis rather than to unsupported narrative claims."
         ),
         (
             f"The main contribution is consistent with the research plan: {contribution} This contribution extends the Introduction rather than repeating it, "
-            f"because the Discussion can now relate the retrieved literature to what the result figures and tables actually show. The Introduction used {intro_citation_count} "
-            f"citation-backed statements to establish the study frame, and the present section uses those same evidence records to explain why the results are meaningful."
+            f"because the Discussion relates the retrieved literature to what the result figures and quantitative diagnostics show. The Introduction used {intro_citation_count} "
+            f"citation-backed statements to establish the study frame, and the present section uses those evidence records to explain why the results are meaningful."
         ),
         (
-            f"Compared with existing work, the current draft should emphasize where the local findings agree with or depart from the cited evidence. "
+            f"Compared with existing work, the local findings are most informative where they agree with or depart from the cited evidence. "
             f"Prior data-oriented work indicates that {_evidence(data).lower()} {_cite(data)}. Method-oriented work further suggests that {_evidence(method).lower()} {_cite(method)}. "
-            f"The present results should therefore be discussed through data construction, validation design, and method behavior rather than through a broad claim of novelty."
+            f"The present results are therefore interpreted through data construction, validation design, and method behavior rather than through a broad claim of novelty."
         ),
         (
-            f"Limitations and future work should be interpreted through the same evidence boundary. The principal limitation is that the present Discussion remains constrained by the available empirical evidence. If the local results are preliminary, sparse, "
-            f"or generated from a narrow validation setting, the manuscript should state that limitation directly and avoid converting an observed pattern into a general conclusion. "
-            f"The method route also requires continued checking: {method_route} Future revisions should update this section whenever the result figures and tables, method outputs, "
-            f"or citation evidence changes, because those sources define the defensible boundary of the paper."
+            f"Limitations and future work follow the same evidence boundary. The principal limitation is that the interpretation remains constrained by the available empirical evidence. When local results are preliminary, sparse, "
+            f"or generated from a narrow validation setting, the defensible conclusion is correspondingly narrow and cannot be converted into a general population-level claim. "
+            f"The method route also requires continued checking: {method_route} Future revisions can extend the claim only when the result figures, quantitative diagnostics, method outputs, "
+            f"and citation evidence jointly support a broader interpretation."
         ),
         (
             f"Overall, the study is best presented as a literature-informed and locally reproducible answer to the gap identified above. Background evidence shows why the topic is relevant. "
-            f"{_evidence(background)} {_cite(background)}. The result figures and tables determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
-            f"paper's evidence trail and avoids adding claims that are not supported by either the retrieved literature or the generated empirical outputs."
+            f"{_evidence(background)} {_cite(background)}. The result figures and quantitative diagnostics determine how far the manuscript can go in interpreting the specific findings. This keeps the Discussion aligned with the "
+            f"paper's evidence trail and avoids adding claims that are not supported by either the retrieved literature or the empirical outputs."
         ),
     ]
     if project_path is not None:
         ensure_reference_usage_plan(project_path)
         paragraphs.extend(_reference_coverage_paragraphs(project_path, "discussion", "\n\n".join(paragraphs)))
-    return "\n\n".join(_paragraph(paragraph) if not paragraph.startswith("\\section") else paragraph for paragraph in paragraphs) + "\n"
+    sanitized = [paragraph if paragraph.startswith("\\section") else _sanitize_discussion_artifacts(paragraph) for paragraph in paragraphs]
+    tex = "\n\n".join(_paragraph(paragraph) if not paragraph.startswith("\\section") else paragraph for paragraph in sanitized) + "\n"
+    forbidden = re.search(r"\b[A-Za-z]:[/\\][^\s{}]+|\b(?:results|data|methods|code)[/\\][^\s{}]+|\b[\w.-]+\.(?:png|jpg|jpeg|csv|json|py|html|md|tex)\b", tex, flags=re.I)
+    if forbidden:
+        tex = re.sub(r"\b[A-Za-z]:[/\\][^\s{}]+", "local empirical evidence", tex)
+        tex = re.sub(r"\b(?:results|data|methods|code)[/\\][^\s{}]+", "analysis evidence", tex, flags=re.I)
+        tex = re.sub(r"\b[\w.-]+\.(?:png|jpg|jpeg|csv|json|py|html|md|tex)\b", "analysis evidence", tex, flags=re.I)
+    return tex
 
 
 def _set_discussion_manifest(project_path: Path) -> None:

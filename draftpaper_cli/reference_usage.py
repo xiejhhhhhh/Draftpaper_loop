@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .citation_utils import bibtex_keys_in_text
 from .project_scaffold import _write_json, utc_now
 
 
@@ -36,6 +37,13 @@ def _read_evidence(project_path: Path) -> list[dict[str, str]]:
         return []
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def _library_keys(project_path: Path) -> set[str]:
+    path = project_path / "references" / "library.bib"
+    if not path.exists():
+        return set()
+    return bibtex_keys_in_text(path.read_text(encoding="utf-8-sig", errors="ignore"))
 
 
 def _key_for_item(item: dict[str, Any]) -> str:
@@ -99,6 +107,7 @@ def build_reference_usage_plan(project: str | Path) -> dict[str, Any]:
     literature_items = _read_json(references_dir / "literature_items.json", [])
     if not isinstance(literature_items, list):
         literature_items = []
+    bib_keys = _library_keys(project_path)
     evidence_rows = _read_evidence(project_path)
     evidence_by_key: dict[str, list[dict[str, str]]] = {}
     for row in evidence_rows:
@@ -113,6 +122,8 @@ def build_reference_usage_plan(project: str | Path) -> dict[str, Any]:
             continue
         key = _key_for_item(item)
         if not key or key in seen:
+            continue
+        if bib_keys and key not in bib_keys:
             continue
         seen.add(key)
         rows = evidence_by_key.get(key) or []
@@ -137,6 +148,8 @@ def build_reference_usage_plan(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "generated_at": utc_now(),
         "policy": "Every retained reference in references/literature_summaries must be cited at least once outside Results.",
+        "source_literature_keys": sorted(seen),
+        "source_bibtex_keys": sorted(bib_keys),
         "total_required_references": len(entries),
         "entries": entries,
     }
@@ -148,7 +161,21 @@ def ensure_reference_usage_plan(project: str | Path) -> dict[str, Any]:
     project_path = Path(project)
     path = project_path / "references" / "reference_usage_plan.json"
     payload = _read_json(path, {})
-    if isinstance(payload, dict) and payload.get("entries"):
+    literature_items = _read_json(project_path / "references" / "literature_items.json", [])
+    current_literature_keys = sorted(
+        key
+        for key in (_key_for_item(item) for item in literature_items if isinstance(item, dict))
+        if key
+    ) if isinstance(literature_items, list) else []
+    current_bib_keys = sorted(_library_keys(project_path))
+    planned_literature_keys = sorted(str(item) for item in payload.get("source_literature_keys") or []) if isinstance(payload, dict) else []
+    planned_bib_keys = sorted(str(item) for item in payload.get("source_bibtex_keys") or []) if isinstance(payload, dict) else []
+    if (
+        isinstance(payload, dict)
+        and payload.get("entries")
+        and planned_literature_keys == current_literature_keys
+        and planned_bib_keys == current_bib_keys
+    ):
         return payload
     return build_reference_usage_plan(project_path)
 
@@ -161,12 +188,15 @@ def citation_keys_in_text(text: str) -> set[str]:
 
 
 def entries_for_section(project: str | Path, section: str) -> list[dict[str, Any]]:
+    project_path = Path(project)
     plan = ensure_reference_usage_plan(project)
+    bib_keys = _library_keys(project_path)
     target = section.strip().lower()
     return [
         entry
         for entry in plan.get("entries") or []
         if entry.get("required") and str(entry.get("target_section") or "").strip().lower() == target
+        and (not bib_keys or str(entry.get("citation_key") or "") in bib_keys)
     ]
 
 

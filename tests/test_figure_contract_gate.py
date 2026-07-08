@@ -63,6 +63,31 @@ class FigureContractGateTests(unittest.TestCase):
             self.assertEqual(report["main_figure_group_count"], 5)
             self.assertEqual(report["generated_figure_count"], 9)
 
+    def test_appendix_contract_entries_do_not_block_main_figure_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Main figures plus appendix checks", field="astronomy machine learning")
+            contracts = [
+                {"storyboard_id": f"fig_main_{index}", "figure_id": f"fig_main_{index}", "required_data": [], "required_method": [], "expected_finding": "main finding"}
+                for index in range(1, 6)
+            ]
+            contracts.append({
+                "storyboard_id": "fig_appendix_diagnostic",
+                "figure_id": "fig_appendix_diagnostic",
+                "required_data": ["nonexistent_appendix_role"],
+                "required_method": [],
+                "manuscript_role": "appendix",
+                "counts_toward_main_figures": False,
+            })
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+            _write_json(project.path / "results" / "figure_plan.json", {"figure_policy": {"minimum_main_figures": 5}, "main_figure_group_count": 5, "figures": []})
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+
+            result = assess_figure_contracts(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+
     def test_repair_figure_data_consumes_contract_gate_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Missing light curve contract", field="astronomy")

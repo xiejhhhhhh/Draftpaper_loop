@@ -356,7 +356,7 @@ class MethodsHardGateTests(unittest.TestCase):
                         {"code_role": "time_aware_transformer_training", "canonical_path": "methods/code_templates/train.py"},
                         {"code_role": "figure_generation", "canonical_path": "methods/code_templates/plot.py"},
                     ],
-                    "selected_input_profile": {"columns": ["pha_file", "bkg_pha_file", "arf_file", "rmf_file", "light_curve"]},
+                    "selected_input_profile": {"columns": ["pha_file", "bkg_pha_file", "arf_file", "rmf_file", "light_curve", "obs_id", "detnam", "lv_version", "source_in_det", "obs_start_mjd"]},
                 }),
                 encoding="utf-8",
             )
@@ -378,8 +378,16 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertIn("source spectra (PHA)", tex)
             self.assertIn("background spectra (PHA)", tex)
             self.assertIn("Here $t$ denotes", tex)
-            for token in ["stage-owned", "formula extraction layer", "figure-code trace", "manifest internals", "pha_file", "bkg_pha_file", "arf_file", "rmf_file", "documented method component", "figure generation", "software operations"]:
+            for token in ["stage-owned", "formula extraction layer", "figure-code trace", "manifest internals", "pha_file", "bkg_pha_file", "arf_file", "rmf_file", "obs_id", "detnam", "lv_version", "source_in_det", "obs_start_mjd", "source in det", "documented method component", "figure generation", "software operations"]:
                 self.assertNotIn(token, tex)
+            self.assertIn("observation identifier", tex)
+            self.assertIn("detector metadata", tex)
+            self.assertIn("processing-version metadata", tex)
+            self.assertIn("detector-level source availability", tex)
+            self.assertIn("observation start time", tex)
+            self.assertNotIn("classification target target", tex)
+            self.assertNotIn("processing-processing-version metadata metadata", tex)
+            self.assertNotIn("metadata metadata", tex)
             self.assertIn("scientific figure synthesis", tex)
             self.assertNotIn("Describe the", tex)
             self.assertNotIn("Define the", tex)

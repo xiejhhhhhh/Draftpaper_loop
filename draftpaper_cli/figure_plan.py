@@ -172,7 +172,7 @@ def _add_unique(figures: list[dict[str, Any]], item: dict[str, Any]) -> None:
 def _mark_supporting_figure(item: dict[str, Any], *, reason: str) -> dict[str, Any]:
     updated = dict(item)
     updated["figure_role"] = "supporting"
-    updated.setdefault("manuscript_role", "appendix")
+    updated["manuscript_role"] = "appendix"
     updated["counts_toward_main_figures"] = False
     updated["contract_locked"] = False
     updated["allowed_substitute"] = False
@@ -490,6 +490,12 @@ def _review_task_figures(
             "scientific_question": f"How does the reviewer-requested {task.get('operation_family')} change the empirical evidence?",
             "caption_draft": f"{title}.",
             "result_claim_template": "This reviewer-driven figure reports whether the revised analysis changes the strength, stability, or interpretation of the empirical result.",
+            "figure_role": "supporting",
+            "manuscript_role": "appendix",
+            "counts_toward_main_figures": False,
+            "contract_locked": False,
+            "allowed_substitute": False,
+            "supporting_reason": "reviewer_rescue_diagnostic_supports_main_story_but_cannot_replace_core_result",
         })
 
     for task in tasks_report.get("tasks") or []:
@@ -609,6 +615,8 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
     for item in figures:
         if item.get("figure_role") != "main_result":
             continue
+        if item.get("counts_toward_main_figures") is False or str(item.get("manuscript_role") or "").lower() == "appendix":
+            continue
         storyboard_trace = item.get("storyboard_trace") or {}
         contracts.append({
             "storyboard_id": item.get("storyboard_id") or item.get("id"),
@@ -650,7 +658,13 @@ def _storyboard_alignment_report(figures: list[dict[str, Any]], storyboard: dict
         str(item.get("figure_id") or f"storyboard_figure_{index}")
         for index, item in enumerate((storyboard or {}).get("figures") or [], start=1)
     ]
-    main_ids = [str(item.get("storyboard_id") or item.get("id")) for item in figures if item.get("figure_role") == "main_result"]
+    main_ids = [
+        str(item.get("storyboard_id") or item.get("id"))
+        for item in figures
+        if item.get("figure_role") == "main_result"
+        and item.get("counts_toward_main_figures") is not False
+        and str(item.get("manuscript_role") or "main").lower() != "appendix"
+    ]
     missing = [item for item in storyboard_ids if item not in main_ids]
     extra_main = [item for item in main_ids if item not in storyboard_ids]
     supporting = [
@@ -662,7 +676,7 @@ def _storyboard_alignment_report(figures: list[dict[str, Any]], storyboard: dict
             "reason": item.get("supporting_reason") or "supporting_or_appendix_figure",
         }
         for item in figures
-        if item.get("figure_role") != "main_result"
+        if item.get("figure_role") != "main_result" or item.get("counts_toward_main_figures") is False or str(item.get("manuscript_role") or "").lower() == "appendix"
     ]
     return {
         "status": "written",

@@ -409,9 +409,11 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
     data_tex = _read_text(project_path / "data" / "data.tex") + "\n" + _read_text(project_path / "latex" / "sections" / "data.tex")
     methods_tex = _read_text(project_path / "methods" / "methods.tex") + "\n" + _read_text(project_path / "latex" / "sections" / "methods.tex")
     discussion_tex = _read_text(project_path / "discussion" / "discussion.tex") + "\n" + _read_text(project_path / "latex" / "sections" / "discussion.tex")
+    section_tex = "\n".join([introduction_tex, data_tex, methods_tex, discussion_tex])
     bib_keys = _bibtex_keys(bibtex)
-    main_citations = _latex_citation_keys(main_tex)
+    main_citations = _latex_citation_keys(main_tex + "\n" + section_tex)
     intro_discussion_citations = _latex_citation_keys(introduction_tex + "\n" + discussion_tex)
+    all_section_citations = _latex_citation_keys(section_tex)
     evidence_rows = _read_citation_evidence(project_path / "references" / "citation_evidence.csv")
     evidence_keys = {row.get("citation_key", "") for row in evidence_rows if row.get("citation_key")}
     evidence_by_section: dict[str, set[str]] = {}
@@ -453,9 +455,9 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
                 f"citation_evidence.csv contains {section}-context references, but the {section.capitalize()} section cites none of them.",
                 file_name,
             ))
-    unused_bib_keys = sorted(bib_keys - intro_discussion_citations)
+    unused_bib_keys = sorted(bib_keys - all_section_citations)
     if unused_bib_keys:
-        issues.append(QualityIssue("warning", "bib_entries_not_used_in_intro_or_discussion", "BibTeX entries not cited in Introduction or Discussion: " + ", ".join(unused_bib_keys[:12]), "latex/library.bib"))
+        issues.append(QualityIssue("warning", "bib_entries_not_used_in_manuscript", "BibTeX entries not cited in the assembled manuscript sections: " + ", ".join(unused_bib_keys[:12]), "latex/library.bib"))
     return {
         "bibtex_entry_count": len(bib_keys),
         "latex_citation_count": len(main_citations),

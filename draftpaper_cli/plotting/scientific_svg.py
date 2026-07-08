@@ -357,8 +357,14 @@ def _fallback_heatmap(path: Path, matrix: list[list[float | None]]) -> None:
 def _scatter_regression(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], numeric: list[str], label_column: str | None) -> dict[str, Any]:
     columns = _planned_columns(figure, numeric, label_column)
     numeric_columns = [column for column in columns if column in numeric]
-    x_col = str(figure.get("x") or (numeric_columns[0] if numeric_columns else ""))
-    y_col = str(figure.get("y") or (numeric_columns[1] if len(numeric_columns) > 1 else ""))
+    if len(numeric_columns) < 2:
+        numeric_columns = list(numeric)
+    requested_x = str(figure.get("x") or "")
+    requested_y = str(figure.get("y") or "")
+    x_col = requested_x if requested_x in numeric else (numeric_columns[0] if numeric_columns else "")
+    y_col = requested_y if requested_y in numeric and requested_y != x_col else ""
+    if not y_col:
+        y_col = next((column for column in numeric_columns if column != x_col), "")
     pairs = _numeric_pairs(rows, x_col, y_col)
     if len(pairs) < MISSING_VALUE_THRESHOLD:
         raise ScientificPlotError(f"Figure {figure.get('id')} requires at least two paired numeric values for {x_col}/{y_col}.")
@@ -401,7 +407,8 @@ def _scatter_regression(path: Path, figure: dict[str, Any], rows: list[dict[str,
 
 
 def _histogram(path: Path, figure: dict[str, Any], rows: list[dict[str, str]], numeric: list[str]) -> dict[str, Any]:
-    column = str(figure.get("x") or (figure.get("required_columns") or numeric or [""])[0])
+    requested = str(figure.get("x") or "")
+    column = requested if requested in numeric else (numeric[0] if numeric else str((figure.get("required_columns") or [""])[0]))
     values = _column_values(rows, column)
     if len(values) < MISSING_VALUE_THRESHOLD:
         raise ScientificPlotError(f"Figure {figure.get('id')} requires numeric values for {column}.")
@@ -606,10 +613,14 @@ def render_scientific_figure(
     else:
         raise ScientificPlotError(f"Unsupported empirical figure type: {kind}")
     payload.update({
-        "figure_id": figure.get("id"),
+        "figure_id": figure.get("id") or figure.get("figure_id") or figure.get("storyboard_id"),
+        "storyboard_id": figure.get("storyboard_id") or figure.get("id") or figure.get("figure_id"),
         "title": figure.get("title"),
         "path": str(path.relative_to(root)).replace("\\", "/"),
         "figure_type": kind or "data_overview",
+        "figure_role": figure.get("figure_role") or "main_result",
+        "manuscript_role": figure.get("manuscript_role") or ("appendix" if figure.get("counts_toward_main_figures") is False else "main"),
+        "counts_toward_main_figures": figure.get("counts_toward_main_figures") is not False,
         "file_format": "png",
         "backend": payload.get("backend") or PLOT_BACKEND,
         "is_placeholder": False,
