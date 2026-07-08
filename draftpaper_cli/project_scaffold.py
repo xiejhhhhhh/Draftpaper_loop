@@ -57,6 +57,7 @@ PROJECT_DIRECTORIES = [
     "core_evidence",
     "results/figures",
     "results/tables",
+    "writing",
     "data_writing",
     "methods_writing",
     "introduction",

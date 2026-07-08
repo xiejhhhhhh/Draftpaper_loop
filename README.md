@@ -26,6 +26,8 @@ Draftpaper-loop is also intended to become a learning research workflow rather t
 
 Current manuscript generation separates evidence control from prose control. Draftpaper-loop builds the auditable research evidence first, generates section-level writing briefs for Data and Methods, lets Codex compose natural scientific prose from those briefs, and then applies integrity, citation, formula, and result-evidence gates after writing.
 
+From v0.17.0 onward, manuscript writing is designed as constrained free composition rather than rigid templating. Draftpaper-loop preserves scientific facts, citation placement, figure interpretation, and manuscript hygiene as machine-checkable contracts, while leaving sentence-level scientific prose open enough for Codex to write naturally from the verified evidence.
+
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
 ## What It Does
@@ -345,6 +347,14 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.17.0 (2026-07-08) -- scientific fact ledger and interpretation-first writing
+
+- Added `writing/scientific_fact_ledger.json`, a shared manuscript-facing ledger for must-preserve scientific facts such as sample sizes, class balance, token coverage, stress-test boundaries, and result metrics.
+- Connected the fact ledger to Data and Methods writing briefs, Data/Methods prose, Discussion comparison, and the final quality gate, so cleaning internal paths or raw fields no longer silently removes key scientific facts.
+- Added `results/figure_interpretation_blueprint.json` so Results writing is driven by main figure groups, scientific questions, primary metrics, claim boundaries, and appendix diagnostics rather than generic artifact summaries.
+- Added relevance filtering for Introduction, Data, and Discussion citation insertion, preventing same-discipline but weakly related literature from being written into inappropriate manuscript positions.
+- Extended quality checks with must-preserve fact coverage, and verified the astronomy regression sections against the current `main.pdf`: v0.17.0 keeps Results citation-free and subsection-free, increases formula and figure-reference coverage, removes path/raw-field leakage, and preserves the current evidence ledger's key data facts.
 
 ### v0.16.9 (2026-07-08) -- style learning and full astronomy regression
 

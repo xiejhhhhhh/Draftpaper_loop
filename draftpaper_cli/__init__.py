@@ -56,6 +56,7 @@ from .review_revision import (
 )
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, infer_review_discipline, propose_review_engineering_plan
 from .results import ResultsGateError, inventory_results, write_results
+from .scientific_fact_ledger import build_scientific_fact_ledger, load_or_build_scientific_fact_ledger
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
 

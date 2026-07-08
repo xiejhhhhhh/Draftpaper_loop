@@ -15,6 +15,7 @@ from .citation_utils import bibtex_keys_in_text, citation_keys_in_text, has_cita
 from .io_utils import read_json, read_text
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status, validate_project
+from .scientific_fact_ledger import SCIENTIFIC_FACT_LEDGER_JSON, load_or_build_scientific_fact_ledger
 from .writing_quality import evaluate_section_quality
 
 
@@ -42,6 +43,7 @@ QUALITY_INPUTS = [
     "results/result_manifest.yaml",
     "results/results.tex",
     "results/results_summary_zh.md",
+    SCIENTIFIC_FACT_LEDGER_JSON,
     "references/citation_evidence.csv",
     "citation_audit/final_citation_audit_report.json",
 ]
@@ -402,6 +404,68 @@ def _check_manuscript_writing_quality(project_path: Path, issues: list[QualityIs
     return report
 
 
+def _fact_is_present(text: str, fact: dict[str, Any]) -> bool:
+    lowered = text.lower()
+    terms = [str(term or "").strip() for term in fact.get("match_terms") or [] if str(term or "").strip()]
+    if not terms and fact.get("value"):
+        terms = [str(fact.get("value"))]
+    for term in terms:
+        if term.lower() in lowered:
+            return True
+    value = str(fact.get("value") or "").strip()
+    return bool(value and value.lower() in lowered)
+
+
+def check_scientific_fact_coverage(project_path: str | Path) -> dict[str, Any]:
+    """Check whether must-preserve scientific facts appear in their target sections."""
+    project_dir = Path(project_path)
+    ledger = load_or_build_scientific_fact_ledger(project_dir)
+    section_files = {
+        "introduction": project_dir / "introduction" / "introduction.tex",
+        "data": project_dir / "data" / "data.tex",
+        "methods": project_dir / "methods" / "methods.tex",
+        "results": project_dir / "results" / "results.tex",
+        "discussion": project_dir / "discussion" / "discussion.tex",
+    }
+    missing: list[dict[str, Any]] = []
+    checked = 0
+    for fact in ledger.get("facts") or []:
+        if not isinstance(fact, dict) or not fact.get("must_preserve"):
+            continue
+        for section in [str(item) for item in fact.get("target_sections") or []]:
+            path = section_files.get(section)
+            if path is None:
+                continue
+            checked += 1
+            if not _fact_is_present(_read_text(path), fact):
+                missing.append({
+                    "section": section,
+                    "role": fact.get("role"),
+                    "text": fact.get("text"),
+                    "value": fact.get("value"),
+                    "file": str(path.relative_to(project_dir)),
+                })
+    return {
+        "status": "passed" if not missing else "failed",
+        "ledger": "writing/scientific_fact_ledger.json",
+        "checked_fact_targets": checked,
+        "missing_fact_count": len(missing),
+        "missing_facts": missing,
+    }
+
+
+def _check_scientific_fact_coverage(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    report = check_scientific_fact_coverage(project_path)
+    for item in report.get("missing_facts") or []:
+        issues.append(QualityIssue(
+            "error",
+            "scientific_fact_missing_from_section",
+            f"Must-preserve scientific fact is missing from {item.get('section')}: {item.get('text')}",
+            str(item.get("file") or "writing/scientific_fact_ledger.json"),
+        ))
+    return report
+
+
 def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
     main_tex = _read_text(project_path / "latex" / "main.tex")
     bibtex = _read_text(project_path / "latex" / "library.bib")
@@ -588,6 +652,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     results_report = _check_results(state.path, issues)
     manuscript_hygiene_report = _check_manuscript_narrative_hygiene(state.path, issues)
     writing_quality_report = _check_manuscript_writing_quality(state.path, issues)
+    scientific_fact_report = _check_scientific_fact_coverage(state.path, issues)
     bibliography_report = _check_bibliography(state.path, issues)
     citation_audit_report = _check_citation_audit(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
@@ -616,6 +681,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "results": results_report,
         "manuscript_hygiene": manuscript_hygiene_report,
         "writing_quality": writing_quality_report,
+        "scientific_facts": scientific_fact_report,
         "bibliography": bibliography_report,
         "citation_audit": citation_audit_report,
         "latex": latex_report,

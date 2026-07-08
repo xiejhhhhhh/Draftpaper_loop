@@ -126,6 +126,7 @@ def build_data_writing_brief(project_path: str | Path, context: dict[str, Any]) 
     inventory = context.get("inventory") if isinstance(context.get("inventory"), dict) else {}
     files = inventory.get("files") if isinstance(inventory, dict) else []
     variable_groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
+    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
     brief = {
         "status": "written",
         "generated_at": utc_now(),
@@ -148,6 +149,10 @@ def build_data_writing_brief(project_path: str | Path, context: dict[str, Any]) 
             "stage-owned data code summary when expressed as processing logic",
             "visible data observations recorded by Codex or the user",
         ],
+        "must_preserve_scientific_facts": [
+            item for item in fact_ledger.get("facts", [])
+            if isinstance(item, dict) and item.get("must_preserve") and "data" in set(item.get("target_sections") or [])
+        ],
         "avoid_content": list(MANUSCRIPT_AVOID_CONTENT),
         "internal_artifacts": _list_dict_values(files, "path"),
         "style_guidance": [
@@ -165,6 +170,7 @@ def build_method_writing_brief(project_path: str | Path, context: dict[str, Any]
     project_dir = Path(project_path)
     formula_manifest = context.get("formula_manifest") if isinstance(context.get("formula_manifest"), dict) else {}
     formulas = formula_manifest.get("formulas") if isinstance(formula_manifest.get("formulas"), list) else []
+    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
     brief = {
         "status": "written",
         "generated_at": utc_now(),
@@ -185,6 +191,10 @@ def build_method_writing_brief(project_path: str | Path, context: dict[str, Any]
             "method_formula_manifest formulas and variable explanations",
             "figure_code_trace links between methods and figures",
             "run_manifest metrics and successful execution status",
+        ],
+        "must_preserve_scientific_facts": [
+            item for item in fact_ledger.get("facts", [])
+            if isinstance(item, dict) and item.get("must_preserve") and "methods" in set(item.get("target_sections") or [])
         ],
         "avoid_content": list(MANUSCRIPT_AVOID_CONTENT),
         "style_guidance": [
@@ -223,6 +233,11 @@ def render_writing_brief_markdown(brief: dict[str, Any]) -> str:
         lines.extend(["", "## Coverage Guidance", ""])
         for key, value in (brief.get("coverage_guidance") or {}).items():
             lines.append(f"- {key}: {_compact(value, 500)}")
+    if brief.get("must_preserve_scientific_facts"):
+        lines.extend(["", "## Must-Preserve Scientific Facts", ""])
+        for item in brief.get("must_preserve_scientific_facts") or []:
+            if isinstance(item, dict):
+                lines.append(f"- {item.get('role')}: {item.get('text')}")
     lines.extend(["", "## Avoid", ""])
     for item in brief.get("avoid_content") or []:
         lines.append(f"- {item}")

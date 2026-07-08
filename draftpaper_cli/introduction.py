@@ -104,9 +104,99 @@ def _cite(row: dict[str, str]) -> str:
     return f"\\citep{{{row.get('citation_key')}}}"
 
 
-def _reference_coverage_paragraphs(project_path: Path, section: str, existing_text: str) -> list[str]:
+_INTRO_STOPWORDS = {
+    "study",
+    "paper",
+    "research",
+    "analysis",
+    "method",
+    "model",
+    "models",
+    "data",
+    "using",
+    "based",
+    "with",
+    "from",
+    "field",
+    "astronomy",
+    "machine",
+    "learning",
+    "domain",
+    "time",
+    "long",
+    "term",
+    "source",
+    "sources",
+}
+_INTRO_SHORT_KEYWORDS = {"ep", "wxt", "fxt", "agn", "xrb", "tde", "xray", "x-ray", "roc", "auc"}
+
+
+def _keyword_tokens(text: str) -> set[str]:
+    normalized = str(text or "").lower().replace("x-ray", "xray").replace("time-domain", "timedomain")
+    tokens = set(re.findall(r"[a-z0-9]+", normalized))
+    return {
+        token
+        for token in tokens
+        if (len(token) >= 4 or token in _INTRO_SHORT_KEYWORDS)
+        and token not in _INTRO_STOPWORDS
+    }
+
+
+def _introduction_relevance_score(row: dict[str, str], project_tokens: set[str]) -> int:
+    evidence_text = " ".join(str(row.get(key) or "") for key in ["claim", "evidence_summary", "citation_key"])
+    row_tokens = _keyword_tokens(evidence_text)
+    overlap = project_tokens & row_tokens
+    return len(overlap)
+
+
+def _filter_introduction_rows(project_meta: dict[str, Any], plan_text: str, citation_rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    project_text = " ".join([
+        str(project_meta.get("idea") or ""),
+        str(project_meta.get("title") or ""),
+        str(project_meta.get("field") or ""),
+    ])
+    project_tokens = _keyword_tokens(project_text)
+    if not project_tokens:
+        return citation_rows
+    scored = [
+        (_introduction_relevance_score(row, project_tokens), index, row)
+        for index, row in enumerate(citation_rows)
+    ]
+    filtered = [row for score, _index, row in scored if score >= 1]
+    if not filtered:
+        return citation_rows
+    filtered.sort(key=lambda item: (-_introduction_relevance_score(item, project_tokens), citation_rows.index(item)))
+    return filtered
+
+
+def _reference_coverage_paragraphs(
+    project_path: Path,
+    section: str,
+    existing_text: str,
+    *,
+    project_meta: dict[str, Any] | None = None,
+    plan_text: str = "",
+    preserve_all: bool = False,
+) -> list[str]:
     paragraphs: list[str] = []
     entries = missing_entries_for_section(project_path, section, existing_text)
+    if section == "introduction" and project_meta and not preserve_all:
+        project_tokens = _keyword_tokens(" ".join([
+            str(project_meta.get("idea") or ""),
+            str(project_meta.get("title") or ""),
+            str(project_meta.get("field") or ""),
+        ]))
+        entries = [
+            entry for entry in entries
+            if not project_tokens or _introduction_relevance_score(
+                {
+                    "claim": str(entry.get("intended_use") or ""),
+                    "evidence_summary": str(entry.get("evidence_summary") or entry.get("title") or ""),
+                    "citation_key": str(entry.get("citation_key") or ""),
+                },
+                project_tokens,
+            ) >= 1
+        ]
     if not entries:
         return paragraphs
     sentences = []
@@ -125,6 +215,7 @@ def _reference_coverage_paragraphs(project_path: Path, section: str, existing_te
 
 
 def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citation_rows: list[dict[str, str]], project_path: Path | None = None) -> str:
+    citation_rows = _filter_introduction_rows(project_meta, _plan_text, citation_rows)
     idea = project_meta.get("idea") or project_meta.get("title") or "the proposed study"
     field = project_meta.get("field") or "the target field"
     background = _pick(citation_rows, "background evidence", 0)
@@ -161,7 +252,15 @@ def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citat
     ]
     if project_path is not None:
         ensure_reference_usage_plan(project_path)
-        paragraphs.extend(_reference_coverage_paragraphs(project_path, "introduction", "\n\n".join(paragraphs)))
+        preserve_all_references = "use all retained references" in str(_plan_text or "").lower()
+        paragraphs.extend(_reference_coverage_paragraphs(
+            project_path,
+            "introduction",
+            "\n\n".join(paragraphs),
+            project_meta=project_meta,
+            plan_text=_plan_text,
+            preserve_all=preserve_all_references,
+        ))
     return "\\section{Introduction}\n" + "\n\n".join(_paragraph(paragraph) for paragraph in paragraphs) + "\n"
 
 

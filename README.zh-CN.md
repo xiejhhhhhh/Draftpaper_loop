@@ -284,6 +284,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.17.0 (2026-07-08) -- 科研事实账本与解释优先的自由写作
+
+- 新增 `writing/scientific_fact_ledger.json`，作为所有正文写作阶段共享的科研事实账本，用于保存必须保留的样本规模、类别平衡、token 覆盖、stress-test 边界和结果指标等关键信息。
+- 将科研事实账本接入 Data/Methods writing brief、Data/Methods 正文、Discussion 对比分析和最终 quality gate，避免在清洗路径、字段名和内部 artifact 表达时把关键科研事实一起删掉。
+- 新增 `results/figure_interpretation_blueprint.json`，让 Results 写作围绕主图组、科学问题、主指标、claim boundary 和 appendix diagnostics 展开，而不是泛泛总结图表文件。
+- 为 Introduction、Data 和 Discussion 的引用插入增加相关性过滤，避免同属一个大学科但与当前 idea/data/method 弱相关的文献被写进不合适的正文位置。
+- 扩展 quality-check，新增 must-preserve scientific fact coverage 检查；并用当前天文学回归项目对比 `main.pdf`，确认 v0.17.0 保持 Results 无引用、无小标题，增强公式和图表引用覆盖，清除了路径/原始字段污染，并保留当前证据账本中的关键数据事实。
+
 ### v0.16.9 (2026-07-08) -- 写作风格学习与完整天文学回归验证
 
 - 新增 `learn-writing-style-from-draft` 路径和 `writing_style.py` 风格画像，让已经人工认可的文稿提供非逐字复用的写作风格信号，同时不削弱证据门控。

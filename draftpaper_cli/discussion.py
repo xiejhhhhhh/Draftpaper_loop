@@ -15,7 +15,9 @@ from .html_utils import write_html_report
 from .latex_utils import safe_latex_text
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .reference_relevance import filter_relevant_references
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
+from .scientific_fact_ledger import build_scientific_fact_ledger, fact_summary_for_sections
 
 
 DISCUSSION_INPUTS = [
@@ -122,8 +124,17 @@ def _evidence(row: dict[str, str]) -> str:
     return _compact(row.get("evidence_summary", ""))
 
 
-def _reference_coverage_paragraphs(project_path: Path, section: str, existing_text: str) -> list[str]:
+def _reference_coverage_paragraphs(
+    project_path: Path,
+    section: str,
+    existing_text: str,
+    project_meta: dict[str, Any] | None = None,
+    *,
+    preserve_all: bool = False,
+) -> list[str]:
     entries = missing_entries_for_section(project_path, section, existing_text)
+    if project_meta and not preserve_all:
+        entries = filter_relevant_references(entries, project_meta)
     if not entries:
         return []
     sentences = []
@@ -330,11 +341,15 @@ def render_discussion_tex(
 ) -> str:
     idea = project_meta.get("idea") or project_meta.get("title") or "the proposed study"
     field = project_meta.get("field") or "the target field"
-    background = _pick(citation_rows, "background evidence", 0)
-    data = _pick(citation_rows, "data background", 0)
-    method = _pick(citation_rows, "method background", 0)
-    gap = _pick(citation_rows, "current gap", 0)
+    preserve_all_references = "use all retained references" in str(plan_text or "").lower()
+    relevant_rows = citation_rows if preserve_all_references else filter_relevant_references(citation_rows, project_meta)
+    background = _pick(relevant_rows, "background evidence", 0)
+    data = _pick(relevant_rows, "data background", 0)
+    method = _pick(relevant_rows, "method background", 0)
+    gap = _pick(relevant_rows, "current gap", 0)
     result_signal = _result_signal(results_text)
+    fact_ledger = build_scientific_fact_ledger(project_path) if project_path is not None else {}
+    result_fact_sentence = fact_summary_for_sections(fact_ledger, {"discussion"})
     contribution = _expected_contribution(plan_text)
     method_route = _method_route(plan_text)
     intro_citation_count = len(re.findall(r"\\cite[a-zA-Z*]*\{", introduction_text))
@@ -354,7 +369,7 @@ def render_discussion_tex(
         (
             f"Compared with existing work, the local findings are most informative where they agree with or depart from the cited evidence. "
             f"Prior data-oriented work indicates that {_evidence(data).lower()} {_cite(data)}. Method-oriented work further suggests that {_evidence(method).lower()} {_cite(method)}. "
-            f"The present results are therefore interpreted through data construction, validation design, and method behavior rather than through a broad claim of novelty."
+            f"The present results are therefore interpreted through data construction, validation design, and method behavior rather than through a broad claim of novelty. {result_fact_sentence}"
         ),
         (
             f"Limitations and future work follow the same evidence boundary. The principal limitation is that the interpretation remains constrained by the available empirical evidence. When local results are preliminary, sparse, "
@@ -370,7 +385,13 @@ def render_discussion_tex(
     ]
     if project_path is not None:
         ensure_reference_usage_plan(project_path)
-        paragraphs.extend(_reference_coverage_paragraphs(project_path, "discussion", "\n\n".join(paragraphs)))
+        paragraphs.extend(_reference_coverage_paragraphs(
+            project_path,
+            "discussion",
+            "\n\n".join(paragraphs),
+            project_meta,
+            preserve_all=preserve_all_references,
+        ))
     sanitized = [paragraph if paragraph.startswith("\\section") else _sanitize_discussion_artifacts(paragraph) for paragraph in paragraphs]
     tex = "\n\n".join(_paragraph(paragraph) if not paragraph.startswith("\\section") else paragraph for paragraph in sanitized) + "\n"
     forbidden = re.search(r"\b[A-Za-z]:[/\\][^\s{}]+|\b(?:results|data|methods|code)[/\\][^\s{}]+|\b[\w.-]+\.(?:png|jpg|jpeg|csv|json|py|html|md|tex)\b", tex, flags=re.I)

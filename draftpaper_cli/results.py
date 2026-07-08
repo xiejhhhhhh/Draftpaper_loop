@@ -25,6 +25,7 @@ RESULT_INPUTS = [
 RESULT_OUTPUTS = [
     "results/results.tex",
     "results/results_summary_zh.md",
+    "results/figure_interpretation_blueprint.json",
 ]
 
 FIGURE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".svg"}
@@ -624,6 +625,46 @@ def _metric_bits(metrics: dict[str, Any]) -> list[str]:
     return bits
 
 
+def _primary_metric_map(metrics: dict[str, Any]) -> dict[str, str]:
+    rendered: dict[str, str] = {}
+    for key, label in [("f1", "F1"), ("f1_macro", "macro F1"), ("macro_f1", "macro F1"), ("auc", "AUC"), ("roc_auc", "AUC"), ("accuracy", "accuracy")]:
+        if key not in metrics:
+            continue
+        try:
+            value = float(metrics[key])
+        except (TypeError, ValueError):
+            continue
+        rendered[label] = f"{value:.3g}"
+    return rendered
+
+
+def build_figure_interpretation_blueprint(entries: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+    """Build a writer-facing interpretation plan for main figures and appendix diagnostics."""
+    main_entries, appendix_entries, _table_entries = _main_and_appendix_entries(entries)
+    groups: list[dict[str, Any]] = []
+    for index, (kind, entry) in enumerate(main_entries, start=1):
+        if kind != "figure":
+            continue
+        appendix_refs = _appendix_refs_for_main(entry, appendix_entries, fallback=index == 1)
+        metrics = entry.get("metrics") if isinstance(entry.get("metrics"), dict) else {}
+        groups.append({
+            "group_index": index,
+            "main_figure_id": entry.get("id") or entry.get("path"),
+            "scientific_question": _sanitize_result_prose(entry.get("scientific_question") or ""),
+            "main_claim": _sanitize_result_prose(entry.get("result_claim") or entry.get("expected_finding") or ""),
+            "primary_metrics": _primary_metric_map(metrics),
+            "interpretation_sentence": _scientific_result_sentence(entry, _sanitize_result_prose(entry.get("result_claim") or "")),
+            "claim_boundary": _sanitize_result_prose(entry.get("claim_boundary") or ""),
+            "appendix_support": appendix_refs,
+        })
+    return {
+        "status": "written",
+        "schema_version": "v0.17.0",
+        "main_group_count": len(groups),
+        "groups": groups,
+    }
+
+
 def _sample_size_from_entry(entry: dict[str, Any], metrics: dict[str, Any]) -> str:
     caption = str(entry.get("caption_draft") or "")
     match = re.search(r"n=([0-9,.e+\-]+)", caption, flags=re.I)
@@ -751,7 +792,7 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
     lines = [
         "\\section{Results}",
         (
-            "The results are organized around the planned main figure groups. Each paragraph states the empirical pattern supported by a main figure and, where needed, cites appendix diagnostics that constrain the reliability or boundary of the interpretation."
+            "The results follow the main evidence groups defined by the research plan. Each paragraph interprets the empirical pattern shown by a main figure and uses appendix diagnostics only where they qualify the reliability, scope, or stability of that interpretation."
         ),
         "",
     ]
@@ -830,6 +871,8 @@ def write_results(project: str | Path) -> dict[str, Any]:
     entries = _validate_manifest(state.path, manifest)
     output_path = state.path / "results" / "results.tex"
     summary_path = state.path / "results" / "results_summary_zh.md"
+    blueprint_path = state.path / "results" / "figure_interpretation_blueprint.json"
+    blueprint = build_figure_interpretation_blueprint(entries)
     rendered_tex = render_results_tex(state.metadata, entries)
     rendered_summary = render_results_summary_zh(entries)
     results_stage = state.metadata.get("stages", {}).get("results", {})
@@ -838,6 +881,7 @@ def write_results(project: str | Path) -> dict[str, Any]:
         and results_stage.get("status") in {"draft", "approved", "completed"}
         and _existing_text(output_path) == rendered_tex
         and _existing_text(summary_path) == rendered_summary
+        and _existing_text(blueprint_path) == json.dumps(blueprint, ensure_ascii=False, indent=2) + "\n"
     )
     if outputs_unchanged:
         return {
@@ -852,6 +896,7 @@ def write_results(project: str | Path) -> dict[str, Any]:
 
     output_path.write_text(rendered_tex, encoding="utf-8")
     summary_path.write_text(rendered_summary, encoding="utf-8")
+    _write_json(blueprint_path, blueprint)
     update_stage_status(state.path, "results", "draft")
     _set_results_stage_manifest(state.path)
     return {

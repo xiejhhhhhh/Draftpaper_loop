@@ -121,6 +121,41 @@ class IntroductionTests(unittest.TestCase):
             self.assertEqual(payload["status"], "written")
             self.assertTrue(Path(payload["introduction"]).exists())
 
+    def test_introduction_filters_same_field_but_weakly_related_background(self) -> None:
+        from draftpaper_cli.introduction import render_introduction_tex
+
+        rows = [
+            {
+                "citation_key": "CubeSat2020",
+                "claim": "background evidence",
+                "evidence_summary": "CubeSats were historically used for education and low-cost space engineering missions.",
+            },
+            {
+                "citation_key": "Relevant2026",
+                "claim": "background evidence",
+                "evidence_summary": "X-ray transient classification uses light curves and spectral features to separate high-energy source classes.",
+            },
+            {
+                "citation_key": "RelevantMethod2025",
+                "claim": "method background",
+                "evidence_summary": "Transformer models can encode irregular astronomical time series for source classification.",
+            },
+        ]
+
+        tex = render_introduction_tex(
+            {
+                "idea": "Time-aware Transformer classification of EP WXT flaring sources using long-term X-ray light curves",
+                "field": "high-energy time-domain astronomy and machine learning",
+            },
+            "# Plan\n",
+            rows,
+        )
+
+        self.assertIn("\\citep{Relevant2026}", tex)
+        self.assertIn("\\citep{RelevantMethod2025}", tex)
+        self.assertNotIn("CubeSats", tex)
+        self.assertNotIn("\\citep{CubeSat2020}", tex)
+
 
 if __name__ == "__main__":
     unittest.main()

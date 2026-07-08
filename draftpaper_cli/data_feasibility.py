@@ -15,6 +15,8 @@ from .html_utils import write_html_report
 from .observations import load_observations
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .reference_relevance import filter_relevant_references
+from .scientific_fact_ledger import SCIENTIFIC_FACT_LEDGER_JSON, build_scientific_fact_ledger, fact_summary_for_sections
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 from .writing_brief import DATA_WRITING_BRIEF_HTML, DATA_WRITING_BRIEF_JSON, build_data_writing_brief
 
@@ -47,6 +49,7 @@ DATA_WRITING_OUTPUTS = [
     DATA_KEY_FACTS_JSON,
     DATA_WRITING_BRIEF_JSON,
     DATA_WRITING_BRIEF_HTML,
+    SCIENTIFIC_FACT_LEDGER_JSON,
     DATA_TEX,
 ]
 
@@ -660,6 +663,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "raw filenames", "processed filenames", "execution commands"],
     }
+    context["scientific_fact_ledger"] = build_scientific_fact_ledger(state.path)
     context["writing_brief"] = build_data_writing_brief(state.path, context)
     _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
     _write_json(state.path / DATA_KEY_FACTS_JSON, key_facts)
@@ -717,6 +721,12 @@ def _select_data_observation(observations: list[dict[str, Any]]) -> str:
 def _render_reference_paragraph(project_dir: Path, section_text: str) -> list[str]:
     ensure_reference_usage_plan(project_dir)
     entries = missing_entries_for_section(project_dir, "data", section_text)
+    try:
+        project_meta = _load_json(project_dir, "project.json")
+    except Exception:
+        project_meta = {}
+    if isinstance(project_meta, dict):
+        entries = filter_relevant_references(entries, project_meta)
     paragraphs: list[str] = []
     if not entries:
         return paragraphs
@@ -745,6 +755,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
     groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
     number_roles = context.get("evidence_number_roles") if isinstance(context.get("evidence_number_roles"), dict) else {}
     key_facts = context.get("data_key_facts") if isinstance(context.get("data_key_facts"), dict) else {}
+    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
     feature_sentence = ""
     if groups:
         group_names = [str(name).replace("_", " ") for name in groups.keys() if groups.get(name)]
@@ -795,9 +806,10 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
         "This boundary is reported as part of the data description because sample coverage, missing measurements, "
         "and available variable groups determine which hypotheses can be examined later in the manuscript."
     )
+    ledger_sentence = fact_summary_for_sections(fact_ledger, {"data"})
     paragraphs = [
         _join_scientific_sentences(source, content),
-        _join_scientific_sentences(processing, data_code, feature_sentence, key_fact_sentence, number_sentence),
+        _join_scientific_sentences(processing, data_code, feature_sentence, key_fact_sentence, number_sentence, ledger_sentence),
         _join_scientific_sentences(observation_text, boundary, boundary_note),
     ]
     return [paragraph for paragraph in paragraphs if paragraph]
