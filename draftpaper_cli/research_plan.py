@@ -776,12 +776,13 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
 
     update_stage_status(state.path, "research_plan", "draft")
     _set_research_plan_manifest(state.path)
+    cited_keys = {str(row.get("citation_key") or "").strip() for row in citation_rows if row.get("citation_key")}
     return {
         "status": "written",
         "project_path": str(state.path),
         "research_plan": str(research_plan_dir / "research_plan.md"),
         "research_plan_zh_cn": str(research_plan_dir / "research_plan.zh-CN.md"),
-        "citation_count": len(citation_rows),
+        "citation_count": len(cited_keys),
         "literature_count": len(literature_items),
         "anchor_paper_count": len(anchor_papers),
         "highest_similarity_score": novelty_report.get("highest_similarity_score"),

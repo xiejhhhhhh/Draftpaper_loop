@@ -601,6 +601,14 @@ def synthesize_cross_literature(items: list[dict[str, Any]]) -> dict[str, str]:
 
 def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
     rows = []
+    context_order = {
+        "idea": 0,
+        "introduction": 0,
+        "target_journal_anchor": 0,
+        "data": 1,
+        "methods": 2,
+        "discussion": 3,
+    }
     for item in items:
         contexts = item.get("search_contexts") or [item.get("search_context") or "idea"]
         # Retained references must remain usable during Discussion writing.  The
@@ -609,7 +617,8 @@ def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
         # generated for the final interpretive section.
         normalized_contexts = {str(context_value or "idea").lower() for context_value in contexts}
         normalized_contexts.add("discussion")
-        for context in sorted(normalized_contexts):
+        ordered_contexts = sorted(normalized_contexts, key=lambda value: (context_order.get(value, 99), value))
+        for context in ordered_contexts:
             section = {
                 "idea": "introduction",
                 "introduction": "introduction",
