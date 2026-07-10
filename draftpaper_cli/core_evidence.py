@@ -189,6 +189,7 @@ def _workflow_coverage(project_path: Path, run_manifest: dict[str, Any], validit
     inventory = _read_json(project_path / "data" / "data_inventory.json", {})
     quality = _read_json(project_path / "data" / "data_quality_report.json", {})
     feasibility = _read_json(project_path / "data" / "data_feasibility_report.json", {})
+    support = _read_json(project_path / "results" / "result_support_checkpoint.json", {})
     output_files = [_normalise_path(item) for item in run_manifest.get("output_files") or []]
     generated_figures = [_normalise_path(item) for item in run_manifest.get("figures_generated") or []]
     return {
@@ -197,6 +198,7 @@ def _workflow_coverage(project_path: Path, run_manifest: dict[str, Any], validit
         "method_analysis": run_manifest.get("status") == "success",
         "figure_production": bool(generated_figures or any(item.startswith("results/figures/") for item in output_files)),
         "result_validity": _decision_from_report(validity) in {"pass", "passed", "conditional_pass"},
+        "result_support": _decision_from_report(support) in {"pass", "passed"},
     }
 
 
@@ -248,6 +250,11 @@ def _recommended_next_action(
         return {
             "command": "assess-result-validity",
             "reason": "Result validity has not passed or conditionally passed.",
+        }
+    if not coverage.get("result_support"):
+        return {
+            "command": "assess-result-support",
+            "reason": "Result support has not passed; decide whether to downgrade claims or supplement data/method evidence before manuscript writing.",
         }
     return {
         "command": "plan-figures",
@@ -311,6 +318,7 @@ def _set_manifest(project_path: Path) -> None:
         "results/figure_metadata.json",
         "methods/run_manifest.yaml",
         "results/result_validity_report.json",
+        "results/result_support_checkpoint.json",
     ]
     manifest["output_files"] = [CORE_EVIDENCE_JSON, CORE_EVIDENCE_HTML]
     _write_json(manifest_path, manifest)

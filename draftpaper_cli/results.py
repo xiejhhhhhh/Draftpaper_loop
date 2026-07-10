@@ -15,6 +15,7 @@ from .latex_utils import safe_latex_text
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .result_validity import ResultValidityError, validate_result_validity_for_results
+from .result_support import ResultSupportError, validate_result_support_for_manuscript
 
 
 RESULT_INPUTS = [
@@ -865,7 +866,8 @@ def write_results(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     try:
         validate_result_validity_for_results(state.path)
-    except ResultValidityError as exc:
+        validate_result_support_for_manuscript(state.path)
+    except (ResultValidityError, ResultSupportError) as exc:
         raise ResultsGateError(str(exc)) from exc
     manifest = _read_manifest(state.path)
     entries = _validate_manifest(state.path, manifest)

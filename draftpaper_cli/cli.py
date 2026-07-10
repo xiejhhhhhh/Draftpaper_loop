@@ -90,6 +90,7 @@ from .review_revision import (
 )
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, propose_review_engineering_plan
 from .result_validity import ResultValidityError, assess_result_validity
+from .result_support import ResultSupportError, assess_result_support
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .template_registry import validate_template_registry
@@ -286,6 +287,9 @@ def build_parser() -> argparse.ArgumentParser:
     result_validity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     result_validity.add_argument("--primary-metric", default=None, help="Override primary metric from methods/method_requirements.json.")
     result_validity.add_argument("--minimum-value", type=float, default=None, help="Override minimum acceptable primary metric value.")
+
+    result_support = subparsers.add_parser("assess-result-support", help="Assess whether current result evidence supports the research-plan claims.")
+    result_support.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     core_evidence = subparsers.add_parser("assess-core-evidence", help="Assess data-method-figure-result evidence before manuscript writing.")
     core_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1000,6 +1004,18 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "assess-result-support":
+        try:
+            result = assess_result_support(args.project)
+        except (ResultSupportError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") == "pass" else 1
 
     if args.command == "assess-core-evidence":
         try:

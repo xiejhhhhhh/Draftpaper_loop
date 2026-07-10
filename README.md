@@ -348,6 +348,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.18.1 (2026-07-10) -- Result Support Checkpoint
+
+- Added `assess-result-support`, a scientific support checkpoint between `assess-result-validity` and `assess-core-evidence`. Technical result validity still checks outputs, metrics, and figure execution, while result support checks whether the current evidence can actually sustain the planned research claims.
+- Added `results/result_support_checkpoint.json/.md/.html`. When figures or metrics only partially support the research plan, the report stops manuscript writing and records two user-facing routes: downgrade the research claims to the current evidence, or supplement data/method evidence and regenerate core figures.
+- Updated the staged pipeline so `status` and `run-pipeline` stop at `result_support` when the support decision fails. Existing failed checkpoints also block `write-results`, preventing the loop from turning weak or contradictory evidence into manuscript claims.
+
 ### v0.17.0 (2026-07-08) -- scientific fact ledger and interpretation-first writing
 
 - Added `writing/scientific_fact_ledger.json`, a shared manuscript-facing ledger for must-preserve scientific facts such as sample sizes, class balance, token coverage, stress-test boundaries, and result metrics.

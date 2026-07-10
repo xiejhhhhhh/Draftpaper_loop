@@ -20,6 +20,27 @@ def read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def write_passing_result_support(project_path: Path) -> None:
+    (project_path / "results" / "result_support_checkpoint.json").write_text(
+        json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
+        encoding="utf-8",
+    )
+    (project_path / "results" / "result_support_checkpoint.md").write_text("# Result support\n", encoding="utf-8")
+    (project_path / "results" / "result_support_checkpoint.html").write_text("<html></html>", encoding="utf-8")
+    (project_path / "result_support" / "stage_manifest.json").write_text(
+        json.dumps(
+            {
+                "output_files": [
+                    "results/result_support_checkpoint.json",
+                    "results/result_support_checkpoint.md",
+                    "results/result_support_checkpoint.html",
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 class OrchestratorPassportTests(unittest.TestCase):
     def test_create_project_initializes_passport_and_ledgers(self) -> None:
         from draftpaper_cli.passport import PASSPORT_FILES, load_project_passport
@@ -147,6 +168,7 @@ class OrchestratorPassportTests(unittest.TestCase):
                 "code",
                 "methods",
                 "result_validity",
+                "result_support",
                 "core_evidence",
                 "results",
                 "introduction",
@@ -165,6 +187,7 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
+            write_passing_result_support(project.path)
             _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
@@ -209,6 +232,7 @@ class OrchestratorPassportTests(unittest.TestCase):
                 "code",
                 "methods",
                 "result_validity",
+                "result_support",
                 "core_evidence",
                 "results",
                 "introduction",
@@ -227,6 +251,7 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
+            write_passing_result_support(project.path)
             _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})

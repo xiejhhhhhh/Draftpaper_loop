@@ -54,6 +54,7 @@ PROJECT_DIRECTORIES = [
     "code/scripts",
     "code/tests",
     "result_validity",
+    "result_support",
     "core_evidence",
     "results/figures",
     "results/tables",
@@ -84,6 +85,7 @@ STAGE_ORDER = [
     "code",
     "methods",
     "result_validity",
+    "result_support",
     "core_evidence",
     "results",
     "introduction",
@@ -129,7 +131,8 @@ def _build_stage_metadata() -> dict[str, dict[str, Any]]:
     stages["code"]["depends_on"] = ["figure_contracts", "method_plan", "data", "references"]
     stages["methods"]["depends_on"] = ["method_plan", "data", "code"]
     stages["result_validity"]["depends_on"] = ["methods", "method_plan", "data"]
-    stages["core_evidence"]["depends_on"] = ["result_validity", "figure_plan", "methods", "data"]
+    stages["result_support"]["depends_on"] = ["result_validity", "research_plan", "figure_plan", "methods", "data"]
+    stages["core_evidence"]["depends_on"] = ["result_support", "figure_plan", "methods", "data"]
     stages["results"]["depends_on"] = ["core_evidence"]
     stages["introduction"]["depends_on"] = ["research_plan", "references", "journal_profile", "core_evidence"]
     stages["data_writing"]["depends_on"] = ["data", "results", "core_evidence"]

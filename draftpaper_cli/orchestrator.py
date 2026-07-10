@@ -41,6 +41,7 @@ STAGE_COMMANDS = {
     "code": "generate-analysis-code",
     "methods": "verify-methods",
     "result_validity": "assess-result-validity",
+    "result_support": "assess-result-support",
     "core_evidence": "assess-core-evidence",
     "results": "inventory-results",
     "introduction": "write-introduction",
@@ -94,6 +95,11 @@ MINIMUM_STAGE_OUTPUTS = {
     "core_evidence": [
         "core_evidence/core_evidence_report.json",
         "core_evidence/core_evidence_report.html",
+    ],
+    "result_support": [
+        "results/result_support_checkpoint.json",
+        "results/result_support_checkpoint.md",
+        "results/result_support_checkpoint.html",
     ],
     "results": [
         "results/result_manifest.yaml",
@@ -271,6 +277,15 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "command": command,
             "cli": _cli_for(project_path, command),
             "reason": "Figure contract gate is blocked; contracted main results need data/method repair before code generation.",
+        }
+    result_support = _read_report(project_path, "results/result_support_checkpoint.json")
+    if result_support and result_support.get("decision") != "pass":
+        return {
+            "stage": "result_support",
+            "command": "choose-result-route",
+            "cli": None,
+            "reason": "Current figures and metrics do not fully support the research-plan claims; choose claim downgrade or data/method supplementation before manuscript writing continues.",
+            "route_options": result_support.get("route_options") or [],
         }
     core_evidence = _read_report(project_path, "core_evidence/core_evidence_report.json")
     if core_evidence and core_evidence.get("decision") not in {"pass", "passed"}:
@@ -498,6 +513,8 @@ def _stage_command(project_path: Path, stage: str) -> str | None:
         return _methods_writing_stage_command(project_path)
     if stage == "core_evidence":
         return _core_evidence_stage_command(project_path)
+    if stage == "result_support":
+        return "assess-result-support"
     if stage == "results":
         return _results_stage_command(project_path)
     return STAGE_COMMANDS.get(stage)

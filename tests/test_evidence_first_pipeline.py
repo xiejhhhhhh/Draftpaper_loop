@@ -21,7 +21,8 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
             project = create_project(root=tmp, idea="Evidence-first paper", field="workflow engineering")
             stages = list(project.metadata["stages"].keys())
 
-            self.assertLess(stages.index("result_validity"), stages.index("core_evidence"))
+            self.assertLess(stages.index("result_validity"), stages.index("result_support"))
+            self.assertLess(stages.index("result_support"), stages.index("core_evidence"))
             self.assertLess(stages.index("core_evidence"), stages.index("results"))
             self.assertLess(stages.index("results"), stages.index("introduction"))
             self.assertLess(stages.index("introduction"), stages.index("data_writing"))
@@ -30,7 +31,7 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
             self.assertIn("results", project.metadata["stages"]["data_writing"]["depends_on"])
             self.assertIn("results", project.metadata["stages"]["methods_writing"]["depends_on"])
 
-    def test_orchestrator_recommends_core_evidence_after_result_validity(self) -> None:
+    def test_orchestrator_recommends_result_support_after_result_validity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Core evidence gate", field="workflow engineering")
             for stage in [
@@ -54,8 +55,8 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
 
             next_action = run_pipeline(project.path)["next_action"]
 
-            self.assertEqual(next_action["stage"], "core_evidence")
-            self.assertEqual(next_action["command"], "assess-core-evidence")
+            self.assertEqual(next_action["stage"], "result_support")
+            self.assertEqual(next_action["command"], "assess-result-support")
 
     def test_core_evidence_gate_requires_reviewable_figures_and_workflow_coverage(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +116,10 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (results / "result_validity_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
+            (results / "result_support_checkpoint.json").write_text(
+                json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
+                encoding="utf-8",
+            )
             (data / "data_acquisition_plan.json").write_text(json.dumps({"tasks": [{"status": "ready"}]}), encoding="utf-8")
             (data / "data_inventory.json").write_text(json.dumps({"files": [{"path": "data/raw/sample.csv"}]}), encoding="utf-8")
             (data / "data_quality_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")

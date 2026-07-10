@@ -33,9 +33,27 @@ class OrchestratorContextStepTests(unittest.TestCase):
 
             self.assertNotEqual(run_pipeline(project.path)["next_action"]["stage"], "data")
 
-            for stage in ["method_plan", "figure_plan", "code", "methods", "result_validity", "core_evidence", "results", "introduction"]:
+            for stage in ["method_plan", "figure_plan", "code", "methods", "result_validity", "result_support", "core_evidence", "results", "introduction"]:
                 update_stage_status(project.path, stage, "draft")
             (project.path / "methods" / "run_manifest.yaml").write_text(json.dumps({"status": "success", "output_files": []}), encoding="utf-8")
+            (project.path / "results" / "result_support_checkpoint.json").write_text(
+                json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "result_support_checkpoint.md").write_text("# Result support\n", encoding="utf-8")
+            (project.path / "results" / "result_support_checkpoint.html").write_text("<html></html>", encoding="utf-8")
+            (project.path / "result_support" / "stage_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "output_files": [
+                            "results/result_support_checkpoint.json",
+                            "results/result_support_checkpoint.md",
+                            "results/result_support_checkpoint.html",
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
             (project.path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
             (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]}), encoding="utf-8")
@@ -76,8 +94,26 @@ class OrchestratorContextStepTests(unittest.TestCase):
 
             self.assertNotEqual(run_pipeline(project.path)["next_action"]["stage"], "methods")
 
-            for stage in ["result_validity", "core_evidence", "results", "introduction", "data_writing"]:
+            for stage in ["result_validity", "result_support", "core_evidence", "results", "introduction", "data_writing"]:
                 update_stage_status(project.path, stage, "draft")
+            (project.path / "results" / "result_support_checkpoint.json").write_text(
+                json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "result_support_checkpoint.md").write_text("# Result support\n", encoding="utf-8")
+            (project.path / "results" / "result_support_checkpoint.html").write_text("<html></html>", encoding="utf-8")
+            (project.path / "result_support" / "stage_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "output_files": [
+                            "results/result_support_checkpoint.json",
+                            "results/result_support_checkpoint.md",
+                            "results/result_support_checkpoint.html",
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
             (project.path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
             (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({"figures": [], "tables": [{"id": "t1", "path": "results/tables/metrics.csv", "caption_draft": "T", "result_claim": "C"}]}), encoding="utf-8")

@@ -284,6 +284,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.18.1 (2026-07-10) -- 结果支撑检查点
+
+- 新增 `assess-result-support`，放在 `assess-result-validity` 和 `assess-core-evidence` 之间。`assess-result-validity` 继续检查运行产物、指标和图表执行质量，而结果支撑检查点专门判断当前证据是否真的能支撑研究计划中的核心主张。
+- 新增 `results/result_support_checkpoint.json/.md/.html`。当图表或指标只能部分支撑研究计划时，报告会停止正文写作，并给出两条人工路线：把研究主张降维到当前证据能够支撑的范围，或者继续补充数据和方法后重新生成核心图表。
+- 更新阶段管线：`status` 和 `run-pipeline` 会在 result support 失败时停在路线选择点；如果已有失败的 result support checkpoint，`write-results` 也会拒绝继续写作，避免把较弱或矛盾的证据硬写成论文结论。
+
 ### v0.17.0 (2026-07-08) -- 科研事实账本与解释优先的自由写作
 
 - 新增 `writing/scientific_fact_ledger.json`，作为所有正文写作阶段共享的科研事实账本，用于保存必须保留的样本规模、类别平衡、token 覆盖、stress-test 边界和结果指标等关键信息。
