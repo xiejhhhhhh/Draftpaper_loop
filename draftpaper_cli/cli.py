@@ -27,6 +27,7 @@ from .code_ownership import (
     route_stage_code,
     trace_figures_to_code,
 )
+from .claim_contract import ClaimContractError, apply_result_downgrade
 from .core_evidence import CoreEvidenceError, assess_core_evidence
 from .evidence_snapshot import EvidenceSnapshotMismatch, reopen_evidence_snapshot
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
@@ -94,6 +95,7 @@ from .review_revision import (
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, propose_review_engineering_plan
 from .result_validity import ResultValidityError, assess_result_validity
 from .result_support import ResultSupportError, assess_result_support
+from .result_rescue import ResultRescueError, prepare_result_rescue
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
@@ -294,6 +296,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     result_support = subparsers.add_parser("assess-result-support", help="Assess whether current result evidence supports the research-plan claims.")
     result_support.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    downgrade_claim = subparsers.add_parser("apply-result-downgrade", help="Freeze current result evidence and downgrade unsupported research-plan claims without rerunning results.")
+    downgrade_claim.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    downgrade_claim.add_argument("--reason", default="", help="Optional human-readable reason for choosing the downgrade route.")
+
+    result_rescue = subparsers.add_parser("prepare-result-rescue", help="Prepare data/method supplement tasks when current results cannot support planned claims.")
+    result_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     core_evidence = subparsers.add_parser("assess-core-evidence", help="Assess data-method-figure-result evidence before manuscript writing.")
     core_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1036,6 +1045,30 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("decision") == "pass" else 1
+
+    if args.command == "apply-result-downgrade":
+        try:
+            result = apply_result_downgrade(args.project, reason=args.reason)
+        except (ClaimContractError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "prepare-result-rescue":
+        try:
+            result = prepare_result_rescue(args.project)
+        except (ResultRescueError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
 
     if args.command == "assess-core-evidence":
         try:

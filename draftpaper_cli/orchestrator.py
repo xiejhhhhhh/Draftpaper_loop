@@ -244,6 +244,47 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _result_support_action(project_path: Path, result_support: dict[str, Any]) -> dict[str, Any] | None:
+    decision = str(result_support.get("decision") or "")
+    if decision == "pass":
+        return None
+    selected_route = str(result_support.get("selected_route") or "")
+    if decision == "supplement_prepared" or selected_route == "supplement_data_and_method":
+        rescue = _read_report(project_path, "review/result_rescue_plan.json")
+        next_commands = list(rescue.get("recommended_next_commands") or [])
+        return {
+            "stage": "result_support",
+            "command": "continue-result-rescue",
+            "cli": next_commands[0] if next_commands else _cli_for(project_path, "prepare-data-acquisition"),
+            "reason": "Supplement route is selected; reopen data/method/figure evidence and rerun result support after the rescue tasks are executed.",
+            "selected_route": "supplement_data_and_method",
+            "result_rescue_plan": "review/result_rescue_plan.json" if rescue else result_support.get("result_rescue_plan"),
+            "recommended_next_commands": next_commands,
+        }
+    route_options = result_support.get("route_options") or []
+    if not route_options:
+        route_options = [
+            {
+                "route": "downgrade_research_claim",
+                "current_executable_command": _cli_for(project_path, "apply-result-downgrade"),
+                "stale_policy": "stale manuscript and claim boundary only; keep current result artifacts frozen",
+            },
+            {
+                "route": "supplement_data_and_method",
+                "current_executable_command": _cli_for(project_path, "prepare-result-rescue"),
+                "stale_policy": "stale data, method, figure, evidence, and manuscript chain before rerunning results",
+            },
+        ]
+    return {
+        "stage": "result_support",
+        "command": "choose-result-route",
+        "cli": None,
+        "reason": "Current figures and metrics do not fully support the research-plan claims; choose claim downgrade or data/method supplementation before manuscript writing continues.",
+        "requires_user_decision": True,
+        "route_options": route_options,
+    }
+
+
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     plan_feasibility = _read_report(project_path, "research_plan/research_plan_feasibility_report.json")
     if plan_feasibility and plan_feasibility.get("decision") == "blocked":
@@ -280,14 +321,10 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "reason": "Figure contract gate is blocked; contracted main results need data/method repair before code generation.",
         }
     result_support = _read_report(project_path, "results/result_support_checkpoint.json")
-    if result_support and result_support.get("decision") != "pass":
-        return {
-            "stage": "result_support",
-            "command": "choose-result-route",
-            "cli": None,
-            "reason": "Current figures and metrics do not fully support the research-plan claims; choose claim downgrade or data/method supplementation before manuscript writing continues.",
-            "route_options": result_support.get("route_options") or [],
-        }
+    if result_support:
+        action = _result_support_action(project_path, result_support)
+        if action:
+            return action
     core_evidence = _read_report(project_path, "core_evidence/core_evidence_report.json")
     if core_evidence and core_evidence.get("decision") not in {"pass", "passed"}:
         action = (core_evidence.get("recommended_next_action") or {}).get("command")
@@ -553,6 +590,20 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
 def status_project(project: str | Path) -> dict[str, Any]:
     """Return pipeline status, passport state, and the next CLI action."""
     state = load_project(project)
+    result_support = _read_report(state.path, "results/result_support_checkpoint.json")
+    result_support_action = _result_support_action(state.path, result_support) if result_support else None
+    if result_support_action and result_support_action.get("command") == "choose-result-route":
+        passport = refresh_project_passport(state.path, event="status")
+        return {
+            "status": "reported",
+            "project_path": str(state.path),
+            "pipeline_state": "awaiting_result_route",
+            "current_stage": state.metadata.get("current_stage"),
+            "awaiting_checkpoint": None,
+            "passport": str(state.path / PASSPORT_FILES["passport"]),
+            "result_support_checkpoint": "results/result_support_checkpoint.json",
+            "next_action": result_support_action,
+        }
     drift = detect_artifact_drift(state.path)
     if drift.get("status") == "drift_detected":
         return {
@@ -587,14 +638,16 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "reason": "A checkpoint is waiting for explicit resume confirmation.",
             },
         }
+    next_action = _next_action(state.path, state.metadata)
+    pipeline_state = "awaiting_result_route" if next_action.get("command") == "choose-result-route" else "ready"
     return {
         "status": "reported",
         "project_path": str(state.path),
-        "pipeline_state": "ready",
+        "pipeline_state": pipeline_state,
         "current_stage": state.metadata.get("current_stage"),
         "awaiting_checkpoint": None,
         "passport": str(state.path / PASSPORT_FILES["passport"]),
-        "next_action": _next_action(state.path, state.metadata),
+        "next_action": next_action,
     }
 
 
@@ -685,6 +738,12 @@ def run_pipeline(project: str | Path) -> dict[str, Any]:
             "status": "drift_detected",
             "project_path": status["project_path"],
             "drift": status["drift"],
+            "next_action": status["next_action"],
+        }
+    if status["pipeline_state"] == "awaiting_result_route":
+        return {
+            "status": "awaiting_result_route",
+            "project_path": status["project_path"],
             "next_action": status["next_action"],
         }
     return {

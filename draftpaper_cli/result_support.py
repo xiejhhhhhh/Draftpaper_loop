@@ -108,13 +108,14 @@ def _claim_texts_from_contract(contract: dict[str, Any]) -> list[dict[str, Any]]
     for index, claim in enumerate(contract.get("claims") or [], start=1):
         if not isinstance(claim, dict):
             continue
-        text = str(claim.get("claim_text") or claim.get("planned_claim") or "").strip()
+        text = str(claim.get("active_claim") or claim.get("claim_text") or claim.get("planned_claim") or "").strip()
         if not text:
             continue
         claims.append({
             "claim_id": str(claim.get("claim_id") or f"claim_{index}"),
             "planned_claim": text,
-            "strength": str(claim.get("strength") or "unspecified"),
+            "strength": str(claim.get("active_strength") or claim.get("strength") or "unspecified"),
+            "claim_boundary": str(claim.get("claim_boundary") or ""),
             "source": "research_plan/claim_contract.json",
         })
     return claims
@@ -263,15 +264,15 @@ def _route_options(project_path: Path) -> list[dict[str, str]]:
             "route": "downgrade_research_claim",
             "label": "Evidence-aligned claim downgrade",
             "description": "Keep the current result figures and metrics, then lower the research-plan claim strength before manuscript writing.",
-            "current_executable_command": f"python -m draftpaper_cli.cli revise-research-plan --project {quoted}",
-            "future_dedicated_command": "apply-result-downgrade",
+            "current_executable_command": f"python -m draftpaper_cli.cli apply-result-downgrade --project {quoted}",
+            "stale_policy": "stale manuscript and claim boundary only; keep data, methods, figures, metrics, and current result artifacts frozen",
         },
         {
             "route": "supplement_data_and_method",
             "label": "Supplement data/method evidence",
             "description": "Keep the stronger research-plan claim, diagnose missing data or method support, and regenerate core result figures.",
-            "current_executable_command": f"python -m draftpaper_cli.cli prepare-analysis-revision --project {quoted}",
-            "future_dedicated_command": "prepare-result-rescue",
+            "current_executable_command": f"python -m draftpaper_cli.cli prepare-result-rescue --project {quoted}",
+            "stale_policy": "stale data, method, figure, evidence, and manuscript chain before rerunning results",
         },
     ]
 
@@ -337,7 +338,7 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
     failed_claims = [item for item in claim_assessments if item.get("support_status") in {"not_supported", "partially_supported"}]
     report = {
         "status": "written",
-        "schema_version": "v0.18.1",
+        "schema_version": "v0.18.5",
         "project_id": state.metadata.get("project_id"),
         "generated_at": utc_now(),
         "decision": decision,
@@ -350,7 +351,7 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
         "failed_claims": failed_claims,
         "route_options": _route_options(state.path) if requires_user_decision else [],
         "manuscript_may_proceed": decision == "pass",
-        "stale_if_downgrade_route": ["research_plan", "results", "introduction", "discussion", "latex", "quality_checks"],
+        "stale_if_downgrade_route": ["results", "introduction", "data_writing", "methods_writing", "discussion", "latex", "quality_checks"],
         "stale_if_supplement_route": ["data", "method_plan", "figure_plan", "figure_contracts", "code", "methods", "result_validity", "result_support", "core_evidence", "results", "introduction", "data_writing", "methods_writing", "discussion", "latex", "quality_checks"],
     }
     results_dir = state.path / "results"

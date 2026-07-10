@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .claim_contract import build_claim_contract_from_blueprint
 from .discipline import infer_discipline_profile
 from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
@@ -32,6 +33,7 @@ RESEARCH_PLAN_OUTPUTS = [
     "research_plan/research_plan.md",
     "research_plan/research_plan.zh-CN.md",
     "research_plan/research_blueprint.json",
+    "research_plan/claim_contract.json",
     "research_plan/figure_storyboard.json",
     "research_plan/method_plan.json",
     "research_plan/target_journal_anchor_papers.json",
@@ -754,6 +756,8 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     except ResearchBlueprintQualityError as exc:
         raise ResearchPlanQualityError(str(exc)) from exc
     _write_json(research_plan_dir / "research_blueprint.json", blueprint)
+    claim_contract = build_claim_contract_from_blueprint(blueprint)
+    _write_json(research_plan_dir / "claim_contract.json", claim_contract)
     _write_json(research_plan_dir / "figure_storyboard.json", blueprint["figure_storyboard"])
     _write_json(research_plan_dir / "method_plan.json", blueprint["method_plan"])
     for obsolete_name in ["research_plan.html", "research_questions.md", "research_questions.html"]:
