@@ -318,9 +318,7 @@ Third-party components keep their own licenses.
 
 ## Support
 
-Building this takes time; a few tokens for maintenance are appreciated. OTZ
-
-Donation supports maintenance only and does not grant commercial use rights.
+Building this takes time; a few tokens for maintenance are appreciated!!!
 
 <p align="center">
   <a href="https://xiejhhhhhh.github.io/Draftpaper_loop/support/"><strong>Open the interactive support page / 打开交互式支持页</strong></a>
@@ -345,6 +343,8 @@ Donation supports maintenance only and does not grant commercial use rights.
     </td>
   </tr>
 </table>
+
+Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 

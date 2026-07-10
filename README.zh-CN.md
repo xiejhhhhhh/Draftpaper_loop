@@ -254,9 +254,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 打赏
 
-开发不易，给点tokens费OTZ
-
-打赏只支持项目维护，不代表商业授权。
+开发不易，赞助点tokens费吧！！！
 
 <p align="center">
   <a href="https://xiejhhhhhh.github.io/Draftpaper_loop/support/"><strong>打开交互式支持页 / Open the interactive support page</strong></a>
@@ -281,6 +279,8 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
     </td>
   </tr>
 </table>
+
+打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
 
