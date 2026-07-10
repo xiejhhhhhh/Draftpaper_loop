@@ -201,6 +201,26 @@ def mark_stage_stale(project: str | Path, stage: str, *, include_self: bool = Fa
     return changed
 
 
+def mark_stages_stale(project: str | Path, stages: list[str]) -> list[str]:
+    """Mark an explicit set of stages stale without recursive dependency expansion."""
+    state = load_project(project)
+    changed: list[str] = []
+    now = utc_now()
+    for stage in stages:
+        if stage not in state.metadata["stages"] or stage in changed:
+            continue
+        stage_meta = state.metadata["stages"][stage]
+        stage_meta["status"] = "stale"
+        stage_meta["stale"] = True
+        stage_meta["last_updated"] = now
+        changed.append(stage)
+        _write_stage_manifest(state, stage)
+    saved = _save_project(state)
+    for stage in changed:
+        _write_stage_manifest(saved, stage)
+    return changed
+
+
 def validate_project(project: str | Path) -> dict[str, Any]:
     """Validate project metadata, required directories, and stage manifests."""
     issues: list[dict[str, str]] = []

@@ -220,17 +220,11 @@ def load_or_build_scientific_fact_ledger(project: str | Path) -> dict[str, Any]:
 
 
 def fact_summary_for_sections(ledger: dict[str, Any], sections: set[str]) -> str:
-    parts: list[str] = []
-    for item in ledger.get("facts") or []:
-        if not isinstance(item, dict) or not item.get("must_preserve"):
-            continue
-        targets = {str(section) for section in item.get("target_sections") or []}
-        if targets and not (targets & sections):
-            continue
-        text = str(item.get("text") or "").strip()
-        if text and text not in parts:
-            parts.append(text)
-    if not parts:
-        return ""
-    return "The manuscript must preserve these scientific facts: " + "; ".join(parts[:8]) + "."
+    """Legacy compatibility shim.
+
+    v0.17.0 rendered registry instructions directly into manuscript prose.
+    Evidence is now supplied structurally to section composers, so this helper
+    intentionally emits no manuscript-facing sentence.
+    """
+    return ""
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .change_impact import affected_stages, artifact_role_for_path, classify_change
 from .passport import (
     PASSPORT_FILES,
     PassportError,
@@ -18,7 +19,7 @@ from .passport import (
     utc_now,
 )
 from .project_scaffold import STAGE_ORDER
-from .project_state import ProjectStateError, load_project, mark_stage_stale
+from .project_state import ProjectStateError, load_project, mark_stages_stale
 
 
 class ArtifactDriftError(RuntimeError):
@@ -132,13 +133,34 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
         }
 
     stale_stages: list[str] = []
-    for source_stage in drift.get("source_stages") or []:
-        if source_stage not in (state.metadata.get("stages") or {}):
-            continue
-        for stage in mark_stage_stale(project_path, source_stage, include_self=False):
-            if stage not in stale_stages:
+    classified_changes: list[dict[str, Any]] = []
+    drift_items = [
+        *drift.get("changed_artifacts", []),
+        *drift.get("missing_artifacts", []),
+        *drift.get("added_artifacts", []),
+    ]
+    for item in drift_items:
+        path = str(item.get("path") or "")
+        role, owner_stage = artifact_role_for_path(path)
+        change = classify_change(
+            artifact_role=role,
+            before=item.get("previous_sha256"),
+            after=item.get("current_sha256"),
+            source_stage=owner_stage,
+        )
+        impacted = affected_stages(change)
+        classified_changes.append({
+            "path": path,
+            "artifact_role": role,
+            "change_class": change.change_class,
+            "affected_stages": impacted,
+            "reason": change.reason,
+        })
+        for stage in impacted:
+            if stage in (state.metadata.get("stages") or {}) and stage not in stale_stages:
                 stale_stages.append(stage)
-        state = load_project(project_path)
+
+    stale_stages = mark_stages_stale(project_path, stale_stages)
 
     event = {
         "kind": "artifact_drift",
@@ -148,6 +170,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
         "changed_artifacts": drift.get("changed_artifacts") or [],
         "missing_artifacts": drift.get("missing_artifacts") or [],
         "added_artifacts": drift.get("added_artifacts") or [],
+        "classified_changes": classified_changes,
     }
     append_integrity_event(project_path, event)
     passport = refresh_project_passport(project_path, event="artifact_drift_synced")
@@ -156,6 +179,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
         "project_path": str(project_path),
         "stale_stages": sorted(stale_stages, key=_stage_sort_key),
         "drift": drift,
+        "classified_changes": classified_changes,
         "passport": str(project_path / PASSPORT_FILES["passport"]),
         "artifact_count": passport.get("artifact_count", 0),
     }

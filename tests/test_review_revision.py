@@ -250,6 +250,39 @@ class ReviewRevisionTests(unittest.TestCase):
             self.assertEqual(project_json["stages"]["results"]["status"], "stale")
             self.assertTrue((project.path / "review" / "apply_revision_report.json").exists())
 
+    def test_apply_revision_for_discussion_does_not_stale_empirical_stages(self) -> None:
+        from draftpaper_cli.project_state import update_stage_status
+        from draftpaper_cli.review_revision import apply_revision
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Citation-local revision", field="astronomy")
+            for stage in ["methods", "result_validity", "core_evidence", "results", "discussion", "latex", "quality_checks"]:
+                update_stage_status(project.path, stage, "completed")
+            (project.path / "review" / "revision_plan.json").write_text(
+                json.dumps(
+                    {
+                        "issues": [
+                            {
+                                "issue_id": "citation-local",
+                                "target_stage": "discussion",
+                                "change_class": "citation_local",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = apply_revision(project.path)
+
+            self.assertEqual(
+                result["affected_stages"],
+                ["discussion", "citation_audit", "latex", "quality_checks"],
+            )
+            project_json = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project_json["stages"]["methods"]["status"], "completed")
+            self.assertEqual(project_json["stages"]["core_evidence"]["status"], "completed")
+
     def test_cli_review_revision_loop_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI review loop", field="workflow engineering")

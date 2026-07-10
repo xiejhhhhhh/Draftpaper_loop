@@ -12,6 +12,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+try:
+    from draftpaper_cli.figure_semantics import rendered_semantic_metadata
+except ModuleNotFoundError:  # Project-local generated runtime.
+    from figure_semantics import rendered_semantic_metadata
+
 
 PLOT_BACKEND = "png_scientific_runtime"
 MISSING_VALUE_THRESHOLD = 2
@@ -626,6 +631,7 @@ def render_scientific_figure(
         "is_placeholder": False,
         "caption_draft": figure.get("caption_draft") or figure.get("title") or "",
         "result_claim_template": figure.get("result_claim_template") or "",
+        **rendered_semantic_metadata(figure, payload),
     })
     return payload
 

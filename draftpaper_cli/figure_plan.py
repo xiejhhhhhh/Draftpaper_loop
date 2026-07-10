@@ -16,6 +16,7 @@ from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 from .research_blueprint import storyboard_to_figure_plan_items
+from .figure_semantics import build_semantic_figure_contract
 
 
 FIGURE_PLAN_INPUTS = [
@@ -618,6 +619,7 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
         if item.get("counts_toward_main_figures") is False or str(item.get("manuscript_role") or "").lower() == "appendix":
             continue
         storyboard_trace = item.get("storyboard_trace") or {}
+        semantic = build_semantic_figure_contract({**storyboard_trace, **item})
         contracts.append({
             "storyboard_id": item.get("storyboard_id") or item.get("id"),
             "figure_id": item.get("id"),
@@ -633,6 +635,7 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
             "expected_finding": item.get("expected_finding") or storyboard_trace.get("expected_finding"),
             "validation_metric": item.get("validation_metric") or storyboard_trace.get("validation_metric"),
             "research_question": item.get("scientific_question") or storyboard_trace.get("research_question"),
+            **semantic,
             "success_criteria": [
                 "planned output path exists",
                 "figure metadata references the same storyboard_id or planned path",

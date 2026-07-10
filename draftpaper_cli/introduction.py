@@ -12,6 +12,7 @@ from typing import Any
 
 from .citation_utils import bibtex_keys_in_text
 from .latex_utils import safe_latex_text
+from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
@@ -279,7 +280,12 @@ def write_introduction(project: str | Path) -> dict[str, Any]:
     introduction_dir = state.path / "introduction"
     introduction_dir.mkdir(parents=True, exist_ok=True)
     output_path = introduction_dir / "introduction.tex"
-    output_path.write_text(render_introduction_tex(state.metadata, plan_text, citation_rows, state.path), encoding="utf-8")
+    fallback = render_introduction_tex(state.metadata, plan_text, citation_rows, state.path)
+    try:
+        composition = select_validated_section_draft(state.path, "introduction", fallback)
+    except SectionCompositionError as exc:
+        raise RuntimeError(str(exc)) from exc
+    output_path.write_text(str(composition["text"]), encoding="utf-8")
 
     update_stage_status(state.path, "introduction", "draft")
     _set_introduction_manifest(state.path)

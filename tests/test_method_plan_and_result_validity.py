@@ -148,7 +148,12 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (project.path / "results" / "figure_contracts.json").write_text(
-                json.dumps({"status": "written", "contracts": [{"figure_id": "fig_main_1", "figure_role": "main_result"}]}),
+                json.dumps({"status": "written", "contracts": [{
+                    "figure_id": "fig_main_1",
+                    "figure_role": "main_result",
+                    "required_data": ["independent_holdout_cohort"],
+                    "expected_finding": "Class-aware performance evidence",
+                }]}),
                 encoding="utf-8",
             )
             (project.path / "results" / "figure_contract_gate_report.json").write_text(
@@ -169,6 +174,84 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             self.assertIn("figure_contracts", report["failure_causes"])
             self.assertTrue(any("Figure contract gate is blocked" in issue for issue in report["figure_contract_issues"]))
             self.assertTrue(any("repair-figure-data" in action for action in report["recommended_actions"]))
+
+    def test_result_validity_rechecks_rendered_figure_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Semantic figure validity", field="astronomy")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="f1", minimum_primary_metric=0.7)
+            (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "output_files": ["results/tables/metrics.csv"], "metrics": {"f1": 0.88}}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_contracts.json").write_text(
+                json.dumps({"contracts": [{
+                    "figure_id": "fig_bad_ids",
+                    "scientific_question": "Do temporal features distinguish classes?",
+                    "required_variable_roles": ["temporal_feature", "class_label"],
+                    "forbidden_variable_roles": ["identifier"],
+                    "plot_grammar": "grouped_distribution",
+                }]}),
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_plan.json").write_text(json.dumps({"figures": []}), encoding="utf-8")
+            (project.path / "results" / "storyboard_alignment_report.json").write_text(
+                json.dumps({"decision": "pass", "all_storyboard_figures_planned": True}), encoding="utf-8"
+            )
+            (project.path / "methods" / "method_feasibility_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
+            (project.path / "data" / "data_role_coverage_report.json").write_text(json.dumps({"available_roles": ["local_data"]}), encoding="utf-8")
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({"figures": [{
+                    "figure_id": "fig_bad_ids",
+                    "x_role": "source_id",
+                    "y_role": "obs_id",
+                    "plot_grammar": "scatter",
+                }]}),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+
+            self.assertEqual(result["decision"], "revise_required")
+            report = json.loads((project.path / "results" / "figure_semantic_validation_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["decision"], "blocked")
+
+    def test_result_validity_uses_run_bound_model_metric_instead_of_manifest_scalar(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Run-aware classification", field="machine learning astronomy")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="f1_macro", minimum_primary_metric=0.8)
+            (project.path / "results" / "tables" / "metrics.csv").write_text(
+                "metric,value\nf1,0.5\n",
+                encoding="utf-8",
+            )
+            (project.path / "results" / "tables" / "verified_models.csv").write_text(
+                "model,split,f1_macro\nlogistic_event_static,source_held_out,0.8667\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps(
+                    {
+                        "status": "success",
+                        "run_id": "run-aware-validity",
+                        "output_files": [
+                            "results/tables/metrics.csv",
+                            "results/tables/verified_models.csv",
+                        ],
+                        "metrics": {"f1": 0.5},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+            report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["observed_value"], 0.8667)
+            self.assertEqual(report["resolved_run_id"], "run-aware-validity")
+            self.assertEqual(report["resolved_metric_source"], "results/tables/verified_models.csv")
 
     def test_cli_collect_method_plan_and_assess_result_validity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

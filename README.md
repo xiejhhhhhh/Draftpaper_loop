@@ -26,13 +26,13 @@ Draftpaper-loop is also intended to become a learning research workflow rather t
 
 Current manuscript generation separates evidence control from prose control. Draftpaper-loop builds the auditable research evidence first, generates section-level writing briefs for Data and Methods, lets Codex compose natural scientific prose from those briefs, and then applies integrity, citation, formula, and result-evidence gates after writing.
 
-From v0.17.0 onward, manuscript writing is designed as constrained free composition rather than rigid templating. Draftpaper-loop preserves scientific facts, citation placement, figure interpretation, and manuscript hygiene as machine-checkable contracts, while leaving sentence-level scientific prose open enough for Codex to write naturally from the verified evidence.
+From v0.17.7 onward, manuscript writing is evidence-semantic free composition rather than rigid templating. Draftpaper-loop resolves facts from verified runs, validates each main figure against a scientific contract, freezes the human-confirmed evidence snapshot, and then leaves sentence-level scientific prose open enough for Codex to write naturally from that one verified evidence version.
 
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
 ## What It Does
 
-Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages. The main loop is now evidence-first: project creation, literature search, journal template profiling, research planning, data acquisition/integration, method planning, figure planning, analysis-code generation, method verification, result validity, core evidence review, Results writing, Introduction/Data/Methods/Discussion writing, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and final quality gates.
+Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages. The main loop is evidence-first: project creation, literature search, journal template profiling, research planning, data acquisition/integration, method planning, figure planning, analysis-code generation, method verification, run-aware result evidence resolution, semantic figure-contract validation, core-evidence review and human confirmation, Results writing, Introduction/Data/Methods/Discussion writing, final citation audit, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and quality gates.
 
 The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, Draftpaper-loop can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
 
@@ -117,6 +117,26 @@ Use Draftpaper-loop in <repo> to create a paper project for this idea, search li
 ```
 
 Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next safe stage. The raw `draftpaper` commands below are the underlying loop interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
+
+### Evidence-Semantic API
+
+The public Python API exposes the same safeguards used by the CLI. `resolve_result_evidence` resolves metrics only from verified, run-bound outputs; `build_scientific_evidence_registry` rejects contradictory facts within the same cohort; `validate_figure_semantics` rejects identifier-versus-identifier and mixed-unit scientific figures; `create_evidence_snapshot` freezes human-confirmed core evidence; and `submit_section_draft` validates a freely composed section before installation. Existing rendered figures can be mapped only through explicit, auditable `submit-figure-semantic-annotations` input with variable roles and evidence-source identifiers.
+
+```python
+from draftpaper_cli import (
+    build_scientific_evidence_registry,
+    create_evidence_snapshot,
+    resolve_result_evidence,
+    submit_section_draft,
+    validate_figure_semantics,
+)
+
+evidence = resolve_result_evidence(project_path)
+registry = build_scientific_evidence_registry(project_path)
+snapshot = create_evidence_snapshot(project_path)
+```
+
+Use `reopen-core-evidence --reason "..."` before a scientific data, method, metric, or figure change. Citation-only and presentation-only changes receive narrower stale propagation; a final citation audit must run after the final five manuscript sections and must match the promoted evidence snapshot.
 
 For staged work, Codex should first call the orchestrator layer:
 
@@ -347,6 +367,16 @@ Donation supports maintenance only and does not grant commercial use rights.
 </table>
 
 ## Recent Updates
+
+### v0.17.7 (2026-07-10) -- evidence-semantic manuscript safeguards
+
+- Replaced the permissive fact-ledger writing path with a domain-neutral Scientific Evidence Registry. Evidence records carry role, cohort, sample unit, split, run, model, source, and confidence so contradictory cohort facts block writing instead of becoming prose hallucinations.
+- Added run-aware result-evidence resolution. Metrics are selected from verified method runs and explicitly anchored sibling tables rather than from an arbitrary generic `metrics.csv`; Results, Methods, validity checks, and figure metadata share evidence identifiers and provenance.
+- Added Semantic Figure Contracts. Main figures now declare scientific question, variable roles, forbidden roles, method outputs, panel structure, plot grammar, metric dimensions, and expected claim. Identifier-versus-identifier plots, mixed-unit axes, missing method outputs, and incomplete panels are rejected before core-evidence confirmation.
+- Added precise change classification and stale propagation. Citation-local and presentation-only changes no longer invalidate evidence generation, whereas data, method, result, figure, and research-design changes reopen the necessary scientific chain.
+- Added human-approved evidence snapshots and explicit reopening. No writer, LaTeX assembly, or final citation audit can silently mix a changed figure, metric, or manuscript section with an older evidence approval.
+- Preserved Codex freedom at sentence level through section evidence packets and post-writing contracts. Freely composed section candidates are accepted only when they respect result-citation, evidence coverage, formula explanation, internal-language, and result-leakage rules.
+- Added `submit-figure-semantic-annotations` for explicit, auditable legacy-figure mappings; the loop does not infer scientific meaning from an old PNG. Cross-project v0.18.0 release regression remains a separate forthcoming validation step.
 
 ### v0.17.0 (2026-07-08) -- scientific fact ledger and interpretation-first writing
 

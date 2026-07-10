@@ -20,6 +20,157 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 class FigureContractGateTests(unittest.TestCase):
+    def test_legacy_metadata_can_be_completed_by_auditable_semantic_annotation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Legacy scientific figure", field="ecology")
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": [{
+                "figure_id": "fig_response",
+                "path": "results/figures/response.png",
+                "scientific_question": "How does the predictor relate to the response?",
+                "required_variable_roles": ["features", "label_or_response"],
+                "forbidden_variable_roles": ["identifier"],
+                "required_method_outputs": ["r2"],
+                "plot_grammar": "relationship",
+                "metric_dimensions": ["dimensionless_score"],
+            }]})
+            _write_json(project.path / "results" / "figure_plan.json", {"figures": []})
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {"status": "success", "output_files": []})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+            _write_json(project.path / "results" / "figure_metadata.json", {"figures": [{
+                "figure_id": "fig_response",
+                "path": "results/figures/response.png",
+                "variables": {"x": "predictor", "y": "response"},
+                "statistics": {"r2": 0.42},
+            }]})
+            _write_json(project.path / "results" / "figure_semantic_annotations.json", {"annotations": [{
+                "figure_id": "fig_response",
+                "x_role": "features",
+                "y_role": "label_or_response",
+                "variable_roles": ["features", "label_or_response"],
+                "series": [{"role": "performance_metric", "unit_family": "dimensionless_score", "metric": "r2"}],
+                "method_outputs": ["r2"],
+                "plot_grammar": "relationship",
+                "evidence_source_ids": ["run:verified", "table:response_metrics"],
+            }]})
+
+            result = assess_figure_contracts(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+
+    def test_successful_run_cannot_pass_with_unvalidated_main_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Missing semantic metadata", field="engineering")
+            contracts = [
+                {
+                    "storyboard_id": f"fig_main_{index}",
+                    "figure_id": f"fig_main_{index}",
+                    "required_data": [],
+                    "required_method": [],
+                    "scientific_question": "What evidence answers the research question?",
+                    "plot_grammar": "relationship",
+                    "required_variable_roles": ["features"],
+                }
+                for index in range(1, 6)
+            ]
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+            _write_json(project.path / "results" / "figure_plan.json", {
+                "figure_policy": {"minimum_main_figures": 5},
+                "main_figure_group_count": 5,
+                "figures": [],
+            })
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {"status": "success", "output_files": []})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+            _write_json(project.path / "results" / "figure_metadata.json", {"figures": []})
+
+            result = assess_figure_contracts(project.path)
+
+            self.assertEqual(result["decision"], "blocked")
+            report = json.loads((project.path / "results" / "figure_semantic_validation_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["validated_figure_count"], 0)
+            self.assertEqual(report["required_main_figure_count"], 5)
+            self.assertEqual(report["decision"], "blocked")
+
+    def test_semantically_invalid_rendered_figure_blocks_contract_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Scientific figure validation", field="astronomy")
+            contracts = [
+                {
+                    "storyboard_id": f"fig_main_{index}",
+                    "figure_id": f"fig_main_{index}",
+                    "required_data": [],
+                    "required_method": [],
+                    "scientific_question": "Does temporal behavior distinguish source classes?",
+                    "required_variable_roles": ["temporal_feature", "class_label"] if index == 1 else [],
+                    "forbidden_variable_roles": ["identifier"] if index == 1 else [],
+                    "plot_grammar": "grouped_distribution" if index == 1 else "",
+                }
+                for index in range(1, 6)
+            ]
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+            _write_json(project.path / "results" / "figure_plan.json", {
+                "figure_policy": {"minimum_main_figures": 5},
+                "main_figure_group_count": 5,
+                "figures": [],
+            })
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+            _write_json(project.path / "results" / "figure_metadata.json", {
+                "figures": [
+                    {
+                        "figure_id": "fig_main_1",
+                        "x_role": "source_id",
+                        "y_role": "obs_id",
+                        "plot_grammar": "scatter",
+                    }
+                ]
+            })
+
+            result = assess_figure_contracts(project.path)
+            report = json.loads((project.path / "results" / "figure_semantic_validation_report.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "blocked")
+            self.assertIn(
+                "identifier_only_scientific_plot",
+                {issue["kind"] for issue in report["figure_checks"][0]["issues"]},
+            )
+
+    def test_main_contract_requires_explicit_method_source_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Transformer classification", field="astronomy machine learning")
+            contracts = [
+                {
+                    "storyboard_id": f"fig_main_{index}",
+                    "figure_id": f"fig_main_{index}",
+                    "required_data": [],
+                    "required_method": ["time_aware_transformer"] if index == 1 else [],
+                    "expected_finding": "main empirical finding",
+                }
+                for index in range(1, 6)
+            ]
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+            _write_json(project.path / "results" / "figure_plan.json", {
+                "figure_policy": {"minimum_main_figures": 5},
+                "main_figure_group_count": 5,
+                "figures": [],
+            })
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+
+            result = assess_figure_contracts(project.path)
+            report = json.loads((project.path / "results" / "figure_contract_gate_report.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "blocked")
+            self.assertIn(
+                "missing_method_source_evidence",
+                {issue["kind"] for issue in report["contract_checks"][0]["issues"]},
+            )
+
     def test_figure_contract_gate_routes_missing_data_to_repair(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Transformer classification", field="astronomy machine learning")

@@ -9,6 +9,7 @@ import tempfile
 import unittest
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
+from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import build_method_writing_context
 from draftpaper_cli.orchestrator import run_pipeline
@@ -38,6 +39,7 @@ class OrchestratorContextStepTests(unittest.TestCase):
             (project.path / "methods" / "run_manifest.yaml").write_text(json.dumps({"status": "success", "output_files": []}), encoding="utf-8")
             (project.path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            create_evidence_snapshot(project.path)
             (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]}), encoding="utf-8")
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nResult text.\n", encoding="utf-8")
@@ -80,6 +82,7 @@ class OrchestratorContextStepTests(unittest.TestCase):
                 update_stage_status(project.path, stage, "draft")
             (project.path / "core_evidence" / "core_evidence_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            create_evidence_snapshot(project.path)
             (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({"figures": [], "tables": [{"id": "t1", "path": "results/tables/metrics.csv", "caption_draft": "T", "result_claim": "C"}]}), encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nResult text.\n", encoding="utf-8")
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")

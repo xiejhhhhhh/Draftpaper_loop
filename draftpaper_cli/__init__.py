@@ -11,15 +11,21 @@ Commercial use requires written authorization from the developer.
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
 from .citation_audit import CitationAuditError, audit_citations
+from .change_impact import ChangeClassification, affected_stages, classify_change
 from .citation_repair import CitationRepairError, apply_citation_repair, generate_citation_repair_plan, re_audit_citations, run_citation_repair_loop
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
+from .evidence_registry import EvidenceConflictError, build_scientific_evidence_registry, ensure_registry_consistent
+from .evidence_snapshot import create_evidence_snapshot, reopen_evidence_snapshot, validate_evidence_snapshot
+from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
+from .figure_semantics import build_semantic_figure_contract, validate_figure_semantics
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
 from .integrity_gate import IntegrityGateError, latest_integrity_report, run_integrity_gate
 from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_latex, compile_latex_pdf
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .methods import MethodsGateError, verify_methods, write_methods
+from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError, load_project_passport, refresh_project_passport
 from .plugin_candidates import (
@@ -56,6 +62,7 @@ from .review_revision import (
 )
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, infer_review_discipline, propose_review_engineering_plan
 from .results import ResultsGateError, inventory_results, write_results
+from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .scientific_fact_ledger import build_scientific_fact_ledger, load_or_build_scientific_fact_ledger
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
@@ -71,6 +78,11 @@ __all__ = [
     "AnalysisCodeGenerationError",
     "AnalysisRevisionError",
     "CitationAuditError",
+    "ChangeClassification",
+    "EvidenceConflictError",
+    "FigureSemanticAnnotationError",
+    "ResultEvidenceError",
+    "SectionCompositionError",
     "CitationRepairError",
     "ArtifactDriftError",
     "LatexAssemblyError",
@@ -118,6 +130,19 @@ __all__ = [
     "detect_artifact_drift",
     "sync_artifact_stale",
     "generate_analysis_code",
+    "classify_change",
+    "affected_stages",
+    "build_scientific_evidence_registry",
+    "ensure_registry_consistent",
+    "create_evidence_snapshot",
+    "reopen_evidence_snapshot",
+    "validate_evidence_snapshot",
+    "build_semantic_figure_contract",
+    "validate_figure_semantics",
+    "submit_figure_semantic_annotations",
+    "build_section_evidence_packet",
+    "submit_section_draft",
+    "resolve_result_evidence",
     "prepare_analysis_revision",
     "write_introduction",
     "inventory_data",

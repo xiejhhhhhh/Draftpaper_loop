@@ -33,6 +33,7 @@ ANALYSIS_CODE_OUTPUTS = [
     "methods/scripts/install_plotting_requirements.py",
     "methods/requirements-publication.txt",
     "methods/src/scientific_plotting.py",
+    "methods/src/figure_semantics.py",
     "methods/src/generated_pipeline.py",
     "methods/tests/test_generated_pipeline.py",
     "methods/method_code_manifest.json",
@@ -44,6 +45,7 @@ ANALYSIS_COMPATIBILITY_OUTPUTS = [
     "code/scripts/install_plotting_requirements.py",
     "code/requirements-publication.txt",
     "code/src/scientific_plotting.py",
+    "code/src/figure_semantics.py",
     "code/src/generated_pipeline.py",
     "code/tests/test_generated_pipeline.py",
 ]
@@ -860,6 +862,11 @@ def generate_analysis_code(
 ) -> dict[str, Any]:
     """Generate project-local analysis code from the current project-specific figure plan."""
     state = load_project(project)
+    if (state.path / "results" / "promoted_evidence_snapshot.json").exists():
+        raise AnalysisCodeGenerationError(
+            "Analysis code cannot overwrite promoted core evidence. Reopen the core-evidence checkpoint "
+            "through the revision workflow before regenerating methods or figures."
+        )
     try:
         requirements = validate_method_plan_for_methods(state.path)
     except MethodPlanError as exc:
@@ -988,7 +995,9 @@ def generate_analysis_code(
     generated_pipeline_source = _render_generated_pipeline(manifest)
     (method_src_dir / "generated_pipeline.py").write_text(generated_pipeline_source, encoding="utf-8")
     plotting_runtime = (Path(__file__).resolve().parent / "plotting" / "scientific_svg.py").read_text(encoding="utf-8")
+    semantic_runtime = (Path(__file__).resolve().parent / "figure_semantics.py").read_text(encoding="utf-8")
     (method_src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
+    (method_src_dir / "figure_semantics.py").write_text(semantic_runtime, encoding="utf-8")
     requirements_text = render_requirements_txt(plotting_requirements)
     (state.path / "methods" / "requirements-publication.txt").write_text(requirements_text, encoding="utf-8")
     (method_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
@@ -997,6 +1006,7 @@ def generate_analysis_code(
     # Compatibility copies keep older commands and tests working while the stage-owned layout becomes canonical.
     (compat_src_dir / "generated_pipeline.py").write_text(generated_pipeline_source, encoding="utf-8")
     (compat_src_dir / "scientific_plotting.py").write_text(plotting_runtime, encoding="utf-8")
+    (compat_src_dir / "figure_semantics.py").write_text(semantic_runtime, encoding="utf-8")
     (state.path / "code" / "requirements-publication.txt").write_text(requirements_text, encoding="utf-8")
     (compat_scripts_dir / "run_analysis.py").write_text(_render_run_script(), encoding="utf-8")
     (compat_scripts_dir / "install_plotting_requirements.py").write_text(_render_install_plotting_script(), encoding="utf-8")

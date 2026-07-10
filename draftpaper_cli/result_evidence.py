@@ -1,0 +1,308 @@
+# Copyright (c) 2026 Jinray Xie
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import json
+from collections import defaultdict
+from pathlib import Path
+from statistics import mean
+from typing import Any
+
+from .project_scaffold import _write_json, utc_now
+from .project_state import load_project
+
+
+RESOLVED_RESULT_EVIDENCE_JSON = "results/resolved_result_evidence.json"
+METRIC_PREFERENCE = ["f1_macro", "macro_f1", "f1", "roc_auc", "auc", "balanced_accuracy", "accuracy"]
+NON_METRIC_COLUMNS = {
+    "model",
+    "model_name",
+    "split",
+    "split_type",
+    "fold",
+    "fold_id",
+    "note",
+    "feature_group",
+    "variant",
+    "class",
+    "label",
+    "n",
+    "n_train",
+    "n_test",
+    "row_count",
+    "sample_size",
+}
+
+
+class ResultEvidenceError(RuntimeError):
+    """Raised when verified method outputs cannot provide result evidence."""
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _safe_project_path(project_path: Path, relative: str) -> Path | None:
+    candidate = (project_path / relative).resolve()
+    try:
+        candidate.relative_to(project_path.resolve())
+    except ValueError:
+        return None
+    return candidate
+
+
+def _numeric(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _source_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[str, Any]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        return []
+    columns = [str(column or "").strip() for column in rows[0].keys()]
+    source_hash = _source_hash(path)
+    model_column = next((item for item in ["model", "model_name", "variant"] if item in columns), "")
+    split_column = next((item for item in ["split", "split_type"] if item in columns), "")
+    fold_column = next((item for item in ["fold", "fold_id"] if item in columns), "")
+    records: list[dict[str, Any]] = []
+    if {"metric", "value"}.issubset(columns):
+        for row in rows:
+            value = _numeric(row.get("value"))
+            metric_name = str(row.get("metric") or "").strip().lower()
+            if metric_name and value is not None:
+                records.append({
+                    "metric_name": metric_name,
+                    "value": value,
+                    "model": "",
+                    "split": "",
+                    "fold": "",
+                    "aggregation": "reported_scalar",
+                    "run_id": run_id,
+                    "source_artifact": relative,
+                    "source_hash": source_hash,
+                    "priority": 10,
+                })
+        return records
+    for row in rows:
+        for column in columns:
+            metric_name = column.strip().lower()
+            if metric_name in NON_METRIC_COLUMNS:
+                continue
+            value = _numeric(row.get(column))
+            if value is None:
+                continue
+            records.append({
+                "metric_name": metric_name,
+                "value": value,
+                "model": str(row.get(model_column) or "").strip() if model_column else "",
+                "split": str(row.get(split_column) or "").strip() if split_column else "",
+                "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
+                "aggregation": "fold_value" if fold_column else "reported_value",
+                "run_id": run_id,
+                "source_artifact": relative,
+                "source_hash": source_hash,
+                "priority": 100 if model_column else 40,
+            })
+    return records
+
+
+def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        grouped[(
+            str(record.get("metric_name") or ""),
+            str(record.get("model") or ""),
+            str(record.get("split") or ""),
+            str(record.get("run_id") or ""),
+            str(record.get("source_artifact") or ""),
+        )].append(record)
+    aggregated: list[dict[str, Any]] = []
+    for (metric_name, model, split, run_id, source_artifact), items in grouped.items():
+        values = [float(item["value"]) for item in items]
+        item = dict(items[0])
+        item["value"] = mean(values)
+        item["aggregation"] = "mean_across_folds" if len(values) > 1 else item.get("aggregation")
+        item["fold_count"] = len(values)
+        item["metric_name"] = metric_name
+        item["model"] = model
+        item["split"] = split
+        item["run_id"] = run_id
+        item["source_artifact"] = source_artifact
+        item.pop("fold", None)
+        aggregated.append(item)
+    return aggregated
+
+
+def _metric_rank(record: dict[str, Any]) -> tuple[int, int, float]:
+    name = str(record.get("metric_name") or "")
+    try:
+        preference = len(METRIC_PREFERENCE) - METRIC_PREFERENCE.index(name)
+    except ValueError:
+        preference = 0
+    return int(record.get("priority") or 0), preference, float(record.get("value") or 0.0)
+
+
+def _matches_anchor(value: float, anchors: list[float]) -> bool:
+    return any(abs(value - anchor) <= max(1e-8, abs(anchor) * 5e-4) for anchor in anchors)
+
+
+def _anchor_verified_metric_tables(
+    project_path: Path,
+    *,
+    run_id: str,
+    bound_sources: list[str],
+    bound_records: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Bind legacy detailed tables only when they reproduce a run-bound summary value."""
+    anchors = [float(item["value"]) for item in bound_records if _numeric(item.get("value")) is not None]
+    if not anchors:
+        return [], []
+    tables_root = project_path / "results" / "tables"
+    verified_records: list[dict[str, Any]] = []
+    verified_sources: list[str] = []
+    already_bound = set(bound_sources)
+    for path in sorted(tables_root.rglob("*.csv")) if tables_root.exists() else []:
+        relative = path.relative_to(project_path).as_posix()
+        if relative in already_bound or "metric" not in path.stem.lower():
+            continue
+        candidate = _aggregate(_metric_rows_from_csv(path, relative, run_id))
+        model_records = [item for item in candidate if str(item.get("model") or "").strip()]
+        if not model_records:
+            continue
+        if not any(_matches_anchor(float(item["value"]), anchors) for item in model_records):
+            continue
+        for item in candidate:
+            item["binding"] = "summary_anchor_verified"
+            item["priority"] = max(80, int(item.get("priority") or 0))
+        verified_records.extend(candidate)
+        verified_sources.append(relative)
+    return verified_records, verified_sources
+
+
+def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
+    """Resolve quantitative evidence only from outputs bound to a successful run."""
+    state = load_project(project)
+    run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml")
+    if str(run_manifest.get("status") or "").lower() != "success":
+        raise ResultEvidenceError("A successful methods/run_manifest.yaml is required to resolve result evidence.")
+    run_id = str(run_manifest.get("run_id") or run_manifest.get("execution_id") or "").strip()
+    if not run_id:
+        seed = json.dumps(
+            {
+                "command": run_manifest.get("command_argv") or run_manifest.get("command"),
+                "outputs": run_manifest.get("output_files") or run_manifest.get("declared_outputs"),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        run_id = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+    outputs = list(
+        dict.fromkeys(
+            str(item).replace("\\", "/")
+            for key in ["output_files", "declared_outputs", "tables_generated"]
+            for item in (run_manifest.get(key) or [])
+            if str(item).strip()
+        )
+    )
+    records: list[dict[str, Any]] = []
+    bound_sources: list[str] = []
+    for relative in outputs:
+        path = _safe_project_path(state.path, relative)
+        if path is None or not path.is_file() or path.suffix.lower() != ".csv":
+            continue
+        bound_sources.append(relative)
+        records.extend(_metric_rows_from_csv(path, relative, run_id))
+    records = _aggregate(records)
+    anchor_records, anchor_verified_sources = _anchor_verified_metric_tables(
+        state.path,
+        run_id=run_id,
+        bound_sources=bound_sources,
+        bound_records=records,
+    )
+    records.extend(anchor_records)
+    candidates = [item for item in records if item.get("metric_name") in METRIC_PREFERENCE]
+    requirements = _read_json(state.path / "methods" / "method_requirements.json")
+    configured_primary = str(requirements.get("primary_metric") or "").strip().lower()
+    configured_summary = [
+        item
+        for item in records
+        if configured_primary
+        and item.get("metric_name") == configured_primary
+        and not str(item.get("model") or "").strip()
+        and item.get("source_artifact") in bound_sources
+    ]
+    primary_metric = (
+        max(configured_summary, key=_metric_rank)
+        if configured_summary
+        else max(candidates, key=_metric_rank) if candidates else {}
+    )
+    evidence_records = []
+    for item in records:
+        evidence_records.append({
+            "evidence_id": hashlib.sha256(
+                f"{item.get('run_id')}|{item.get('model')}|{item.get('split')}|{item.get('metric_name')}".encode("utf-8")
+            ).hexdigest()[:16],
+            "entity_role": f"result_metric_{item.get('metric_name')}",
+            "value": item.get("value"),
+            "unit": "score",
+            "cohort": "main",
+            "sample_unit": "model_evaluation",
+            "split": item.get("split") or "",
+            "run_id": run_id,
+            "source_artifact": item.get("source_artifact"),
+            "source_hash": item.get("source_hash"),
+            "confidence": "verified_run_output",
+            "target_sections": ["results", "methods", "discussion"],
+            "model": item.get("model") or "",
+        })
+    report = {
+        "status": "resolved" if primary_metric else "no_primary_metric",
+        "schema_version": "v0.17.4",
+        "generated_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "run_id": run_id,
+        "bound_sources": bound_sources,
+        "anchor_verified_sources": anchor_verified_sources,
+        "metric_count": len(records),
+        "metrics": sorted(records, key=_metric_rank, reverse=True),
+        "primary_metric": primary_metric,
+        "evidence_records": evidence_records,
+        "policy": "Model- and split-specific verified run outputs outrank generic scalar metric files.",
+    }
+    fingerprint_payload = {key: value for key, value in report.items() if key != "generated_at"}
+    report["evidence_fingerprint"] = hashlib.sha256(
+        json.dumps(fingerprint_payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    output_path = state.path / RESOLVED_RESULT_EVIDENCE_JSON
+    existing = _read_json(output_path)
+    if existing:
+        if existing.get("evidence_fingerprint") == report.get("evidence_fingerprint"):
+            return existing
+        stable_existing = {key: value for key, value in existing.items() if key != "generated_at"}
+        stable_report = {key: value for key, value in report.items() if key != "generated_at"}
+        if json.dumps(stable_existing, sort_keys=True, ensure_ascii=False) == json.dumps(
+            stable_report,
+            sort_keys=True,
+            ensure_ascii=False,
+        ):
+            return existing
+    _write_json(output_path, report)
+    return report
