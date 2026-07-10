@@ -13,6 +13,24 @@ from draftpaper_cli.project_scaffold import create_project
 
 
 class ScientificFactLedgerTests(unittest.TestCase):
+    def test_fact_summary_is_not_rendered_as_manuscript_instruction(self) -> None:
+        from draftpaper_cli.scientific_fact_ledger import fact_summary_for_sections
+
+        summary = fact_summary_for_sections(
+            {
+                "facts": [
+                    {
+                        "must_preserve": True,
+                        "target_sections": ["methods"],
+                        "text": "60 sources",
+                    }
+                ]
+            },
+            {"methods"},
+        )
+
+        self.assertEqual(summary, "")
+
     def test_ledger_extracts_must_preserve_sample_facts_from_observations(self) -> None:
         from draftpaper_cli.scientific_fact_ledger import build_scientific_fact_ledger
 
@@ -40,8 +58,8 @@ class ScientificFactLedgerTests(unittest.TestCase):
             self.assertTrue(facts["event_count"]["must_preserve"])
             self.assertTrue((project.path / "writing" / "scientific_fact_ledger.json").exists())
 
-    def test_quality_gate_reports_missing_must_preserve_facts_by_section(self) -> None:
-        from draftpaper_cli.quality_gate import check_scientific_fact_coverage
+    def test_legacy_ledger_is_not_an_authoritative_quality_gate(self) -> None:
+        from draftpaper_cli.quality_gate import check_scientific_evidence_registry
         from draftpaper_cli.scientific_fact_ledger import build_scientific_fact_ledger
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -62,12 +80,11 @@ class ScientificFactLedgerTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            report = check_scientific_fact_coverage(project.path)
+            report = check_scientific_evidence_registry(project.path)
 
-            missing = {(item["section"], item["role"]) for item in report["missing_facts"]}
-            self.assertNotIn(("data", "event_count"), missing)
-            self.assertIn(("methods", "event_count"), missing)
-            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["record_count"], 0)
+            self.assertEqual(report["blocking_conflict_count"], 0)
 
     def test_results_writer_creates_interpretation_blueprint_from_main_and_appendix_figures(self) -> None:
         from draftpaper_cli.results import write_results

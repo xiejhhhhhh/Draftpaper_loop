@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .citation_utils import bibtex_keys_in_text, citation_keys_in_text
+from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
 from .latex_utils import safe_latex_text
 from .metadata import GENERATOR_TEX_COMMENT
@@ -534,12 +535,31 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
     """Assemble staged manuscript sections into latex/main.tex and latex/library.bib."""
     state = load_project(project)
     try:
+        promoted_snapshot = validate_promoted_snapshot_for_writing(state.path)
+    except EvidenceSnapshotMismatch as exc:
+        raise LatexAssemblyError(str(exc)) from exc
+    try:
         validate_journal_profile_for_writing(state.path)
     except JournalProfileError as exc:
         raise LatexAssemblyError(str(exc)) from exc
     _require_inputs(state.path)
     _require_non_stale_input_stages(state.metadata)
     sections = _read_sections(state.path)
+    snapshot_id = str(promoted_snapshot.get("snapshot_id") or "legacy_unpromoted")
+    if promoted_snapshot:
+        mismatches = []
+        for section_name, _relative in SECTION_INPUTS:
+            report_path = state.path / "writing" / "section_validation" / f"{section_name}.json"
+            if not report_path.exists():
+                mismatches.append(f"{section_name}:missing_validation")
+                continue
+            report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+            if report.get("decision") != "pass" or report.get("evidence_snapshot_id") != snapshot_id:
+                mismatches.append(f"{section_name}:snapshot_mismatch")
+        if mismatches:
+            raise LatexAssemblyError(
+                "Manuscript sections are not validated against the promoted evidence snapshot: " + ", ".join(mismatches)
+            )
     citation_keys, bib_keys = _validate_citations(state.path, sections)
     latex_dir = state.path / "latex"
     latex_dir.mkdir(parents=True, exist_ok=True)
@@ -558,6 +578,7 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
         "section_count": len(sections),
         "citation_count": len(citation_keys),
         "bibtex_entry_count": len(bib_keys),
+        "evidence_snapshot_id": snapshot_id,
         "outputs": LATEX_OUTPUTS,
     }
     if compile_pdf:

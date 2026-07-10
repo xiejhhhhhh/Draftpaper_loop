@@ -57,6 +57,9 @@ def _write_minimal_citation_project(root: str) -> Path:
         "The interpretation remains limited by the validation setting \\citep{Smith2024Model}.\n",
         encoding="utf-8",
     )
+    (project_path / "data" / "data.tex").write_text("\\section{Data}\nData description.\n", encoding="utf-8")
+    (project_path / "methods" / "methods.tex").write_text("\\section{Methods}\nMethod description.\n", encoding="utf-8")
+    (project_path / "results" / "results.tex").write_text("\\section{Results}\nResult description.\n", encoding="utf-8")
     (project_path / "latex" / "main.tex").write_text(
         "\\documentclass{article}\n\\begin{document}\n"
         "\\input{sections/introduction}\n\\input{sections/discussion}\n"
@@ -156,6 +159,16 @@ def _write_citation_preservation_project(root: str) -> Path:
 
 
 class CitationAuditRepairTests(unittest.TestCase):
+    def test_final_audit_requires_all_final_manuscript_sections(self) -> None:
+        from draftpaper_cli.citation_audit import CitationAuditError, audit_citations
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = _write_minimal_citation_project(tmp)
+            (project_path / "results" / "results.tex").unlink()
+
+            with self.assertRaisesRegex(CitationAuditError, "final manuscript sections"):
+                audit_citations(project_path, final=True)
+
     def test_audit_repair_loop_writes_iteration_and_final_html_reports(self) -> None:
         from draftpaper_cli.citation_audit import audit_citations
         from draftpaper_cli.citation_repair import apply_citation_repair, generate_citation_repair_plan

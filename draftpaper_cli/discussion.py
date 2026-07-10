@@ -13,11 +13,12 @@ from typing import Any
 from .citation_utils import bibtex_keys_in_text
 from .html_utils import write_html_report
 from .latex_utils import safe_latex_text
+from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .reference_relevance import filter_relevant_references
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
-from .scientific_fact_ledger import build_scientific_fact_ledger, fact_summary_for_sections
+from .evidence_registry import ensure_registry_consistent
 
 
 DISCUSSION_INPUTS = [
@@ -348,8 +349,6 @@ def render_discussion_tex(
     method = _pick(relevant_rows, "method background", 0)
     gap = _pick(relevant_rows, "current gap", 0)
     result_signal = _result_signal(results_text)
-    fact_ledger = build_scientific_fact_ledger(project_path) if project_path is not None else {}
-    result_fact_sentence = fact_summary_for_sections(fact_ledger, {"discussion"})
     contribution = _expected_contribution(plan_text)
     method_route = _method_route(plan_text)
     intro_citation_count = len(re.findall(r"\\cite[a-zA-Z*]*\{", introduction_text))
@@ -369,7 +368,7 @@ def render_discussion_tex(
         (
             f"Compared with existing work, the local findings are most informative where they agree with or depart from the cited evidence. "
             f"Prior data-oriented work indicates that {_evidence(data).lower()} {_cite(data)}. Method-oriented work further suggests that {_evidence(method).lower()} {_cite(method)}. "
-            f"The present results are therefore interpreted through data construction, validation design, and method behavior rather than through a broad claim of novelty. {result_fact_sentence}"
+            f"The present results are therefore interpreted through data construction, validation design, and method behavior rather than through a broad claim of novelty."
         ),
         (
             f"Limitations and future work follow the same evidence boundary. The principal limitation is that the interpretation remains constrained by the available empirical evidence. When local results are preliminary, sparse, "
@@ -413,15 +412,18 @@ def _set_discussion_manifest(project_path: Path) -> None:
 def write_discussion(project: str | Path) -> dict[str, Any]:
     """Write a traceable LaTeX Discussion from prior sections, results, and citation evidence."""
     state = load_project(project)
+    ensure_registry_consistent(state.path)
     plan_text, introduction_text, results_text, citation_rows = _require_inputs(state.path)
     discussion_dir = state.path / "discussion"
     discussion_dir.mkdir(parents=True, exist_ok=True)
     prepare_discussion_comparison(state.path)
     output_path = discussion_dir / "discussion.tex"
-    output_path.write_text(
-        render_discussion_tex(state.metadata, plan_text, introduction_text, results_text, citation_rows, state.path),
-        encoding="utf-8",
-    )
+    fallback = render_discussion_tex(state.metadata, plan_text, introduction_text, results_text, citation_rows, state.path)
+    try:
+        composition = select_validated_section_draft(state.path, "discussion", fallback)
+    except SectionCompositionError as exc:
+        raise RuntimeError(str(exc)) from exc
+    output_path.write_text(str(composition["text"]), encoding="utf-8")
 
     update_stage_status(state.path, "discussion", "draft")
     _set_discussion_manifest(state.path)

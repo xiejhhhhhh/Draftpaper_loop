@@ -11,9 +11,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .change_impact import ChangeClassification, affected_stages
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
-from .project_state import load_project, mark_stage_stale
+from .project_state import load_project, mark_stages_stale
 from .review_engines import propose_review_engineering_plan
 
 
@@ -1341,16 +1342,54 @@ def apply_revision(project: str | Path, *, issue_ids: list[str] | None = None, d
     selected = set(issue_ids or [])
     issues = [issue for issue in plan.get("issues") or [] if not selected or issue.get("issue_id") in selected]
     target_stages = sorted({str(issue.get("target_stage")) for issue in issues if issue.get("target_stage")})
+    classifications = []
+    affected: list[str] = []
+    for issue in issues:
+        stage = str(issue.get("target_stage") or "research_plan")
+        declared_class = str(issue.get("change_class") or "")
+        inferred_class = declared_class or {
+            "references": "citation_local",
+            "discussion": "prose_semantic",
+            "latex": "presentation_only",
+            "quality_checks": "presentation_only",
+            "results": "scientific_result",
+            "result_validity": "scientific_result",
+            "methods": "method_semantic",
+            "method_plan": "method_semantic",
+            "data": "data_semantic",
+        }.get(stage, "research_design")
+        role = {
+            "citation_local": "citation_repair",
+            "presentation_only": "latex_style",
+            "prose_semantic": "section_prose",
+            "scientific_result": "result_metric",
+            "method_semantic": "method_code",
+            "data_semantic": "processed_data",
+        }.get(inferred_class, "research_plan")
+        change = ChangeClassification(
+            inferred_class,
+            role,
+            stage,
+            inferred_class not in {"citation_local", "presentation_only"},
+            inferred_class in {"citation_local", "presentation_only", "prose_semantic", "scientific_result"},
+            f"Revision issue targets {stage}.",
+            {"issue_id": issue.get("issue_id")},
+        )
+        classifications.append({"issue_id": issue.get("issue_id"), "change_class": inferred_class})
+        affected.extend(affected_stages(change))
+    affected = list(dict.fromkeys(affected))
     stale_changes: dict[str, list[str]] = {}
     if not dry_run:
-        for stage in target_stages:
-            stale_changes[stage] = mark_stage_stale(project_path, stage, include_self=True)
+        changed = mark_stages_stale(project_path, affected)
+        stale_changes["classified"] = changed
     report = {
         "status": "dry_run" if dry_run else "applied",
         "generated_at": utc_now(),
         "project_path": str(project_path),
         "issue_count": len(issues),
         "target_stages": target_stages,
+        "affected_stages": affected,
+        "change_classifications": classifications,
         "stale_changes": stale_changes,
         "message": "Scientific content was not edited automatically; affected stages were marked stale for explicit rerun.",
     }

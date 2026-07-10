@@ -10,12 +10,16 @@ from pathlib import Path
 from typing import Any
 
 from .citation_utils import has_citation_command
+from .evidence_registry import ensure_registry_consistent
+from .evidence_snapshot import EvidenceSnapshotMismatch, validate_evidence_snapshot
 from .io_utils import read_json
 from .latex_utils import safe_latex_text
+from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .result_validity import ResultValidityError, validate_result_validity_for_results
 from .result_support import ResultSupportError, validate_result_support_for_manuscript
+from .result_evidence import ResultEvidenceError, resolve_result_evidence
 
 
 RESULT_INPUTS = [
@@ -131,6 +135,7 @@ def _unrendered_planned_figure_paths(project_path: Path) -> dict[str, dict[str, 
 def _artifact_context(project_path: Path) -> dict[str, dict[str, Any]]:
     analysis_manifest = _read_json(project_path / "methods" / "analysis_code_manifest.json")
     run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    resolved_evidence = _read_json(project_path / "results" / "resolved_result_evidence.json")
     figure_plan = _read_json(project_path / "results" / "figure_plan.json")
     figure_metadata = _read_json(project_path / "results" / "figure_metadata.json")
     metadata_by_path = {
@@ -173,7 +178,12 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, Any]]:
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
     method_families = ", ".join(str(item).replace("_", " ") for item in (analysis_manifest.get("method_families") or []))
     primary_metric = analysis_manifest.get("primary_metric") or "primary metric"
-    observed = (run_manifest.get("metrics") or {}).get(str(primary_metric))
+    resolved_primary = resolved_evidence.get("primary_metric") or {}
+    observed = resolved_primary.get("value")
+    if observed is None:
+        observed = (run_manifest.get("metrics") or {}).get(str(primary_metric))
+    if resolved_primary.get("metric_name"):
+        primary_metric = resolved_primary.get("metric_name")
     metric_text = f"{primary_metric}={observed}" if observed is not None else str(primary_metric)
     context.update({
         "metrics.csv": {
@@ -306,6 +316,10 @@ def inventory_results(project: str | Path) -> dict[str, Any]:
         and path.relative_to(state.path).as_posix() not in excluded_planned
     )
     table_paths = sorted(path for path in tables_dir.iterdir() if path.is_file() and path.suffix.lower() in TABLE_EXTENSIONS)
+    try:
+        resolved_evidence = resolve_result_evidence(state.path)
+    except ResultEvidenceError:
+        resolved_evidence = {}
     context = _artifact_context(state.path)
     figures = [_figure_entry(state.path, path, index + 1, context) for index, path in enumerate(figure_paths)]
     tables = [_table_entry(state.path, path, index + 1, context) for index, path in enumerate(table_paths)]
@@ -322,6 +336,7 @@ def inventory_results(project: str | Path) -> dict[str, Any]:
         "internal_tables": [item for item in tables if item.get("table_role") == "internal"],
         "claim_boundaries": _claim_boundaries(figures),
         "figure_code_trace": _load_figure_code_trace(state.path),
+        "resolved_result_evidence": resolved_evidence,
     }
     _write_json(results_dir / "result_manifest.yaml", manifest)
     update_stage_status(state.path, "results", "draft")
@@ -864,6 +879,13 @@ def _existing_text(path: Path) -> str | None:
 def write_results(project: str | Path) -> dict[str, Any]:
     """Write results.tex only from existing artifacts declared in result_manifest.yaml."""
     state = load_project(project)
+    ensure_registry_consistent(state.path)
+    snapshot_path = state.path / "results" / "promoted_evidence_snapshot.json"
+    if snapshot_path.exists():
+        try:
+            validate_evidence_snapshot(state.path)
+        except EvidenceSnapshotMismatch as exc:
+            raise ResultsGateError(str(exc)) from exc
     try:
         validate_result_validity_for_results(state.path)
         validate_result_support_for_manuscript(state.path)
@@ -875,7 +897,12 @@ def write_results(project: str | Path) -> dict[str, Any]:
     summary_path = state.path / "results" / "results_summary_zh.md"
     blueprint_path = state.path / "results" / "figure_interpretation_blueprint.json"
     blueprint = build_figure_interpretation_blueprint(entries)
-    rendered_tex = render_results_tex(state.metadata, entries)
+    fallback_tex = render_results_tex(state.metadata, entries)
+    try:
+        composition = select_validated_section_draft(state.path, "results", fallback_tex)
+    except SectionCompositionError as exc:
+        raise ResultsGateError(str(exc)) from exc
+    rendered_tex = str(composition["text"])
     rendered_summary = render_results_summary_zh(entries)
     results_stage = state.metadata.get("stages", {}).get("results", {})
     outputs_unchanged = (

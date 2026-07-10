@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .evidence_snapshot import create_evidence_snapshot
 from .passport import (
     PASSPORT_FILES,
     PassportError,
@@ -649,11 +650,22 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         "project_id": state.metadata.get("project_id"),
     }
     append_checkpoint_event(state.path, resume_event)
+    promoted_snapshot = None
+    if str(resume_event.get("stage") or "") == "core_evidence":
+        promoted_snapshot = create_evidence_snapshot(state.path)
+        core_report_path = state.path / "core_evidence" / "core_evidence_report.json"
+        if core_report_path.exists():
+            core_report = json.loads(core_report_path.read_text(encoding="utf-8-sig"))
+            core_report["promoted_evidence_snapshot_id"] = promoted_snapshot.get("snapshot_id")
+            core_report["human_confirmation_status"] = "approved"
+            core_report["human_confirmation_checkpoint_hash"] = checkpoint_hash
+            core_report_path.write_text(json.dumps(core_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     status = status_project(state.path)
     return {
         "status": "resumed",
         "project_path": str(state.path),
         "consumed_checkpoint_hash": checkpoint_hash,
+        "evidence_snapshot_id": (promoted_snapshot or {}).get("snapshot_id"),
         "next_action": status["next_action"],
     }
 

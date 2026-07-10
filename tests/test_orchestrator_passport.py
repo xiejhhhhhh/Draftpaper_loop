@@ -90,6 +90,19 @@ class OrchestratorPassportTests(unittest.TestCase):
             checkpoint_events = read_jsonl(project.path / "checkpoint_ledger.jsonl")
             self.assertEqual([event["kind"] for event in checkpoint_events], ["checkpoint", "resume"])
 
+    def test_resuming_core_evidence_checkpoint_promotes_snapshot(self) -> None:
+        from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Core evidence approval", field="astronomy")
+            (project.path / "results" / "figures" / "main.png").write_bytes(b"approved")
+
+            checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Review figures.")
+            resumed = resume_project(project.path, checkpoint_hash=checkpoint["checkpoint_hash"], note="Approved.")
+
+            self.assertEqual(resumed["status"], "resumed")
+            self.assertTrue((project.path / "results" / "promoted_evidence_snapshot.json").exists())
+
     def test_cli_status_checkpoint_resume_and_run_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI orchestrator", field="workflow engineering")

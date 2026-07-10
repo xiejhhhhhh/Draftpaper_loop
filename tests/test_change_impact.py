@@ -1,0 +1,108 @@
+# Copyright (c) 2026 Jinray Xie
+# Contact: xiejinhui22@mails.ucas.ac.cn
+# Source-available for non-commercial use only; commercial use requires written authorization.
+
+from __future__ import annotations
+
+import unittest
+
+from draftpaper_cli.change_impact import affected_stages, artifact_role_for_path, classify_change
+
+
+class ChangeImpactTests(unittest.TestCase):
+    def test_local_citation_repair_does_not_invalidate_empirical_pipeline(self) -> None:
+        change = classify_change(
+            artifact_role="citation_repair",
+            before="The method is established \\citep{Old}.",
+            after="The method provides contextual precedent \\citep{New}.",
+            source_stage="discussion",
+            declaration={"claim_semantics_changed": False},
+        )
+
+        self.assertEqual(change.change_class, "citation_local")
+        self.assertEqual(
+            affected_stages(change),
+            ["discussion", "citation_audit", "latex", "quality_checks"],
+        )
+
+    def test_cosmetic_figure_change_only_invalidates_presentation_consumers(self) -> None:
+        change = classify_change(
+            artifact_role="figure",
+            before=b"old-png",
+            after=b"new-png",
+            source_stage="results",
+            declaration={
+                "cosmetic_only": True,
+                "before_evidence_fingerprint": "same",
+                "after_evidence_fingerprint": "same",
+            },
+        )
+
+        self.assertEqual(change.change_class, "presentation_only")
+        self.assertEqual(
+            affected_stages(change),
+            ["results", "latex", "quality_checks"],
+        )
+
+    def test_scientific_figure_change_invalidates_all_manuscript_consumers(self) -> None:
+        change = classify_change(
+            artifact_role="figure",
+            before=b"old-png",
+            after=b"new-png",
+            source_stage="results",
+        )
+
+        self.assertEqual(change.change_class, "scientific_result")
+        self.assertEqual(
+            affected_stages(change),
+            [
+                "result_validity",
+                "core_evidence",
+                "results",
+                "introduction",
+                "data_writing",
+                "methods_writing",
+                "discussion",
+                "citation_audit",
+                "latex",
+                "quality_checks",
+            ],
+        )
+
+    def test_method_change_invalidates_verification_and_downstream_evidence(self) -> None:
+        change = classify_change(
+            artifact_role="method_code",
+            before="old model",
+            after="new model",
+            source_stage="methods",
+        )
+
+        self.assertEqual(change.change_class, "method_semantic")
+        self.assertIn("methods", affected_stages(change))
+        self.assertIn("core_evidence", affected_stages(change))
+        self.assertIn("citation_audit", affected_stages(change))
+
+    def test_research_design_change_invalidates_every_downstream_stage(self) -> None:
+        change = classify_change(
+            artifact_role="research_plan",
+            before="old question",
+            after="new question",
+            source_stage="research_plan",
+        )
+
+        impacted = affected_stages(change)
+        self.assertEqual(change.change_class, "research_design")
+        self.assertEqual(impacted[0], "research_plan")
+        self.assertIn("data", impacted)
+        self.assertIn("methods", impacted)
+        self.assertIn("quality_checks", impacted)
+
+    def test_artifact_paths_distinguish_manuscript_prose_from_scientific_data(self) -> None:
+        self.assertEqual(artifact_role_for_path("data/data.tex"), ("section_prose", "data_writing"))
+        self.assertEqual(artifact_role_for_path("data/processed/sample.csv"), ("processed_data", "data"))
+        self.assertEqual(artifact_role_for_path("results/figures/main.png"), ("figure", "results"))
+        self.assertEqual(artifact_role_for_path("latex/sections/results.tex"), ("latex_style", "latex"))
+
+
+if __name__ == "__main__":
+    unittest.main()

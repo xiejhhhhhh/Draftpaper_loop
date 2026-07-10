@@ -10,6 +10,8 @@ from typing import Any
 
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .result_evidence import ResultEvidenceError, resolve_result_evidence
+from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
 
 
 RESULT_VALIDITY_INPUTS = [
@@ -318,13 +320,34 @@ def assess_result_validity(
     requirements = _read_json(state.path / "methods" / "method_requirements.json")
     data_feasibility = _read_json(state.path / "data" / "data_feasibility_report.json")
     figure_contracts = _read_json(state.path / "results" / "figure_contracts.json")
+    if figure_contracts:
+        try:
+            assess_figure_contracts(state.path)
+        except FigureContractGateError:
+            pass
     figure_contract_gate = _read_json(state.path / "results" / "figure_contract_gate_report.json")
     figure_execution_diagnosis = _read_json(state.path / "results" / "figure_execution_diagnosis.json")
     metric = (primary_metric or requirements.get("primary_metric") or "f1").strip().lower()
     threshold = minimum_value if minimum_value is not None else requirements.get("minimum_primary_metric")
     threshold_float = _default_threshold(metric, threshold)
     metrics = run_manifest.get("metrics") or {}
-    observed = _to_float(metrics.get(metric))
+    resolved_evidence: dict[str, Any] = {}
+    try:
+        resolved_evidence = resolve_result_evidence(state.path)
+    except ResultEvidenceError:
+        resolved_evidence = {}
+    resolved_candidates = [
+        item
+        for item in (resolved_evidence.get("metrics") or [])
+        if str(item.get("metric_name") or "").lower() == metric
+    ]
+    primary = resolved_evidence.get("primary_metric") or {}
+    resolved_metric = (
+        primary
+        if str(primary.get("metric_name") or "").lower() == metric
+        else resolved_candidates[0] if resolved_candidates else {}
+    )
+    observed = _to_float(resolved_metric.get("value")) if resolved_metric else _to_float(metrics.get(metric))
     missing_outputs = _missing_outputs(state.path, run_manifest)
     metric_interpretation = _interpret_metric(metric, observed, threshold_float)
     issues = []
@@ -381,6 +404,18 @@ def assess_result_validity(
         "primary_metric": metric,
         "metric_semantics": metric_interpretation["metric_semantics"],
         "observed_value": observed,
+        "resolved_run_id": resolved_evidence.get("run_id") or "",
+        "resolved_metric_source": resolved_metric.get("source_artifact") or "",
+        "resolved_evidence_id": next(
+            (
+                item.get("evidence_id")
+                for item in (resolved_evidence.get("evidence_records") or [])
+                if item.get("entity_role") == f"result_metric_{metric}"
+                and item.get("model") == resolved_metric.get("model")
+                and item.get("split") == resolved_metric.get("split")
+            ),
+            "",
+        ),
         "minimum_value": threshold_float,
         "evidence_strength": evidence_strength,
         "statistical_interpretation": metric_interpretation["statistical_interpretation"],

@@ -316,6 +316,7 @@ def _set_manifest(project_path: Path) -> None:
         FIGURE_CONTRACTS_JSON,
         FIGURE_EXECUTION_DIAGNOSIS_JSON,
         "results/figure_metadata.json",
+        "results/figure_semantic_validation_report.json",
         "methods/run_manifest.yaml",
         "results/result_validity_report.json",
         "results/result_support_checkpoint.json",
@@ -331,6 +332,7 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
     figure_metadata = _read_json(state.path / "results" / "figure_metadata.json", {})
     contracts_payload = _read_json(state.path / FIGURE_CONTRACTS_JSON, {})
     diagnosis = _read_json(state.path / FIGURE_EXECUTION_DIAGNOSIS_JSON, {})
+    semantic_report = _read_json(state.path / "results" / "figure_semantic_validation_report.json", {})
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     figures = _figure_items(figure_plan if isinstance(figure_plan, dict) else {}, figure_metadata if isinstance(figure_metadata, dict) else {})
@@ -351,6 +353,8 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         issues.append(
             f"Research-plan main figure contract appears substituted by a supporting figure: {item.get('storyboard_id')}."
         )
+    if str((semantic_report or {}).get("decision") or "").lower() == "blocked":
+        issues.append("At least one rendered figure fails its semantic scientific contract.")
     for label, covered in coverage.items():
         if not covered:
             issues.append(f"Workflow coverage missing: {label}.")
@@ -366,6 +370,7 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         "reviewable_figures": figures,
         "workflow_coverage": coverage,
         "figure_contract_coverage": contract_coverage,
+        "figure_semantic_validation": semantic_report,
         "issues": issues,
         "recommended_next_action": _recommended_next_action(decision, issues, coverage, contract_coverage),
     }

@@ -28,6 +28,7 @@ from .code_ownership import (
     trace_figures_to_code,
 )
 from .core_evidence import CoreEvidenceError, assess_core_evidence
+from .evidence_snapshot import EvidenceSnapshotMismatch, reopen_evidence_snapshot
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, prepare_discussion_comparison, write_discussion
@@ -36,11 +37,13 @@ from .integrity_gate import IntegrityGateError, run_integrity_gate
 from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
+from .manuscript_composer import SectionCompositionError, submit_section_draft
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
 from .figure_plan import FigurePlanError, plan_figures
 from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
+from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
 from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_figure_data, repair_figure_method
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
@@ -91,6 +94,7 @@ from .review_revision import (
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, propose_review_engineering_plan
 from .result_validity import ResultValidityError, assess_result_validity
 from .result_support import ResultSupportError, assess_result_support
+from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .template_registry import validate_template_registry
@@ -305,6 +309,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     results = subparsers.add_parser("write-results", help="Write results.tex from result_manifest.yaml.")
     results.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    resolve_evidence = subparsers.add_parser("resolve-result-evidence", help="Resolve run-bound model and statistical evidence.")
+    resolve_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    reopen_evidence = subparsers.add_parser("reopen-core-evidence", help="Archive an approved evidence snapshot before scientific revision.")
+    reopen_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    reopen_evidence.add_argument("--reason", required=True, help="Reason the human-approved evidence must be reopened.")
+
+    submit_section = subparsers.add_parser("submit-section-draft", help="Validate and install a freely composed manuscript section draft.")
+    submit_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    submit_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+    submit_section.add_argument("--input", required=True, help="Path to a Codex-composed LaTeX section candidate.")
+
+    submit_figure_semantics = subparsers.add_parser("submit-figure-semantic-annotations", help="Submit auditable semantic mappings for legacy rendered figures.")
+    submit_figure_semantics.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    submit_figure_semantics.add_argument("--input", required=True, help="Path to a JSON semantic annotation file.")
 
     discussion = subparsers.add_parser("write-discussion", help="Write a traceable LaTeX Discussion section.")
     discussion.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1072,6 +1092,42 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "resolve-result-evidence":
+        try:
+            result = resolve_result_evidence(args.project)
+        except (ResultEvidenceError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "reopen-core-evidence":
+        try:
+            result = reopen_evidence_snapshot(args.project, reason=args.reason)
+        except (EvidenceSnapshotMismatch, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "submit-section-draft":
+        try:
+            result = submit_section_draft(args.project, args.section, args.input)
+        except (SectionCompositionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "submit-figure-semantic-annotations":
+        try:
+            result = submit_figure_semantic_annotations(args.project, args.input)
+        except (FigureSemanticAnnotationError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

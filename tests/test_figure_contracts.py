@@ -110,6 +110,13 @@ class FigureContractTests(unittest.TestCase):
             self.assertTrue(all(item.get("contract_locked") for item in main_figures))
             self.assertTrue(all(not item.get("counts_toward_main_figures", True) for item in supporting_figures))
             self.assertEqual([item["storyboard_id"] for item in contracts["contracts"]], ["fig_1_workflow", "fig_2_transformer_performance"])
+            for contract in contracts["contracts"]:
+                self.assertTrue(contract.get("scientific_question"))
+                self.assertTrue(contract.get("plot_grammar"))
+                self.assertIn("required_variable_roles", contract)
+                self.assertIn("forbidden_variable_roles", contract)
+                self.assertIn("required_method_outputs", contract)
+                self.assertIn("metric_dimensions", contract)
             self.assertEqual(alignment["decision"], "pass")
 
     def test_core_evidence_blocks_missing_main_contract_and_recommends_repair(self) -> None:

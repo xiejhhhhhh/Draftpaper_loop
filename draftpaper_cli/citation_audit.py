@@ -12,6 +12,11 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from .evidence_snapshot import (
+    EvidenceSnapshotMismatch,
+    manuscript_snapshot,
+    validate_promoted_snapshot_for_writing,
+)
 from .metadata import GENERATOR_HTML_META
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
@@ -525,6 +530,27 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
     except Exception as exc:
         raise CitationAuditError(str(exc)) from exc
 
+    if final:
+        required_sections = [
+            "introduction/introduction.tex",
+            "data/data.tex",
+            "methods/methods.tex",
+            "results/results.tex",
+            "discussion/discussion.tex",
+        ]
+        missing_sections = [relative for relative in required_sections if not (state.path / relative).is_file()]
+        if missing_sections:
+            raise CitationAuditError(
+                "Final citation audit requires all final manuscript sections and must run after writing: "
+                + ", ".join(missing_sections)
+            )
+        try:
+            promoted_snapshot = validate_promoted_snapshot_for_writing(state.path)
+        except EvidenceSnapshotMismatch as exc:
+            raise CitationAuditError(str(exc)) from exc
+    else:
+        promoted_snapshot = {}
+
     bib = _read_bib(state.path)
     evidence = _read_evidence(state.path)
     usages = _collect_usages(state.path, bib, evidence)
@@ -552,6 +578,8 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
         "summary": summary,
         "reference_coverage": coverage,
         "usages": [asdict(usage) for usage in usages],
+        "manuscript_snapshot": manuscript_snapshot(state.path),
+        "evidence_snapshot_id": str(promoted_snapshot.get("snapshot_id") or "legacy_unpromoted"),
     }
     audit_dir = state.path / "citation_audit"
     iteration_dir = audit_dir / "iterations"

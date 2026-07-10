@@ -18,11 +18,13 @@ from .html_utils import write_html_report
 from .io_utils import read_json, read_text
 from .latex_utils import safe_latex_text
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
+from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
-from .scientific_fact_ledger import SCIENTIFIC_FACT_LEDGER_JSON, build_scientific_fact_ledger, fact_summary_for_sections
+from .evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry, ensure_registry_consistent
+from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .writing_brief import METHOD_WRITING_BRIEF_HTML, METHOD_WRITING_BRIEF_JSON, build_method_writing_brief
 
 
@@ -49,7 +51,7 @@ METHOD_OUTPUTS = [
     "methods/method_writing_context.html",
     METHOD_WRITING_BRIEF_JSON,
     METHOD_WRITING_BRIEF_HTML,
-    SCIENTIFIC_FACT_LEDGER_JSON,
+    EVIDENCE_REGISTRY_JSON,
     "methods/method_formula_manifest.json",
     "methods/method_formulas.tex",
     "methods/methods.tex",
@@ -1200,7 +1202,11 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
     }
-    context["scientific_fact_ledger"] = build_scientific_fact_ledger(state.path)
+    try:
+        context["resolved_result_evidence"] = resolve_result_evidence(state.path)
+    except ResultEvidenceError:
+        context["resolved_result_evidence"] = {}
+    context["scientific_evidence_registry"] = build_scientific_evidence_registry(state.path)
     context["writing_brief"] = build_method_writing_brief(state.path, context)
     context_path = state.path / "methods" / "method_writing_context.json"
     _write_json(context_path, context)
@@ -1246,8 +1252,6 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
     boundary_raw = _drop_internal_method_sentences(context.get("claim_boundary", ""))
     family_raw = _drop_internal_method_sentences(context.get("method_family_summary", ""))
     formula_entries = _latex_formula_entries(context)
-    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
-    method_fact_sentence = fact_summary_for_sections(fact_ledger, {"methods"})
     section_profile = _section_profile_for_methods(context, formula_entries)
     step_tokens = _formula_step_tokens(formula_entries)
     project_path = context.get("project_path")
@@ -1271,7 +1275,6 @@ def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], 
             part for part in [
                 analysis_steps_raw,
                 stage_sentence,
-                method_fact_sentence,
                 "Data construction, feature representation, model fitting, and validation are therefore treated as linked parts of the same empirical test rather than as separate bookkeeping steps.",
             ] if part
         )
@@ -1341,11 +1344,17 @@ def _set_methods_writing_manifest(project_path: Path) -> None:
 def write_methods(project: str | Path) -> dict[str, Any]:
     """Write methods.tex only if methods/run_manifest.yaml proves a successful run."""
     state = load_project(project)
+    ensure_registry_consistent(state.path)
     manifest = _validate_successful_manifest(state.path)
     context = build_method_writing_context(state.path)
     methods_dir = state.path / "methods"
     output_path = methods_dir / "methods.tex"
-    output_path.write_text(_render_methods_tex(state.metadata, manifest, context), encoding="utf-8")
+    fallback = _render_methods_tex(state.metadata, manifest, context)
+    try:
+        composition = select_validated_section_draft(state.path, "methods", fallback)
+    except SectionCompositionError as exc:
+        raise MethodsGateError(str(exc)) from exc
+    output_path.write_text(str(composition["text"]), encoding="utf-8")
     update_stage_status(state.path, "methods_writing", "draft")
     _set_methods_writing_manifest(state.path)
     return {

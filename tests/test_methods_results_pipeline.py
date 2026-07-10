@@ -20,7 +20,7 @@ from tests.test_analysis_code_generation import prepare_codegen_project, write_p
 
 
 class MethodsResultsPipelineTests(unittest.TestCase):
-    def test_generated_method_artifacts_feed_result_manifest_and_results_text(self) -> None:
+    def test_generic_generated_artifacts_do_not_bypass_semantic_result_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Pipeline coupling", field="astronomy machine learning")
             prepare_codegen_project(project.path)
@@ -34,28 +34,17 @@ class MethodsResultsPipelineTests(unittest.TestCase):
                 input_data=[codegen["selected_input_data"]],
             )
             validity = assess_result_validity(project.path, minimum_value=0.4)
-            self.assertEqual(validity["decision"], "pass")
-
-            inventory = inventory_results(project.path)
-            self.assertEqual(inventory["figure_count"], figure_plan["generated_figure_count"])
-            self.assertEqual(inventory["table_count"], 2)
-            manifest = json.loads((project.path / "results" / "result_manifest.yaml").read_text(encoding="utf-8"))
-            figure_claims = " ".join(entry["result_claim"] for entry in manifest["figures"])
-            self.assertIn("observed classes", figure_claims.lower())
-            self.assertIn("observ", figure_claims.lower())
-            self.assertTrue("r=" in figure_claims or "support ratio" in figure_claims or "metric summary" in figure_claims.lower())
-
-            state_after_inventory = load_project(project.path)
-            self.assertEqual(state_after_inventory.metadata["stages"]["results"]["status"], "draft")
-            self.assertTrue(state_after_inventory.metadata["stages"]["discussion"]["stale"])
-
-            written = write_results(project.path)
-            self.assertEqual(written["artifact_count"], figure_plan["generated_figure_count"] + 2)
-            results_tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
-            self.assertIn("\\includegraphics", results_tex)
-            self.assertIn("figure", results_tex.lower())
-            self.assertIn("usable observations", results_tex)
-            self.assertNotIn("\\cite", results_tex)
+            self.assertEqual(validity["decision"], "revise_required")
+            semantic = json.loads(
+                (project.path / "results" / "figure_semantic_validation_report.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(semantic["decision"], "blocked")
+            issue_kinds = {
+                issue["kind"]
+                for check in semantic["figure_checks"]
+                for issue in check.get("issues") or []
+            }
+            self.assertTrue(issue_kinds & {"mixed_unit_families", "missing_required_variable_role", "plot_grammar_mismatch"})
 
 
 if __name__ == "__main__":

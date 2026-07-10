@@ -12,11 +12,12 @@ from typing import Any
 
 from .data_contracts import DATA_CONTRACT_FULFILLMENT_JSON, DATA_DEGRADATION_RECOMMENDATIONS_JSON, DATA_ROLE_COVERAGE_HTML, DATA_ROLE_COVERAGE_JSON, write_data_contract_reports
 from .html_utils import write_html_report
+from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .observations import load_observations
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .reference_relevance import filter_relevant_references
-from .scientific_fact_ledger import SCIENTIFIC_FACT_LEDGER_JSON, build_scientific_fact_ledger, fact_summary_for_sections
+from .evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry, ensure_registry_consistent
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 from .writing_brief import DATA_WRITING_BRIEF_HTML, DATA_WRITING_BRIEF_JSON, build_data_writing_brief
 
@@ -49,7 +50,7 @@ DATA_WRITING_OUTPUTS = [
     DATA_KEY_FACTS_JSON,
     DATA_WRITING_BRIEF_JSON,
     DATA_WRITING_BRIEF_HTML,
-    SCIENTIFIC_FACT_LEDGER_JSON,
+    EVIDENCE_REGISTRY_JSON,
     DATA_TEX,
 ]
 
@@ -663,7 +664,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "raw filenames", "processed filenames", "execution commands"],
     }
-    context["scientific_fact_ledger"] = build_scientific_fact_ledger(state.path)
+    context["scientific_evidence_registry"] = build_scientific_evidence_registry(state.path)
     context["writing_brief"] = build_data_writing_brief(state.path, context)
     _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
     _write_json(state.path / DATA_KEY_FACTS_JSON, key_facts)
@@ -755,7 +756,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
     groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
     number_roles = context.get("evidence_number_roles") if isinstance(context.get("evidence_number_roles"), dict) else {}
     key_facts = context.get("data_key_facts") if isinstance(context.get("data_key_facts"), dict) else {}
-    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
+    evidence_registry = context.get("scientific_evidence_registry") if isinstance(context.get("scientific_evidence_registry"), dict) else {}
     feature_sentence = ""
     if groups:
         group_names = [str(name).replace("_", " ") for name in groups.keys() if groups.get(name)]
@@ -806,10 +807,19 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
         "This boundary is reported as part of the data description because sample coverage, missing measurements, "
         "and available variable groups determine which hypotheses can be examined later in the manuscript."
     )
-    ledger_sentence = fact_summary_for_sections(fact_ledger, {"data"})
+    evidence_sentence = ""
+    scoped_records = [
+        item for item in evidence_registry.get("records", [])
+        if isinstance(item, dict) and (not item.get("target_sections") or "data" in set(item.get("target_sections") or []))
+    ]
+    if scoped_records:
+        evidence_sentence = "The scoped evidence registry distinguishes " + ", ".join(
+            f"{item.get('entity_role')}={item.get('value')} for the {item.get('cohort')} cohort"
+            for item in scoped_records[:4]
+        ) + "."
     paragraphs = [
         _join_scientific_sentences(source, content),
-        _join_scientific_sentences(processing, data_code, feature_sentence, key_fact_sentence, number_sentence, ledger_sentence),
+        _join_scientific_sentences(processing, data_code, feature_sentence, evidence_sentence, number_sentence),
         _join_scientific_sentences(observation_text, boundary, boundary_note),
     ]
     return [paragraph for paragraph in paragraphs if paragraph]
@@ -831,10 +841,16 @@ def render_data_tex(context: dict[str, Any]) -> str:
 def write_data(project: str | Path) -> dict[str, Any]:
     """Write data.tex from the manuscript-facing data context."""
     state = load_project(project)
+    ensure_registry_consistent(state.path)
     context_path = state.path / DATA_WRITING_CONTEXT_JSON
     context = _load_json(state.path, DATA_WRITING_CONTEXT_JSON) if context_path.exists() else build_data_writing_context(state.path)
     output_path = state.path / DATA_TEX
-    output_path.write_text(render_data_tex(context), encoding="utf-8")
+    fallback = render_data_tex(context)
+    try:
+        composition = select_validated_section_draft(state.path, "data", fallback)
+    except SectionCompositionError as exc:
+        raise DataGateError(str(exc)) from exc
+    output_path.write_text(str(composition["text"]), encoding="utf-8")
     update_stage_status(state.path, "data_writing", "draft")
     _set_data_writing_manifest(state.path)
     return {

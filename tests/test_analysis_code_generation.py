@@ -195,6 +195,9 @@ def write_passing_figure_contract_gate(project_path: Path) -> None:
             continue
         required_roles.extend(str(role) for role in contract.get("required_data") or [])
         required_roles.extend(str(role) for role in contract.get("required_data_roles") or [])
+        if contract.get("required_method") or contract.get("required_methods") or contract.get("required_method_roles"):
+            contract["method_source_status"] = "project_code_available"
+    contracts_path.write_text(json.dumps(contracts, ensure_ascii=False, indent=2), encoding="utf-8")
     available_roles = list(dict.fromkeys(required_roles + [
         "local_data",
         "tabular_data",
@@ -225,6 +228,21 @@ def write_passing_figure_contract_gate(project_path: Path) -> None:
 
 
 class AnalysisCodeGenerationTests(unittest.TestCase):
+    def test_generate_analysis_code_refuses_to_overwrite_promoted_evidence(self) -> None:
+        from draftpaper_cli.analysis_code import AnalysisCodeGenerationError, generate_analysis_code
+        from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Frozen core evidence", field="astronomy")
+            prepare_codegen_project(project.path)
+            plan_figures(project.path)
+            write_passing_figure_contract_gate(project.path)
+            (project.path / "results" / "figures" / "approved.png").write_bytes(b"approved")
+            create_evidence_snapshot(project.path)
+
+            with self.assertRaisesRegex(AnalysisCodeGenerationError, "promoted core evidence"):
+                generate_analysis_code(project.path)
+
     def test_generate_analysis_code_writes_manifest_and_runnable_code(self) -> None:
         from draftpaper_cli.analysis_code import generate_analysis_code
         from draftpaper_cli.project_state import load_project

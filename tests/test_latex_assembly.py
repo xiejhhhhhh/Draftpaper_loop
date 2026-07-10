@@ -13,7 +13,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
+from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data, write_data
+from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
 from draftpaper_cli.discussion import write_discussion
 from draftpaper_cli.introduction import write_introduction
 from draftpaper_cli.journal_profile import resolve_journal_template
@@ -88,14 +89,11 @@ def prepared_project(tmp: str) -> Path:
     )
     assess_result_validity(project.path)
     write_core_evidence_pass(project.path, figure_count=1)
+    create_evidence_snapshot(project.path)
     inventory_results(project.path)
     write_results(project.path)
     write_introduction(project.path)
-    (project.path / "data" / "data.tex").write_text(
-        "\\section{Data}\nThe study uses locally prepared multimodal survey data.\n",
-        encoding="utf-8",
-    )
-    update_stage_status(project.path, "data_writing", "draft")
+    write_data(project.path)
     write_methods(project.path)
     write_discussion(project.path)
     return project.path

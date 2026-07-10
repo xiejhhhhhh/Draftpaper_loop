@@ -290,6 +290,16 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 `results/result_support_checkpoint.json/.md/.html`。当图表或指标只能部分支撑研究计划时，报告会停止正文写作，并给出两条人工路线：把研究主张降维到当前证据能够支撑的范围，或者继续补充数据和方法后重新生成核心图表。
 - 更新阶段管线：`status` 和 `run-pipeline` 会在 result support 失败时停在路线选择点；如果已有失败的 result support checkpoint，`write-results` 也会拒绝继续写作，避免把较弱或矛盾的证据硬写成论文结论。
 
+### v0.17.7 (2026-07-10) -- 证据语义论文保护层
+
+- 用领域无关的 Scientific Evidence Registry 替代宽松的事实账本写作路径。每条证据记录角色、cohort、样本单位、数据划分、运行、模型、来源与置信度；同一 cohort 内的矛盾事实会阻塞写作，而不是被写成幻觉。
+- 新增 run-aware 结果证据解析。指标只从已验证的方法运行及具有明确锚点的关联表中选择，不再任意读取通用 `metrics.csv`；Results、Methods、有效性检查和图表 metadata 共用证据 ID 与来源。
+- 新增 Semantic Figure Contract。主图必须声明科学问题、变量角色、禁止角色、方法输出、面板结构、图形语法、指标量纲和预期论断。identifier 对 identifier、混合量纲坐标、缺少方法输出或面板不完整的图表会在 core evidence 确认前被拒绝。
+- 新增精确 change classification 与 stale 传播。citation 局部修改和纯展示修改不再使证据生成失效；数据、方法、结果、主图和研究设计修改会重新打开必要的科学链路。
+- 新增人工确认后的证据快照与显式 reopen 机制。写作器、LaTeX 组装和最终 citation audit 都不能静默混用已变化的图、指标或正文与旧的证据确认。
+- 使用章节证据包与写后合同，在不放松 Results 无引用、证据覆盖、公式解释、内部语言和结果泄漏限制的前提下保留 Codex 的自由写作能力。
+- 新增 `submit-figure-semantic-annotations`，用于提交旧图表的显式、可审计语义映射；系统不会从旧 PNG 猜测科学含义。v0.18.0 的跨项目完整回归仍是后续独立验证步骤。
+
 ### v0.17.0 (2026-07-08) -- 科研事实账本与解释优先的自由写作
 
 - 新增 `writing/scientific_fact_ledger.json`，作为所有正文写作阶段共享的科研事实账本，用于保存必须保留的样本规模、类别平衡、token 覆盖、stress-test 边界和结果指标等关键信息。

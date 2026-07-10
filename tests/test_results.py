@@ -217,8 +217,8 @@ class ResultsManifestWriterTests(unittest.TestCase):
             self.assertNotIn("row_count", tex)
             self.assertNotIn("results/tables/metrics.csv", tex)
 
-    def test_write_results_interprets_nested_metric_statistics(self) -> None:
-        from draftpaper_cli.results import write_results
+    def test_write_results_blocks_when_verified_metric_file_conflicts_with_manifest_scalar(self) -> None:
+        from draftpaper_cli.results import ResultsGateError, write_results
 
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Weak classifier evidence", field="astronomy machine learning")
@@ -242,17 +242,8 @@ class ResultsManifestWriterTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            write_results(project.path)
-            tex = (project.path / "results" / "results.tex").read_text(encoding="utf-8")
-
-            self.assertIn("baseline-level decision boundary", tex)
-            self.assertIn("F1=0.5", tex)
-            self.assertIn("feature count=11", tex)
-            self.assertNotIn("unhashable", tex)
-            self.assertNotIn("row_count", tex)
-            self.assertNotIn(r"row\_count", tex)
-            self.assertNotIn("feature_column_count", tex)
-            self.assertNotIn(r"feature\_column\_count", tex)
+            with self.assertRaisesRegex(ResultsGateError, "revise_required"):
+                write_results(project.path)
 
     def test_write_results_is_idempotent_after_downstream_writing_when_inputs_are_unchanged(self) -> None:
         from draftpaper_cli.results import inventory_results, write_results

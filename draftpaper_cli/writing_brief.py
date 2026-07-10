@@ -126,7 +126,7 @@ def build_data_writing_brief(project_path: str | Path, context: dict[str, Any]) 
     inventory = context.get("inventory") if isinstance(context.get("inventory"), dict) else {}
     files = inventory.get("files") if isinstance(inventory, dict) else []
     variable_groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
-    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
+    evidence_registry = context.get("scientific_evidence_registry") if isinstance(context.get("scientific_evidence_registry"), dict) else {}
     brief = {
         "status": "written",
         "generated_at": utc_now(),
@@ -150,8 +150,8 @@ def build_data_writing_brief(project_path: str | Path, context: dict[str, Any]) 
             "visible data observations recorded by Codex or the user",
         ],
         "must_preserve_scientific_facts": [
-            item for item in fact_ledger.get("facts", [])
-            if isinstance(item, dict) and item.get("must_preserve") and "data" in set(item.get("target_sections") or [])
+            item for item in evidence_registry.get("records", [])
+            if isinstance(item, dict) and (not item.get("target_sections") or "data" in set(item.get("target_sections") or []))
         ],
         "avoid_content": list(MANUSCRIPT_AVOID_CONTENT),
         "internal_artifacts": _list_dict_values(files, "path"),
@@ -170,7 +170,7 @@ def build_method_writing_brief(project_path: str | Path, context: dict[str, Any]
     project_dir = Path(project_path)
     formula_manifest = context.get("formula_manifest") if isinstance(context.get("formula_manifest"), dict) else {}
     formulas = formula_manifest.get("formulas") if isinstance(formula_manifest.get("formulas"), list) else []
-    fact_ledger = context.get("scientific_fact_ledger") if isinstance(context.get("scientific_fact_ledger"), dict) else {}
+    evidence_registry = context.get("scientific_evidence_registry") if isinstance(context.get("scientific_evidence_registry"), dict) else {}
     brief = {
         "status": "written",
         "generated_at": utc_now(),
@@ -193,8 +193,8 @@ def build_method_writing_brief(project_path: str | Path, context: dict[str, Any]
             "run_manifest metrics and successful execution status",
         ],
         "must_preserve_scientific_facts": [
-            item for item in fact_ledger.get("facts", [])
-            if isinstance(item, dict) and item.get("must_preserve") and "methods" in set(item.get("target_sections") or [])
+            item for item in evidence_registry.get("records", [])
+            if isinstance(item, dict) and (not item.get("target_sections") or "methods" in set(item.get("target_sections") or []))
         ],
         "avoid_content": list(MANUSCRIPT_AVOID_CONTENT),
         "style_guidance": [

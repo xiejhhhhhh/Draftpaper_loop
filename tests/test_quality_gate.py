@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data, write_data
+from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
+from draftpaper_cli.citation_audit import audit_citations
 from draftpaper_cli.discussion import write_discussion
 from draftpaper_cli.introduction import write_introduction
 from draftpaper_cli.journal_profile import resolve_journal_template
@@ -90,6 +92,7 @@ def prepared_assembled_project(tmp: str) -> Path:
     )
     assess_result_validity(project.path)
     write_core_evidence_pass(project.path, figure_count=5)
+    create_evidence_snapshot(project.path)
     inventory_results(project.path)
     write_results(project.path)
     write_introduction(project.path)
@@ -97,19 +100,7 @@ def prepared_assembled_project(tmp: str) -> Path:
     write_data(project.path)
     write_methods(project.path)
     assemble_latex(project.path)
-    (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
-    (project.path / "citation_audit" / "final_citation_audit_report.json").write_text(
-        json.dumps({
-            "status": "passed",
-            "summary": {
-                "blocking_issue_count": 0,
-                "unsupported": 0,
-                "unverifiable": 0,
-                "average_match_score": 0.88,
-            },
-        }),
-        encoding="utf-8",
-    )
+    audit_citations(project.path, final=True)
     return project.path
 
 
