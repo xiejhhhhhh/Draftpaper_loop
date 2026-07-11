@@ -333,6 +333,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.20.1 (2026-07-11) -- 项目本地能力审计与 Results 语义核查
+
+- 在插件充分性门与外部救援之间新增 `audit-project-capabilities`。该命令会审计阶段归属的数据和方法资产，记录隐私安全的相对证据路径及哈希；只有当前项目可验证的实现才会形成受限 `covered_project_local` 绑定，不会修改全局学科模块，也不会绕过 candidate 验证和明确 promote。
+- Results 学科审查现在不仅检查图表，还会核查正文语义：无法追溯的指标主张、内部 artifact 表达、把引用当作结果证据、缺少图表解释、插件/运行追溯不完整和 review-rule 证据冲突都会被报告。
+- Data 与 Methods 写作上下文会读取清洗后的数据/方法绑定角色，使可复用插件和经过审计的项目本地实现能够改善科研表述，同时不暴露路径、命令、manifest 或凭证。
+
 ### v0.18.9-v0.20.0 (2026-07-11) -- 能力驱动的复合学科执行链
 
 - 在 research plan 完成后新增 `discipline_contract.json` 和 `research_capability_contract.json`。它们会声明主学科、次学科、跨学科的数据/方法/review 归属，以及每个计划主张和主图对应的稳定能力需求。

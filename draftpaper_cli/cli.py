@@ -71,6 +71,7 @@ from .plugin_candidates import (
     write_github_contribution_guide,
 )
 from .project_scaffold import ProjectAlreadyExistsError, create_project
+from .project_capability_audit import audit_project_capabilities
 from .plugin_rescue import PluginRescueError, prepare_plugin_rescue
 from .plugin_execution import PluginExecutionError, execute_data_plugins, execute_method_plugins
 from .research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
@@ -263,6 +264,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     plugin_sufficiency = subparsers.add_parser("assess-plugin-sufficiency", help="Gate planned core figures against structured data, method, runtime, and review plugin support.")
     plugin_sufficiency.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    project_capability_audit = subparsers.add_parser("audit-project-capabilities", help="Audit missing plugin requirements against stage-owned project-local data and method assets before external rescue.")
+    project_capability_audit.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     plugin_rescue = subparsers.add_parser("prepare-plugin-rescue", help="Prepare scoped AcademicForge/GitHub/plugin-promotion rescue tasks for missing capabilities.")
     plugin_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -959,6 +963,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "assess-plugin-sufficiency":
         try:
             result = assess_plugin_sufficiency(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") == "pass" else 1
+
+    if args.command == "audit-project-capabilities":
+        try:
+            result = audit_project_capabilities(args.project)
         except ProjectStateError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

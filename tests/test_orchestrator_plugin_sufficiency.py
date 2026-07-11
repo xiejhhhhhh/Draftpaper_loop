@@ -19,5 +19,5 @@ def test_pipeline_stops_for_plugin_rescue_when_core_figure_is_insufficient(tmp_p
 
     result = run_pipeline(project)
 
-    assert result["pipeline_state"] == "plugin_gap_detected"
-    assert result["next_action"]["command"] == "prepare-plugin-rescue"
+    assert result["pipeline_state"] == "capability_audit_required"
+    assert result["next_action"]["command"] == "audit-project-capabilities"

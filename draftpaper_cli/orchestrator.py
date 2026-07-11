@@ -314,6 +314,14 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "reason": "Planned core figures need structured data/method/runtime plugin sufficiency assessment before execution.",
         }
     if sufficiency_report.get("decision") == "blocked":
+        audit_report = _read_report(project_path, "research_plan/project_capability_audit.json")
+        if not audit_report:
+            return {
+                "stage": "research_plan",
+                "command": "audit-project-capabilities",
+                "cli": _cli_for(project_path, "audit-project-capabilities"),
+                "reason": "Apparent plugin gaps must first be audited against stage-owned project-local data and method assets before external rescue or a figure block.",
+            }
         return {
             "stage": "research_plan",
             "command": "prepare-plugin-rescue",
@@ -717,6 +725,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "choose-result-route": "awaiting_result_route",
         "resolve-research-capabilities": "plugin_sufficiency_required",
         "assess-plugin-sufficiency": "plugin_sufficiency_required",
+        "audit-project-capabilities": "capability_audit_required",
         "prepare-plugin-rescue": "plugin_gap_detected",
     }.get(command, "ready")
     if next_action.get("plugin_execution_failure"):

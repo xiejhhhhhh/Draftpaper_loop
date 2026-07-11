@@ -91,7 +91,12 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
     for index, contract in enumerate(_main_figures(contracts), start=1):
         figure_id = _figure_id(contract, index)
         requirement = figure_requirements.get(figure_id) or {}
-        bound = [item for item in bindings if isinstance(item, dict) and item.get("figure_id") == figure_id and item.get("state") == "covered"]
+        bound = [
+            item for item in bindings
+            if isinstance(item, dict)
+            and item.get("figure_id") == figure_id
+            and item.get("state") in {"covered", "covered_project_local"}
+        ]
         data_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "data" and item.get("plugin_id")]
         method_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "method" and item.get("plugin_id")]
         review_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "review" and item.get("plugin_id")]

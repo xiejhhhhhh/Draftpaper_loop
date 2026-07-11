@@ -106,6 +106,15 @@ def _execute_bindings(project: str | Path, *, kind: str) -> dict[str, Any]:
             "output_hashes": {},
             "scientific_evidence_status": "not_established",
         }
+        if binding.get("binding_scope") == "project_local":
+            event.update({
+                "status": "project_local_asset_registered",
+                "reason": "This binding is traceable project-local evidence. It is executed by the project method runner, not by a copied global plugin template.",
+                "evidence": dict(binding.get("evidence") or {}),
+            })
+            _append_jsonl(ledger_path, event)
+            events.append(event)
+            continue
         try:
             manifest_path, manifest, template_path = _resolve_plugin(binding)
             runtime = str(manifest.get("runtime_class") or binding.get("runtime_class") or "local_optional_dependency")
@@ -166,7 +175,7 @@ def record_project_method_run(project: str | Path, *, output_files: list[str]) -
     plan = _read_json(state.path / BINDING_PLAN)
     bindings = [
         item for item in plan.get("bindings") or []
-        if isinstance(item, dict) and item.get("kind") == "method" and item.get("state") == "covered"
+        if isinstance(item, dict) and item.get("kind") == "method" and item.get("state") in {"covered", "covered_project_local"}
     ]
     hashes = {
         relative: _sha256(state.path / relative)

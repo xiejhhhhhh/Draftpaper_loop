@@ -417,6 +417,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.20.1 (2026-07-11) -- Project-Local Capability Audit and Results Semantics
+
+- Added `audit-project-capabilities` between plugin sufficiency and external rescue. It audits stage-owned local data and method assets, records privacy-safe relative evidence paths plus hashes, and creates constrained `covered_project_local` bindings only for the active project. These bindings never modify global discipline modules or bypass candidate validation and explicit promotion.
+- Results discipline review now audits manuscript prose as well as figures: it detects untraceable metric claims, internal artifact language, citations used as result evidence, missing figure interpretation, incomplete plugin/run traces, and review-rule evidence conflicts.
+- Data and Methods writing contexts now include sanitized descriptions of bound data and method roles, so reusable plugins and audited project-local implementations can improve scientific exposition without exposing paths, commands, manifests, or credentials.
+
 ### v0.18.9-v0.20.0 (2026-07-11) -- Capability-Driven Composite Discipline Execution
 
 - Added a final `discipline_contract.json` and `research_capability_contract.json` immediately after research planning. They declare the primary and secondary disciplines, cross-discipline data/method/review ownership, and stable requirements for each planned claim and main figure.
