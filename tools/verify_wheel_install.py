@@ -13,6 +13,7 @@ from pathlib import Path
 
 RESOURCE_PATTERNS = ("*.json", "*.csv", "*.md")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
 EXPECTED_ENTRY_COUNT = 209
 EXPECTED_FIXTURE_COUNT = 545
 
@@ -21,8 +22,26 @@ def _resource_counts(root: Path) -> dict[str, int]:
     return {pattern: len(list(root.rglob(pattern))) for pattern in RESOURCE_PATTERNS}
 
 
-def _fixture_count(entries: list[dict[str, object]]) -> int:
-    return sum(len(entry.get("fixtures") or []) for entry in entries)
+def _source_registry_summary() -> dict[str, object]:
+    """Inspect checkout resources without importing the source package.
+
+    The wheel check intentionally runs before installing project dependencies.
+    Importing ``draftpaper_cli`` here would resolve the checkout package and turn
+    this resource check into an accidental editable-environment check.
+    """
+
+    manifests = sorted(SOURCE_MODULE_ROOT.glob("*/*/*/manifest.json"))
+    fixture_count = sum(
+        1
+        for manifest in manifests
+        for path in manifest.parent.iterdir()
+        if path.is_file() and path.name.startswith("fixture_")
+    )
+    return {
+        "entry_count": len(manifests),
+        "fixture_count": fixture_count,
+        "resource_counts": _resource_counts(SOURCE_MODULE_ROOT),
+    }
 
 
 def main() -> int:
@@ -36,18 +55,7 @@ def main() -> int:
         raise SystemExit("No draftpaper-cli wheel was found.")
     wheel = wheels[-1].resolve()
 
-    sys.path.insert(0, str(REPOSITORY_ROOT))
-    from draftpaper_cli.template_registry import discover_template_registry
-
-    source = discover_template_registry()
-    if not Path(source["root"]).resolve().is_relative_to(REPOSITORY_ROOT):
-        raise SystemExit(f"Source registry resolved outside the checkout: {source['root']}")
-    source_root = Path(source["root"])
-    source_summary = {
-        "entry_count": source["entry_count"],
-        "fixture_count": _fixture_count(source["entries"]),
-        "resource_counts": _resource_counts(source_root),
-    }
+    source_summary = _source_registry_summary()
 
     if source_summary["entry_count"] != EXPECTED_ENTRY_COUNT or source_summary["fixture_count"] != EXPECTED_FIXTURE_COUNT:
         raise SystemExit(
