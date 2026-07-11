@@ -39,6 +39,7 @@ STAGE_GROUPS = {
     "figure_contract": {"figure_contract", "figure_contracts", "plan-figures", "assess-figure-contracts"},
     "assess_result_validity": {"assess_result_validity", "assess-result-validity", "result_validity", "verify-methods"},
     "result_support_checkpoint": {"result_support_checkpoint", "assess-result-support", "result_support"},
+    "post_results": {"post_results", "review_results", "review-results-with-discipline-rules", "assess_result_validity", "result_support_checkpoint"},
     "citation_audit": {"citation_audit", "citation-audit", "write_results", "write_discussion"},
 }
 
@@ -48,6 +49,7 @@ STAGE_RULE_FAMILY_HINTS = {
     "figure_contract": {"figure_claim_validity", "data_validity", "model_validity", "discipline_review"},
     "assess_result_validity": {"model_validity", "statistical_validity", "data_validity", "figure_claim_validity", "reproducibility_and_operational_validity", "discipline_review"},
     "result_support_checkpoint": {"figure_claim_validity", "model_validity", "statistical_validity", "citation_and_manuscript_validity", "discipline_review"},
+    "post_results": {"figure_claim_validity", "model_validity", "statistical_validity", "data_validity", "reproducibility_and_operational_validity", "discipline_review"},
     "citation_audit": {"citation_and_manuscript_validity", "figure_claim_validity", "discipline_review"},
 }
 
@@ -232,6 +234,8 @@ def _infer_required_evidence(rule: dict[str, Any], stage: str) -> list[str]:
             roles.extend(["method_run", "result_metric"])
         elif stage == "result_support_checkpoint":
             roles.extend(["claim_contract", "result_metric", "figure_contract"])
+        elif stage == "post_results":
+            roles.extend(["method_run", "result_metric", "figure_contract", "results_prose"])
         elif stage == "citation_audit":
             roles.extend(["citation_evidence", "manuscript_claim"])
     return list(dict.fromkeys(roles))
@@ -404,6 +408,8 @@ def _stage_matches(rule: dict[str, Any], stage: str) -> bool:
         return True
     if normalized_stage == "result_support_checkpoint" and any(term in blob for term in ["claim", "baseline", "ablation", "figure", "metric", "validation"]):
         return True
+    if normalized_stage == "post_results" and any(term in blob for term in ["claim", "baseline", "ablation", "figure", "metric", "validation", "uncertainty", "unit"]):
+        return True
     if normalized_stage == "citation_audit" and any(term in blob for term in ["citation", "reference", "claim", "manuscript"]):
         return True
     return not hooks and family == "discipline_review"
@@ -485,8 +491,39 @@ def load_discipline_review_rules(project: str | Path) -> dict[str, Any]:
     }
 
 
-def select_review_rules_for_stage(rules: list[dict[str, Any]], stage: str) -> list[dict[str, Any]]:
-    return [rule for rule in rules if isinstance(rule, dict) and _stage_matches(rule, stage)]
+def _rule_matches_active_plugins(rule: dict[str, Any], active_plugin_ids: list[str]) -> bool:
+    if not active_plugin_ids:
+        return True
+    declared: list[str] = []
+    for key in ["applicable_plugins", "applicable_methods", "applicable_data_roles"]:
+        value = rule.get(key)
+        if isinstance(value, list):
+            declared.extend(str(item) for item in value if str(item).strip())
+        elif value:
+            declared.append(str(value))
+    if not declared:
+        return True
+    active = {_normalise(item) for item in active_plugin_ids if _normalise(item)}
+    expected = {_normalise(item) for item in declared if _normalise(item)}
+    return any(
+        left == right or left in right or right in left
+        for left in active
+        for right in expected
+    )
+
+
+def select_review_rules_for_stage(
+    rules: list[dict[str, Any]],
+    stage: str,
+    *,
+    active_plugin_ids: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    return [
+        rule for rule in rules
+        if isinstance(rule, dict)
+        and _stage_matches(rule, stage)
+        and _rule_matches_active_plugins(rule, list(active_plugin_ids or []))
+    ]
 
 
 def assess_review_rules(
@@ -498,7 +535,15 @@ def assess_review_rules(
 ) -> dict[str, Any]:
     project_path = Path(project)
     loaded = load_discipline_review_rules(project_path)
-    rules = select_review_rules_for_stage(list(loaded.get("review_rules") or []), stage)
+    active_plugin_ids = [
+        str(item) for item in (evidence_context or {}).get("active_plugin_ids") or []
+        if str(item).strip()
+    ]
+    rules = select_review_rules_for_stage(
+        list(loaded.get("review_rules") or []),
+        stage,
+        active_plugin_ids=active_plugin_ids,
+    )
     available = set(collect_review_rule_evidence_roles(project_path, evidence_context))
     observed_conflicts = _collect_evidence_conflicts(project_path, evidence_context)
     assessments: list[dict[str, Any]] = []
@@ -599,6 +644,7 @@ def assess_review_rules(
         "discipline_module_id": (loaded.get("discipline_module") or {}).get("module_id"),
         "available_evidence_roles": sorted(available),
         "selected_rule_count": len(assessments),
+        "active_plugin_ids": active_plugin_ids,
         "blocking_count": blocking_count,
         "warn_count": warn_count,
         "advisory_count": advisory_count,

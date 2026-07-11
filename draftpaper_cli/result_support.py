@@ -14,7 +14,6 @@ from .html_utils import write_html_report
 from .passport import utc_now
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
-from .review_rule_runtime import assess_review_rules
 
 
 RESULT_SUPPORT_JSON = "results/result_support_checkpoint.json"
@@ -32,7 +31,6 @@ RESULT_SUPPORT_INPUTS = [
 ]
 
 RESULT_SUPPORT_OUTPUTS = [RESULT_SUPPORT_JSON, RESULT_SUPPORT_MD, RESULT_SUPPORT_HTML]
-RESULT_SUPPORT_OUTPUTS.append("results/result_support_review_rule_gate.json")
 
 
 class ResultSupportError(RuntimeError):
@@ -295,18 +293,6 @@ def _render_markdown(report: dict[str, Any]) -> str:
         lines.append(f"  - Planned claim: {item.get('planned_claim')}")
         if item.get("diagnosis"):
             lines.append(f"  - Diagnosis: {item.get('diagnosis')}")
-    if report.get("review_rule_gate_decision"):
-        lines.extend(["", "## Discipline Review Rule Gate", ""])
-        lines.append(f"Decision: {report.get('review_rule_gate_decision')}")
-        gate = report.get("review_rule_gate") if isinstance(report.get("review_rule_gate"), dict) else {}
-        for assessment in gate.get("rule_assessments") or []:
-            if not isinstance(assessment, dict):
-                continue
-            if assessment.get("decision") != "satisfied":
-                lines.append(f"- {assessment.get('rule_id')}: {assessment.get('decision')}")
-                missing = ", ".join(str(item) for item in assessment.get("missing_evidence_roles") or [])
-                if missing:
-                    lines.append(f"  - Missing evidence: {missing}")
     lines.extend(["", "## Recommended Routes", ""])
     if report.get("requires_user_decision"):
         for route in report.get("route_options") or []:
@@ -349,24 +335,6 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
             "diagnosis": "Draftpaper_loop cannot verify scientific support without a planned claim or storyboard finding.",
         })
     decision, support_level, requires_user_decision = _decision(claim_assessments, validity)
-    review_rule_gate = assess_review_rules(
-        state.path,
-        stage="result_support_checkpoint",
-        evidence_context={"available_evidence_roles": ["result_support", "claim_contract"]},
-        write_path=state.path / "results" / "result_support_review_rule_gate.json",
-    )
-    if review_rule_gate.get("decision") == "revise_required":
-        claim_assessments.append({
-            "claim_id": "discipline_review_rule_gate",
-            "planned_claim": "Discipline review rules must be satisfied before manuscript writing.",
-            "source": "results/result_support_review_rule_gate.json",
-            "support_status": "not_supported",
-            "failure_type": "review_rule_gate_failed",
-            "diagnosis": "One or more promoted, evidence-bound discipline review rules are missing required evidence for the current result-support checkpoint.",
-        })
-        decision = "route_decision_required"
-        support_level = "failed"
-        requires_user_decision = True
     failed_claims = [item for item in claim_assessments if item.get("support_status") in {"not_supported", "partially_supported"}]
     report = {
         "status": "written",
@@ -377,9 +345,6 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
         "support_level": support_level,
         "requires_user_decision": requires_user_decision,
         "result_validity_decision": validity.get("decision"),
-        "review_rule_gate_decision": review_rule_gate.get("decision"),
-        "review_rule_gate_report": "results/result_support_review_rule_gate.json",
-        "review_rule_gate": review_rule_gate,
         "evidence_strength": validity.get("evidence_strength"),
         "metrics": metrics,
         "claim_assessments": claim_assessments,

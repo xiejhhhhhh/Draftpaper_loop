@@ -850,9 +850,31 @@ def _validate_figure_contract_gate(project_path: Path) -> dict[str, Any]:
         command = action.get("command") or "repair-figure-data / repair-figure-method / revise-research-plan"
         reason = action.get("reason") or "contracted main figures are not executable"
         raise AnalysisCodeGenerationError(f"Figure contract gate is blocked: {reason}. Next command: {command}.")
+    if decision == "rescue_required":
+        raise AnalysisCodeGenerationError(
+            "Figure generation is paused while a required data or method capability is rescued. "
+            "Run audit-project-capabilities and prepare-plugin-rescue."
+        )
     if decision not in {"pass", "conditional"}:
         raise AnalysisCodeGenerationError("Figure contract gate has an unknown decision. Rerun assess-figure-contracts.")
     return payload
+
+
+def _validate_plugin_trace_for_codegen(project_path: Path) -> dict[str, Any] | None:
+    """Require bound claim/data/method/review support when capability contracts exist."""
+    if not (project_path / "research_plan" / "research_capability_contract.json").exists():
+        return None
+    from .figure_plugin_trace import validate_figure_plugin_trace
+
+    trace = validate_figure_plugin_trace(project_path)
+    if trace.get("decision") in {"blocked", "blocked_unavailable", "capability_rescue_required"}:
+        final_block = trace.get("decision") in {"blocked", "blocked_unavailable"}
+        raise AnalysisCodeGenerationError(
+            ("Figure generation is blocked because a required data or method capability remained unavailable after rescue. " if final_block else
+             "Figure generation is paused because a required data or method capability needs rescue. ")
+            + "Run audit-project-capabilities and prepare-plugin-rescue; review-rule selection occurs after Results writing."
+        )
+    return trace
 def generate_analysis_code(
     project: str | Path,
     *,
@@ -881,6 +903,7 @@ def generate_analysis_code(
         figure_plan = validate_figure_plan_for_codegen(state.path)
 
     figure_contract_gate = _validate_figure_contract_gate(state.path)
+    figure_plugin_trace = _validate_plugin_trace_for_codegen(state.path)
 
     inventory = _read_json(state.path / "data" / "data_inventory.json", {})
     if not isinstance(inventory, dict) or not inventory:
@@ -952,6 +975,7 @@ def generate_analysis_code(
         "method_formula_plan": method_blueprint.get("method_formula_plan") if isinstance(method_blueprint, dict) else {},
         "figure_plan": figure_plan,
         "figure_contract_gate": figure_contract_gate,
+        "figure_plugin_trace": figure_plugin_trace,
         "plotting_requirements": plotting_requirements,
         "review_task_coverage": review_task_coverage,
         "declared_outputs": declared_outputs,

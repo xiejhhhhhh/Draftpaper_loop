@@ -45,6 +45,7 @@ from .method_feasibility import MethodFeasibilityError, assess_method_feasibilit
 from .figure_plan import FigurePlanError, plan_figures
 from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
 from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
+from .figure_plugin_trace import validate_figure_plugin_trace
 from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_figure_data, repair_figure_method
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
@@ -70,6 +71,10 @@ from .plugin_candidates import (
     write_github_contribution_guide,
 )
 from .project_scaffold import ProjectAlreadyExistsError, create_project
+from .project_capability_audit import audit_project_capabilities
+from .plugin_rescue import PluginRescueError, prepare_plugin_rescue, record_plugin_rescue_outcome
+from .plugin_execution import PluginExecutionError, execute_data_plugins, execute_method_plugins
+from .research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 from .project_state import (
     InvalidStageStatusError,
     ProjectStateError,
@@ -108,6 +113,7 @@ from .result_validity import ResultValidityError, assess_result_validity
 from .result_support import ResultSupportError, assess_result_support
 from .result_rescue import ResultRescueError, prepare_result_rescue
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
+from .result_discipline_review import ResultDisciplineReviewError, review_results_with_discipline_rules
 from .review_rule_runtime import assess_review_rules
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
@@ -253,6 +259,28 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     plan.add_argument("--allow-high-similarity", action="store_true", help="Continue even when a highly similar prior paper is detected.")
 
+    capability_contract = subparsers.add_parser("resolve-research-capabilities", help="Resolve final composite discipline and research capability contracts from the current research plan.")
+    capability_contract.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    plugin_sufficiency = subparsers.add_parser("assess-plugin-sufficiency", help="Gate planned core figures against structured data, method, runtime, and review plugin support.")
+    plugin_sufficiency.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    project_capability_audit = subparsers.add_parser("audit-project-capabilities", help="Audit missing plugin requirements against stage-owned project-local data and method assets before external rescue.")
+    project_capability_audit.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    plugin_rescue = subparsers.add_parser("prepare-plugin-rescue", help="Prepare scoped AcademicForge/GitHub/plugin-promotion rescue tasks for missing capabilities.")
+    plugin_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    plugin_rescue.add_argument("--academicforge-root", default=None, help="Optional local AcademicForge skill root used only for candidate extraction commands.")
+    plugin_rescue.add_argument("--github-metadata", default=None, help="Optional offline GitHub-search-style metadata JSON used for scoped discovery commands.")
+
+    plugin_rescue_outcome = subparsers.add_parser("record-plugin-rescue-outcome", help="Record whether scoped local, AcademicForge, and GitHub capability rescue found an executable route.")
+    plugin_rescue_outcome.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    plugin_rescue_outcome.add_argument("--requirement-id", required=True, help="Requirement identifier from review/plugin_rescue_plan.json.")
+    plugin_rescue_outcome.add_argument("--outcome", required=True, choices=["capability_found", "not_found_after_search"])
+    plugin_rescue_outcome.add_argument("--attempted-route", action="append", default=[], help="Audited route; repeat for project_local, existing_registry, academicforge, and github_research_code.")
+    plugin_rescue_outcome.add_argument("--route-evidence", action="append", default=[], help="Structured evidence artifact as route=project-relative-or-absolute-path; repeat for every attempted route.")
+    plugin_rescue_outcome.add_argument("--evidence-note", required=True, help="Short auditable summary of the search result.")
+
     plan_feasibility = subparsers.add_parser("assess-research-plan-feasibility", help="Check research-plan figure/storyboard feasibility before data and method execution.")
     plan_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -279,6 +307,9 @@ def build_parser() -> argparse.ArgumentParser:
     data_acquisition = subparsers.add_parser("prepare-data-acquisition", help="Write a plan-first data acquisition profile and source manifest.")
     data_acquisition.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     data_acquisition.add_argument("--source-root", default=None, help="Optional external research folder to scan for access-mode evidence.")
+
+    data_plugins = subparsers.add_parser("execute-data-plugins", help="Execute selected local data-plugin fixture contracts and record data-stage provenance.")
+    data_plugins.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     data_sources = subparsers.add_parser("inventory-data-sources", help="Refresh data acquisition source manifest without downloading data.")
     data_sources.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -308,6 +339,9 @@ def build_parser() -> argparse.ArgumentParser:
     method_blueprint = subparsers.add_parser("prepare-method-blueprint", help="Build a discipline-aware data-to-method code blueprint.")
     method_blueprint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    method_plugins = subparsers.add_parser("execute-method-plugins", help="Execute selected local method-plugin fixture contracts and record method-stage provenance.")
+    method_plugins.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
     method_feasibility = subparsers.add_parser("assess-method-feasibility", help="Check method data contracts and executable method support before figure planning.")
     method_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -317,6 +351,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     figure_contracts = subparsers.add_parser("assess-figure-contracts", help="Gate planned main figures against data, method, and storyboard contracts before code generation.")
     figure_contracts.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    figure_plugin_trace = subparsers.add_parser("validate-figure-plugin-trace", help="Validate main-figure claim, plugin, run-output, and review-rule provenance.")
+    figure_plugin_trace.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     codegen = subparsers.add_parser("generate-analysis-code", help="Generate project-local analysis code from literature and method requirements.")
     codegen.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -391,6 +428,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     results = subparsers.add_parser("write-results", help="Write results.tex from result_manifest.yaml.")
     results.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    result_discipline_review = subparsers.add_parser("review-results-with-discipline-rules", help="Audit Results against composite discipline review rules and complete figure-plugin traces.")
+    result_discipline_review.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     resolve_evidence = subparsers.add_parser("resolve-result-evidence", help="Resolve run-bound model and statistical evidence.")
     resolve_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -919,6 +959,68 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "resolve-research-capabilities":
+        try:
+            result = resolve_research_capabilities(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "assess-plugin-sufficiency":
+        try:
+            result = assess_plugin_sufficiency(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") in {"pass", "rescue_required"} else 1
+
+    if args.command == "audit-project-capabilities":
+        try:
+            result = audit_project_capabilities(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") in {"pass", "rescue_required"} else 1
+
+    if args.command == "prepare-plugin-rescue":
+        try:
+            result = prepare_plugin_rescue(
+                args.project,
+                academicforge_root=args.academicforge_root,
+                github_metadata=args.github_metadata,
+            )
+        except (PluginRescueError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "record-plugin-rescue-outcome":
+        try:
+            route_evidence = {}
+            for item in args.route_evidence:
+                if "=" not in item:
+                    raise PluginRescueError("--route-evidence must use route=path syntax.")
+                route, path = item.split("=", 1)
+                route_evidence[route.strip()] = path.strip()
+            result = record_plugin_rescue_outcome(
+                args.project,
+                requirement_id=args.requirement_id,
+                outcome=args.outcome,
+                attempted_routes=args.attempted_route,
+                route_evidence=route_evidence,
+                evidence_note=args.evidence_note,
+            )
+        except (PluginRescueError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked_unavailable" else 1
+
     if args.command == "inventory-data":
         try:
             result = inventory_data(args.project)
@@ -954,6 +1056,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "execute-data-plugins":
+        try:
+            result = execute_data_plugins(args.project)
+        except (PluginExecutionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "written" else 1
 
     if args.command == "assess-data-quality":
         try:
@@ -1047,6 +1158,14 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("decision") != "blocked" else 1
+    if args.command == "validate-figure-plugin-trace":
+        try:
+            result = validate_figure_plugin_trace(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") in {"ready_for_codegen", "pass"} else 1
     if args.command == "generate-analysis-code":
         try:
             result = generate_analysis_code(args.project, output_files=args.output, auto_plan_figures=args.auto_plan_figures, use_review_tasks=args.use_review_tasks)
@@ -1151,6 +1270,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "execute-method-plugins":
+        try:
+            result = execute_method_plugins(args.project)
+        except (PluginExecutionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "written" else 1
 
     if args.command == "assess-method-feasibility":
         try:
@@ -1329,6 +1457,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "review-results-with-discipline-rules":
+        try:
+            result = review_results_with_discipline_rules(args.project)
+        except (ResultDisciplineReviewError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") in {"pass", "repair_required"} else 1
 
     if args.command == "resolve-result-evidence":
         try:

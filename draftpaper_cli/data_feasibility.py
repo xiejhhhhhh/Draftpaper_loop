@@ -626,11 +626,21 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     feasibility = _load_json(state.path, DATA_FEASIBILITY_JSON)
     observations = load_observations(state.path, stage="data")
     data_code_manifest = _read_optional_json(state.path / "data" / "data_code_manifest.json", {})
+    plugin_binding_plan = _read_optional_json(state.path / "research_plan" / "plugin_binding_plan.json", {})
+    data_bindings = [
+        item for item in plugin_binding_plan.get("bindings") or []
+        if isinstance(item, dict) and item.get("kind") == "data" and item.get("state") in {"covered", "covered_project_local"}
+    ]
     groups = _variable_groups(list(inventory.get("files") or []))
     source_summary = _data_source_summary(inventory)
     content_summary = _data_content_summary(inventory, groups)
     processing_summary = _processing_summary(inventory, observations)
     data_code_summary = _data_code_summary(data_code_manifest if isinstance(data_code_manifest, dict) else {})
+    binding_roles = [str(item.get("requirement_id") or "").split(":")[-1].replace("_", " ") for item in data_bindings]
+    plugin_binding_summary = (
+        "The analysis-ready data were assembled through declared scientific roles including " + ", ".join(dict.fromkeys(binding_roles)) + "."
+        if binding_roles else ""
+    )
     number_roles = _evidence_number_roles(inventory if isinstance(inventory, dict) else {}, data_code_manifest if isinstance(data_code_manifest, dict) else {})
     key_facts = _data_key_facts(inventory if isinstance(inventory, dict) else {}, observations, number_roles)
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
@@ -643,6 +653,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         content_summary,
         processing_summary,
         data_code_summary,
+        plugin_binding_summary,
         claim_boundary,
     ]).strip()
     context = {
@@ -655,6 +666,8 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "processing_summary": processing_summary,
         "data_code_summary": data_code_summary,
         "data_code_manifest": data_code_manifest if isinstance(data_code_manifest, dict) else {},
+        "data_plugin_bindings": data_bindings,
+        "plugin_binding_summary": plugin_binding_summary,
         "evidence_number_roles": number_roles,
         "data_key_facts": key_facts,
         "claim_boundary": claim_boundary,
@@ -752,6 +765,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
     content = _strip_forbidden_paths(guidance.get("processed_dataset") or context.get("content_summary", ""))
     processing = _strip_forbidden_paths(guidance.get("missingness_coverage") or context.get("processing_summary", ""))
     data_code = _strip_forbidden_paths(context.get("data_code_summary", ""))
+    plugin_binding = _strip_forbidden_paths(context.get("plugin_binding_summary", ""))
     boundary = _strip_forbidden_paths(guidance.get("claim_boundary") or context.get("claim_boundary", ""))
     groups = context.get("variable_groups") if isinstance(context.get("variable_groups"), dict) else {}
     number_roles = context.get("evidence_number_roles") if isinstance(context.get("evidence_number_roles"), dict) else {}
@@ -819,7 +833,7 @@ def _brief_guided_data_paragraphs(context: dict[str, Any]) -> list[str]:
         ) + "."
     paragraphs = [
         _join_scientific_sentences(source, content),
-        _join_scientific_sentences(processing, data_code, feature_sentence, evidence_sentence, number_sentence),
+        _join_scientific_sentences(processing, data_code, plugin_binding, feature_sentence, evidence_sentence, number_sentence),
         _join_scientific_sentences(observation_text, boundary, boundary_note),
     ]
     return [paragraph for paragraph in paragraphs if paragraph]

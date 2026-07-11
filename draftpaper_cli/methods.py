@@ -420,6 +420,9 @@ def verify_methods(
     _write_manifest(methods_dir / "run_manifest.yaml", manifest)
     if status == "success":
         _write_method_formulas(state.path, manifest)
+        from .plugin_execution import record_project_method_run
+
+        record_project_method_run(state.path, output_files=declared_outputs)
     update_stage_status(state.path, "methods", "approved" if status == "success" else "failed")
     return {
         "status": status,
@@ -1171,10 +1174,20 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     formula_manifest = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
     figure_code_trace = _read_json(state.path / "results" / "figure_code_trace.json", {})
     method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
+    plugin_binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json", {})
+    method_bindings = [
+        item for item in plugin_binding_plan.get("bindings") or []
+        if isinstance(item, dict) and item.get("kind") == "method" and item.get("state") in {"covered", "covered_project_local"}
+    ]
     if method_blueprint and "method_code_plan" not in analysis_manifest:
         analysis_manifest["method_code_plan"] = method_blueprint.get("method_code_plan") or {}
     family_summary = _method_family_text(requirements)
     analysis_steps = _strip_forbidden_paths(_analysis_steps_text(requirements, observations, analysis_manifest))
+    binding_families = [str(item.get("requirement_id") or "").split(":")[-1].replace("_", " ") for item in method_bindings]
+    if binding_families:
+        analysis_steps = _strip_forbidden_paths(
+            analysis_steps + " The implemented analysis uses declared method roles for " + ", ".join(dict.fromkeys(binding_families)) + "."
+        )
     data_role = _strip_forbidden_paths(_data_role_text(manifest, analysis_manifest))
     code_trace_summary = _strip_forbidden_paths(_method_code_trace_text(analysis_manifest, formula_manifest, figure_code_trace))
     verification_summary = _strip_forbidden_paths(_metrics_text(manifest, requirements))
@@ -1196,6 +1209,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "observation_count": len(observations),
         "observations": observations,
         "method_blueprint": method_blueprint,
+        "method_plugin_bindings": method_bindings,
         "method_code_manifest": analysis_manifest,
         "formula_manifest": formula_manifest if isinstance(formula_manifest, dict) else {},
         "figure_code_trace": figure_code_trace if isinstance(figure_code_trace, dict) else {},

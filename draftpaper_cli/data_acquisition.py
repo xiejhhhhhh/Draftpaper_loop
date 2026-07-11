@@ -695,6 +695,11 @@ def _render_plan_markdown(plan: dict[str, Any]) -> str:
 def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | None = None) -> dict[str, Any]:
     state = load_project(project)
     profile = classify_data_access(state.path, source_root=source_root)
+    binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json")
+    bound_data_plugins = [
+        item for item in binding_plan.get("bindings") or []
+        if isinstance(item, dict) and item.get("kind") == "data"
+    ]
     acquisition_tasks = _data_acquisition_tasks(state.path, profile)
     discipline_connector_catalog = _discipline_connector_catalog(profile)
     plan = {
@@ -706,6 +711,8 @@ def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | N
         "access_modes": profile["access_modes"],
         "connectors": profile["connectors"],
         "discipline_connector_catalog": discipline_connector_catalog,
+        "plugin_binding_plan": "research_plan/plugin_binding_plan.json" if binding_plan else None,
+        "bound_data_plugins": bound_data_plugins,
         "data_acquisition_tasks": acquisition_tasks,
         "completeness_checks": [
             "Every detected connector must provide a local manifest, access log, or processed summary before manuscript writing.",
@@ -757,6 +764,7 @@ def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | N
         "script_count": 0,
         "planned_connectors": plan["access_modes"],
         "discipline_connector_catalog": discipline_connector_catalog,
+        "bound_data_plugins": bound_data_plugins,
         "data_acquisition_tasks": acquisition_tasks.get("tasks") or [],
         "notes": [
             "Data collection, API access, remote manifests, and preprocessing code should be saved under data/scripts.",

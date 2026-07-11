@@ -12,7 +12,6 @@ from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
-from .review_rule_runtime import assess_review_rules
 
 
 RESULT_VALIDITY_INPUTS = [
@@ -27,7 +26,6 @@ RESULT_VALIDITY_INPUTS = [
 RESULT_VALIDITY_OUTPUTS = [
     "results/result_validity_report.json",
     "results/result_validity_report.md",
-    "results/review_rule_gate_report.json",
 ]
 
 
@@ -295,14 +293,6 @@ def _render_md(report: dict[str, Any]) -> str:
         lines.extend(["", "## Figure Contract Issues", ""])
         for issue in report.get("figure_contract_issues") or []:
             lines.append(f"- {issue}")
-    if report.get("review_rule_issues") or report.get("review_rule_warnings"):
-        lines.extend(["", "## Discipline Review Rule Gate", ""])
-        lines.append(f"Decision: {report.get('review_rule_gate_decision', 'not_assessed')}")
-        lines.append("")
-        for issue in report.get("review_rule_issues") or []:
-            lines.append(f"- {issue}")
-        for warning in report.get("review_rule_warnings") or []:
-            lines.append(f"- {warning}")
     lines.extend(["", "## Recommended Backtracking", ""])
     for action in report.get("recommended_actions") or ["Proceed to Results writing."]:
         lines.append(f"- {action}")
@@ -376,37 +366,6 @@ def assess_result_validity(
         figure_execution_diagnosis=figure_execution_diagnosis,
     )
     issues.extend(contract_issues)
-    review_rule_gate = assess_review_rules(
-        state.path,
-        stage="assess_result_validity",
-        evidence_context={
-            "available_evidence_roles": ["result_metric"] if observed is not None else [],
-            "primary_metric": metric,
-            "observed_value": observed,
-        },
-        write_path=state.path / "results" / "review_rule_gate_report.json",
-    )
-    review_rule_issues: list[str] = []
-    review_rule_warnings: list[str] = []
-    review_rule_actions: list[str] = []
-    for assessment in review_rule_gate.get("rule_assessments") or []:
-        if not isinstance(assessment, dict):
-            continue
-        rule_id = str(assessment.get("rule_id") or "review_rule")
-        decision_for_rule = str(assessment.get("decision") or "")
-        missing = ", ".join(str(item) for item in assessment.get("missing_evidence_roles") or [])
-        message = f"{rule_id}: {decision_for_rule}"
-        if missing:
-            message += f"; missing evidence roles: {missing}"
-        if decision_for_rule == "blocked_missing_evidence":
-            review_rule_issues.append(message)
-        elif decision_for_rule in {"needs_evidence", "threshold_requires_context", "human_confirmation_required"}:
-            review_rule_warnings.append(message)
-        route = str(assessment.get("failure_route") or "").strip()
-        if route and decision_for_rule != "satisfied":
-            review_rule_actions.append(f"Review rule {rule_id} recommends route: {route}.")
-    issues.extend(review_rule_issues)
-
     evidence_strength = str(metric_interpretation["evidence_strength"])
     if not issues and threshold_float is not None:
         decision = "pass"
@@ -437,16 +396,6 @@ def assess_result_validity(
         actions.extend(action for action in contract_actions if action not in actions)
     if contract_issues and "figure_contracts" not in causes:
         causes = sorted(set(causes + ["figure_contracts"]))
-    if review_rule_issues:
-        if decision != "revise_required":
-            decision = "revise_required"
-        causes = sorted(set(causes + ["review_rules"]))
-        actions.extend(action for action in review_rule_actions if action not in actions)
-    elif review_rule_warnings and decision == "pass":
-        decision = "conditional_pass"
-        actions.extend(action for action in review_rule_actions if action not in actions)
-        actions.append("Proceed only if claim strength remains aligned with advisory discipline review-rule warnings.")
-
     report = {
         "project_id": state.metadata.get("project_id"),
         "decision": decision,
@@ -473,11 +422,6 @@ def assess_result_validity(
         "recommended_actions": actions,
         "missing_outputs": missing_outputs,
         "review_task_coverage_issues": review_task_coverage_issues,
-        "review_rule_gate_decision": review_rule_gate.get("decision"),
-        "review_rule_issues": review_rule_issues,
-        "review_rule_warnings": review_rule_warnings,
-        "review_rule_gate_report": "results/review_rule_gate_report.json",
-        "review_rule_gate": review_rule_gate,
         "figure_contract_gate_decision": figure_contract_gate.get("decision"),
         "figure_contract_issues": contract_issues,
         "figure_execution_has_blocking_repairs": figure_execution_diagnosis.get("has_blocking_repairs"),

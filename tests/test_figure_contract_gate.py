@@ -21,7 +21,7 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 class FigureContractGateTests(unittest.TestCase):
-    def test_promoted_review_rule_can_block_figure_contract_and_emit_rescue(self) -> None:
+    def test_promoted_review_rule_is_deferred_until_results_review(self) -> None:
         rule = {
             "rule_id": "external_validation_figure_gate_test",
             "rule_group_id": "external_validation_figure_gate_test",
@@ -62,11 +62,9 @@ class FigureContractGateTests(unittest.TestCase):
                 result = assess_figure_contracts(project.path)
                 report = json.loads((project.path / "results" / "figure_contract_gate_report.json").read_text(encoding="utf-8"))
 
-                self.assertEqual(result["decision"], "blocked")
-                self.assertEqual(report["review_rule_gate_decision"], "revise_required")
-                self.assertTrue(report["review_rule_rescue_tasks"])
-                self.assertIn("prepare-result-rescue", report["recommended_next_commands"][0])
-                self.assertEqual(report["recommended_next_action"]["command"], "prepare-result-rescue")
+                self.assertEqual(result["decision"], "pass")
+                self.assertNotIn("review_rule_gate_decision", report)
+                self.assertEqual(report["review_rule_stage"], "post_results")
         finally:
             DEFAULT_MODULE.spec.review_rule_groups.remove(rule)
 

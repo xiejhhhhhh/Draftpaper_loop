@@ -417,6 +417,28 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.20.2 (2026-07-11) -- Post-Results Discipline Review and Capability Rescue Boundary
+
+- Figure contracts no longer execute discipline `review_rule` gates before plotting. Data and method plugins produce figures; only figures with actual plugin traces activate matching discipline rules in `review-results-with-discipline-rules`.
+- Untraceable metrics, internal artifact language, misplaced citations, and missing figure interpretation now enter `repair_required`, which prioritizes rewriting or narrowing Results claims instead of treating prose defects as figure-generation failures.
+- Capability gaps first enter `rescue_required` and are checked against project-local assets, the registered plugin catalog, AcademicForge, and GitHub research code. The new `record-plugin-rescue-outcome` command permits `blocked_unavailable` only after all four routes have auditable search evidence and the required data or method capability still cannot be found.
+
+### v0.20.1 (2026-07-11) -- Project-Local Capability Audit and Results Semantics
+
+- Added `audit-project-capabilities` between plugin sufficiency and external rescue. It audits stage-owned local data and method assets, records privacy-safe relative evidence paths plus hashes, and creates constrained `covered_project_local` bindings only for the active project. These bindings never modify global discipline modules or bypass candidate validation and explicit promotion.
+- Results discipline review now audits manuscript prose as well as figures: it detects untraceable metric claims, internal artifact language, citations used as result evidence, missing figure interpretation, incomplete plugin/run traces, and review-rule evidence conflicts.
+- Data and Methods writing contexts now include sanitized descriptions of bound data and method roles, so reusable plugins and audited project-local implementations can improve scientific exposition without exposing paths, commands, manifests, or credentials.
+
+### v0.18.9-v0.20.0 (2026-07-11) -- Capability-Driven Composite Discipline Execution
+
+- Added a final `discipline_contract.json` and `research_capability_contract.json` immediately after research planning. They declare the primary and secondary disciplines, cross-discipline data/method/review ownership, and stable requirements for each planned claim and main figure.
+- Added `assess-plugin-sufficiency`. It performs structured matching against registered `data_connector`, `method_template`, and `review_rule` manifests using roles, method families, outputs, runtime class, validation level, aliases, and discipline compatibility. A mock, plan-only, or external contract never counts as executable support for a main figure.
+- Added `prepare-plugin-rescue`. A capability gap becomes a scoped route through existing plugins, AcademicForge candidate processing, license-aware public research-code discovery, generalization, validation, de-duplication, and explicit human-confirmed `promote-plugin-candidate --write`. Project-specific or license-uncertain code remains project-local.
+- Added `execute-data-plugins` and `execute-method-plugins`, plus stage-owned `plugin_execution_ledger.jsonl` records. Manifest/template hashes, parameters, runtime state, input/output hashes, and fixture-versus-project-result status are preserved; fixture execution is explicitly not treated as scientific evidence.
+- Added `results/figure_plugin_trace_report.json/.html`. Each main figure must trace to a research-plan claim, covered data plugin, covered method plugin, review-rule route, and a verified project run output before Results evidence is accepted. Code generation may proceed only from an explicit pre-run binding chain; missing links route to plugin rescue rather than a substitute figure.
+- Added `review-results-with-discipline-rules` after `write-results`. It combines Results prose, complete figure traces, plugin bindings, verified run outputs, and composite-discipline review rules. Only mature, promoted, evidence-bound rules may block scientifically; trace gaps always stop downstream manuscript writing.
+- `status` and `run-pipeline` now expose `plugin_sufficiency_required` and `plugin_gap_detected` states. Cross-discipline regression fixtures cover geography+machine learning, astronomy+machine learning, and bioinformatics+medicine chains.
+
 ### v0.18.8 (2026-07-11) -- Expanded Local Skill Foundations and Mock External Contracts
 
 - Expanded the first-party local foundation catalog to 159 parameterized plugins across statistics, experimental design, classical ML, tabular/array processing, scientific visualization, geography, astronomy, bioinformatics, medicine, chemistry, materials science, physics, and quantum science. Every plugin is placed only under its discipline's `data_connectors`, `method_templates`, or `review_rules` directory.
