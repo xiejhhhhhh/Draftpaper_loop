@@ -419,6 +419,22 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.23.0 (2026-07-12) -- Wheel Release Regressions and Verifiable Quality Claims
+
+- Added wheel-shipped, de-identified regression contracts for geography+machine learning, astronomy+machine learning, and bioinformatics+medicine. An ordinary `pip install` now exercises plugin sufficiency, project execution evidence, figure traceability, rendered-pixel and source-table checks, the Scientific Evidence Registry, Results binding, composite review rules, and the real final citation producer.
+- Added adversarial regressions for wrong runs, cohorts, units, splits, models, metrics or dimensions, forged metadata on blank figures, contract/fixture-only plugins, citation negation, numeric mismatch, and causal reversal. `status` must also leave every project-file hash unchanged.
+- Automated keywords, metadata, and file-presence scores can no longer authorize a 95% claim. `prepare-blind-quality-evaluation` and `record-blind-quality-evaluation` require at least two independent blinded reviewers to compare the complete manuscript and real figures, with 100% scientific correctness and a mean quality ratio of at least 0.95.
+- Isolated wheel verification requires both source and installed registries to discover 209 plugins and 545 fixtures, then runs all three domain and adversarial regressions inside the installed environment. CI also covers Python 3.10-3.12 on Linux and Windows.
+
+### v0.22.1-v0.22.8 (2026-07-12) -- Evidence Semantics, Runtime Truth, and State Kernel
+
+- Fixed wheel resources and citation-audit/parity schemas. Formal writing now follows section packet -> free Codex composition -> candidate validation -> Scientific Editor -> explicit acceptance -> release; deterministic fallback remains diagnostic-only.
+- Evidence Binding v2 binds quantitative claims to `evidence_id/run/cohort/sample_unit/split/model/metric_dimension` and verifies metric identity and dimension. Wrong scopes or same-value semantic substitutions block writing.
+- Plugin runtime truth now distinguishes `contract_only`, `code_generator`, `fixture_executed`, `project_validated`, and `live_validated`; only hashed project or live outputs can satisfy a main-figure capability.
+- Reviewer Engine v2 consumes a standard EvidenceBundle and executes real thresholds, dimensions, baseline, ablation, uncertainty, and plugin `evaluate_rule` checks. Scientific anomalies route first to local Results semantic repair.
+- Figure checks inspect rendered pixels, axis/text regions, panels, and source tables. Citation audit adds passage, numeric, negation, causal-direction, and claim-strength checks while preserving references and emitting paragraph-rewrite tasks.
+- Added a read-only state kernel, explicit migration, atomic JSON/JSONL writes, cross-platform locks, and separate command registry, artifact repository, schema adapters, plugin runtime, writing coordinator, and release coordinator boundaries.
+
 ### v0.21.1-v0.22.0 (2026-07-12) -- Paper Narrative and Scientific Writing Architecture
 
 - Added the discipline-neutral Paper Narrative Engine. It reads true YAML/JSON research artifacts and produces `paper_brief.json`, `figure_story_arc.json`, `manuscript_argument_map.json`, and `section_claim_allocation.json`; main and supporting figures are grouped into finding-level stories with explicit questions, evidence, comparisons, and claim boundaries.

@@ -23,6 +23,8 @@ from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .passport import read_jsonl
+from .plugin_runtime import RUNTIME_LEVELS, resolve_effective_runtime_level
 
 
 DISCIPLINE_CONTRACT = "research_plan/discipline_contract.json"
@@ -33,7 +35,6 @@ BINDING_PLAN = "research_plan/plugin_binding_plan.json"
 GAP_PLAN = "research_plan/plugin_gap_plan.json"
 
 LOCAL_RUNTIME_CLASSES = {"local_pure_python", "local_optional_dependency"}
-RUNNABLE_VALIDATION_LEVELS = {"fixture_runnable", "live_validated"}
 EXTERNAL_RUNTIME_CLASSES = {"remote_api", "remote_server", "gpu_model", "laboratory_hardware"}
 
 
@@ -283,19 +284,25 @@ def _has_local_template(candidate: dict[str, Any], kind: str) -> bool:
     return any(path.exists() for path in root.glob(f"*/{directory}/{plugin_id}/template.py"))
 
 
-def _runtime_state(candidate: dict[str, Any], kind: str) -> tuple[str, str]:
+def _effective_runtime_level(project_path: Path, candidate: dict[str, Any], kind: str) -> tuple[str, str]:
+    plugin_id = _candidate_id(candidate, kind)
+    static_level = str(candidate.get("runtime_level") or "contract_only")
+    events = []
+    for relative in ("data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl"):
+        events.extend(item for item in read_jsonl(project_path / relative) if str(item.get("plugin_id") or "") == plugin_id)
+    return resolve_effective_runtime_level(static_level, events)
+
+
+def _runtime_state(project_path: Path, candidate: dict[str, Any], kind: str) -> tuple[str, str, str]:
     runtime = str(candidate.get("runtime_class") or "local_optional_dependency")
-    validation = str(candidate.get("validation_level") or "plan_only")
+    level, basis = _effective_runtime_level(project_path, candidate, kind)
+    if level in {"project_validated", "live_validated"}:
+        return "covered", basis, level
     if runtime in EXTERNAL_RUNTIME_CLASSES:
-        return "blocked_external", "external_contract"
-    if runtime in LOCAL_RUNTIME_CLASSES and validation in RUNNABLE_VALIDATION_LEVELS:
-        return "covered", "fixture_or_live_validated"
-    if runtime in LOCAL_RUNTIME_CLASSES and _has_local_template(candidate, kind):
-        # A first-party stage template is enough to generate and verify
-        # project-local code. It is deliberately not evidence of a completed
-        # scientific run; the figure trace enforces that later boundary.
-        return "covered", "local_template_requires_project_verification"
-    return "partially_covered", "plan_only_contract"
+        return "blocked_external", "external_contract_without_live_evidence", level
+    if level in {"code_generator", "fixture_executed"}:
+        return "execution_required", basis, level
+    return "partially_covered", "contract_only", level
 
 
 def _structured_match(requirement: dict[str, Any], candidate: dict[str, Any]) -> tuple[int, list[str]]:
@@ -337,7 +344,7 @@ def _structured_match(requirement: dict[str, Any], candidate: dict[str, Any]) ->
     return score, reasons
 
 
-def _assess_requirement(requirement: dict[str, Any], catalog: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+def _assess_requirement(project_path: Path, requirement: dict[str, Any], catalog: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
     kind = str(requirement["kind"])
     if kind == "figure":
         return {
@@ -365,7 +372,7 @@ def _assess_requirement(requirement: dict[str, Any], catalog: dict[str, list[dic
     if not selected:
         state = "missing"
     else:
-        state, coverage_basis = _runtime_state(selected["candidate"], kind)
+        state, coverage_basis, runtime_level = _runtime_state(project_path, selected["candidate"], kind)
     candidate = selected["candidate"] if selected else {}
     return {
         **requirement,
@@ -376,6 +383,7 @@ def _assess_requirement(requirement: dict[str, Any], catalog: dict[str, list[dic
         "match_reasons": selected["reasons"] if selected else [],
         "runtime_class": candidate.get("runtime_class") if candidate else None,
         "validation_level": candidate.get("validation_level") if candidate else None,
+        "runtime_level": runtime_level if selected else None,
         "coverage_basis": coverage_basis if selected else "no_matching_contract",
         "alternatives": [{"plugin_id": _candidate_id(item["candidate"], kind), "score": item["score"]} for item in scored[1:4]],
     }
@@ -406,9 +414,10 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "discipline_modules": discipline_contract.get("discipline_modules") or [],
     }
     catalog = _catalog(profile)
-    assessments = [_assess_requirement(item, catalog) for item in _as_list(contract.get("requirements"))]
+    assessments = [_assess_requirement(state.path, item, catalog) for item in _as_list(contract.get("requirements"))]
     core = [item for item in assessments if item.get("core") and item.get("kind") in {"data", "method"}]
-    blocking = [item for item in core if item.get("state") != "covered"]
+    execution_pending = [item for item in core if item.get("state") == "execution_required"]
+    blocking = [item for item in core if item.get("state") not in {"covered", "execution_required"}]
     rescue_tasks = [{
         "requirement_id": item["requirement_id"],
         "kind": item["kind"],
@@ -426,18 +435,21 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "state": item["state"],
         "runtime_class": item.get("runtime_class"),
         "validation_level": item.get("validation_level"),
-    } for item in assessments if item.get("state") == "covered" and item.get("matched_plugin_id")]
+        "runtime_level": item.get("runtime_level"),
+    } for item in assessments if item.get("state") in {"covered", "execution_required"} and item.get("matched_plugin_id")]
+    decision = "rescue_required" if blocking else ("execution_required" if execution_pending else "pass")
     report = {
         "status": "written",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
-        "decision": "rescue_required" if blocking else "pass",
-        "core_figure_decision": "rescue_required" if blocking else "pass",
+        "decision": decision,
+        "core_figure_decision": decision,
         "requirement_assessments": assessments,
         "covered_count": sum(item.get("state") == "covered" for item in assessments),
         "blocking_count": len(blocking),
+        "execution_required_count": len(execution_pending),
         "rescue_tasks": rescue_tasks,
-        "policy": "Mock, plan-only, and external plugin contracts do not count as executable support. A gap enters project-local, AcademicForge, and GitHub rescue; it is not a final block until those routes are explicitly exhausted.",
+        "policy": "Contract-only, mock, plan, and fixture-only plugins cannot satisfy core figures. Only project-validated or live-validated outputs count; executable templates remain pending until a project run is verified.",
     }
     binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "bindings": bindings}
     gap_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "gaps": rescue_tasks, "requires_human_confirmation": bool(rescue_tasks)}

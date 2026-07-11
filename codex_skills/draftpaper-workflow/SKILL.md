@@ -5,7 +5,7 @@ description: Use when a user wants Codex to operate Draftpaper-loop projects, st
 
 # Draftpaper-loop Workflow
 
-Use this skill as a thin Codex calling layer for the active Draftpaper-loop repository. The core capability is the Python package, CLI, and local project directory model. Codex must translate user intent into CLI calls and explain results; it must not reimplement workflow logic.
+Use this skill as the thin Codex calling layer for Draftpaper-loop. Translate user intent into CLI calls and explain results; do not reimplement workflow logic.
 
 ## Boundary
 
@@ -17,13 +17,7 @@ Use:
 python -m draftpaper_cli.cli <command>
 ```
 
-For real paper projects, prefer plotting support:
-
-```powershell
-python -m pip install -e .[plotting]
-```
-
-Use the minimal install only for CLI smoke tests. Generated empirical Results figures must not degrade to workflow diagrams.
+Install plotting dependencies for real paper projects. Empirical Results figures must not degrade to workflow diagrams.
 
 Read `references/commands.md` when exact command syntax is needed.
 
@@ -66,24 +60,25 @@ Run stages in this order unless the user asks for a focused rerun:
 23. `assess-core-evidence`
 24. `checkpoint --stage core_evidence` for human figure/evidence confirmation
 25. `inventory-results`
-26. `write-results`
-27. `write-introduction`
-28. `build-data-context`
-29. `write-data`
-30. `build-method-context`
-31. `write-methods`
-32. `prepare-discussion-comparison`
-33. `write-discussion`
-34. `assemble-latex`
-35. `run-integrity-gate`
-36. `quality-check`
-37. reviewer/rescue commands when gates fail
+26. For Results: `prepare-section-writing`, compose `writing/drafts/results.tex` freely from the packet, `submit-section-draft`, `prepare-scientific-editor`, apply only requested local repairs, `accept-section-draft`, then `write-results`
+27. Repeat the same free-writing/editor/acceptance lifecycle for Introduction, then `write-introduction`
+28. `build-data-context`, then repeat the lifecycle for Data before `write-data`
+29. `build-method-context`, then repeat the lifecycle for Methods before `write-methods`
+30. `prepare-discussion-comparison`, then repeat the lifecycle for Discussion before `write-discussion`
+31. `assess-functional-quality-release`
+32. `assemble-latex`
+33. `run-integrity-gate`
+34. `audit-citations --final`
+35. `prepare-blind-quality-evaluation`, collect independent reviews, then `record-blind-quality-evaluation`
+36. `assess-paper-quality-parity`
+37. `quality-check`
+38. reviewer/rescue commands when gates fail
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
 ## Rerun Rules
 
-If upstream artifacts change, rerun from the earliest affected stage through downstream writing, assembly, integrity, and quality. If references change, rerun plan, evidence generation, Results, then manuscript writing. Journal profile affects plan, all writing, and assembly; data affects method plan onward; code or method changes affect method verification onward. If results change, rerun result validity, core evidence, Results, then downstream writing. Template-only changes affect assembly, integrity, and quality.
+Rerun from the earliest affected stage. If references change, rerun plan, evidence, Results, and writing. Journal changes affect plan, writing, and assembly; data affects method planning onward; code or method changes affect verification onward. If results change, rerun validity, core evidence, Results, and downstream writing. Template-only changes affect assembly and quality.
 
 ## Gates
 
@@ -93,15 +88,17 @@ The main loop is evidence-first: literature and feasibility -> research plan/sto
 
 Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`, both after core evidence and Results. Before those writing stages, use code provenance, method formula extraction, and figure-code trace artifacts. Results require passed/conditional result validity, passed `assess-core-evidence`, and `inventory-results`; Results contain no citations. Discussion citations must come from BibTeX and citation evidence, and `prepare-discussion-comparison` should create the comparison matrix before `write-discussion`. Always run `run-integrity-gate` before final `quality-check`.
 
+Every formal manuscript section must follow the state machine exposed by `run-pipeline`: evidence-packet preparation -> Codex free composition -> candidate submission -> Scientific Editor -> paragraph-local repair when requested -> explicit section acceptance -> section writer. Deterministic fallback text is diagnostic-only and must never proceed to LaTeX assembly, citation audit, parity assessment, or formal release. Do not bypass an Agent action when `run-pipeline` returns `compose-section-with-agent` or `revise-section-with-agent`; write the requested draft path, then rerun `run-pipeline`.
+
 For Zotero-backed references and append-only audit files, follow `references/commands.md`; do not edit CLI-owned ledgers or manifests manually.
 
 ## Review and Revision Loop
 
-When any gate fails, use `status` or `run-pipeline` to follow: `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, reviewer-task reruns, then `generate-revision-plan`. Reviewer-task reruns use `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity`. Review engineering runs geography, astronomy, machine_learning, or default. Use `review/review_engineering_plan.html`, `review/analysis_revision_feasibility.html`, and `review/user_confirmation_requests.json` before data cleaning or method reruns. `apply-revision` only marks stages stale. After reruns, use `re-review`.
+When a gate fails, follow `status` or `run-pipeline` through diagnosis, review, statistical or analysis repair, reviewer-task reruns, and `generate-revision-plan`. Inspect the generated review plan, feasibility report, and confirmation requests before rerunning data or methods. `apply-revision` only marks stages stale; use `re-review` after reruns.
 
 ## Skill Reuse
 
-Before building new analysis/method workflows, search for reusable skills or GitHub skill repositories. Reuse suitable skills before creating new ones. If a reusable workflow is created, summarize it as a future skill candidate. For PDF/full-text literature fetching, prefer `Dictation354/paper-fetch-skill`.
+Reuse suitable skills or public research workflows before creating new analysis code. Record reusable work as a future skill candidate; use the configured paper-fetch skill for full text.
 
 ## Reporting
 

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -101,7 +102,62 @@ def prepared_assembled_project(tmp: str) -> Path:
     write_methods(project.path)
     assemble_latex(project.path)
     audit_citations(project.path, final=True)
+    _write_v022_formal_release_fixture(project.path)
     return project.path
+
+
+def _write_v022_formal_release_fixture(project_path: Path) -> None:
+    snapshot = json.loads((project_path / "results" / "promoted_evidence_snapshot.json").read_text(encoding="utf-8"))
+    snapshot_id = snapshot["snapshot_id"]
+    section_sources = {
+        "introduction": project_path / "introduction" / "introduction.tex",
+        "data": project_path / "data" / "data.tex",
+        "methods": project_path / "methods" / "methods.tex",
+        "results": project_path / "results" / "results.tex",
+        "discussion": project_path / "discussion" / "discussion.tex",
+    }
+    for section, source in section_sources.items():
+        text = source.read_text(encoding="utf-8-sig")
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        candidate = project_path / "writing" / "candidates" / f"{section}.tex"
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        candidate.write_text(text, encoding="utf-8")
+        payloads = {
+            project_path / "writing" / "section_validation" / f"{section}.json": {
+                "generated_at": "2026-07-01T00:00:00+00:00", "decision": "pass", "status": "accepted",
+                "composition_mode": "codex_free_candidate", "quality_parity_eligible": True,
+                "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+                "functional_job_coverage": {"decision": "pass", "score": 1.0},
+            },
+            project_path / "writing" / "scientific_editor" / f"{section}.json": {
+                "decision": "pass", "source_hash": digest, "tasks": [],
+            },
+            project_path / "writing" / "section_acceptance" / f"{section}.json": {
+                "status": "accepted", "composition_mode": "codex_free_candidate", "formal_release_eligible": True,
+                "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+            },
+            project_path / "writing" / "claim_bindings" / f"{section}.json": {
+                "status": "passed", "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+                "quantitative_claim_count": 0, "bound_claim_count": 0, "bindings": [],
+            },
+        }
+        for path, payload in payloads.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+    (project_path / "review" / "results_manuscript_quality.json").write_text(
+        json.dumps({"decision": "pass", "score": 1.0}), encoding="utf-8"
+    )
+    (project_path / "results" / "scientific_figure_quality_report.json").write_text(
+        json.dumps({"decision": "pass", "score": 1.0}), encoding="utf-8"
+    )
+    (project_path / "quality_checks" / "blind_manuscript_evaluation.json").write_text(
+        json.dumps({
+            "status": "completed", "manuscripts_blinded": True, "reviewer_count": 2,
+            "full_manuscript_compared": True, "real_figures_compared": True,
+            "scientific_correctness_score": 1.0, "aggregate_quality_ratio": 0.97,
+        }),
+        encoding="utf-8",
+    )
 
 
 def _write_aas_html(base: Path) -> Path:
@@ -115,14 +171,19 @@ def _write_aas_html(base: Path) -> Path:
 
 class QualityGateUpgradeTests(unittest.TestCase):
     def test_quality_check_passes_for_complete_assembled_project(self) -> None:
+        from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
         from draftpaper_cli.quality_gate import run_quality_check
 
         with tempfile.TemporaryDirectory() as tmp:
             project_path = prepared_assembled_project(tmp)
 
             report = run_quality_check(project_path)
+            parity = assess_paper_quality_parity(project_path)
 
             self.assertEqual(report["status"], "passed")
+            self.assertTrue(parity["hard_checks"]["citation_audit_passed"])
+            self.assertTrue(parity["hard_checks"]["reference_coverage_preserved"])
+            self.assertEqual(parity["citation_audit_contract"]["producer_status"], "passed")
             self.assertEqual(report["error_count"], 0)
             self.assertTrue((project_path / "quality_checks" / "quality_report.json").exists())
             self.assertIn("project", report)

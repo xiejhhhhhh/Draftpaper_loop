@@ -455,6 +455,10 @@ def assess_functional_quality_release(project: str | Path) -> dict[str, Any]:
         section: _read(state.path / "writing" / "section_validation" / f"{section}.json")
         for section in ("introduction", "data", "methods", "results", "discussion")
     }
+    section_acceptances = {
+        section: _read(state.path / "writing" / "section_acceptance" / f"{section}.json")
+        for section in ("introduction", "data", "methods", "results", "discussion")
+    }
     component_scores = {
         name: 1.0 if path.exists() else 0.0 for name, path in required.items()
     }
@@ -463,17 +467,40 @@ def assess_functional_quality_release(project: str | Path) -> dict[str, Any]:
         decision = str(report.get("decision") or report.get("status") or "")
         coverage = report.get("functional_job_coverage") or {}
         eligible = report.get("quality_parity_eligible") is True and coverage.get("decision") == "pass"
-        component_scores[f"section_{section}"] = 1.0 if mode == "codex_free_candidate" and decision in {"pass", "accepted"} and eligible else 0.0
+        acceptance = section_acceptances[section]
+        claim_bindings = _read(state.path / "writing" / "claim_bindings" / f"{section}.json")
+        accepted = (
+            acceptance.get("status") == "accepted"
+            and acceptance.get("composition_mode") == "codex_free_candidate"
+            and acceptance.get("formal_release_eligible") is True
+            and acceptance.get("candidate_hash") == report.get("candidate_hash")
+            and acceptance.get("evidence_snapshot_id") == report.get("evidence_snapshot_id")
+            and claim_bindings.get("status") == "passed"
+            and claim_bindings.get("candidate_hash") == report.get("candidate_hash")
+            and claim_bindings.get("evidence_snapshot_id") == report.get("evidence_snapshot_id")
+        )
+        component_scores[f"section_{section}"] = 1.0 if mode == "codex_free_candidate" and decision in {"pass", "accepted"} and eligible and accepted else 0.0
     score = sum(component_scores.values()) / max(len(component_scores), 1)
+    accepted_candidate_hashes = {
+        section: str(report.get("candidate_hash") or "")
+        for section, report in section_acceptances.items()
+    }
+    evidence_snapshot_ids = sorted({
+        str(report.get("evidence_snapshot_id") or "")
+        for report in section_acceptances.values()
+        if report.get("evidence_snapshot_id")
+    })
     payload = {
-        "schema_version": "v0.22.0",
+        "schema_version": "v0.22.2",
         "generated_at": utc_now(),
         "component_scores": component_scores,
         "functional_quality_score": round(score, 4),
         "hard_correctness_required": True,
         "quality_parity_target": 0.95,
         "decision": "pass" if score >= 0.95 else "blocked",
-        "blocking_reason": "All manuscript sections must be validated free-prose candidates; deterministic fallback is not release eligible." if score < 0.95 else "",
+        "accepted_candidate_hashes": accepted_candidate_hashes,
+        "evidence_snapshot_ids": evidence_snapshot_ids,
+        "blocking_reason": "All manuscript sections must be editor-cleared, explicitly accepted free-prose candidates; deterministic fallback is not release eligible." if score < 0.95 else "",
     }
     target = state.path / "quality" / "functional_quality_release.json"
     target.parent.mkdir(parents=True, exist_ok=True)

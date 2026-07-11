@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
+from .state_kernel import append_jsonl_locked, atomic_write_json
 
 
 PASSPORT_FILES = {
@@ -52,16 +53,11 @@ def _read_json(path: Path, fallback: Any) -> Any:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload)
 
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(
-        (path.read_text(encoding="utf-8") if path.exists() else "")
-        + json.dumps(payload, ensure_ascii=False, sort_keys=True)
-        + "\n",
-        encoding="utf-8",
-    )
+    append_jsonl_locked(path, payload)
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -159,12 +155,8 @@ def _latest_unconsumed_checkpoint(project_path: Path) -> dict[str, Any] | None:
     return None
 
 
-def _write_passport(project_path: Path, *, event: str) -> dict[str, Any]:
+def _build_passport(project_path: Path, *, event: str) -> dict[str, Any]:
     metadata = _metadata(project_path)
-    for relative in PASSPORT_FILES.values():
-        path = project_path / relative
-        if not path.exists():
-            path.write_text("", encoding="utf-8")
     artifacts = collect_artifacts(project_path)
     awaiting = _latest_unconsumed_checkpoint(project_path)
     passport = {
@@ -187,6 +179,11 @@ def _write_passport(project_path: Path, *, event: str) -> dict[str, Any]:
         "artifacts": artifacts,
         "ledgers": dict(PASSPORT_FILES),
     }
+    return passport
+
+
+def _write_passport(project_path: Path, *, event: str) -> dict[str, Any]:
+    passport = _build_passport(project_path, event=event)
     _write_json(project_path / PASSPORT_FILES["passport"], passport)
     return passport
 
@@ -211,7 +208,7 @@ def initialize_project_passport(project: str | Path) -> dict[str, Any]:
 
 
 def refresh_project_passport(project: str | Path, *, event: str = "refresh") -> dict[str, Any]:
-    """Refresh passport snapshot and append artifact entries for current files."""
+    """Refresh passport and append only changed, added, or removed artifacts."""
     project_path = project_root(project)
     for relative in PASSPORT_FILES.values():
         path = project_path / relative
@@ -219,22 +216,37 @@ def refresh_project_passport(project: str | Path, *, event: str = "refresh") -> 
             path.write_text("", encoding="utf-8")
     artifacts = collect_artifacts(project_path)
     now = utc_now()
+    previous: dict[str, dict[str, Any]] = {}
+    for record in read_jsonl(project_path / PASSPORT_FILES["artifact_ledger"]):
+        path = str(record.get("path") or "")
+        if path:
+            previous[path] = record
+    current = {str(artifact["path"]): artifact for artifact in artifacts}
     for artifact in artifacts:
+        prior = previous.get(str(artifact["path"])) or {}
+        if prior.get("sha256") == artifact.get("sha256") and prior.get("kind") != "artifact_removed":
+            continue
         _append_jsonl(project_path / PASSPORT_FILES["artifact_ledger"], {
             "kind": "artifact",
             "event": event,
             "recorded_at": now,
             **artifact,
         })
+    for path, prior in previous.items():
+        if path not in current and prior.get("kind") != "artifact_removed":
+            _append_jsonl(project_path / PASSPORT_FILES["artifact_ledger"], {
+                "kind": "artifact_removed", "event": event, "recorded_at": now,
+                "path": path, "previous_sha256": prior.get("sha256"), "stage": prior.get("stage"),
+            })
     return _write_passport(project_path, event=event)
 
 
 def load_project_passport(project: str | Path) -> dict[str, Any]:
-    """Load passport, initializing it for older projects when needed."""
+    """Load passport without mutating older projects."""
     project_path = project_root(project)
     passport_path = project_path / PASSPORT_FILES["passport"]
     if not passport_path.exists() or not passport_path.read_text(encoding="utf-8").strip():
-        return initialize_project_passport(project_path)
+        return _build_passport(project_path, event="read_only_snapshot")
     payload = _read_json(passport_path, {})
     if not isinstance(payload, dict):
         raise PassportError(f"{passport_path} must contain an object.")

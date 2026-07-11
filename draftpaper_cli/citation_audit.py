@@ -97,6 +97,10 @@ class CitationUsage:
     supporting_evidence: str
     doi: str
     url: str
+    semantic_verdict: str
+    semantic_checks: dict[str, Any]
+    evidence_passage: str
+    evidence_locator: str
     needs_review: bool
 
 
@@ -199,13 +203,101 @@ def _infer_citation_intent(section: str, passage: str, evidence_text: str, bib_f
     return "claim_support"
 
 
-def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> tuple[str, float, str, float, float, bool, str, str, str, str, str]:
+def _numbers(text: str) -> list[float]:
+    values = []
+    for raw in re.findall(r"(?<![A-Za-z])[-+]?(?:\d+\.\d+|\d+)(?:[eE][-+]?\d+)?%?", text):
+        try:
+            value = float(raw.rstrip("%"))
+        except ValueError:
+            continue
+        values.append(value / 100.0 if raw.endswith("%") else value)
+    return values
+
+
+def _negated(text: str) -> bool:
+    return bool(re.search(r"\b(?:no|not|never|neither|without|failed to|did not|does not|cannot)\b", text, flags=re.I))
+
+
+def _causal_pair(text: str) -> tuple[set[str], set[str]] | None:
+    match = re.search(r"(.{3,100}?)\b(?:causes?|leads? to|results? in|improves?|increases?|reduces?|decreases?)\b(.{3,100})", text, flags=re.I)
+    if not match:
+        return None
+    return _tokens(match.group(1)), _tokens(match.group(2))
+
+
+def _effect_direction(text: str) -> str:
+    if re.search(r"\b(?:increase[sd]?|improve[sd]?|raise[sd]?|higher|positive)\b", text, flags=re.I):
+        return "increase"
+    if re.search(r"\b(?:decrease[sd]?|reduce[sd]?|lower(?:ed)?|worse|negative)\b", text, flags=re.I):
+        return "decrease"
+    return "unspecified"
+
+
+def _semantic_support_checks(claim: str, evidence_passage: str, intent: str, lexical_alignment: float, topic_relevance: float) -> dict[str, Any]:
+    claim_numbers = _numbers(claim)
+    evidence_numbers = _numbers(evidence_passage)
+    unmatched_numbers = [
+        value for value in claim_numbers
+        if not any(abs(value - candidate) <= max(1e-8, abs(candidate) * 5e-4) for candidate in evidence_numbers)
+    ]
+    numeric_status = "consistent" if not unmatched_numbers else "unsupported_or_mismatched"
+    polarity_status = "consistent"
+    if lexical_alignment >= 0.15 and _negated(claim) != _negated(evidence_passage):
+        polarity_status = "possible_negation_mismatch"
+    claim_cause = _causal_pair(claim)
+    evidence_cause = _causal_pair(evidence_passage)
+    causal_status = "not_claimed"
+    if claim_cause:
+        causal_status = "supported" if evidence_cause and claim_cause[0] & evidence_cause[0] and claim_cause[1] & evidence_cause[1] else "unsupported_direction"
+        if evidence_cause and claim_cause[0] & evidence_cause[1] and claim_cause[1] & evidence_cause[0]:
+            causal_status = "reversed_direction"
+        if evidence_cause and _effect_direction(claim) != "unspecified" and _effect_direction(evidence_passage) != "unspecified" and _effect_direction(claim) != _effect_direction(evidence_passage):
+            causal_status = "reversed_direction"
+    strong_claim = bool(re.search(r"\b(?:prove[sd]?|demonstrate[sd]? conclusively|always|necessarily|causes?|superior|eliminates?|guarantees?)\b", claim, flags=re.I))
+    cautious_evidence = bool(re.search(r"\b(?:may|might|could|suggests?|associated|correlat|preliminary|limited)\b", evidence_passage, flags=re.I))
+    strength_status = "overstated" if strong_claim and cautious_evidence else "compatible"
+    contradictions = []
+    if polarity_status != "consistent":
+        contradictions.append("negation_or_polarity")
+    if causal_status in {"unsupported_direction", "reversed_direction"}:
+        contradictions.append("causal_direction")
+    if numeric_status != "consistent":
+        contradictions.append("numeric_support")
+    if contradictions:
+        verdict = "contradicted_or_unsupported"
+    elif strength_status == "overstated":
+        verdict = "claim_too_strong"
+    elif lexical_alignment >= 0.28:
+        verdict = "direct_support"
+    elif intent != "claim_support" and topic_relevance >= 0.45:
+        verdict = "contextual_support"
+    elif lexical_alignment >= 0.15:
+        verdict = "partial_support"
+    else:
+        verdict = "insufficient_support"
+    return {
+        "semantic_verdict": verdict,
+        "numeric_consistency": numeric_status,
+        "claim_numbers": claim_numbers,
+        "evidence_numbers": evidence_numbers,
+        "unmatched_claim_numbers": unmatched_numbers,
+        "polarity_consistency": polarity_status,
+        "causal_direction_consistency": causal_status,
+        "claim_strength_consistency": strength_status,
+        "contradiction_types": contradictions,
+        "requires_paragraph_repair": verdict in {"contradicted_or_unsupported", "claim_too_strong", "insufficient_support"},
+    }
+
+
+def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> tuple[str, float, str, float, float, bool, str, str, str, str, str, dict[str, Any], str]:
     if key not in bib:
-        return "unverifiable", 0.0, "unknown", 0.0, 0.0, True, "resolve_bibtex_key", "The citation key is absent from BibTeX, so the cited source cannot be resolved.", "", "", ""
+        semantic = {"semantic_verdict": "unverifiable", "requires_paragraph_repair": True}
+        return "unverifiable", 0.0, "unknown", 0.0, 0.0, True, "resolve_bibtex_key", "The citation key is absent from BibTeX, so the cited source cannot be resolved.", "", "", "", semantic, ""
     rows = evidence.get(key) or []
     if not rows:
         fields = bib.get(key) or {}
-        return "unverifiable", 0.0, "unknown", 0.0, 0.0, True, "add_citation_evidence", "The source exists in BibTeX but has no citation_evidence row for claim-level checking.", "", fields.get("doi", ""), fields.get("url", "")
+        semantic = {"semantic_verdict": "unverifiable", "requires_paragraph_repair": True}
+        return "unverifiable", 0.0, "unknown", 0.0, 0.0, True, "add_citation_evidence", "The source exists in BibTeX but has no citation_evidence row for claim-level checking.", "", fields.get("doi", ""), fields.get("url", ""), semantic, ""
     section_rows = [row for row in rows if (row.get("section") or "").strip().lower() == section]
     candidate_rows = section_rows or rows
     claim_tokens = _tokens(_clean_latex(passage))
@@ -238,13 +330,22 @@ def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, 
     if intent != "claim_support" and (claim_tokens & relevance_tokens):
         topic_relevance = max(topic_relevance, 0.55)
     claim_alignment = best_score
+    semantic = _semantic_support_checks(_clean_latex(passage), supporting, intent, claim_alignment, topic_relevance)
+    semantic_verdict = semantic["semantic_verdict"]
+    locator = str(best_row.get("passage_id") or best_row.get("page") or best_row.get("section_locator") or best_row.get("source") or "")
+    if semantic_verdict == "contradicted_or_unsupported":
+        return "unsupported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "agent_paragraph_rewrite_required", "The source passage conflicts with the claim's numeric, polarity, or causal semantics; preserve the reference and repair the paragraph against the passage.", supporting, doi, url, semantic, locator
+    if semantic_verdict == "claim_too_strong":
+        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "narrow_claim_strength", "The claim is stronger than the source passage and must be narrowed without deleting the reference.", supporting, doi, url, semantic, locator
+    if semantic_verdict == "contextual_support":
+        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "keep_contextual_citation", "The source is valid context or provenance; it is not treated as proof of every surrounding scientific detail.", supporting, doi, url, semantic, locator
     if claim_alignment >= 0.28:
-        return "supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "keep_citation", "The cited evidence overlaps with the local claim at a source-specific level.", supporting, doi, url
+        return "supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "keep_citation", "The cited source passage supports the local claim without detected numeric, polarity, causal, or strength conflict.", supporting, doi, url, semantic, locator
     if claim_alignment >= 0.15:
-        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_supported_claim", "The citation is topically related, but the local claim should be narrowed or supplemented.", supporting, doi, url
+        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_supported_claim", "The citation is topically related, but the local claim should be narrowed or supplemented.", supporting, doi, url, semantic, locator
     if topic_relevance >= 0.45:
-        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_contextual_citation", "The citation is highly relevant as context, method background, data-source background, or tool provenance, but the local claim is stronger than the stored evidence.", supporting, doi, url
-    return "unsupported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "rewrite_claim_relocate_citation_or_add_evidence", "The local claim does not align with the stored evidence for this citation; keep the retained reference and revise the surrounding claim, move the citation to a better-supported sentence, or add missing citation evidence.", supporting, doi, url
+        return "partially_supported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), False, "rewrite_to_contextual_citation", "The citation is highly relevant as context, method background, data-source background, or tool provenance, but the local claim is stronger than the stored evidence.", supporting, doi, url, semantic, locator
+    return "unsupported", round(claim_alignment, 3), intent, round(topic_relevance, 3), round(claim_alignment, 3), True, "agent_paragraph_rewrite_required", "The local claim lacks passage-level support; keep the retained reference and repair the paragraph rather than replacing it with an evidence summary.", supporting, doi, url, semantic, locator
 
 
 def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> list[CitationUsage]:
@@ -269,7 +370,7 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
                     if dedupe in seen:
                         continue
                     seen.add(dedupe)
-                    verdict, score, intent, relevance, alignment, blocking, repair_hint, reasoning, supporting, doi, url = _judge_usage(key, section, passage, bib, evidence)
+                    verdict, score, intent, relevance, alignment, blocking, repair_hint, reasoning, supporting, doi, url, semantic, locator = _judge_usage(key, section, passage, bib, evidence)
                     usage_id = f"{section}_{len(usages) + 1:03d}_{re.sub(r'[^A-Za-z0-9_-]+', '_', key)}"
                     usages.append(CitationUsage(
                         usage_id=usage_id,
@@ -296,6 +397,10 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
                         supporting_evidence=supporting,
                         doi=doi,
                         url=url,
+                        semantic_verdict=str(semantic.get("semantic_verdict") or "unknown"),
+                        semantic_checks=semantic,
+                        evidence_passage=supporting,
+                        evidence_locator=locator,
                         needs_review=blocking or verdict == "partially_supported",
                     ))
     return usages

@@ -67,10 +67,8 @@ class OrchestratorContextStepTests(unittest.TestCase):
             self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "build-data-context")
             build_data_writing_context(project.path)
             refresh_project_passport(project.path, event="test")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "write-data")
-            write_data(project.path)
-            refresh_project_passport(project.path, event="test")
-            self.assertNotEqual(run_pipeline(project.path)["next_action"]["stage"], "data_writing")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "prepare-section-writing")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["writing_state"], "preparation_required")
 
     def test_methods_execution_stage_finishes_before_manuscript_methods_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -129,7 +127,8 @@ class OrchestratorContextStepTests(unittest.TestCase):
             self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "build-method-context")
             build_method_writing_context(project.path)
             refresh_project_passport(project.path, event="test")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "write-methods")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "prepare-section-writing")
+            self.assertEqual(run_pipeline(project.path)["next_action"]["writing_state"], "preparation_required")
 
 
 if __name__ == "__main__":

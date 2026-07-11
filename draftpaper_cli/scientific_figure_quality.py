@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import csv
+import hashlib
 import json
 import struct
 from pathlib import Path
@@ -44,6 +46,122 @@ def _png_dimensions(path: Path) -> tuple[int, int]:
     return struct.unpack(">II", header[16:24])
 
 
+def _pixel_evidence(path: Path) -> dict[str, Any]:
+    try:
+        from PIL import Image, ImageStat
+
+        with Image.open(path) as image:
+            image = image.convert("L")
+            image.thumbnail((512, 512))
+            width, height = image.size
+            pixels = list(image.getdata())
+            dark = [value < 235 for value in pixels]
+            nonwhite_fraction = sum(dark) / max(len(dark), 1)
+            variance = float(ImageStat.Stat(image).var[0])
+            edge_count = 0
+            for y in range(height):
+                row = y * width
+                for x in range(1, width):
+                    edge_count += abs(pixels[row + x] - pixels[row + x - 1]) > 28
+            edge_density = edge_count / max(height * max(width - 1, 1), 1)
+            left_width = max(1, width // 5)
+            bottom_start = max(0, height * 4 // 5)
+            left_density = sum(dark[y * width + x] for y in range(height) for x in range(left_width)) / max(height * left_width, 1)
+            bottom_density = sum(dark[y * width + x] for y in range(bottom_start, height) for x in range(width)) / max((height - bottom_start) * width, 1)
+            occupancy = []
+            for index in range(24):
+                start = index * width // 24
+                end = max(start + 1, (index + 1) * width // 24)
+                density = sum(dark[y * width + x] for y in range(height) for x in range(start, end)) / max(height * (end - start), 1)
+                occupancy.append(density > 0.006)
+            groups = 0
+            active = False
+            for occupied in occupancy:
+                if occupied and not active:
+                    groups += 1
+                active = occupied
+            return {
+                "decoded": True,
+                "nonwhite_fraction": round(nonwhite_fraction, 6),
+                "luminance_variance": round(variance, 3),
+                "edge_density": round(edge_density, 6),
+                "axis_region_evidence": left_density > 0.004 and bottom_density > 0.004,
+                "text_edge_evidence": edge_density > 0.004,
+                "inferred_horizontal_content_groups": groups,
+                "nonblank": nonwhite_fraction >= 0.002 and variance >= 4.0 and edge_density >= 0.001,
+            }
+    except Exception as exc:
+        return {"decoded": False, "nonblank": False, "error": str(exc)}
+
+
+def _read_ledger_events(project_path: Path) -> list[dict[str, Any]]:
+    events = []
+    for relative in ("data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl"):
+        path = project_path / relative
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(item, dict):
+                events.append(item)
+    return events
+
+
+def _source_artifact_evidence(project_path: Path, item: dict[str, Any], trace: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
+    event_id = str(trace.get("run_output_event_id") or "")
+    event = next((candidate for candidate in events if str(candidate.get("event_id") or "") == event_id), {})
+    output_hashes = event.get("output_hashes") if isinstance(event.get("output_hashes"), dict) else {}
+    declared = []
+    for key in ("source_tables", "underlying_tables", "source_artifacts", "data_sources"):
+        value = item.get(key)
+        declared.extend(value if isinstance(value, list) else [value] if value else [])
+    declared.extend(path for path in output_hashes if str(path).lower().endswith((".csv", ".tsv", ".json", ".parquet", ".fits", ".tif", ".tiff")))
+    paths = list(dict.fromkeys(str(value).replace("\\", "/") for value in declared if str(value).strip()))
+    verified = []
+    table_values: list[float] = []
+    for relative in paths:
+        path = project_path / relative
+        if not path.is_file():
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        expected = str(output_hashes.get(relative) or "")
+        hash_matches = not expected or expected == digest
+        verified.append({"path": relative, "sha256": digest, "run_hash_matches": hash_matches})
+        if path.suffix.lower() in {".csv", ".tsv"}:
+            delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
+            try:
+                with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                    for row in csv.DictReader(handle, delimiter=delimiter):
+                        for value in row.values():
+                            try:
+                                table_values.append(float(value))
+                            except (TypeError, ValueError):
+                                continue
+            except OSError:
+                pass
+    statistics = item.get("statistics") if isinstance(item.get("statistics"), dict) else {}
+    statistic_values = []
+    for value in statistics.values():
+        try:
+            statistic_values.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    statistics_bound = all(
+        any(abs(value - candidate) <= max(1e-8, abs(candidate) * 5e-5) for candidate in table_values)
+        for value in statistic_values
+    ) if statistic_values else bool(verified)
+    return {
+        "event_found": bool(event),
+        "event_status": event.get("status"),
+        "verified_artifacts": verified,
+        "all_hashes_match": bool(verified) and all(artifact["run_hash_matches"] for artifact in verified),
+        "statistics_bound_to_table": statistics_bound,
+    }
+
+
 def _values(value: object) -> set[str]:
     if isinstance(value, dict):
         raw = value.keys()
@@ -67,6 +185,7 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
     trace_by_id = {str(item.get("figure_id") or ""): item for item in traces if isinstance(item, dict)}
     checks = []
     all_issues = []
+    ledger_events = _read_ledger_events(state.path)
     for index, contract in enumerate(contracts, start=1):
         if not isinstance(contract, dict) or str(contract.get("manuscript_role") or "main").lower() == "appendix":
             continue
@@ -76,15 +195,17 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         trace = trace_by_id.get(figure_id) or {}
         path = state.path / str(item.get("path") or contract.get("path") or "")
         width, height = _png_dimensions(path)
+        pixels = _pixel_evidence(path)
+        sources = _source_artifact_evidence(state.path, item, trace, ledger_events)
         issues = []
-        artifact_integrity = 1.0 if width and height else 0.0
+        artifact_integrity = 1.0 if width and height and pixels.get("nonblank") else 0.0
         if not artifact_integrity:
-            issues.append({"kind": "invalid_or_missing_png"})
-        legibility = 1.0 if width >= 1200 and height >= 800 and item.get("axis_labels") and item.get("text_elements") else 0.0
+            issues.append({"kind": "invalid_missing_or_blank_png", "pixel_evidence": pixels})
+        legibility = 1.0 if width >= 1200 and height >= 800 and pixels.get("axis_region_evidence") and pixels.get("text_edge_evidence") else 0.0
         if width < 1200 or height < 800:
             issues.append({"kind": "insufficient_pixel_dimensions", "width": width, "height": height})
-        if not item.get("axis_labels") or not item.get("text_elements"):
-            issues.append({"kind": "missing_legibility_metadata"})
+        if not pixels.get("axis_region_evidence") or not pixels.get("text_edge_evidence"):
+            issues.append({"kind": "rendered_axis_or_text_evidence_missing"})
 
         required_roles = (
             _values(contract.get("required_variable_roles"))
@@ -103,16 +224,17 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
                 "missing_method_outputs": sorted(required_outputs - observed_outputs),
             })
 
-        evidence_reporting = 1.0 if item.get("statistics") and item.get("interpretation_summary") and item.get("publication_ready") else 0.0
+        evidence_reporting = 1.0 if item.get("statistics") and item.get("interpretation_summary") and sources.get("statistics_bound_to_table") else 0.0
         if not evidence_reporting:
             issues.append({"kind": "missing_statistical_or_interpretive_evidence"})
-        plugin_trace = 1.0 if trace.get("data_plugin_ids") and trace.get("method_plugin_ids") and trace.get("run_output_event_id") else 0.0
+        plugin_trace = 1.0 if trace.get("data_plugin_ids") and trace.get("method_plugin_ids") and sources.get("event_found") and sources.get("all_hashes_match") else 0.0
         if not plugin_trace:
             issues.append({"kind": "missing_plugin_run_trace"})
 
         required_panels = _values(contract.get("required_panels"))
         observed_panels = _values(item.get("panels"))
-        panel_completeness = 1.0 if not required_panels or required_panels <= observed_panels else 0.0
+        inferred_groups = int(pixels.get("inferred_horizontal_content_groups") or 0)
+        panel_completeness = 1.0 if not required_panels or (required_panels <= observed_panels and inferred_groups >= min(len(required_panels), 2)) else 0.0
         if not panel_completeness:
             issues.append({"kind": "missing_required_panels", "panels": sorted(required_panels - observed_panels)})
         dimensions = {
@@ -125,13 +247,13 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         }
         weights = {"artifact_integrity": 0.15, "legibility": 0.15, "semantic_alignment": 0.25, "evidence_reporting": 0.15, "plugin_run_trace": 0.20, "panel_completeness": 0.10}
         score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
-        check = {"figure_id": figure_id, "score": score, "decision": "pass" if score >= MINIMUM_SCORE else "repair_required", "dimensions": dimensions, "issues": issues}
+        check = {"figure_id": figure_id, "score": score, "decision": "pass" if score >= MINIMUM_SCORE else "repair_required", "dimensions": dimensions, "pixel_evidence": pixels, "source_artifact_evidence": sources, "issues": issues}
         checks.append(check)
         all_issues.extend({**issue, "figure_id": figure_id} for issue in issues)
     score = round(sum(item["score"] for item in checks) / max(1, len(checks)), 4)
     report = {
         "status": "written",
-        "schema_version": "v0.21.0",
+        "schema_version": "v0.22.6",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": score,
@@ -139,7 +261,7 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         "decision": "pass" if checks and all(item["decision"] == "pass" for item in checks) else "repair_required",
         "figure_checks": checks,
         "issues": all_issues,
-        "policy": "A valid PNG is necessary but insufficient; publication readiness requires semantic, plugin-run, panel, statistical, and legibility evidence.",
+        "policy": "Metadata is never self-proving: publication readiness requires nonblank rendered pixels, visible layout evidence, run-hashed source artifacts, table-bound statistics, semantic contracts, plugin execution, and panel completeness.",
     }
     _write_json(state.path / REPORT, report)
     return report

@@ -13,11 +13,13 @@ from typing import Any
 
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .schema_adapters import normalize_citation_audit
 
 
 REPORT = "quality_checks/paper_quality_parity_report.json"
 MINIMUM_SCORE = 0.95
 CORE_SECTIONS = ("introduction", "data", "methods", "results", "discussion")
+BLIND_EVALUATION = "quality_checks/blind_manuscript_evaluation.json"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -61,6 +63,32 @@ def _section_function_score(report: dict[str, Any]) -> float:
     return _bounded_score(coverage.get("score"))
 
 
+def _blind_evaluation_contract(payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        reviewer_count = int(payload.get("reviewer_count") or 0)
+    except (TypeError, ValueError):
+        reviewer_count = 0
+    quality_ratio = _bounded_score(payload.get("aggregate_quality_ratio"))
+    scientific_correctness = _bounded_score(payload.get("scientific_correctness_score"))
+    checks = {
+        "completed": str(payload.get("status") or "").lower() == "completed",
+        "manuscripts_blinded": payload.get("manuscripts_blinded") is True,
+        "independent_reviewers": reviewer_count >= 2,
+        "full_manuscript_compared": payload.get("full_manuscript_compared") is True,
+        "real_figures_compared": payload.get("real_figures_compared") is True,
+        "scientific_correctness_100_percent": scientific_correctness == 1.0,
+        "quality_ratio_at_least_95_percent": quality_ratio >= MINIMUM_SCORE,
+    }
+    return {
+        "status": "verified" if all(checks.values()) else "missing_or_incomplete",
+        "checks": checks,
+        "reviewer_count": reviewer_count,
+        "aggregate_quality_ratio": quality_ratio,
+        "scientific_correctness_score": scientific_correctness,
+        "verified": all(checks.values()),
+    }
+
+
 def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     """Assess scientific function separately from non-negotiable correctness."""
     state = load_project(project)
@@ -73,6 +101,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     lifecycles = _read_json(state.path / "writing" / "section_lifecycles.json")
     matrices = _read_json(state.path / "writing" / "argument_matrices.json")
     panel_contracts = _read_json(state.path / "results" / "panel_figure_contracts.json")
+    blind_evaluation = _blind_evaluation_contract(_read_json(state.path / BLIND_EVALUATION))
     section_reports = {section: _section_report(state.path, section) for section in CORE_SECTIONS}
 
     result_score = _bounded_score(result_quality.get("score"))
@@ -116,9 +145,10 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "figure_readability_panel_logic_and_captions": 0.10,
         "prose_naturalness_and_cross_section_coherence": 0.05,
     }
-    functional_score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
+    automated_functional_score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
+    functional_score = min(automated_functional_score, blind_evaluation["aggregate_quality_ratio"])
 
-    coverage = citation_quality.get("reference_coverage") if isinstance(citation_quality.get("reference_coverage"), dict) else {}
+    citation_contract = normalize_citation_audit(citation_quality, minimum_coverage=MINIMUM_SCORE)
     citation_time = _timestamp(citation_quality.get("generated_at"))
     section_times = [_timestamp(report.get("generated_at")) for report in section_reports.values()]
     known_section_times = [item for item in section_times if item is not None]
@@ -131,9 +161,10 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "results_evidence_quality_passed": result_quality.get("decision") == "pass" and result_score >= MINIMUM_SCORE,
         "figure_scientific_quality_passed": figure_quality.get("decision") == "pass" and figure_score >= MINIMUM_SCORE,
         "no_blocking_evidence_conflicts": not bool(conflicts),
-        "citation_audit_passed": citation_quality.get("decision") == "pass" and int(citation_quality.get("blocking_issue_count") or 0) == 0,
-        "reference_coverage_preserved": _bounded_score(coverage.get("coverage_ratio", 1.0)) >= MINIMUM_SCORE,
+        "citation_audit_passed": citation_contract["audit_passed"],
+        "reference_coverage_preserved": citation_contract["coverage_preserved"],
         "citation_audit_after_final_draft": citation_after_final_draft,
+        "blind_full_manuscript_and_real_figure_evaluation": blind_evaluation["verified"],
     }
     hard_correctness_score = round(sum(float(value) for value in hard_checks.values()) / len(hard_checks), 4)
     hard_correctness_passed = all(hard_checks.values())
@@ -150,16 +181,23 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "project_id": state.metadata.get("project_id"),
         "score": functional_score,
         "functional_quality_score": functional_score,
+        "automated_functional_quality_score": automated_functional_score,
         "minimum_score": MINIMUM_SCORE,
         "hard_correctness_score": hard_correctness_score,
         "hard_correctness_required": 1.0,
         "hard_correctness_passed": hard_correctness_passed,
         "hard_checks": hard_checks,
+        "blind_manuscript_evaluation": blind_evaluation,
+        "citation_audit_contract": citation_contract,
         "decision": decision,
         "dimensions": dimensions,
         "weights": weights,
         "repair_priorities": repair_priorities,
-        "policy": "Release quality measures scientific function rather than lexical similarity; every hard scientific correctness check must pass independently.",
+        "recommended_next_commands": [] if blind_evaluation["verified"] else [
+            "prepare-blind-quality-evaluation",
+            "record-blind-quality-evaluation",
+        ],
+        "policy": "Automated structure and evidence scores are diagnostic only. A 0.95 release claim additionally requires blinded comparison of the complete manuscript and real figures by at least two independent reviewers, with 100% scientific correctness.",
     }
     _write_json(state.path / REPORT, report)
     return report

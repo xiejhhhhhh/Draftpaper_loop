@@ -13,6 +13,7 @@ from typing import Any
 
 from .metadata import attach_generator_metadata
 from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
+from .state_kernel import atomic_write_json, atomic_write_text
 
 
 class ProjectAlreadyExistsError(FileExistsError):
@@ -143,10 +144,10 @@ def _build_stage_metadata() -> dict[str, dict[str, Any]]:
     return stages
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
+def _write_json(path: Path, payload: Any) -> None:
     if isinstance(payload, dict) and "generated_at" in payload:
         payload = attach_generator_metadata(payload)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload)
 
 
 def _write_simple_yaml(path: Path, payload: dict[str, Any]) -> None:
@@ -174,7 +175,7 @@ def _write_simple_yaml(path: Path, payload: dict[str, Any]) -> None:
 
     for root_key, root_value in payload.items():
         render(root_key, root_value)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    atomic_write_text(path, "\n".join(lines) + "\n")
 
 
 def _write_stage_manifests(project_path: Path, metadata: dict[str, Any]) -> None:

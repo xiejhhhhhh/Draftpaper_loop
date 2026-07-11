@@ -1,0 +1,2 @@
+recursive-include draftpaper_cli/discipline_modules *.json *.csv *.md
+recursive-include draftpaper_cli/release_fixtures *.json

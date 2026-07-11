@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import re
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,7 @@ from .discipline_modules import get_discipline_module
 from .project_scaffold import _write_json, utc_now
 
 
-REVIEW_RULE_RUNTIME_SCHEMA_VERSION = "v0.18.6"
+REVIEW_RULE_RUNTIME_SCHEMA_VERSION = "v0.22.5"
 
 MATURE_RULE_STATES = {"promoted_review_rule", "paper_integrated", "runtime_integrated"}
 BLOCKING_LEVELS = {"block_claim", "block_writing", "block_pipeline", "block"}
@@ -303,11 +304,14 @@ def _review_rule_rescue_task(project_path: Path, assessment: dict[str, Any]) -> 
     rule_id = str(assessment.get("rule_id") or "review_rule")
     missing = list(assessment.get("missing_evidence_roles") or [])
     conflicts = list(assessment.get("observed_forbidden_conflicts") or [])
-    trigger = "forbidden_conflict" if conflicts else "missing_evidence" if missing else "threshold_or_confirmation"
+    semantic_failure = decision in {"threshold_failed", "scientific_anomaly", "plugin_rule_failed"}
+    trigger = "scientific_anomaly" if semantic_failure else "forbidden_conflict" if conflicts else "missing_evidence" if missing else "threshold_or_confirmation"
     if route == "supplement_data_and_method":
         command = "prepare-result-rescue"
     if trigger == "forbidden_conflict" and route in {"method_rescue", "supplement_data_and_method"}:
         command = "prepare-result-rescue" if route == "supplement_data_and_method" else "prepare-method-blueprint"
+    if trigger == "scientific_anomaly":
+        command = "prepare-results-semantic-repair"
     return {
         "task_id": f"review_rule:{rule_id}:{trigger}",
         "source": "review_rule_runtime",
@@ -322,6 +326,8 @@ def _review_rule_rescue_task(project_path: Path, assessment: dict[str, Any]) -> 
         "recommended_cli": f"python -m draftpaper_cli.cli {command} --project {project_path}",
         "missing_evidence_roles": missing,
         "observed_forbidden_conflicts": conflicts,
+        "scientific_findings": list(assessment.get("scientific_findings") or []),
+        "threshold_evaluation": dict(assessment.get("threshold_evaluation") or {}),
         "repair_priority": list(assessment.get("repair_priority") or []),
         "review_question": assessment.get("review_question") or "",
         "scientific_risk": assessment.get("scientific_risk") or "",
@@ -337,6 +343,8 @@ def _review_rule_rescue_reason(assessment: dict[str, Any], trigger: str) -> str:
     if trigger == "forbidden_conflict":
         conflicts = ", ".join(str(item) for item in assessment.get("observed_forbidden_conflicts") or []) or "declared forbidden conflict"
         return f"Review rule {rule_id} observed forbidden evidence conflicts: {conflicts}."
+    if trigger == "scientific_anomaly":
+        return f"Review rule {rule_id} found a result-level threshold, dimension, binding, baseline, ablation, or uncertainty anomaly; repair the affected Results claim locally before escalating to new data or methods."
     if assessment.get("decision") == "threshold_requires_context":
         return f"Review rule {rule_id} uses a threshold that must remain contextual until a reliable source or human confirmation is recorded."
     if assessment.get("decision") == "human_confirmation_required":
@@ -418,9 +426,12 @@ def _stage_matches(rule: dict[str, Any], stage: str) -> bool:
 def _available_metric_roles(run_manifest: dict[str, Any], result_evidence: dict[str, Any]) -> set[str]:
     roles: set[str] = set()
     metric_names = {_normalise(key) for key in (run_manifest.get("metrics") or {}).keys()}
-    for item in result_evidence.get("metrics") or []:
+    for item in list(result_evidence.get("metrics") or []) + list(result_evidence.get("evidence_records") or []):
         if isinstance(item, dict):
-            metric_names.add(_normalise(item.get("metric_name") or item.get("name") or ""))
+            metric_names.add(_normalise(
+                item.get("metric_name") or item.get("name")
+                or str(item.get("entity_role") or "").removeprefix("result_metric_")
+            ))
     if metric_names:
         roles.update({"result_metric", "performance_metric", "primary_metric"})
     if any("r2" in item or "r_squared" in item for item in metric_names):
@@ -440,10 +451,151 @@ def _available_metric_roles(run_manifest: dict[str, Any], result_evidence: dict[
     return roles
 
 
+def build_review_evidence_bundle(project: str | Path, extra_context: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build the domain-neutral evidence object consumed by executable review rules."""
+    project_path = Path(project)
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml", {})
+    resolved = _read_json(project_path / "results" / "resolved_result_evidence.json", {})
+    if not resolved:
+        resolved = _read_json(project_path / "results" / "result_evidence_resolution.json", {})
+    registry = _read_json(project_path / "writing" / "scientific_evidence_registry.json", {})
+    records = [item for item in registry.get("records") or [] if isinstance(item, dict)]
+    metrics: list[dict[str, Any]] = []
+    for item in resolved.get("evidence_records") or []:
+        if isinstance(item, dict) and str(item.get("entity_role") or "").startswith("result_metric_"):
+            metrics.append(dict(item))
+    if not metrics:
+        run_id = str(run_manifest.get("run_id") or run_manifest.get("execution_id") or "run_summary")
+        for name, value in (run_manifest.get("metrics") or {}).items():
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            metrics.append({
+                "evidence_id": f"run:{run_id}:{_normalise(name)}",
+                "entity_role": f"result_metric_{_normalise(name)}",
+                "metric_name": _normalise(name),
+                "value": numeric,
+                "metric_dimension": "count" if any(token in _normalise(name) for token in ("count", "_n", "sample")) else "score",
+                "run_id": run_id,
+                "cohort_id": str(run_manifest.get("cohort_id") or "main"),
+                "sample_unit": str(run_manifest.get("sample_unit") or "model_evaluation"),
+                "split": str(run_manifest.get("evaluation_split") or "run_summary"),
+                "model_id": str(run_manifest.get("model_id") or "run_summary"),
+            })
+    metric_map = {
+        _normalise(item.get("metric_name") or str(item.get("entity_role") or "").removeprefix("result_metric_")): item.get("value")
+        for item in metrics
+    }
+    conflicts = sorted(_collect_evidence_conflicts(project_path, extra_context))
+    return {
+        "schema_version": "v0.22.5",
+        "project_path": str(project_path),
+        "roles": collect_review_rule_evidence_roles(project_path, extra_context),
+        "records": records,
+        "metrics": metrics,
+        "metric_values": metric_map,
+        "run_manifest": run_manifest,
+        "conflicts": conflicts,
+        "baseline_metrics": [item for item in metrics if "baseline" in _normalise(item.get("model_id") or item.get("entity_role"))],
+        "ablation_metrics": [item for item in metrics if "ablation" in _normalise(item.get("model_id") or item.get("entity_role")) or any(token in _normalise(item.get("model_id")) for token in ("no_", "without"))],
+        "uncertainty_records": [item for item in records + metrics if any(token in _normalise(item.get("entity_role")) for token in ("confidence_interval", "uncertainty", "standard_error", "bootstrap"))],
+        "results_text": (project_path / "results" / "results.tex").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "results" / "results.tex").exists() else "",
+    }
+
+
+def _threshold_evaluation(rule: dict[str, Any], bundle: dict[str, Any], enabled: bool) -> dict[str, Any]:
+    policy = rule.get("threshold_policy") if isinstance(rule.get("threshold_policy"), dict) else {}
+    if not enabled or policy.get("value") in {None, ""}:
+        return {"status": "not_applicable"}
+    metric_hint = _normalise(rule.get("metric_name") or rule.get("metric_family") or "")
+    values = bundle.get("metric_values") or {}
+    if metric_hint:
+        candidates = [(name, value) for name, value in values.items() if metric_hint == name or metric_hint in name or name in metric_hint]
+    else:
+        candidates = list(values.items())
+    if not candidates:
+        return {"status": "missing_metric", "metric_hint": metric_hint}
+    metric_name, observed = candidates[0]
+    try:
+        observed_value = float(observed)
+        threshold = float(policy["value"])
+    except (TypeError, ValueError):
+        return {"status": "invalid_threshold"}
+    comparator = str(policy.get("comparator") or ">=").strip()
+    comparisons = {
+        ">=": observed_value >= threshold, ">": observed_value > threshold,
+        "<=": observed_value <= threshold, "<": observed_value < threshold,
+        "==": abs(observed_value - threshold) <= 1e-12,
+    }
+    passed = comparisons.get(comparator)
+    if passed is None:
+        return {"status": "invalid_comparator", "comparator": comparator}
+    return {
+        "status": "passed" if passed else "failed", "metric_name": metric_name,
+        "observed": observed_value, "comparator": comparator, "threshold": threshold,
+    }
+
+
+def _scientific_bundle_findings(rule: dict[str, Any], bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    blob = _text_blob(rule)
+    metrics = list(bundle.get("metrics") or [])
+    for item in metrics:
+        missing = [field for field in ("evidence_id", "run_id", "cohort_id", "sample_unit", "split", "model_id", "metric_dimension") if not str(item.get(field) or "").strip()]
+        if missing:
+            findings.append({"code": "incomplete_metric_binding", "severity": "repair_required", "evidence_id": item.get("evidence_id"), "missing_fields": missing})
+    dimensions: dict[str, set[str]] = {}
+    for item in metrics:
+        name = _normalise(item.get("metric_name") or str(item.get("entity_role") or "").removeprefix("result_metric_"))
+        dimensions.setdefault(name, set()).add(_normalise(item.get("metric_dimension")))
+    for name, values in dimensions.items():
+        values.discard("")
+        if len(values) > 1:
+            findings.append({"code": "mixed_metric_dimension", "severity": "repair_required", "metric_name": name, "dimensions": sorted(values)})
+    if "baseline" in blob and not bundle.get("baseline_metrics"):
+        findings.append({"code": "baseline_evidence_missing", "severity": "repair_required"})
+    if "ablation" in blob and not bundle.get("ablation_metrics"):
+        findings.append({"code": "ablation_evidence_missing", "severity": "repair_required"})
+    if any(token in blob for token in ("uncertainty", "confidence_interval", "bootstrap")) and not bundle.get("uncertainty_records"):
+        findings.append({"code": "uncertainty_evidence_missing", "severity": "repair_required"})
+    return findings
+
+
+def _execute_review_plugin(rule: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any]:
+    rule_id = str(rule.get("rule_id") or rule.get("rule_group_id") or "")
+    if not rule_id:
+        return {"status": "not_available"}
+    root = Path(__file__).resolve().parent / "discipline_modules"
+    matches = list(root.glob(f"*/review_rules/{rule_id}/template.py"))
+    if not matches:
+        return {"status": "not_available"}
+    path = matches[0]
+    try:
+        spec = importlib.util.spec_from_file_location(f"draftpaper_review_{rule_id}", path)
+        if not spec or not spec.loader:
+            return {"status": "load_failed"}
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        evaluator = getattr(module, "evaluate_rule", None)
+        if callable(evaluator):
+            result = evaluator({
+                "roles": bundle.get("roles") or [], "evidence_roles": bundle.get("roles") or [],
+                "metrics": bundle.get("metric_values") or {}, "records": bundle.get("records") or [],
+                "conflicts": bundle.get("conflicts") or [],
+            })
+            return {"status": "executed", "template": str(path), "result": result if isinstance(result, dict) else {"value": result}}
+    except Exception as exc:
+        return {"status": "execution_failed", "template": str(path), "error": str(exc)}
+    return {"status": "no_evaluator", "template": str(path)}
+
+
 def collect_review_rule_evidence_roles(project: str | Path, extra_context: dict[str, Any] | None = None) -> list[str]:
     project_path = Path(project)
     run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml", {})
-    result_evidence = _read_json(project_path / "results" / "result_evidence_resolution.json", {})
+    result_evidence = _read_json(project_path / "results" / "resolved_result_evidence.json", {})
+    if not result_evidence:
+        result_evidence = _read_json(project_path / "results" / "result_evidence_resolution.json", {})
     roles: set[str] = set()
     if (project_path / "research_plan" / "research_plan.md").exists():
         roles.add("research_plan")
@@ -546,6 +698,7 @@ def assess_review_rules(
     )
     available = set(collect_review_rule_evidence_roles(project_path, evidence_context))
     observed_conflicts = _collect_evidence_conflicts(project_path, evidence_context)
+    evidence_bundle = build_review_evidence_bundle(project_path, evidence_context)
     assessments: list[dict[str, Any]] = []
     blocking_count = 0
     warn_count = 0
@@ -565,6 +718,11 @@ def assess_review_rules(
         mature_enough = maturity in {"runnable", "mature", "paper_integrated", "runtime_integrated"}
         formally_deployed = deployment_state in {_normalise(item) for item in MATURE_RULE_STATES}
         may_block = mature_enough and formally_deployed and blocking_level in {_normalise(item) for item in BLOCKING_LEVELS}
+        threshold_evaluation = _threshold_evaluation(rule, evidence_bundle, hard_threshold)
+        scientific_findings = _scientific_bundle_findings(rule, evidence_bundle)
+        plugin_evaluation = _execute_review_plugin(rule, evidence_bundle)
+        plugin_result = plugin_evaluation.get("result") if isinstance(plugin_evaluation.get("result"), dict) else {}
+        plugin_failed = plugin_result.get("passes_gate") is False or plugin_result.get("decision") in {"failed", "revise_required"}
         if conflict_hits:
             if may_block:
                 decision = "blocked_evidence_conflict"
@@ -587,6 +745,27 @@ def assess_review_rules(
                 decision = "advisory_missing_evidence"
                 runtime_level = "advisory"
                 advisory_count += 1
+        elif threshold_evaluation.get("status") == "failed":
+            decision = "threshold_failed"
+            runtime_level = "blocking" if may_block else "warn_and_repair"
+            if may_block:
+                blocking_count += 1
+            else:
+                warn_count += 1
+        elif plugin_failed:
+            decision = "plugin_rule_failed"
+            runtime_level = "blocking" if may_block else "warn_and_repair"
+            if may_block:
+                blocking_count += 1
+            else:
+                warn_count += 1
+        elif scientific_findings:
+            decision = "scientific_anomaly"
+            runtime_level = "blocking" if may_block else "warn_and_repair"
+            if may_block:
+                blocking_count += 1
+            else:
+                warn_count += 1
         elif threshold_warnings:
             decision = "threshold_requires_context"
             if mature_enough:
@@ -623,6 +802,9 @@ def assess_review_rules(
             "runtime_level": runtime_level,
             "decision": decision,
             "warnings": threshold_warnings,
+            "threshold_evaluation": threshold_evaluation,
+            "scientific_findings": scientific_findings,
+            "plugin_evaluation": plugin_evaluation,
             "checks": list(rule.get("checks") or []),
             "repair_priority": list(rule.get("repair_priority") or []),
             "review_question": rule.get("review_question") or "",
@@ -649,6 +831,14 @@ def assess_review_rules(
         "warn_count": warn_count,
         "advisory_count": advisory_count,
         "rule_assessments": assessments,
+        "evidence_bundle_summary": {
+            "metric_count": len(evidence_bundle.get("metrics") or []),
+            "record_count": len(evidence_bundle.get("records") or []),
+            "baseline_metric_count": len(evidence_bundle.get("baseline_metrics") or []),
+            "ablation_metric_count": len(evidence_bundle.get("ablation_metrics") or []),
+            "uncertainty_record_count": len(evidence_bundle.get("uncertainty_records") or []),
+            "conflicts": evidence_bundle.get("conflicts") or [],
+        },
         "rescue_task_count": len(rescue_tasks),
         "rescue_tasks": rescue_tasks,
         "recommended_next_commands": list(dict.fromkeys(
@@ -660,6 +850,8 @@ def assess_review_rules(
             "candidate_or_foundation_rules_are_advisory_unless_promoted_and_evidence_bound": True,
             "fixed_thresholds_require_reliable_source_or_user_confirmation": True,
             "support_layer_signals_must_backflow_as_review_rule_candidates_before_runtime_blocking": True,
+            "plugin_evaluators_are_executed_when_available": True,
+            "scientific_anomalies_route_to_local_results_repair_before_data_or_method_rescue": True,
         },
     }
     if write_path is not None:

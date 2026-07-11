@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import json
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .project_scaffold import PROJECT_DIRECTORIES, _build_stage_metadata, _write_json, _write_simple_yaml, utc_now
+from .state_kernel import StateKernelError, read_json_object
 
 
 VALID_STAGE_STATUSES = {"pending", "draft", "approved", "stale", "failed", "completed"}
@@ -50,14 +52,11 @@ def load_project(project: str | Path) -> ProjectState:
     if not json_path.exists():
         raise ProjectStateError(f"project.json not found: {json_path}")
     try:
-        metadata = json.loads(json_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ProjectStateError(f"project.json is invalid JSON: {json_path}") from exc
-    if not isinstance(metadata, dict):
-        raise ProjectStateError(f"project.json must contain an object: {json_path}")
+        metadata = read_json_object(json_path, required_keys=("project_id", "stages"))
+    except StateKernelError as exc:
+        raise ProjectStateError(str(exc)) from exc
     if "stages" not in metadata or not isinstance(metadata["stages"], dict):
         raise ProjectStateError(f"project.json has no stages object: {json_path}")
-    metadata = _migrate_metadata_schema(json_path, metadata)
     return ProjectState(path=json_path.parent, metadata=metadata)
 
 
@@ -71,33 +70,50 @@ def _manifest_path(project_path: Path, stage: str) -> Path:
     return _stage_dir(project_path, stage) / "stage_manifest.json"
 
 
-def _migrate_metadata_schema(json_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
-    """Add newly introduced stages and dependency edges to older local projects."""
+def inspect_project_migration(project: str | Path) -> dict[str, Any]:
+    """Return a read-only migration plan for an older project."""
+    json_path = _project_json_path(project)
+    try:
+        metadata = read_json_object(json_path, required_keys=("project_id", "stages"))
+    except StateKernelError as exc:
+        raise ProjectStateError(str(exc)) from exc
     project_path = json_path.parent
     defaults = _build_stage_metadata()
-    changed = False
+    return {
+        "status": "migration_required" if (
+            any(not (project_path / relative).is_dir() for relative in PROJECT_DIRECTORIES)
+            or any(stage not in metadata["stages"] or metadata["stages"][stage].get("depends_on") != default.get("depends_on") for stage, default in defaults.items())
+        ) else "current",
+        "project_path": str(project_path),
+        "missing_directories": [relative for relative in PROJECT_DIRECTORIES if not (project_path / relative).is_dir()],
+        "missing_stages": [stage for stage in defaults if stage not in metadata["stages"]],
+        "dependency_updates": [stage for stage, default in defaults.items() if stage in metadata["stages"] and metadata["stages"][stage].get("depends_on") != default.get("depends_on")],
+    }
+
+
+def migrate_project(project: str | Path) -> dict[str, Any]:
+    """Explicitly migrate project directories, stage metadata, and manifests."""
+    json_path = _project_json_path(project)
+    metadata = read_json_object(json_path, required_keys=("project_id", "stages"))
+    project_path = json_path.parent
+    plan = inspect_project_migration(project_path)
     for relative in PROJECT_DIRECTORIES:
-        directory = project_path / relative
-        if not directory.exists():
-            directory.mkdir(parents=True, exist_ok=True)
-            changed = True
+        (project_path / relative).mkdir(parents=True, exist_ok=True)
+    defaults = _build_stage_metadata()
+    updated = copy.deepcopy(metadata)
     for stage, default_meta in defaults.items():
-        if stage not in metadata["stages"]:
-            metadata["stages"][stage] = default_meta
-            changed = True
-            continue
-        if metadata["stages"][stage].get("depends_on") != default_meta.get("depends_on"):
-            metadata["stages"][stage]["depends_on"] = list(default_meta.get("depends_on") or [])
-            changed = True
-    if changed:
-        metadata["updated_at"] = utc_now()
-        _write_json(project_path / "project.json", metadata)
-        _write_simple_yaml(project_path / "project.yaml", metadata)
-        state = ProjectState(path=project_path, metadata=metadata)
-        for stage in defaults:
-            if not _manifest_path(project_path, stage).exists():
-                _write_stage_manifest(state, stage)
-    return metadata
+        if stage not in updated["stages"]:
+            updated["stages"][stage] = copy.deepcopy(default_meta)
+        else:
+            updated["stages"][stage]["depends_on"] = list(default_meta.get("depends_on") or [])
+    updated["updated_at"] = utc_now()
+    _write_json(project_path / "project.json", updated)
+    _write_simple_yaml(project_path / "project.yaml", updated)
+    state = ProjectState(path=project_path, metadata=updated)
+    for stage in defaults:
+        if not _manifest_path(project_path, stage).exists():
+            _write_stage_manifest(state, stage)
+    return {**plan, "status": "migrated", "project_path": str(project_path)}
 
 
 def _save_project(state: ProjectState) -> ProjectState:

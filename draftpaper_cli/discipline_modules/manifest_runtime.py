@@ -83,6 +83,7 @@ def _normalized_entry(entry: dict[str, Any]) -> dict[str, Any]:
     manifest.setdefault("maturity", entry.get("maturity") or "foundation")
     manifest.setdefault("runtime_class", entry.get("runtime_class") or "local_optional_dependency")
     manifest.setdefault("validation_level", entry.get("validation_level") or "plan_only")
+    manifest.setdefault("runtime_level", entry.get("runtime_level") or "contract_only")
     if kind == "connector":
         manifest.setdefault("connector_id", entry.get("plugin_id"))
         manifest.setdefault("display_name", str(manifest.get("connector_id") or "").replace("_", " ").title())

@@ -28,6 +28,15 @@ def _quality_architecture(project):
     _json(project / "writing" / "section_lifecycles.json", {"data_lifecycle": {}, "method_lifecycle": {}})
     _json(project / "results" / "panel_figure_contracts.json", {"figure_groups": [{"figure_group_id": "f1"}]})
     _json(project / "writing" / "scientific_evidence_registry.json", {"records": [], "blocking_conflicts": []})
+    _json(project / "quality_checks" / "blind_manuscript_evaluation.json", {
+        "status": "completed",
+        "manuscripts_blinded": True,
+        "reviewer_count": 2,
+        "full_manuscript_compared": True,
+        "real_figures_compared": True,
+        "scientific_correctness_score": 1.0,
+        "aggregate_quality_ratio": 0.97,
+    })
     for section in ("introduction", "data", "methods", "results", "discussion"):
         _json(project / "writing" / "section_validation" / f"{section}.json", {
             "generated_at": "2026-07-12T10:00:00+00:00",
@@ -50,7 +59,11 @@ def test_full_paper_quality_parity_passes_complete_scientific_manuscript(tmp_pat
     _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
     _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
     _quality_architecture(project)
-    _json(project / "citation_audit" / "final_citation_audit_report.json", {"generated_at": "2026-07-12T11:00:00+00:00", "decision": "pass", "blocking_issue_count": 0, "reference_coverage": {"coverage_ratio": 1.0}})
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {
+        "generated_at": "2026-07-12T11:00:00+00:00", "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
+    })
 
     report = assess_paper_quality_parity(project)
 
@@ -93,9 +106,9 @@ def test_quality_parity_rejects_deterministic_section_fallback(tmp_path) -> None
     _json(fallback_path, fallback_report)
     _json(project / "citation_audit" / "final_citation_audit_report.json", {
         "generated_at": "2026-07-12T11:00:00+00:00",
-        "decision": "pass",
-        "blocking_issue_count": 0,
-        "reference_coverage": {"coverage_ratio": 1.0},
+        "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
     })
 
     report = assess_paper_quality_parity(project)
@@ -114,9 +127,9 @@ def test_quality_parity_requires_citation_audit_after_final_section_validation(t
     _quality_architecture(project)
     _json(project / "citation_audit" / "final_citation_audit_report.json", {
         "generated_at": "2026-07-12T09:59:59+00:00",
-        "decision": "pass",
-        "blocking_issue_count": 0,
-        "reference_coverage": {"coverage_ratio": 1.0},
+        "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
     })
 
     report = assess_paper_quality_parity(project)
@@ -124,3 +137,25 @@ def test_quality_parity_requires_citation_audit_after_final_section_validation(t
     assert report["decision"] == "repair_required"
     assert report["hard_checks"]["citation_audit_after_final_draft"] is False
     assert report["hard_correctness_passed"] is False
+
+
+def test_quality_parity_does_not_claim_95_percent_without_blind_full_manuscript_evidence(tmp_path) -> None:
+    from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
+
+    project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
+    _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
+    _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
+    _quality_architecture(project)
+    (project / "quality_checks" / "blind_manuscript_evaluation.json").unlink()
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {
+        "generated_at": "2026-07-12T11:00:00+00:00", "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
+    })
+
+    report = assess_paper_quality_parity(project)
+
+    assert report["decision"] == "repair_required"
+    assert report["functional_quality_score"] == 0.0
+    assert report["automated_functional_quality_score"] >= 0.95
+    assert report["hard_checks"]["blind_full_manuscript_and_real_figure_evaluation"] is False

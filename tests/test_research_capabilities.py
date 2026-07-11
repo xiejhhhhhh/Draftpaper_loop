@@ -116,7 +116,7 @@ def test_sufficiency_requires_rescue_before_declaring_capability_unavailable(tmp
     assert any(item["state"] in {"missing", "blocked_external", "incompatible"} for item in saved["requirement_assessments"])
 
 
-def test_sufficiency_accepts_first_party_local_templates_but_marks_project_verification_boundary(tmp_path: Path) -> None:
+def test_sufficiency_rejects_template_presence_until_project_outputs_are_verified(tmp_path: Path) -> None:
     from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 
     project = _project_with_contract_inputs(
@@ -137,9 +137,29 @@ def test_sufficiency_accepts_first_party_local_templates_but_marks_project_verif
     result = assess_plugin_sufficiency(project)
     saved = json.loads((project / "research_plan" / "plugin_sufficiency_report.json").read_text(encoding="utf-8"))
 
-    assert result["decision"] == "pass"
-    covered = [item for item in saved["requirement_assessments"] if item["state"] == "covered"]
-    assert any(item["coverage_basis"] == "local_template_requires_project_verification" for item in covered)
+    assert result["decision"] != "pass"
+    assert not [item for item in saved["requirement_assessments"] if item["core"] and item["state"] == "covered"]
+
+    ledger_events = []
+    for item in saved["requirement_assessments"]:
+        if item.get("core") and item.get("matched_plugin_id"):
+            ledger_events.append({
+                "plugin_id": item["matched_plugin_id"], "status": "project_executed",
+                "output_hashes": {"verified-output": "sha256"},
+            })
+    for relative in ("data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl"):
+        path = project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(json.dumps(item) for item in ledger_events) + "\n", encoding="utf-8")
+
+    rerun = assess_plugin_sufficiency(project)
+    assert rerun["decision"] == "pass"
+    promoted = json.loads((project / "research_plan" / "plugin_sufficiency_report.json").read_text(encoding="utf-8"))
+    assert all(
+        item.get("runtime_level") == "project_validated"
+        for item in promoted["requirement_assessments"]
+        if item.get("core") and item.get("kind") in {"data", "method"}
+    )
 
 
 @pytest.mark.parametrize(

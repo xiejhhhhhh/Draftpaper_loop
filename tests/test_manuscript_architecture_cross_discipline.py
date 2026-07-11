@@ -82,8 +82,14 @@ appendix_figures:
     _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
     _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
     _json(project / "citation_audit" / "final_citation_audit_report.json", {
-        "generated_at": "2026-07-12T11:00:00+00:00", "decision": "pass", "blocking_issue_count": 0,
-        "reference_coverage": {"coverage_ratio": 1.0},
+        "generated_at": "2026-07-12T11:00:00+00:00", "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
+    })
+    _json(project / "quality_checks" / "blind_manuscript_evaluation.json", {
+        "status": "completed", "manuscripts_blinded": True, "reviewer_count": 2,
+        "full_manuscript_compared": True, "real_figures_compared": True,
+        "scientific_correctness_score": 1.0, "aggregate_quality_ratio": 0.97,
     })
 
     report = assess_paper_quality_parity(project)

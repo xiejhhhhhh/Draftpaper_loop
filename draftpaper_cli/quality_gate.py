@@ -5,12 +5,12 @@
 from __future__ import annotations
 
 import csv
-import json
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .artifact_repository import ArtifactRepository
 from .citation_utils import bibtex_keys_in_text, citation_keys_in_text, has_citation_command
 from .evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry
 from .evidence_snapshot import (
@@ -18,7 +18,7 @@ from .evidence_snapshot import (
     validate_citation_audit_snapshot,
     validate_promoted_snapshot_for_writing,
 )
-from .io_utils import read_json, read_text
+from .io_utils import read_text
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status, validate_project
 from .writing_quality import evaluate_section_quality
@@ -51,6 +51,7 @@ QUALITY_INPUTS = [
     EVIDENCE_REGISTRY_JSON,
     "references/citation_evidence.csv",
     "citation_audit/final_citation_audit_report.json",
+    "quality_checks/blind_manuscript_evaluation.json",
 ]
 
 QUALITY_OUTPUTS = [
@@ -96,11 +97,6 @@ class QualityGateError(RuntimeError):
 
 def _read_text(path: Path) -> str:
     return read_text(path)
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    payload = read_json(path, {})
-    return payload if isinstance(payload, dict) else {}
 
 
 def _bibtex_keys(content: str) -> set[str]:
@@ -164,11 +160,12 @@ def _check_stage_readiness(state_meta: dict[str, Any], issues: list[QualityIssue
 
 
 def _check_methods(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
-    requirements = _read_json(project_path / "methods" / "method_requirements.json")
+    repo = ArtifactRepository(project_path)
+    requirements = repo.read_mapping("methods/method_requirements.json")
     if not requirements:
         issues.append(QualityIssue("error", "method_requirements_missing", "methods/method_requirements.json is required.", "methods/method_requirements.json"))
     manifest_path = project_path / "methods" / "run_manifest.yaml"
-    manifest = _read_json(manifest_path)
+    manifest = repo.read_mapping("methods/run_manifest.yaml")
     status = manifest.get("status")
     if status != "success":
         issues.append(QualityIssue("error", "methods_run_manifest_not_success", "methods/run_manifest.yaml must have status=success.", "methods/run_manifest.yaml"))
@@ -189,7 +186,7 @@ def _check_methods(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
 
 
 def _check_result_validity(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
-    report = _read_json(project_path / "results" / "result_validity_report.json")
+    report = ArtifactRepository(project_path).read_mapping("results/result_validity_report.json")
     decision = report.get("decision")
     if decision not in {"pass", "conditional_pass"}:
         issues.append(QualityIssue(
@@ -215,7 +212,7 @@ def _check_result_validity(project_path: Path, issues: list[QualityIssue]) -> di
 
 
 def _check_core_evidence(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
-    report = _read_json(project_path / "core_evidence" / "core_evidence_report.json")
+    report = ArtifactRepository(project_path).read_mapping("core_evidence/core_evidence_report.json")
     decision = report.get("decision")
     if decision != "pass":
         issues.append(QualityIssue(
@@ -258,7 +255,7 @@ def _check_core_evidence(project_path: Path, issues: list[QualityIssue]) -> dict
 
 
 def _check_data_feasibility(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
-    report = _read_json(project_path / "data" / "data_feasibility_report.json")
+    report = ArtifactRepository(project_path).read_mapping("data/data_feasibility_report.json")
     decision = report.get("decision")
     if decision not in {"pass", "conditional_pass"}:
         issues.append(QualityIssue(
@@ -315,10 +312,11 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
     if citation_count:
         issues.append(QualityIssue("error", "results_contains_citation", "Results section must not contain citation commands.", "results/results.tex"))
 
-    manifest = _read_json(project_path / "results" / "result_manifest.yaml")
-    figure_plan = _read_json(project_path / "results" / "figure_plan.json")
-    figure_metadata = _read_json(project_path / "results" / "figure_metadata.json")
-    figure_quality = _read_json(project_path / "results" / "figure_quality_report.json")
+    repo = ArtifactRepository(project_path)
+    manifest = repo.read_mapping("results/result_manifest.yaml")
+    figure_plan = repo.read_mapping("results/figure_plan.json")
+    figure_metadata = repo.read_mapping("results/figure_metadata.json")
+    figure_quality = repo.read_mapping("results/figure_quality_report.json")
     metadata_by_path = {
         str(item.get("path") or ""): item
         for item in figure_metadata.get("figures") or []
@@ -390,7 +388,7 @@ def _check_manuscript_writing_quality(project_path: Path, issues: list[QualityIs
         "results": project_path / "results" / "results.tex",
         "discussion": project_path / "discussion" / "discussion.tex",
     }
-    manifest = _read_json(project_path / "results" / "result_manifest.yaml")
+    manifest = ArtifactRepository(project_path).read_mapping("results/result_manifest.yaml")
     figure_count = len(manifest.get("figures") or [])
     report: dict[str, Any] = {}
     for section, path in section_files.items():
@@ -501,8 +499,9 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
 
 
 def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
-    report = _read_json(project_path / "citation_audit" / "final_citation_audit_report.json")
-    coverage_report = _read_json(project_path / "citation_audit" / "reference_coverage_report.json")
+    repo = ArtifactRepository(project_path)
+    report = repo.read_mapping("citation_audit/final_citation_audit_report.json")
+    coverage_report = repo.read_mapping("citation_audit/reference_coverage_report.json")
     status = report.get("status")
     summary = report.get("summary") or {}
     coverage = report.get("reference_coverage") or coverage_report or {}
@@ -553,7 +552,7 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
             "The final citation audit does not identify the final manuscript and BibTeX snapshot it reviewed.",
             "citation_audit/final_citation_audit_report.json",
         ))
-    promoted = _read_json(project_path / "results" / "promoted_evidence_snapshot.json")
+    promoted = repo.read_mapping("results/promoted_evidence_snapshot.json")
     expected_evidence_snapshot_id = str(promoted.get("snapshot_id") or "")
     audited_evidence_snapshot_id = str(report.get("evidence_snapshot_id") or "")
     if expected_evidence_snapshot_id and audited_evidence_snapshot_id != expected_evidence_snapshot_id:
@@ -580,7 +579,7 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
 
 def _check_latex_hygiene(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
     main_tex = _read_text(project_path / "latex" / "main.tex")
-    profile = _read_json(project_path / "journal_profile" / "journal_profile.json")
+    profile = ArtifactRepository(project_path).read_mapping("journal_profile/journal_profile.json")
     documentclass = str(profile.get("documentclass") or "")
     target_journal = str(profile.get("target_journal") or "")
     begin_doc = main_tex.count("\\begin{document}")
@@ -615,7 +614,7 @@ def _check_pdf(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]
     pdf_path = project_path / "latex" / "main.pdf"
     if not manifest_path.exists():
         return {"status": "not_run", "pdf_exists": pdf_path.exists()}
-    manifest = _read_json(manifest_path)
+    manifest = ArtifactRepository(project_path).read_mapping("latex/pdf_compile_manifest.json")
     status = manifest.get("status")
     if status == "failed":
         issues.append(QualityIssue("error", "pdf_compile_failed", str(manifest.get("message") or "PDF compilation failed."), "latex/pdf_compile_manifest.json"))
@@ -627,11 +626,11 @@ def _check_pdf(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]
 
 
 def _set_quality_manifest(project_path: Path) -> None:
-    manifest_path = project_path / "quality_checks" / "stage_manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    repo = ArtifactRepository(project_path)
+    manifest = repo.read_mapping("quality_checks/stage_manifest.json")
     manifest["input_files"] = QUALITY_INPUTS
     manifest["output_files"] = QUALITY_OUTPUTS
-    _write_json(manifest_path, manifest)
+    repo.write_json("quality_checks/stage_manifest.json", manifest)
 
 
 def run_quality_check(project: str | Path) -> dict[str, Any]:
@@ -669,22 +668,25 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     citation_audit_report = _check_citation_audit(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
     pdf_report = _check_pdf(state.path, issues)
-    paper_quality_parity: dict[str, Any] = {}
-    if (
-        (state.path / "results" / "results_narrative_contract.json").exists()
-        and (state.path / "research_plan" / "research_capability_contract.json").exists()
-        and (state.path / "review" / "result_discipline_review_report.json").exists()
-    ):
-        from .paper_quality_parity import assess_paper_quality_parity
+    from .release_coordinator import assess_release_bundle
 
-        paper_quality_parity = assess_paper_quality_parity(state.path)
-        if paper_quality_parity.get("decision") != "pass":
-            issues.append(QualityIssue(
-                "error",
-                "paper_quality_parity_below_target",
-                f"Full-paper quality score {paper_quality_parity.get('score')} is below 0.95.",
-                "quality_checks/paper_quality_parity_report.json",
-            ))
+    release_bundle = assess_release_bundle(state.path)
+    functional_quality_release = release_bundle["functional_quality_release"]
+    if functional_quality_release.get("decision") != "pass":
+        issues.append(QualityIssue(
+            "error",
+            "formal_free_prose_release_blocked",
+            str(functional_quality_release.get("blocking_reason") or "Formal free-prose section acceptance is incomplete."),
+            "quality/functional_quality_release.json",
+        ))
+    paper_quality_parity = release_bundle["paper_quality_parity"]
+    if paper_quality_parity.get("decision") != "pass":
+        issues.append(QualityIssue(
+            "error",
+            "paper_quality_parity_below_target",
+            f"Full-paper quality score {paper_quality_parity.get('score')} is below 0.95 or a hard correctness check failed.",
+            "quality_checks/paper_quality_parity_report.json",
+        ))
 
     error_count = sum(1 for issue in issues if issue.severity == "error")
     warning_count = sum(1 for issue in issues if issue.severity == "warning")
@@ -718,6 +720,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "citation_audit": citation_audit_report,
         "latex": latex_report,
         "pdf": pdf_report,
+        "functional_quality_release": functional_quality_release,
         "paper_quality_parity": paper_quality_parity,
     }
 

@@ -41,25 +41,22 @@ def _sentence_pattern(passage: str) -> re.Pattern[str]:
 
 
 def _suggest_supported_claim(usage: dict[str, Any]) -> str:
-    evidence = str(usage.get("supporting_evidence") or "").strip()
-    if evidence:
-        return evidence.rstrip(".。 ")
-    citation_key = str(usage.get("citation_key") or "The cited source")
-    return f"{citation_key} provides relevant background for this statement"
+    return str(usage.get("original_claim") or usage.get("claim") or "").strip()
 
 
 def _repair_action_for_usage(usage: dict[str, Any]) -> tuple[str, str, bool]:
     verdict = str(usage.get("verdict") or "")
     support_status = str(usage.get("support_status") or "")
+    semantic_verdict = str(usage.get("semantic_verdict") or "")
     blocking = bool(usage.get("blocking"))
     if support_status in {"directly_supported"} or verdict == "supported":
         return "keep_citation", "No repair is required.", False
-    if support_status == "partially_supported_rewrite_needed" and not blocking:
-        return "keep_citation", "No immediate repair is required; the citation can be reviewed during prose editing.", False
+    if (support_status == "contextually_relevant" or semantic_verdict == "contextual_support") and not blocking:
+        return "keep_citation", "Keep the citation as context or provenance; do not treat it as proof of unrelated surrounding details.", False
     if not blocking:
         return (
-            "rewrite_to_supported_claim",
-            "Rewrite the local claim so it states only what the cited source directly supports, and keep the citation as context or provenance.",
+            "agent_paragraph_rewrite",
+            "Revise the paragraph locally so the citation's intent and source passage are explicit; preserve the reference and the paragraph's supported argumentative role.",
             False,
         )
     if support_status == "unverifiable" or verdict == "unverifiable":
@@ -69,8 +66,8 @@ def _repair_action_for_usage(usage: dict[str, Any]) -> tuple[str, str, bool]:
             False,
         )
     return (
-        "rewrite_to_supported_claim",
-        "Rewrite the local claim so it matches the retained reference evidence; keep the reference and citation in the manuscript.",
+        "agent_paragraph_rewrite",
+        "Use the source passage, numeric consistency, polarity, causal direction, and claim-strength checks to repair this paragraph locally. Preserve both the paragraph's supported argument and the retained reference; an evidence summary must not replace the paragraph.",
         False,
     )
 
@@ -143,6 +140,10 @@ def generate_citation_repair_plan(project: str | Path) -> dict[str, Any]:
             "original_passage": usage.get("passage"),
             "original_claim": usage.get("claim"),
             "supporting_evidence": usage.get("supporting_evidence"),
+            "semantic_verdict": usage.get("semantic_verdict"),
+            "semantic_checks": usage.get("semantic_checks") or {},
+            "evidence_passage": usage.get("evidence_passage") or usage.get("supporting_evidence"),
+            "evidence_locator": usage.get("evidence_locator"),
             "action": action,
             "suggested_claim": suggested_claim,
             "deletion_allowed": deletion_allowed,
@@ -248,11 +249,12 @@ def apply_citation_repair(project: str | Path, *, dry_run: bool = False) -> dict
             "citation_key": issue.get("citation_key"),
         })
     ledger = {
-        "status": "dry_run" if dry_run else "applied",
+        "status": "dry_run" if dry_run else ("agent_repair_required" if any(issue.get("action") == "agent_paragraph_rewrite" for issue in plan.get("issues") or []) else "applied"),
         "generated_at": utc_now(),
         "project_path": str(state.path),
         "applied_action_count": len(applied),
         "applied_actions": applied,
+        "pending_agent_tasks": [issue for issue in plan.get("issues") or [] if issue.get("action") == "agent_paragraph_rewrite"],
     }
     audit_dir = state.path / "citation_audit"
     _write_json(audit_dir / "citation_repair_ledger.json", ledger)

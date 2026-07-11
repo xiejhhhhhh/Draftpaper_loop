@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,51 @@ def write_passing_result_support(project_path: Path) -> None:
         json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
         encoding="utf-8",
     )
+
+
+def write_formal_writing_release(project_path: Path) -> None:
+    from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
+
+    snapshot = create_evidence_snapshot(project_path)
+    snapshot_id = snapshot["snapshot_id"]
+    accepted_hashes = {}
+    for section in ("results", "introduction", "data", "methods", "discussion"):
+        text = f"\\section{{{section.title()}}}\nA validated free-prose {section} section.\n"
+        candidate = project_path / "writing" / "candidates" / f"{section}.tex"
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        candidate.write_text(text, encoding="utf-8")
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        accepted_hashes[section] = digest
+        artifacts = {
+            project_path / "writing" / "section_packets" / f"{section}.json": {
+                "section": section, "promoted_evidence_snapshot": {"snapshot_id": snapshot_id},
+            },
+            project_path / "writing" / "section_validation" / f"{section}.json": {
+                "decision": "pass", "composition_mode": "codex_free_candidate", "quality_parity_eligible": True,
+                "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+                "functional_job_coverage": {"decision": "pass", "score": 1.0},
+            },
+            project_path / "writing" / "scientific_editor" / f"{section}.json": {
+                "decision": "pass", "source_hash": digest, "tasks": [],
+            },
+            project_path / "writing" / "section_acceptance" / f"{section}.json": {
+                "status": "accepted", "composition_mode": "codex_free_candidate", "formal_release_eligible": True,
+                "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+            },
+            project_path / "writing" / "claim_bindings" / f"{section}.json": {
+                "status": "passed", "candidate_hash": digest, "evidence_snapshot_id": snapshot_id,
+                "quantitative_claim_count": 0, "bound_claim_count": 0, "bindings": [],
+            },
+        }
+        for path, payload in artifacts.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+    release = project_path / "quality" / "functional_quality_release.json"
+    release.parent.mkdir(parents=True, exist_ok=True)
+    release.write_text(json.dumps({
+        "decision": "pass", "accepted_candidate_hashes": accepted_hashes,
+        "evidence_snapshot_ids": [snapshot_id],
+    }), encoding="utf-8")
     (project_path / "results" / "result_support_checkpoint.md").write_text("# Result support\n", encoding="utf-8")
     (project_path / "results" / "result_support_checkpoint.html").write_text("<html></html>", encoding="utf-8")
     (project_path / "result_support" / "stage_manifest.json").write_text(
@@ -42,6 +88,40 @@ def write_passing_result_support(project_path: Path) -> None:
 
 
 class OrchestratorPassportTests(unittest.TestCase):
+    def test_status_is_strictly_read_only_for_all_project_files(self) -> None:
+        from draftpaper_cli.orchestrator import status_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Read-only status", field="workflow engineering")
+            before = {
+                path.relative_to(project.path).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in project.path.rglob("*") if path.is_file()
+            }
+
+            status_project(project.path)
+
+            after = {
+                path.relative_to(project.path).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in project.path.rglob("*") if path.is_file()
+            }
+            self.assertEqual(before, after)
+
+    def test_artifact_ledger_appends_only_real_changes(self) -> None:
+        from draftpaper_cli.passport import refresh_project_passport
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Delta ledger", field="workflow engineering")
+            ledger = project.path / "artifact_ledger.jsonl"
+            initial = len(read_jsonl(ledger))
+            refresh_project_passport(project.path, event="no_change")
+            self.assertEqual(len(read_jsonl(ledger)), initial)
+            (project.path / "idea" / "idea.md").write_text("# Changed idea\n", encoding="utf-8")
+            refresh_project_passport(project.path, event="idea_changed")
+            changed = len(read_jsonl(ledger))
+            self.assertEqual(changed, initial + 1)
+            refresh_project_passport(project.path, event="no_second_change")
+            self.assertEqual(len(read_jsonl(ledger)), changed)
+
     def test_create_project_initializes_passport_and_ledgers(self) -> None:
         from draftpaper_cli.passport import PASSPORT_FILES, load_project_passport
 
@@ -207,6 +287,7 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
+            write_formal_writing_release(project.path)
             refresh_project_passport(project.path, event="test_status_ready")
 
             status = status_project(project.path)
@@ -272,6 +353,7 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
             _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
+            write_formal_writing_release(project.path)
             refresh_project_passport(project.path, event="test_integrity_passed_no_citation_audit")
 
             self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "audit-citations")

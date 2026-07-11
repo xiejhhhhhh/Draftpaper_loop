@@ -14,6 +14,9 @@ from .project_state import load_project
 
 
 EVIDENCE_REGISTRY_JSON = "writing/scientific_evidence_registry.json"
+REQUIRED_BINDING_FIELDS = (
+    "evidence_id", "run_id", "cohort_id", "sample_unit", "split", "model_id", "metric_dimension",
+)
 
 
 class EvidenceConflictError(RuntimeError):
@@ -44,32 +47,52 @@ def _normalize_record(
     value = record.get("value")
     if not role or value is None or value == "":
         return None
-    return {
+    is_result_metric = role.startswith("result_metric_")
+    cohort_id = str(record.get("cohort_id") or record.get("cohort") or "main").strip() or "main"
+    run_id = str(record.get("run_id") or ("" if is_result_metric else "not_applicable")).strip()
+    split = str(record.get("split") or ("" if is_result_metric else "not_applicable")).strip()
+    model_id = str(record.get("model_id") or record.get("model") or ("" if is_result_metric else "not_applicable")).strip()
+    metric_dimension = str(record.get("metric_dimension") or record.get("unit") or "").strip()
+    normalized = {
         "evidence_id": str(record.get("evidence_id") or ""),
         "entity_role": role,
         "value": value,
         "unit": str(record.get("unit") or "").strip(),
-        "cohort": str(record.get("cohort") or "main").strip() or "main",
+        "cohort_id": cohort_id,
+        "cohort": cohort_id,
         "sample_unit": str(record.get("sample_unit") or "").strip(),
-        "split": str(record.get("split") or "").strip(),
-        "run_id": str(record.get("run_id") or "").strip(),
-        "model": str(record.get("model") or "").strip(),
+        "split": split,
+        "run_id": run_id,
+        "model_id": model_id,
+        "model": model_id,
+        "metric_dimension": metric_dimension,
         "source_artifact": source_artifact,
         "source_hash": source_hash,
         "confidence": str(record.get("confidence") or "verified").strip(),
         "target_sections": list(record.get("target_sections") or []),
         "claim_boundary": str(record.get("claim_boundary") or "").strip(),
     }
+    missing = [field for field in REQUIRED_BINDING_FIELDS if not str(normalized.get(field) or "").strip()]
+    normalized["binding_complete"] = not missing
+    normalized["missing_binding_fields"] = missing
+    return normalized
 
 
-def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str]:
+def _finalize_binding(record: dict[str, Any]) -> None:
+    missing = [field for field in REQUIRED_BINDING_FIELDS if not str(record.get(field) or "").strip()]
+    record["binding_complete"] = not missing
+    record["missing_binding_fields"] = missing
+
+
+def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, str]:
     return (
         str(record.get("entity_role") or ""),
-        str(record.get("cohort") or ""),
+        str(record.get("cohort_id") or record.get("cohort") or ""),
         str(record.get("sample_unit") or ""),
         str(record.get("split") or ""),
         str(record.get("run_id") or ""),
-        str(record.get("model") or ""),
+        str(record.get("model_id") or record.get("model") or ""),
+        str(record.get("metric_dimension") or ""),
     )
 
 
@@ -100,7 +123,7 @@ def _numeric(value: Any) -> float | None:
 
 def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     conflicts: list[dict[str, Any]] = []
-    grouped: dict[tuple[str, str, str, str, str, str], list[dict[str, Any]]] = {}
+    grouped: dict[tuple[str, str, str, str, str, str, str], list[dict[str, Any]]] = {}
     for record in records:
         grouped.setdefault(_record_key(record), []).append(record)
     for key, items in grouped.items():
@@ -116,6 +139,7 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "split": key[3],
                     "run_id": key[4],
                     "model": key[5],
+                    "metric_dimension": key[6],
                 },
                 "values": [item.get("value") for item in items],
                 "evidence_ids": [item.get("evidence_id") for item in items],
@@ -124,7 +148,7 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_scope: dict[tuple[str, str, str, str], dict[str, list[dict[str, Any]]]] = {}
     for record in records:
         scope = (
-            str(record.get("cohort") or ""),
+            str(record.get("cohort_id") or record.get("cohort") or ""),
             str(record.get("sample_unit") or ""),
             str(record.get("split") or ""),
             str(record.get("run_id") or ""),
@@ -172,6 +196,7 @@ def _records_from_payload(path: Path, project_path: Path) -> list[dict[str, Any]
         if not item["evidence_id"]:
             scope = f"{item['entity_role']}|{item['cohort']}|{item['sample_unit']}|{item['split']}|{item['run_id']}|{item['model']}|{index}"
             item["evidence_id"] = hashlib.sha256(scope.encode("utf-8")).hexdigest()[:16]
+        _finalize_binding(item)
         normalized.append(item)
     return normalized
 
@@ -199,8 +224,9 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                     "unit": unit,
                     "cohort": "main",
                     "sample_unit": "figure_evidence",
-                    "model": figure_id,
-                    "confidence": "figure_metadata",
+                    "model_id": figure_id,
+                    "metric_dimension": unit,
+                    "confidence": "figure_metadata_unbound",
                     "target_sections": ["results", "discussion"],
                 },
                 source_artifact=relative,
@@ -210,6 +236,7 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                 record["evidence_id"] = hashlib.sha256(
                     f"{figure_id}|{metric_name}|{numeric}|{source_hash}".encode("utf-8")
                 ).hexdigest()[:16]
+                _finalize_binding(record)
                 records.append(record)
     return records
 
@@ -230,16 +257,20 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     if result_manifest.exists():
         records.extend(_records_from_result_manifest(result_manifest, state.path))
     conflicts = _conflicts(records)
+    incomplete = [record for record in records if not record.get("binding_complete")]
     registry = {
         "status": "blocked" if conflicts else "ready",
-        "schema_version": "v0.17.3",
+        "schema_version": "v0.22.3",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "record_count": len(records),
         "records": records,
         "blocking_conflict_count": len(conflicts),
+        "incomplete_binding_count": len(incomplete),
+        "incomplete_binding_evidence_ids": [record.get("evidence_id") for record in incomplete],
         "conflicts": conflicts,
-        "policy": "Only structured, scoped evidence may guide manuscript facts; free-text observations are context, not authoritative numeric evidence.",
+        "required_binding_fields": list(REQUIRED_BINDING_FIELDS),
+        "policy": "Only structured evidence bound to evidence/run/cohort/unit/split/model/dimension may guide quantitative manuscript claims; free text is non-authoritative context.",
     }
     output = state.path / EVIDENCE_REGISTRY_JSON
     output.parent.mkdir(parents=True, exist_ok=True)

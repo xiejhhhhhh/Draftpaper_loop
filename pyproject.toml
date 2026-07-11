@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.22.0"
+version = "0.23.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = { file = "LICENSE" }
@@ -11,6 +11,7 @@ authors = [
 keywords = ["research", "latex", "paper-writing", "cli", "codex-skills"]
 dependencies = [
   "matplotlib>=3.8",
+  "Pillow>=10",
   "SciencePlots>=2.1",
   "numpy>=1.24",
   "pandas>=2.0",
@@ -67,6 +68,8 @@ include = ["draftpaper_cli*"]
 exclude = ["codex_skills*", "third_party*", "tests*"]
 
 [tool.setuptools.package-data]
+"draftpaper_cli.discipline_modules" = ["**/*.json", "**/*.csv", "**/*.md"]
+"draftpaper_cli.release_fixtures" = ["*.json"]
 "draftpaper_cli._vendor.paper_fetch_skill" = ["LICENSE"]
 "draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.resources.arxiv" = ["*.json"]
 "draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.resources.formula" = ["*.json", "*.mjs"]

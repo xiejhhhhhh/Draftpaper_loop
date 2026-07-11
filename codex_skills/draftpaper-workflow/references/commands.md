@@ -101,6 +101,9 @@ python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project --compile-pdf
 python -m draftpaper_cli.cli compile-latex-pdf --project <repo>\projects\my_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_project
+python -m draftpaper_cli.cli prepare-blind-quality-evaluation --project <repo>\projects\my_project
+python -m draftpaper_cli.cli record-blind-quality-evaluation --project <repo>\projects\my_project --input <completed-review.json>
+python -m draftpaper_cli.cli assess-paper-quality-parity --project <repo>\projects\my_project
 python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
 python -m draftpaper_cli.cli review-draft --project <repo>\projects\my_project
@@ -122,6 +125,8 @@ python -m draftpaper_cli.cli write-github-contribution-guide --project <repo>\pr
 `run-integrity-gate` returns exit code `0` for passed and `1` for failed. It writes `integrity/integrity_report.json`, `integrity/integrity_report.md`, and appends an `integrity_gate` event to `integrity_ledger.jsonl`. Run it before `quality-check` to catch missing BibTeX keys, missing citation evidence, Results citations, missing result artifacts, and unbound result claims.
 
 `quality-check` returns exit code `0` for passed and `1` for failed. It still writes `quality_checks/quality_report.json` on failure.
+
+`prepare-blind-quality-evaluation` writes the two-reviewer rubric template. After independent reviewers compare the complete blinded manuscripts and real figures, `record-blind-quality-evaluation` validates their dimension scores and records `quality_checks/blind_manuscript_evaluation.json`. Automated scores cannot replace this artifact or authorize the 0.95 quality claim.
 
 `diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `assess-publication-readiness` writes readiness, archive-review, journal-fit, and claim-evidence artifacts. `discover-review-workflow-gaps` infers geography, astronomy, machine_learning, or default. `propose-review-engineering-plan` writes review-engineering plans and user-confirmation requests. `recommend-statistical-revision` writes `review/statistical_rescue_plan.json` and `.html`. `prepare-analysis-revision` writes `review/actionable_analysis_tasks.json`, `review/analysis_revision_feasibility.json`, `.html`, `methods/analysis_revision_requirements.json`, and `results/revision_figure_plan_delta.json`; blocked tasks ask for missing data roles instead of generating fake code. After this, use `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity` before `generate-revision-plan`. `apply-revision` marks affected stages stale only. `re-review` reruns diagnosis, review, readiness, statistical rescue, and planning.
 

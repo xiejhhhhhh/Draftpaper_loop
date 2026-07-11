@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,10 @@ from .writing_architecture import (
 
 class SectionCompositionError(RuntimeError):
     """Raised when a free-form section candidate violates its writing contract."""
+
+
+def _hash_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _dedupe_fallback_sentences(text: str) -> str:
@@ -52,6 +57,33 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _write_quantitative_claim_bindings(
+    project_path: Path,
+    section: str,
+    text: str,
+    validation: dict[str, Any],
+    evidence_snapshot_id: str,
+) -> dict[str, Any]:
+    bindings = list(validation.get("numeric_claim_bindings") or [])
+    report = {
+        "schema_version": "v0.22.3",
+        "generated_at": utc_now(),
+        "section": section,
+        "candidate_hash": _hash_text(text),
+        "evidence_snapshot_id": evidence_snapshot_id,
+        "required_binding_fields": list(validation.get("required_binding_fields") or []),
+        "quantitative_claim_count": len(bindings),
+        "bound_claim_count": sum(1 for item in bindings if item.get("status") == "bound"),
+        "status": "passed" if all(item.get("status") == "bound" for item in bindings) else "blocked",
+        "bindings": bindings,
+        "policy": "Every quantitative manuscript claim must resolve to one complete evidence/run/cohort/unit/split/model/dimension binding.",
+    }
+    target = project_path / "writing" / "claim_bindings" / f"{section}.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(target, report)
+    return report
 
 
 def _functional_job_coverage(section: str, text: str, packet: dict[str, Any]) -> dict[str, Any]:
@@ -153,6 +185,8 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
             "turn each finding block into observed evidence, comparison where available, interpretation, and a calibrated limit. "
             "The completed draft is accepted only after deterministic evidence and quality validation."
         ),
+        "agent_draft_path": f"writing/drafts/{normalized}.tex",
+        "candidate_path": f"writing/candidates/{normalized}.tex",
     }
     output = state.path / "writing" / "section_packets" / f"{normalized}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -178,6 +212,19 @@ def select_validated_section_draft(project: str | Path, section: str, fallback_t
         packet.get("scientific_evidence_registry") or {},
     )
     report["composition_mode"] = mode
+    if mode == "deterministic_offline_fallback":
+        binding_issue_kinds = {
+            "unsupported_numeric_claim",
+            "numeric_claim_scope_mismatch",
+            "incomplete_evidence_binding",
+            "ambiguous_numeric_claim_binding",
+        }
+        for issue in report.get("issues") or []:
+            if issue.get("kind") in binding_issue_kinds:
+                issue["severity"] = "diagnostic_warning"
+        report["decision"] = (
+            "blocked" if any(issue.get("severity") == "blocking" for issue in report.get("issues") or []) else "pass"
+        )
     coverage = _functional_job_coverage(normalized, text, packet)
     report["functional_job_coverage"] = coverage
     if mode == "deterministic_offline_fallback":
@@ -189,6 +236,12 @@ def select_validated_section_draft(project: str | Path, section: str, fallback_t
         (packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted"
     )
     report["candidate_path"] = candidate_path.relative_to(state.path).as_posix() if candidate_path.exists() else ""
+    report["candidate_hash"] = _hash_text(text) if candidate_path.exists() else ""
+    claim_bindings = _write_quantitative_claim_bindings(
+        state.path, normalized, text, report, report["evidence_snapshot_id"]
+    )
+    report["claim_binding_report"] = f"writing/claim_bindings/{normalized}.json"
+    report["claim_binding_status"] = claim_bindings["status"]
     quality_report: dict[str, Any] = {}
     if normalized == "results" and len((packet.get("results_narrative_contract") or {}).get("figure_groups") or []) >= 3:
         from .manuscript_quality import assess_results_manuscript_quality
@@ -232,6 +285,12 @@ def submit_section_draft(project: str | Path, section: str, input_path: str | Pa
         packet.get("scientific_evidence_registry") or {},
     )
     report["functional_job_coverage"] = _functional_job_coverage(normalized, text, packet)
+    evidence_snapshot_id = str(
+        (packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted"
+    )
+    claim_bindings = _write_quantitative_claim_bindings(
+        state.path, normalized, text, report, evidence_snapshot_id
+    )
     if normalized == "results" and len((packet.get("results_narrative_contract") or {}).get("figure_groups") or []) >= 3:
         from .manuscript_quality import assess_results_manuscript_quality
 
@@ -257,11 +316,66 @@ def submit_section_draft(project: str | Path, section: str, input_path: str | Pa
         "status": "accepted",
         "composition_mode": "codex_free_candidate",
         "candidate_path": target.relative_to(state.path).as_posix(),
+        "candidate_hash": _hash_text(text),
         "evidence_snapshot_id": str(
             (packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted"
         ),
+        "claim_binding_report": f"writing/claim_bindings/{normalized}.json",
+        "claim_binding_status": claim_bindings["status"],
     })
     validation_dir = state.path / "writing" / "section_validation"
     validation_dir.mkdir(parents=True, exist_ok=True)
     _write_json(validation_dir / f"{normalized}.json", report)
+    return report
+
+
+def accept_section_draft(project: str | Path, section: str) -> dict[str, Any]:
+    """Accept an editor-cleared free-prose candidate for formal manuscript writing."""
+    state = load_project(project)
+    normalized = str(section or "").strip().lower()
+    if normalized not in {"introduction", "data", "methods", "results", "discussion"}:
+        raise SectionCompositionError(f"Unsupported manuscript section: {normalized}")
+    candidate_path = state.path / "writing" / "candidates" / f"{normalized}.tex"
+    if not candidate_path.is_file():
+        raise SectionCompositionError(f"No submitted free-prose candidate exists for {normalized}.")
+    text = candidate_path.read_text(encoding="utf-8-sig")
+    candidate_hash = _hash_text(text)
+    validation = _read_json(state.path / "writing" / "section_validation" / f"{normalized}.json")
+    editor = _read_json(state.path / "writing" / "scientific_editor" / f"{normalized}.json")
+    claim_bindings = _read_json(state.path / "writing" / "claim_bindings" / f"{normalized}.json")
+    packet = build_section_evidence_packet(state.path, normalized)
+    snapshot_id = str((packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted")
+    if (
+        validation.get("composition_mode") != "codex_free_candidate"
+        or str(validation.get("decision") or validation.get("status")) not in {"pass", "accepted"}
+        or validation.get("quality_parity_eligible") is not True
+        or validation.get("candidate_hash") != candidate_hash
+        or validation.get("evidence_snapshot_id") != snapshot_id
+    ):
+        raise SectionCompositionError(f"The {normalized} candidate has not passed its current evidence and writing contract.")
+    if editor.get("source_hash") != candidate_hash or editor.get("decision") != "pass":
+        raise SectionCompositionError(f"The {normalized} candidate still requires Scientific Editor review or local repair.")
+    if (
+        claim_bindings.get("status") != "passed"
+        or claim_bindings.get("candidate_hash") != candidate_hash
+        or claim_bindings.get("evidence_snapshot_id") != snapshot_id
+    ):
+        raise SectionCompositionError(f"The {normalized} candidate has incomplete or stale quantitative evidence bindings.")
+    report = {
+        "schema_version": "v0.22.2",
+        "generated_at": utc_now(),
+        "section": normalized,
+        "status": "accepted",
+        "decision": "accepted",
+        "composition_mode": "codex_free_candidate",
+        "candidate_path": candidate_path.relative_to(state.path).as_posix(),
+        "candidate_hash": candidate_hash,
+        "evidence_snapshot_id": snapshot_id,
+        "editor_report": f"writing/scientific_editor/{normalized}.json",
+        "claim_binding_report": f"writing/claim_bindings/{normalized}.json",
+        "formal_release_eligible": True,
+    }
+    target = state.path / "writing" / "section_acceptance" / f"{normalized}.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(target, report)
     return report

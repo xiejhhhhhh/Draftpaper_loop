@@ -35,6 +35,9 @@ NON_METRIC_COLUMNS = {
     "n_test",
     "row_count",
     "sample_size",
+    "cohort",
+    "cohort_id",
+    "sample_unit",
 }
 
 
@@ -82,6 +85,8 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
     model_column = next((item for item in ["model", "model_name", "variant"] if item in columns), "")
     split_column = next((item for item in ["split", "split_type"] if item in columns), "")
     fold_column = next((item for item in ["fold", "fold_id"] if item in columns), "")
+    cohort_column = next((item for item in ["cohort_id", "cohort"] if item in columns), "")
+    sample_unit_column = "sample_unit" if "sample_unit" in columns else ""
     records: list[dict[str, Any]] = []
     if {"metric", "value"}.issubset(columns):
         for row in rows:
@@ -96,6 +101,8 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                     "fold": "",
                     "aggregation": "reported_scalar",
                     "run_id": run_id,
+                    "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
+                    "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
                     "source_artifact": relative,
                     "source_hash": source_hash,
                     "priority": 10,
@@ -117,6 +124,8 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                 "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
                 "aggregation": "fold_value" if fold_column else "reported_value",
                 "run_id": run_id,
+                "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
+                "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
                 "source_artifact": relative,
                 "source_hash": source_hash,
                 "priority": 100 if model_column else 40,
@@ -263,19 +272,20 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             "entity_role": f"result_metric_{item.get('metric_name')}",
             "value": item.get("value"),
             "unit": "score",
-            "cohort": "main",
-            "sample_unit": "model_evaluation",
-            "split": item.get("split") or "",
+            "metric_dimension": "score",
+            "cohort_id": item.get("cohort_id") or run_manifest.get("cohort_id") or "main",
+            "sample_unit": item.get("sample_unit") or run_manifest.get("sample_unit") or "model_evaluation",
+            "split": item.get("split") or run_manifest.get("evaluation_split") or "run_summary",
             "run_id": run_id,
             "source_artifact": item.get("source_artifact"),
             "source_hash": item.get("source_hash"),
             "confidence": "verified_run_output",
             "target_sections": ["results", "methods", "discussion"],
-            "model": item.get("model") or "",
+            "model_id": item.get("model") or run_manifest.get("model_id") or "run_summary",
         })
     report = {
         "status": "resolved" if primary_metric else "no_primary_metric",
-        "schema_version": "v0.17.4",
+        "schema_version": "v0.22.3",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "run_id": run_id,

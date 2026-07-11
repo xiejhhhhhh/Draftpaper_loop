@@ -221,15 +221,25 @@ class CitationAuditRepairTests(unittest.TestCase):
 
             plan = generate_citation_repair_plan(project_path)
             self.assertEqual(plan["status"], "repair_plan_written")
-            self.assertEqual(plan["issue_count"], 1)
-            self.assertEqual(plan["issues"][0]["action"], "rewrite_to_supported_claim")
-            self.assertFalse(plan["issues"][0]["deletion_allowed"])
-            self.assertNotIn("remove", plan["issues"][0]["action"])
+            self.assertEqual(plan["issue_count"], 2)
+            self.assertTrue(all(issue["action"] == "agent_paragraph_rewrite" for issue in plan["issues"]))
+            self.assertTrue(all(not issue["deletion_allowed"] for issue in plan["issues"]))
             self.assertTrue((project_path / "citation_audit" / "citation_repair_plan.html").exists())
 
             applied = apply_citation_repair(project_path)
-            self.assertEqual(applied["status"], "applied")
-            self.assertEqual(applied["applied_action_count"], 1)
+            self.assertEqual(applied["status"], "agent_repair_required")
+            self.assertEqual(applied["applied_action_count"], 0)
+            self.assertEqual(len(applied["pending_agent_tasks"]), 2)
+
+            (project_path / "introduction" / "introduction.tex").write_text(
+                "\\section{Introduction}\nExternal validation remains necessary for compact models \\citep{Smith2024Model}. "
+                "The cited data paper describes curated benchmark data for model evaluation \\citep{Lee2023Data}.\n",
+                encoding="utf-8",
+            )
+            (project_path / "discussion" / "discussion.tex").write_text(
+                "\\section{Discussion}\nThe cited study reports external validation of compact models \\citep{Smith2024Model}.\n",
+                encoding="utf-8",
+            )
 
             final_audit = audit_citations(project_path, final=True)
             self.assertEqual(final_audit["status"], "passed")
@@ -270,13 +280,14 @@ class CitationAuditRepairTests(unittest.TestCase):
 
             repair = subprocess.run(
                 [sys.executable, "-m", "draftpaper_cli.cli", "run-citation-repair-loop", "--project", str(project_path)],
-                check=True,
+                check=False,
                 capture_output=True,
                 text=True,
             )
-            payload = json.loads(repair.stdout)
-            self.assertEqual(payload["status"], "passed")
-            self.assertTrue((project_path / "citation_audit" / "final_citation_audit_report.html").exists())
+            self.assertEqual(repair.returncode, 1)
+            self.assertIn("strict pass", json.loads(repair.stderr)["message"])
+            ledger = json.loads((project_path / "citation_audit" / "citation_repair_ledger.json").read_text(encoding="utf-8"))
+            self.assertEqual(ledger["status"], "agent_repair_required")
 
     def test_contextual_method_citations_are_preserved_and_repair_prefers_rewrite(self) -> None:
         from draftpaper_cli.citation_audit import audit_citations
@@ -297,13 +308,12 @@ class CitationAuditRepairTests(unittest.TestCase):
             self.assertFalse(sherpa_usage["blocking"])
 
             plan = generate_citation_repair_plan(project_path)
-            sherpa_issue = next(
+            self.assertFalse([
                 issue for issue in plan["issues"]
                 if issue["citation_key"] == "Freeman2001Sherpa14" and issue["section"] == "methods"
-            )
-            self.assertEqual(sherpa_issue["action"], "rewrite_to_supported_claim")
-            self.assertNotEqual(sherpa_issue["action"], "remove_unsupported_claim")
-            self.assertIn("Sherpa is the CIAO modeling and fitting application", sherpa_issue["suggested_claim"])
+            ])
+            self.assertIn(sherpa_usage["semantic_verdict"], {"contextual_support", "direct_support", "partial_support"})
+            self.assertTrue(sherpa_usage["evidence_passage"])
 
     def test_reference_coverage_report_tracks_uncited_and_topic_suspect_summaries(self) -> None:
         from draftpaper_cli.citation_audit import audit_citations
@@ -366,6 +376,35 @@ class CitationAuditRepairTests(unittest.TestCase):
 
             self.assertEqual(usage["verdict"], "supported")
             self.assertIn("external validation", usage["claim"])
+
+    def test_semantic_audit_rejects_negation_numeric_and_causal_reversal(self) -> None:
+        from draftpaper_cli.citation_audit import audit_citations
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = _write_minimal_citation_project(tmp)
+            (project_path / "references" / "citation_evidence.csv").write_text(
+                "citation_key,section,claim,evidence_summary,source,doi,url\n"
+                'Smith2024Model,introduction,"external validation and treatment response","The paper reports external validation, reports accuracy of 0.82, and finds that treatment increases response.",full_text_passage,10.1000/model.2024,https://example.org/model\n',
+                encoding="utf-8",
+            )
+            (project_path / "introduction" / "introduction.tex").write_text(
+                "\\section{Introduction}\n"
+                "The paper does not report external validation \\citep{Smith2024Model}. "
+                "The paper reports an accuracy of 0.92 \\citep{Smith2024Model}. "
+                "The study finds that treatment decreases response \\citep{Smith2024Model}.\n",
+                encoding="utf-8",
+            )
+            (project_path / "discussion" / "discussion.tex").write_text("\\section{Discussion}\nNo citations.\n", encoding="utf-8")
+
+            report = audit_citations(project_path)
+            usages = [item for item in report["usages"] if item["citation_key"] == "Smith2024Model"]
+
+            self.assertEqual(len(usages), 3)
+            self.assertTrue(all(item["blocking"] for item in usages))
+            checks = [item["semantic_checks"] for item in usages]
+            self.assertTrue(any(item["polarity_consistency"] == "possible_negation_mismatch" for item in checks))
+            self.assertTrue(any(item["numeric_consistency"] == "unsupported_or_mismatched" for item in checks))
+            self.assertTrue(any(item["causal_direction_consistency"] == "reversed_direction" for item in checks))
 
 
 if __name__ == "__main__":

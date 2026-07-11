@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -149,6 +151,32 @@ class ProjectStateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "updated")
             self.assertEqual(payload["stage"], "data")
             self.assertEqual(payload["stage_status"], "draft")
+
+    def test_old_project_load_is_read_only_and_migration_is_explicit(self) -> None:
+        from draftpaper_cli.project_state import inspect_project_migration, load_project, migrate_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            created = create_project(root=tmp, idea="Explicit migration", field="workflow engineering")
+            project_json = created.path / "project.json"
+            metadata = json.loads(project_json.read_text(encoding="utf-8"))
+            metadata["stages"].pop("result_support")
+            project_json.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+            shutil.rmtree(created.path / "result_support")
+            before = hashlib.sha256(project_json.read_bytes()).hexdigest()
+
+            state = load_project(created.path)
+            plan = inspect_project_migration(created.path)
+
+            self.assertNotIn("result_support", state.metadata["stages"])
+            self.assertEqual(hashlib.sha256(project_json.read_bytes()).hexdigest(), before)
+            self.assertFalse((created.path / "result_support").exists())
+            self.assertEqual(plan["status"], "migration_required")
+            self.assertIn("result_support", plan["missing_stages"])
+
+            migrated = migrate_project(created.path)
+            self.assertEqual(migrated["status"], "migrated")
+            self.assertIn("result_support", load_project(created.path).metadata["stages"])
+            self.assertTrue((created.path / "result_support").is_dir())
 
 
 if __name__ == "__main__":

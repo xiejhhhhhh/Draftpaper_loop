@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
-from .citation_audit import CitationAuditError, audit_citations
+from .citation_audit import CitationAuditError
 from .citation_repair import (
     CitationRepairError,
     apply_citation_repair,
@@ -38,20 +38,16 @@ from .integrity_gate import IntegrityGateError, run_integrity_gate
 from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
-from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
 from .manuscript_quality import assess_results_manuscript_quality
 from .scientific_figure_quality import assess_scientific_figure_quality
 from .results_semantic_repair import prepare_results_semantic_repair
-from .paper_quality_parity import assess_paper_quality_parity
 from .paper_narrative import PaperNarrativeError, build_paper_narrative, build_results_synthesis_plan, build_section_outline
 from .writing_architecture import (
     WritingArchitectureError,
-    assess_functional_quality_release,
     build_argument_matrices,
     build_panel_writing_contracts,
     build_section_lifecycles,
     prepare_panel_repair,
-    prepare_scientific_editor,
     record_scientific_editor_revision,
     resolve_venue_style_adapter,
 )
@@ -100,7 +96,6 @@ from .project_state import (
     update_stage_status,
     validate_project,
 )
-from .quality_gate import QualityGateError, run_quality_check
 from .research_code_mining import (
     ResearchCodeMiningError,
     bootstrap_discipline_foundation,
@@ -191,6 +186,7 @@ def _skill_source_url(args: argparse.Namespace) -> str | None:
         return f"https://github.com/{repo_text}"
     return None
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
+from .command_registry import COMMAND_SPECS, dispatch_registered_command
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -212,6 +208,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate-project", help="Validate project metadata and stage manifests.")
     validate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    inspect_migration = subparsers.add_parser("inspect-project-migration", help="Read-only report of schema updates required by an older project.")
+    inspect_migration.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    migrate = subparsers.add_parser("migrate-project", help="Explicitly apply current project directories, stages, dependencies, and manifests.")
+    migrate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     template_registry = subparsers.add_parser("validate-template-registry", help="Validate discipline plugin manifests and template files.")
     template_registry.add_argument("--root", default=None, help="Optional discipline_modules root for testing or contribution review.")
@@ -498,6 +500,10 @@ def build_parser() -> argparse.ArgumentParser:
     submit_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
     submit_section.add_argument("--input", required=True, help="Path to a Codex-composed LaTeX section candidate.")
 
+    accept_section = subparsers.add_parser("accept-section-draft", help="Accept an editor-cleared free-prose section for formal manuscript writing.")
+    accept_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    accept_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+
     prepare_section = subparsers.add_parser("prepare-section-writing", help="Build the evidence and narrative-contract packet for free Codex section writing.")
     prepare_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     prepare_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
@@ -535,6 +541,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     quality = subparsers.add_parser("quality-check", help="Run final staged manuscript quality checks.")
     quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    blind_template = subparsers.add_parser("prepare-blind-quality-evaluation", help="Write the independent blind-review rubric template required for a 95 percent quality claim.")
+    blind_template.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    blind_record = subparsers.add_parser("record-blind-quality-evaluation", help="Validate and record completed independent blind-review evidence.")
+    blind_record.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    blind_record.add_argument("--input", required=True, help="Completed blind-review JSON based on the generated template.")
 
     integrity = subparsers.add_parser("run-integrity-gate", help="Run citation evidence and result artifact integrity checks.")
     integrity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -759,6 +772,9 @@ def build_parser() -> argparse.ArgumentParser:
     style = subparsers.add_parser("learn-writing-style-from-draft", help="Extract non-verbatim writing style signals from an approved draft.")
     style.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     style.add_argument("--draft", required=True, help="Path to an approved .tex or text draft used only for style-signal extraction.")
+    missing_registered_commands = sorted(set(COMMAND_SPECS) - set(subparsers.choices))
+    if missing_registered_commands:
+        raise RuntimeError("Registered CLI commands are missing parser definitions: " + ", ".join(missing_registered_commands))
     return parser
 
 
@@ -770,6 +786,16 @@ def main(argv: list[str] | None = None) -> int:
             pass
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    try:
+        registered = dispatch_registered_command(args)
+    except Exception as exc:
+        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return 1
+    if registered is not None:
+        result, exit_code = registered
+        print(json.dumps(result, ensure_ascii=False))
+        return exit_code
 
     if args.command == "create-project":
         try:
@@ -1584,7 +1610,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
-    if args.command in {"build-argument-matrices", "build-section-lifecycles", "build-panel-contracts", "prepare-panel-repair", "resolve-venue-writing-style", "prepare-scientific-editor", "record-scientific-editor-revision", "assess-functional-quality-release"}:
+    if args.command in {"build-argument-matrices", "build-section-lifecycles", "build-panel-contracts", "prepare-panel-repair", "resolve-venue-writing-style", "record-scientific-editor-revision"}:
         try:
             if args.command == "build-argument-matrices":
                 result = build_argument_matrices(args.project)
@@ -1596,31 +1622,9 @@ def main(argv: list[str] | None = None) -> int:
                 result = prepare_panel_repair(args.project)
             elif args.command == "resolve-venue-writing-style":
                 result = resolve_venue_style_adapter(args.project)
-            elif args.command == "prepare-scientific-editor":
-                result = prepare_scientific_editor(args.project, args.section, args.input)
             elif args.command == "record-scientific-editor-revision":
                 result = record_scientific_editor_revision(args.project, args.section, args.before, args.after, args.iteration)
-            else:
-                result = assess_functional_quality_release(args.project)
         except (WritingArchitectureError, PaperNarrativeError, ProjectStateError) as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-        return 0
-
-    if args.command == "submit-section-draft":
-        try:
-            result = submit_section_draft(args.project, args.section, args.input)
-        except (SectionCompositionError, ProjectStateError) as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-        return 0
-
-    if args.command == "prepare-section-writing":
-        try:
-            result = build_section_evidence_packet(args.project, args.section)
-        except (SectionCompositionError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
@@ -1653,15 +1657,6 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
-
-    if args.command == "assess-paper-quality-parity":
-        try:
-            result = assess_paper_quality_parity(args.project)
-        except ProjectStateError as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("decision") == "pass" else 1
 
     if args.command == "submit-figure-semantic-annotations":
         try:
@@ -1720,34 +1715,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
-    if args.command == "quality-check":
-        try:
-            result = run_quality_check(args.project)
-        except QualityGateError as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        except Exception as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("status") == "passed" else 1
-
     if args.command == "run-integrity-gate":
         try:
             result = run_integrity_gate(args.project)
         except IntegrityGateError as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        except Exception as exc:
-            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
-            return 1
-        print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("status") == "passed" else 1
-
-    if args.command == "audit-citations":
-        try:
-            result = audit_citations(args.project, final=args.final)
-        except CitationAuditError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         except Exception as exc:

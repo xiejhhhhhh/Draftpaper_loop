@@ -311,6 +311,65 @@ class ReviewRuleRuntimeTests(unittest.TestCase):
         finally:
             MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(rule)
 
+    def test_real_threshold_failure_routes_to_local_results_semantic_repair(self) -> None:
+        rule = {
+            "rule_id": "minimum_f1_runtime_test", "rule_group_id": "minimum_f1_runtime_test",
+            "rule_family": "model_validity", "metric_name": "f1",
+            "evidence_binding": {"required_fields": ["performance_metric"], "forbidden_conflicts": []},
+            "blocking_level": "block_claim", "failure_route": "method_rescue",
+            "pipeline_hooks": {"post_results": "required"},
+            "threshold_policy": {"mode": "fixed", "value": 0.8, "comparator": ">="},
+            "threshold_source": {"type": "discipline_convention", "citation_or_note": "test convention"},
+            "maturity": "mature", "deployment_state": "promoted_review_rule", "human_confirmation_required": False,
+        }
+        MACHINE_LEARNING_MODULE.spec.review_rule_groups.append(rule)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                project = create_project(root=tmp, idea="Threshold anomaly", field="machine learning")
+                _write_validity_project_inputs(project.path)
+                (project.path / "methods" / "run_manifest.yaml").write_text(
+                    json.dumps({"status": "success", "run_id": "run-low", "metrics": {"f1": 0.72}}), encoding="utf-8"
+                )
+                report = assess_review_rules(project.path, stage="post_results")
+                assessment = next(item for item in report["rule_assessments"] if item["rule_id"] == rule["rule_id"])
+                task = next(item for item in report["rescue_tasks"] if item["rule_id"] == rule["rule_id"])
+                self.assertEqual(assessment["decision"], "threshold_failed")
+                self.assertEqual(assessment["threshold_evaluation"]["observed"], 0.72)
+                self.assertEqual(task["recommended_command"], "prepare-results-semantic-repair")
+        finally:
+            MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(rule)
+
+    def test_mixed_metric_dimensions_are_detected_from_evidence_bundle(self) -> None:
+        rule = {
+            "rule_id": "dimension_consistency_runtime_test", "rule_group_id": "dimension_consistency_runtime_test",
+            "rule_family": "model_validity", "evidence_roles": ["performance_metric"],
+            "evidence_binding": {"required_fields": ["performance_metric"], "forbidden_conflicts": []},
+            "blocking_level": "block_claim", "failure_route": "manuscript_repair",
+            "pipeline_hooks": {"post_results": "required"}, "threshold_policy": {"mode": "contextual"},
+            "maturity": "mature", "deployment_state": "promoted_review_rule", "human_confirmation_required": False,
+        }
+        MACHINE_LEARNING_MODULE.spec.review_rule_groups.append(rule)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                project = create_project(root=tmp, idea="Dimension anomaly", field="machine learning")
+                _write_validity_project_inputs(project.path)
+                records = []
+                for evidence_id, dimension, value in (("f1-score", "score", 0.8), ("f1-count", "count", 8)):
+                    records.append({
+                        "evidence_id": evidence_id, "entity_role": "result_metric_f1", "metric_name": "f1", "value": value,
+                        "metric_dimension": dimension, "run_id": "run-1", "cohort_id": "main", "sample_unit": "source",
+                        "split": "held_out", "model_id": "model-1",
+                    })
+                (project.path / "results" / "resolved_result_evidence.json").write_text(
+                    json.dumps({"evidence_records": records}), encoding="utf-8"
+                )
+                report = assess_review_rules(project.path, stage="post_results")
+                assessment = next(item for item in report["rule_assessments"] if item["rule_id"] == rule["rule_id"])
+                self.assertEqual(assessment["decision"], "scientific_anomaly")
+                self.assertIn("mixed_metric_dimension", {item["code"] for item in assessment["scientific_findings"]})
+        finally:
+            MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(rule)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import hashlib
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,12 @@ from .passport import (
 from .project_scaffold import STAGE_ORDER
 from .project_state import ProjectStateError, load_project
 from .stale_sync import detect_artifact_drift
+from .artifact_repository import ArtifactRepository
+from .writing_coordinator import (
+    SECTION_STAGE_MAP as COORDINATED_SECTION_STAGE_MAP,
+    formal_writing_release_action as coordinated_formal_release_action,
+    section_lifecycle_action as coordinated_section_lifecycle_action,
+)
 
 
 COMPLETE_STATUSES = {"draft", "approved", "completed"}
@@ -235,14 +240,7 @@ def _integrity_is_current(project_path: Path) -> bool:
 
 
 def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
-    path = project_path / relative
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return ArtifactRepository(project_path).read_mapping(relative)
 
 
 def _plugin_execution_failures(project_path: Path) -> list[dict[str, Any]]:
@@ -313,6 +311,34 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "command": "assess-plugin-sufficiency",
             "cli": _cli_for(project_path, "assess-plugin-sufficiency"),
             "reason": "Planned core figures need structured data/method/runtime plugin sufficiency assessment before execution.",
+        }
+    if sufficiency_report.get("decision") == "execution_required":
+        pending = [
+            item for item in sufficiency_report.get("requirement_assessments") or []
+            if isinstance(item, dict) and item.get("core") and item.get("state") == "execution_required"
+        ]
+        pending_kinds = {str(item.get("kind") or "") for item in pending}
+        existing_events = [
+            event for relative in ("data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl")
+            for event in read_jsonl(project_path / relative)
+        ]
+        pending_ids = {str(item.get("matched_plugin_id") or "") for item in pending}
+        attempted = any(str(event.get("plugin_id") or "") in pending_ids for event in existing_events)
+        if attempted:
+            return {
+                "stage": "research_plan",
+                "command": "prepare-plugin-rescue",
+                "cli": _cli_for(project_path, "prepare-plugin-rescue"),
+                "reason": "Selected templates were only fixture/code-generator level after execution preparation; bind and verify real project outputs before claiming sufficiency.",
+                "plugin_gap_plan": "research_plan/plugin_gap_plan.json",
+            }
+        command = "execute-data-plugins" if "data" in pending_kinds else "execute-method-plugins"
+        return {
+            "stage": "research_plan",
+            "command": command,
+            "cli": _cli_for(project_path, command),
+            "reason": "Core capability templates exist but must execute and produce auditable project outputs before they can satisfy plugin sufficiency.",
+            "runtime_level_required": "project_validated",
         }
     if sufficiency_report.get("decision") in {"rescue_required", "blocked", "blocked_unavailable"}:
         audit_report = _read_report(project_path, "research_plan/project_capability_audit.json")
@@ -476,6 +502,16 @@ def _citation_audit_action(project_path: Path) -> dict[str, Any] | None:
             "reason": "Claim-level citation audit failed; generate a repair plan before final quality check.",
         }
     if not (project_path / "citation_audit" / "citation_repair_ledger.json").exists():
+        plan = _read_report(project_path, "citation_audit/citation_repair_plan.json")
+        agent_tasks = [item for item in plan.get("issues") or [] if isinstance(item, dict) and item.get("action") == "agent_paragraph_rewrite"]
+        if agent_tasks:
+            return {
+                "stage": "citation_audit",
+                "command": "revise-citation-paragraphs-with-agent",
+                "cli": None,
+                "reason": "Citation semantics require paragraph-local Agent repair; references must be preserved and evidence summaries must not replace the manuscript argument.",
+                "tasks": agent_tasks,
+            }
         return {
             "stage": "citation_audit",
             "command": "apply-citation-repair",
@@ -665,6 +701,15 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
             "cli": None,
             "reason": "All declared stages are current.",
         }
+    section = COORDINATED_SECTION_STAGE_MAP.get(stage)
+    if section:
+        lifecycle_action = coordinated_section_lifecycle_action(project_path, section)
+        if lifecycle_action:
+            return lifecycle_action
+    if stage in {"latex", "quality_checks"}:
+        release_action = coordinated_formal_release_action(project_path)
+        if release_action:
+            return release_action
     command = _stage_command(project_path, stage)
     if stage == "quality_checks" and not _integrity_is_current(project_path):
         command = "run-integrity-gate"
@@ -688,7 +733,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
     result_support = _read_report(state.path, "results/result_support_checkpoint.json")
     result_support_action = _result_support_action(state.path, result_support) if result_support else None
     if result_support_action and result_support_action.get("command") == "choose-result-route":
-        passport = refresh_project_passport(state.path, event="status")
+        passport = load_project_passport(state.path)
         return {
             "status": "reported",
             "project_path": str(state.path),
@@ -716,7 +761,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "reason": "Artifact hashes changed since the last passport snapshot.",
             },
         }
-    passport = refresh_project_passport(state.path, event="status")
+    passport = load_project_passport(state.path)
     awaiting = passport.get("awaiting_checkpoint")
     if awaiting:
         return {
@@ -741,6 +786,13 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "assess-plugin-sufficiency": "plugin_sufficiency_required",
         "audit-project-capabilities": "capability_audit_required",
         "prepare-plugin-rescue": "plugin_gap_detected",
+        "compose-section-with-agent": "agent_composition_required",
+        "revise-section-with-agent": "editor_revision_required",
+        "accept-section-draft": "section_acceptance_required",
+        "assess-functional-quality-release": "quality_release_required",
+        "execute-data-plugins": "plugin_execution_required",
+        "execute-method-plugins": "plugin_execution_required",
+        "revise-citation-paragraphs-with-agent": "citation_agent_repair_required",
     }.get(command, "ready")
     if next_action.get("plugin_execution_failure"):
         pipeline_state = "plugin_execution_failed"

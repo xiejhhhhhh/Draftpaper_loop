@@ -335,6 +335,22 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.23.0（2026-07-12）-- Wheel 发布回归与可验证质量声明
+
+- 新增随 wheel 发布的 geography+machine learning、astronomy+machine learning、bioinformatics+medicine 三类脱敏回归合同。普通 `pip install` 后会实际运行插件充分性、项目级执行证据、图表追踪、像素与底层表格核验、Scientific Evidence Registry、Results 数字绑定、复合学科 review rules 和最终 citation audit。
+- 新增对抗回归，强制拒绝错误 run/cohort/unit/split/model、错误 metric/量纲、伪 metadata 空白图、仅有合同或 fixture 的插件，以及引用中的否定冲突、数值不符和因果反转。`status` 还必须保持项目文件哈希不变。
+- 95% 质量不再由自动关键词、metadata 或文件存在性分数授权。新增 `prepare-blind-quality-evaluation` 和 `record-blind-quality-evaluation`；正式 parity 还要求至少两位独立盲评者比较完整稿件与真实图表、科学正确性为 100%、平均质量比例不低于 0.95。
+- wheel 隔离安装会核对源码与安装包都发现 209 个插件、545 个 fixture，并在安装环境中运行三领域与对抗回归。CI 同时覆盖 Python 3.10-3.12、Linux 和 Windows。
+
+### v0.22.1-v0.22.8（2026-07-12）-- 证据语义、运行真值与状态内核
+
+- 修复 wheel 资源打包和 citation audit/parity schema，正式写作流程接入“章节证据包 -> Codex 自由撰写 -> 候选验证 -> Scientific Editor -> 显式接受 -> 发布”；deterministic fallback 仅用于诊断。
+- Evidence Binding v2 要求数字与论断绑定 `evidence_id/run/cohort/sample_unit/split/model/metric_dimension`，并校验指标名称与量纲；错误范围或同值异义会阻断写作。
+- 插件运行等级拆分为 `contract_only`、`code_generator`、`fixture_executed`、`project_validated` 和 `live_validated`。只有带输出哈希的真实项目或 live 运行可以满足主图能力。
+- Reviewer Engine v2 读取标准 EvidenceBundle，执行真实阈值、量纲、baseline、ablation、不确定性与插件 `evaluate_rule`；科学异常优先进入 Results 局部语义修复。
+- 图表核验读取真实像素、坐标/文字区域、面板和底层表格；citation audit 增加 passage、数值、否定、因果方向和论断强度检查，修复任务保留参考文献并要求段落级重写。
+- 新增只读状态内核、显式迁移、原子 JSON/JSONL 写入与跨平台锁，并拆分 command registry、artifact repository、schema adapters、plugin runtime、writing coordinator 和 release coordinator。
+
 ### v0.21.1-v0.22.0（2026-07-12）-- 论文叙事与科学写作架构
 
 - 新增领域无关的 Paper Narrative Engine。它读取真实 YAML/JSON 研究产物，生成 `paper_brief.json`、`figure_story_arc.json`、`manuscript_argument_map.json` 和 `section_claim_allocation.json`；主图与附录/支撑图按研究发现组合，每组明确科学问题、证据、比较关系和论断边界。

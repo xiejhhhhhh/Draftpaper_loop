@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .io_utils import read_json
+from .plugin_runtime import RUNTIME_LEVELS, inspect_static_runtime_level
 
 
 PLUGIN_KINDS = {
@@ -33,6 +34,10 @@ def _module_root() -> Path:
     return Path(__file__).resolve().parent / "discipline_modules"
 
 
+def _static_runtime_level(plugin_dir: Path, kind: str, manifest: dict[str, Any]) -> str:
+    return inspect_static_runtime_level(plugin_dir, kind, manifest)
+
+
 def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
     base = root or _module_root()
     entries: list[dict[str, Any]] = []
@@ -48,9 +53,10 @@ def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
             for path in plugin_dir.iterdir()
             if path.is_file() and path.name.startswith("fixture_")
         )
+        kind = PLUGIN_KINDS.get(kind_dir, kind_dir)
         entries.append({
             "discipline": discipline,
-            "kind": PLUGIN_KINDS.get(kind_dir, kind_dir),
+            "kind": kind,
             "kind_dir": kind_dir,
             "plugin_id": manifest.get("connector_id")
             or manifest.get("template_id")
@@ -63,6 +69,7 @@ def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
             "maturity": manifest.get("maturity") or manifest.get("status") or "foundation",
             "runtime_class": manifest.get("runtime_class") or "local_optional_dependency",
             "validation_level": manifest.get("validation_level") or "plan_only",
+            "runtime_level": _static_runtime_level(plugin_dir, kind, manifest),
             "manifest_data": manifest,
         })
     return {
@@ -102,6 +109,13 @@ def validate_template_registry(root: Path | None = None) -> dict[str, Any]:
             issues.append({
                 "severity": "error",
                 "code": "validation_level_invalid",
+                "plugin_id": str(entry["plugin_id"]),
+                "path": str(entry["path"]),
+            })
+        if entry["runtime_level"] not in RUNTIME_LEVELS:
+            issues.append({
+                "severity": "error",
+                "code": "runtime_level_invalid",
                 "plugin_id": str(entry["plugin_id"]),
                 "path": str(entry["path"]),
             })
