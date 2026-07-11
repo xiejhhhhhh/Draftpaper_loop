@@ -669,6 +669,22 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
     citation_audit_report = _check_citation_audit(state.path, issues)
     latex_report = _check_latex_hygiene(state.path, issues)
     pdf_report = _check_pdf(state.path, issues)
+    paper_quality_parity: dict[str, Any] = {}
+    if (
+        (state.path / "results" / "results_narrative_contract.json").exists()
+        and (state.path / "research_plan" / "research_capability_contract.json").exists()
+        and (state.path / "review" / "result_discipline_review_report.json").exists()
+    ):
+        from .paper_quality_parity import assess_paper_quality_parity
+
+        paper_quality_parity = assess_paper_quality_parity(state.path)
+        if paper_quality_parity.get("decision") != "pass":
+            issues.append(QualityIssue(
+                "error",
+                "paper_quality_parity_below_target",
+                f"Full-paper quality score {paper_quality_parity.get('score')} is below 0.95.",
+                "quality_checks/paper_quality_parity_report.json",
+            ))
 
     error_count = sum(1 for issue in issues if issue.severity == "error")
     warning_count = sum(1 for issue in issues if issue.severity == "warning")
@@ -702,6 +718,7 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "citation_audit": citation_audit_report,
         "latex": latex_report,
         "pdf": pdf_report,
+        "paper_quality_parity": paper_quality_parity,
     }
 
     quality_dir = state.path / "quality_checks"

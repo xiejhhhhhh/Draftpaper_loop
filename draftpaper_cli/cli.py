@@ -41,6 +41,8 @@ from .literature_search import search_literature_for_project
 from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
 from .manuscript_quality import assess_results_manuscript_quality
 from .scientific_figure_quality import assess_scientific_figure_quality
+from .results_semantic_repair import prepare_results_semantic_repair
+from .paper_quality_parity import assess_paper_quality_parity
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
@@ -457,6 +459,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     figure_publication_quality = subparsers.add_parser("assess-figure-publication-quality", help="Score rendered main figures against semantic, plugin-run, panel, evidence, and legibility contracts.")
     figure_publication_quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    results_semantic_repair = subparsers.add_parser("prepare-results-semantic-repair", help="Prepare minimal claim-level Results repairs without replacing the full section.")
+    results_semantic_repair.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    paper_quality_parity = subparsers.add_parser("assess-paper-quality-parity", help="Score the complete manuscript and figures against the 0.95 release contract.")
+    paper_quality_parity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     submit_figure_semantics = subparsers.add_parser("submit-figure-semantic-annotations", help="Submit auditable semantic mappings for legacy rendered figures.")
     submit_figure_semantics.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1530,6 +1538,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "assess-figure-publication-quality":
         try:
             result = assess_scientific_figure_quality(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") == "pass" else 1
+
+    if args.command == "prepare-results-semantic-repair":
+        try:
+            result = prepare_results_semantic_repair(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "assess-paper-quality-parity":
+        try:
+            result = assess_paper_quality_parity(args.project)
         except ProjectStateError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

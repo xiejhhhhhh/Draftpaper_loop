@@ -86,7 +86,11 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         if not item.get("axis_labels") or not item.get("text_elements"):
             issues.append({"kind": "missing_legibility_metadata"})
 
-        required_roles = _values(contract.get("required_variable_roles"))
+        required_roles = (
+            _values(contract.get("required_variable_roles"))
+            | _values(contract.get("required_data_roles"))
+            | _values(contract.get("required_data"))
+        )
         observed_roles = _values(item.get("variable_roles")) | _values(item.get("variables"))
         required_outputs = _values(contract.get("required_method_outputs"))
         observed_outputs = _values(item.get("method_outputs")) | _values(item.get("statistics"))

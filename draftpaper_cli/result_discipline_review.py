@@ -185,7 +185,7 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
     if semantic_repairs or manuscript_quality.get("decision") == "repair_required" or figure_quality.get("decision") == "repair_required":
         decision = "repair_required"
         action = {
-            "command": "verify-methods" if figure_quality.get("decision") == "repair_required" else "write-results",
+            "command": "verify-methods" if figure_quality.get("decision") == "repair_required" else "prepare-results-semantic-repair",
             "reason": "Figures or Results require repair before they meet the 0.95 publication-quality contracts.",
         }
     elif rule_gate.get("decision") == "revise_required":

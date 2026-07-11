@@ -28,6 +28,8 @@ from .methods import MethodsGateError, verify_methods, write_methods
 from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
 from .manuscript_quality import assess_results_manuscript_quality, build_results_narrative_contract
 from .scientific_figure_quality import assess_scientific_figure_quality
+from .paper_quality_parity import assess_paper_quality_parity
+from .results_semantic_repair import prepare_results_semantic_repair
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError, load_project_passport, refresh_project_passport
 from .plugin_candidates import (
@@ -168,6 +170,8 @@ __all__ = [
     "build_results_narrative_contract",
     "assess_results_manuscript_quality",
     "assess_scientific_figure_quality",
+    "assess_paper_quality_parity",
+    "prepare_results_semantic_repair",
     "resolve_result_evidence",
     "assess_review_rules",
     "build_review_rule_rescue_tasks",

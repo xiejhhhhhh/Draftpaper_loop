@@ -339,6 +339,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 `prepare-section-writing` 与 `assess-manuscript-quality`。Results 按证据真实性、叙事覆盖、科学推理、论断校准和行文多样性评分；正式候选稿最低要求为 0.95，错误指标或重复模板会进入修复路线。
 - 新增 `assess-figure-publication-quality`。PNG 存在不再等于合格，主图还必须满足语义合同、数据/方法插件运行追溯、面板完整性、统计解释、像素尺寸与可读性要求。
 - 通用绘图器不再把未知主图类型静默替换成数据概览图；主图缺少对应方法输出时进入插件补齐，只有明确的 supporting 图才允许使用通用诊断视图。
+- 新增 `prepare-results-semantic-repair` 和 `assess-paper-quality-parity`。前者只修错误论断片段并保留已验证的六图叙事，后者汇总图表、Results、Introduction、Data、Methods、Discussion 与 citation audit；总分未达到 0.95 时最终 `quality-check` 不能通过。
 
 ### v0.20.2 (2026-07-11) -- Results 后置学科审查与能力救援边界
 

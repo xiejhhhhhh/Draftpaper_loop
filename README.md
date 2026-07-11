@@ -423,6 +423,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added `prepare-section-writing` and `assess-manuscript-quality`. Results are scored for evidence fidelity, narrative coverage, scientific reasoning, claim calibration, and prose diversity; a formal candidate must reach 0.95, while wrong metrics and repetitive template prose enter repair.
 - Added `assess-figure-publication-quality`. A non-empty PNG is no longer sufficient: main figures must satisfy semantic contracts, data/method plugin run provenance, panel completeness, statistical interpretation, pixel dimensions, and legibility.
 - The generic plotter no longer silently replaces an unknown main-result figure with a data overview. Missing main-figure methods enter plugin rescue; generic diagnostic views remain available only when explicitly planned.
+- Added `prepare-results-semantic-repair` and `assess-paper-quality-parity`. The former repairs only affected claims while preserving verified figure narratives; the latter aggregates figures, Results, Introduction, Data, Methods, Discussion, and citation audit, and final `quality-check` cannot pass below 0.95.
 
 ### v0.20.2 (2026-07-11) -- Post-Results Discipline Review and Capability Rescue Boundary
 
