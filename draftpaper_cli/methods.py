@@ -420,6 +420,9 @@ def verify_methods(
     _write_manifest(methods_dir / "run_manifest.yaml", manifest)
     if status == "success":
         _write_method_formulas(state.path, manifest)
+        from .plugin_execution import record_project_method_run
+
+        record_project_method_run(state.path, output_files=declared_outputs)
     update_stage_status(state.path, "methods", "approved" if status == "success" else "failed")
     return {
         "status": status,

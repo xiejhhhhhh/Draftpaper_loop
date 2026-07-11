@@ -244,6 +244,15 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _plugin_execution_failures(project_path: Path) -> list[dict[str, Any]]:
+    failures = []
+    for relative in ["data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl"]:
+        for event in read_jsonl(project_path / relative):
+            if str(event.get("status") or "") == "execution_failed":
+                failures.append(event)
+    return failures
+
+
 def _result_support_action(project_path: Path, result_support: dict[str, Any]) -> dict[str, Any] | None:
     decision = str(result_support.get("decision") or "")
     if decision == "pass":
@@ -286,6 +295,60 @@ def _result_support_action(project_path: Path, result_support: dict[str, Any]) -
 
 
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
+    research_plan = project_path / "research_plan" / "research_plan.md"
+    discipline_contract = project_path / "research_plan" / "discipline_contract.json"
+    sufficiency_report = _read_report(project_path, "research_plan/plugin_sufficiency_report.json")
+    capability_inputs_present = (project_path / "research_plan" / "claim_contract.json").exists() or (project_path / "research_plan" / "figure_storyboard.json").exists()
+    if research_plan.exists() and capability_inputs_present and not discipline_contract.exists():
+        return {
+            "stage": "research_plan",
+            "command": "resolve-research-capabilities",
+            "cli": _cli_for(project_path, "resolve-research-capabilities"),
+            "reason": "The final research plan needs an explicit discipline and capability contract before data/method execution.",
+        }
+    if discipline_contract.exists() and capability_inputs_present and not sufficiency_report:
+        return {
+            "stage": "research_plan",
+            "command": "assess-plugin-sufficiency",
+            "cli": _cli_for(project_path, "assess-plugin-sufficiency"),
+            "reason": "Planned core figures need structured data/method/runtime plugin sufficiency assessment before execution.",
+        }
+    if sufficiency_report.get("decision") == "blocked":
+        return {
+            "stage": "research_plan",
+            "command": "prepare-plugin-rescue",
+            "cli": _cli_for(project_path, "prepare-plugin-rescue"),
+            "reason": "At least one core figure lacks an executable data or method plugin; prepare a scoped capability rescue instead of generating a substitute figure.",
+            "plugin_gap_plan": "research_plan/plugin_gap_plan.json",
+        }
+    execution_failures = _plugin_execution_failures(project_path)
+    if execution_failures:
+        failed = execution_failures[-1]
+        return {
+            "stage": str(failed.get("stage") or "methods"),
+            "command": "prepare-plugin-rescue",
+            "cli": _cli_for(project_path, "prepare-plugin-rescue"),
+            "reason": f"Plugin execution failed for {failed.get('plugin_id') or 'a selected plugin'}; repair the scoped capability or runtime contract before figure generation.",
+            "plugin_execution_failure": failed,
+        }
+    results_path = project_path / "results" / "results.tex"
+    result_discipline_review = _read_report(project_path, "review/result_discipline_review_report.json")
+    if (project_path / "research_plan" / "research_capability_contract.json").exists() and results_path.exists() and not result_discipline_review:
+        return {
+            "stage": "results",
+            "command": "review-results-with-discipline-rules",
+            "cli": _cli_for(project_path, "review-results-with-discipline-rules"),
+            "reason": "Results prose must be checked against the complete main-figure plugin trace and composite discipline review rules before downstream manuscript sections.",
+        }
+    if (project_path / "research_plan" / "research_capability_contract.json").exists() and result_discipline_review.get("decision") == "revise_required":
+        action = result_discipline_review.get("recommended_next_action") or {}
+        command = str(action.get("command") or "prepare-result-rescue")
+        return {
+            "stage": "results",
+            "command": command,
+            "cli": _cli_for(project_path, command),
+            "reason": str(action.get("reason") or "Results discipline review requires evidence repair before manuscript writing continues."),
+        }
     plan_feasibility = _read_report(project_path, "research_plan/research_plan_feasibility_report.json")
     if plan_feasibility and plan_feasibility.get("decision") == "blocked":
         command = str(plan_feasibility.get("recommended_next_action") or "revise-research-plan")
@@ -649,7 +712,19 @@ def status_project(project: str | Path) -> dict[str, Any]:
             },
         }
     next_action = _next_action(state.path, state.metadata)
-    pipeline_state = "awaiting_result_route" if next_action.get("command") == "choose-result-route" else "ready"
+    command = str(next_action.get("command") or "")
+    pipeline_state = {
+        "choose-result-route": "awaiting_result_route",
+        "resolve-research-capabilities": "plugin_sufficiency_required",
+        "assess-plugin-sufficiency": "plugin_sufficiency_required",
+        "prepare-plugin-rescue": "plugin_gap_detected",
+    }.get(command, "ready")
+    if next_action.get("plugin_execution_failure"):
+        pipeline_state = "plugin_execution_failed"
+    elif command == "prepare-plugin-rescue":
+        sufficiency = _read_report(state.path, "research_plan/plugin_sufficiency_report.json")
+        if any(str(item.get("state") or "") == "blocked_external" for item in sufficiency.get("requirement_assessments") or [] if isinstance(item, dict)):
+            pipeline_state = "awaiting_external_access"
     return {
         "status": "reported",
         "project_path": str(state.path),

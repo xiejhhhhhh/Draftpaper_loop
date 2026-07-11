@@ -36,6 +36,8 @@ RESEARCH_PLAN_OUTPUTS = [
     "research_plan/claim_contract.json",
     "research_plan/figure_storyboard.json",
     "research_plan/method_plan.json",
+    "research_plan/discipline_contract.json",
+    "research_plan/research_capability_contract.json",
     "research_plan/target_journal_anchor_papers.json",
     "research_plan/novelty_overlap_report.json",
     "research_plan/novelty_overlap_report.md",
@@ -778,6 +780,13 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
     (research_plan_dir / "research_plan.zh-CN.md").write_text(plan_text_cn, encoding="utf-8")
 
+    # The plan is the authoritative hand-off from literature interpretation to
+    # data/method execution. Resolve a final composite discipline contract here
+    # so downstream stages cannot silently select unrelated generic plugins.
+    from .research_capabilities import resolve_research_capabilities
+
+    capability_contract = resolve_research_capabilities(state.path)
+
     update_stage_status(state.path, "research_plan", "draft")
     _set_research_plan_manifest(state.path)
     cited_keys = {str(row.get("citation_key") or "").strip() for row in citation_rows if row.get("citation_key")}
@@ -790,5 +799,7 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
         "literature_count": len(literature_items),
         "anchor_paper_count": len(anchor_papers),
         "highest_similarity_score": novelty_report.get("highest_similarity_score"),
+        "discipline_contract": capability_contract["discipline_contract"],
+        "research_capability_contract": capability_contract["research_capability_contract"],
         "outputs": RESEARCH_PLAN_OUTPUTS,
     }

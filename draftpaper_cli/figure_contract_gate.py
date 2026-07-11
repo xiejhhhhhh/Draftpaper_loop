@@ -35,6 +35,11 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     figure_metadata = read_json(state.path / "results" / "figure_metadata.json", {})
     run_manifest = read_json(state.path / "methods" / "run_manifest.yaml", {})
     semantic_annotations = read_json(state.path / "results" / "figure_semantic_annotations.json", {})
+    plugin_trace = None
+    if (state.path / "research_plan" / "research_capability_contract.json").exists():
+        from .figure_plugin_trace import validate_figure_plugin_trace
+
+        plugin_trace = validate_figure_plugin_trace(state.path)
     if not isinstance(contracts, dict) or not contracts:
         raise FigureContractGateError("results/figure_contracts.json is required. Run plan-figures first.")
 
@@ -42,6 +47,12 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     available_data_roles = normalize_roles((data_coverage or {}).get("available_roles") or []) if isinstance(data_coverage, dict) else []
     method_status = str((method_feasibility or {}).get("decision") or "missing") if isinstance(method_feasibility, dict) else "missing"
     issues: list[dict[str, str]] = []
+    if (plugin_trace or {}).get("decision") == "blocked":
+        issues.append({
+            "severity": "blocking",
+            "kind": "missing_plugin_trace_chain",
+            "detail": "At least one main figure lacks its required claim/data-plugin/method-plugin/review-rule binding. Run assess-plugin-sufficiency and prepare-plugin-rescue.",
+        })
     contract_checks: list[dict[str, Any]] = []
     metadata_by_id = {
         str(item.get("figure_id") or item.get("storyboard_id") or item.get("id") or ""): item
@@ -231,6 +242,8 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
         "review_rule_rescue_tasks": review_rule_gate.get("rescue_tasks") or [],
         "recommended_next_commands": review_rule_gate.get("recommended_next_commands") or [],
         "recommended_next_action": next_action,
+        "figure_plugin_trace": plugin_trace,
+        "figure_plugin_trace_decision": (plugin_trace or {}).get("decision"),
         "policy": "Every planned main figure group must keep its research-plan contract before code generation. The contract is 5-6 main figure groups; generated PNG/panel count may exceed six when supporting or appendix diagnostics are scientifically useful. Validation or diagnostic figures cannot replace contracted main results.",
     }
     results_dir = state.path / "results"
@@ -305,6 +318,8 @@ def _next_action(decision: str, issues: list[dict[str, str]]) -> dict[str, str]:
         return {"command": "generate-analysis-code", "reason": "Figure contracts are executable."}
     if any(item.get("kind") in {"missing_data_role", "partial_data_role"} for item in issues):
         return {"command": "repair-figure-data", "reason": "At least one contracted main figure lacks required data roles."}
+    if any(item.get("kind") == "missing_plugin_trace_chain" for item in issues):
+        return {"command": "prepare-plugin-rescue", "reason": "A contracted main figure lacks a required capability binding; repair the plugin chain before code generation."}
     if any(item.get("kind") == "missing_method_feasibility" for item in issues):
         return {"command": "repair-figure-method", "reason": "At least one contracted main figure lacks executable method support."}
     if any(item.get("kind") == "missing_method_source_evidence" for item in issues):

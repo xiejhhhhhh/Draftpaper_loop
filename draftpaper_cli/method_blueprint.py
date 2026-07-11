@@ -258,6 +258,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     review_tasks = _read_json(state.path / "review" / "actionable_analysis_tasks.json", {})
     research_storyboard = _read_json(state.path / "research_plan" / "figure_storyboard.json", {})
     research_method_plan = _read_json(state.path / "research_plan" / "method_plan.json", {})
+    plugin_binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json", {})
     context = {
         "metadata": state.metadata,
         "method_requirements": requirements,
@@ -271,7 +272,15 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     hints = module.method_blueprint_hints(context)
     review_rule_gate = assess_review_rules(state.path, stage="method_plan")
     available_roles = _available_data_roles(inventory, acquisition_plan)
-    selected_templates = _select_method_templates(hints, context)
+    bound_method_ids = {
+        str(item.get("plugin_id"))
+        for item in plugin_binding_plan.get("bindings") or []
+        if isinstance(item, dict) and item.get("kind") == "method" and item.get("state") == "covered" and item.get("plugin_id")
+    }
+    selected_templates = [
+        item for item in hints.get("method_template_hints") or []
+        if isinstance(item, dict) and str(item.get("template_id") or "") in bound_method_ids
+    ] if bound_method_ids else _select_method_templates(hints, context)
     selected_roles = _selected_template_values(selected_templates, "input_roles")
     required_roles = selected_roles or list(hints.get("data_contract_hints") or [])
     missing_roles = _missing_roles(required_roles, available_roles)
@@ -301,6 +310,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "validation_checks": validation_checks,
         "figure_families": figure_families,
         "selected_method_templates": selected_template_ids,
+        "plugin_binding_plan": "research_plan/plugin_binding_plan.json" if plugin_binding_plan else None,
+        "bound_method_plugin_ids": sorted(bound_method_ids),
         "storyboard_method_tasks": list(research_method_plan.get("method_tasks") or []) if isinstance(research_method_plan, dict) else [],
         "storyboard_figures": list(research_storyboard.get("figures") or []) if isinstance(research_storyboard, dict) else [],
         "figure_policy": hints.get("figure_policy") or {},
@@ -333,6 +344,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "selected_method_template_hints": selected_templates,
         "review_rule_hints": hints.get("review_rule_hints") or [],
         "review_rule_gate_plan": review_rule_gate,
+        "plugin_binding_plan": plugin_binding_plan,
         "composite_discipline": hints.get("composite_discipline") or {},
         "review_task_count": len(review_tasks.get("tasks") or []) if isinstance(review_tasks, dict) else 0,
         "next_command": f'python -m draftpaper_cli.cli generate-analysis-code --project "{state.path}"',

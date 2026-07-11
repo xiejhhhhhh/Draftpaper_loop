@@ -333,6 +333,16 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.18.9-v0.20.0 (2026-07-11) -- 能力驱动的复合学科执行链
+
+- 在 research plan 完成后新增 `discipline_contract.json` 和 `research_capability_contract.json`。它们会声明主学科、次学科、跨学科的数据/方法/review 归属，以及每个计划主张和主图对应的稳定能力需求。
+- 新增 `assess-plugin-sufficiency`。该门控会按数据角色、方法族、输出合同、运行等级、验证等级、aliases 和学科兼容性，结构化匹配已注册的 `data_connector`、`method_template` 和 `review_rule`。mock、plan-only 或外部合同不能被当作主图的可执行支撑。
+- 新增 `prepare-plugin-rescue`。能力缺口会形成范围明确的补齐路线：现有插件、AcademicForge 候选处理、许可证感知的公开科研代码检索、泛化、验证、去重，以及经人工确认后的 `promote-plugin-candidate --write`。项目专属或许可证不明确的代码保持在项目本地。
+- 新增 `execute-data-plugins`、`execute-method-plugins` 和阶段归属的 `plugin_execution_ledger.jsonl`。账本记录 manifest/template 哈希、参数、运行状态、输入/输出哈希，以及 fixture 与真实项目结果的区别；fixture 运行不会被误认为科研证据。
+- 新增 `results/figure_plugin_trace_report.json/.html`。每张主图在进入 Results 证据前都必须追溯到 research-plan claim、已覆盖的 data plugin、已覆盖的 method plugin、review-rule 路线和已验证的项目运行产物。代码生成只允许基于明确的运行前绑定链；缺少环节时进入插件补齐路线，不会生成相似替代图。
+- 在 `write-results` 后新增 `review-results-with-discipline-rules`。该审查结合 Results 正文、完整图表追溯、插件绑定、已验证运行产物和复合学科 review rules。只有成熟、已 promote 且完成证据绑定的规则可以在科学层面阻断；任何图表追溯缺口都会停止后续正文流程。
+- `status` 和 `run-pipeline` 新增 `plugin_sufficiency_required`、`plugin_gap_detected` 状态。跨学科回归夹具覆盖 geography+machine learning、astronomy+machine learning 和 bioinformatics+medicine。
+
 ### v0.18.8 (2026-07-11) -- 本地 Skill 地基扩展与外部 mock 合同
 
 - 第一方本地 foundation catalog 已扩展到 159 个参数化插件，覆盖统计、实验设计、经典机器学习、表格/数组处理、科研可视化、地理、天文、生物信息、医学、化学、材料、物理和量子科学。所有插件只部署在对应学科的 `data_connectors`、`method_templates` 或 `review_rules` 目录中。
