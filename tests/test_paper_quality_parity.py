@@ -18,6 +18,26 @@ def _json(path, payload):
     _write(path, json.dumps(payload))
 
 
+
+def _quality_architecture(project):
+    _json(project / "writing" / "paper_brief.json", {"paper": "brief"})
+    _json(project / "writing" / "argument_matrices.json", {
+        "introduction_gap_matrix": [{"gap_id": "g1"}],
+        "discussion_finding_comparison_matrix": [{"comparison_id": "c1"}],
+    })
+    _json(project / "writing" / "section_lifecycles.json", {"data_lifecycle": {}, "method_lifecycle": {}})
+    _json(project / "results" / "panel_figure_contracts.json", {"figure_groups": [{"figure_group_id": "f1"}]})
+    _json(project / "writing" / "scientific_evidence_registry.json", {"records": [], "blocking_conflicts": []})
+    for section in ("introduction", "data", "methods", "results", "discussion"):
+        _json(project / "writing" / "section_validation" / f"{section}.json", {
+            "generated_at": "2026-07-12T10:00:00+00:00",
+            "decision": "pass",
+            "composition_mode": "codex_free_candidate",
+            "quality_parity_eligible": True,
+            "evidence_snapshot_id": "snapshot-1",
+            "functional_job_coverage": {"decision": "pass", "score": 1.0},
+        })
+
 def test_full_paper_quality_parity_passes_complete_scientific_manuscript(tmp_path) -> None:
     from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
 
@@ -29,7 +49,8 @@ def test_full_paper_quality_parity_passes_complete_scientific_manuscript(tmp_pat
     _write(project / "discussion" / "discussion.tex", r"Compared with prior work \cite{A}, the result clarifies the mechanism. The main innovation is the validated integration of evidence. A limitation is the current cohort size, which motivates external validation.")
     _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
     _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
-    _json(project / "citation_audit" / "final_citation_audit_report.json", {"decision": "pass", "blocking_issue_count": 0, "reference_coverage": {"coverage_ratio": 1.0}})
+    _quality_architecture(project)
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {"generated_at": "2026-07-12T11:00:00+00:00", "decision": "pass", "blocking_issue_count": 0, "reference_coverage": {"coverage_ratio": 1.0}})
 
     report = assess_paper_quality_parity(project)
 
@@ -53,4 +74,53 @@ def test_full_paper_quality_parity_exposes_thin_sections(tmp_path) -> None:
 
     assert report["score"] < 0.5
     assert report["decision"] == "repair_required"
-    assert {item["section"] for item in report["repair_priorities"]} >= {"figures", "results", "methods", "discussion"}
+    assert report["hard_correctness_passed"] is False
+    assert report["repair_priorities"]
+
+def test_quality_parity_rejects_deterministic_section_fallback(tmp_path) -> None:
+    from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
+
+    project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
+    _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
+    _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
+    _quality_architecture(project)
+    fallback_path = project / "writing" / "section_validation" / "methods.json"
+    fallback_report = json.loads(fallback_path.read_text(encoding="utf-8"))
+    fallback_report.update({
+        "composition_mode": "deterministic_offline_fallback",
+        "quality_parity_eligible": False,
+    })
+    _json(fallback_path, fallback_report)
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {
+        "generated_at": "2026-07-12T11:00:00+00:00",
+        "decision": "pass",
+        "blocking_issue_count": 0,
+        "reference_coverage": {"coverage_ratio": 1.0},
+    })
+
+    report = assess_paper_quality_parity(project)
+
+    assert report["decision"] == "repair_required"
+    assert report["hard_checks"]["all_core_sections_validated_free_prose"] is False
+    assert report["hard_correctness_passed"] is False
+
+
+def test_quality_parity_requires_citation_audit_after_final_section_validation(tmp_path) -> None:
+    from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
+
+    project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
+    _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
+    _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
+    _quality_architecture(project)
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {
+        "generated_at": "2026-07-12T09:59:59+00:00",
+        "decision": "pass",
+        "blocking_issue_count": 0,
+        "reference_coverage": {"coverage_ratio": 1.0},
+    })
+
+    report = assess_paper_quality_parity(project)
+
+    assert report["decision"] == "repair_required"
+    assert report["hard_checks"]["citation_audit_after_final_draft"] is False
+    assert report["hard_correctness_passed"] is False

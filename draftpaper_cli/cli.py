@@ -43,6 +43,18 @@ from .manuscript_quality import assess_results_manuscript_quality
 from .scientific_figure_quality import assess_scientific_figure_quality
 from .results_semantic_repair import prepare_results_semantic_repair
 from .paper_quality_parity import assess_paper_quality_parity
+from .paper_narrative import PaperNarrativeError, build_paper_narrative, build_results_synthesis_plan, build_section_outline
+from .writing_architecture import (
+    WritingArchitectureError,
+    assess_functional_quality_release,
+    build_argument_matrices,
+    build_panel_writing_contracts,
+    build_section_lifecycles,
+    prepare_panel_repair,
+    prepare_scientific_editor,
+    record_scientific_editor_revision,
+    resolve_venue_style_adapter,
+)
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
@@ -442,6 +454,44 @@ def build_parser() -> argparse.ArgumentParser:
     reopen_evidence = subparsers.add_parser("reopen-core-evidence", help="Archive an approved evidence snapshot before scientific revision.")
     reopen_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     reopen_evidence.add_argument("--reason", required=True, help="Reason the human-approved evidence must be reopened.")
+
+    paper_narrative = subparsers.add_parser("build-paper-narrative", help="Build the paper brief, figure-story arc, and section claim allocation before writing.")
+    paper_narrative.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    section_outline = subparsers.add_parser("prepare-section-outline", help="Build a paragraph-level evidence outline before Codex composes a section.")
+    section_outline.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    section_outline.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+
+    results_synthesis = subparsers.add_parser("build-results-synthesis", help="Build finding blocks from the figure-story arc and resolved result evidence.")
+    results_synthesis.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    argument_matrices = subparsers.add_parser("build-argument-matrices", help="Build Introduction gap and Discussion finding-comparison matrices.")
+    argument_matrices.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    section_lifecycles = subparsers.add_parser("build-section-lifecycles", help="Build traceable Data and Methods scientific lifecycles.")
+    section_lifecycles.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    panel_contracts = subparsers.add_parser("build-panel-contracts", help="Build panel-aware figure narrative and local-repair contracts.")
+    panel_contracts.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    panel_repair = subparsers.add_parser("prepare-panel-repair", help="Diagnose and route panel-local data, method, rendering, statistics, or claim repairs.")
+    panel_repair.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    venue_style = subparsers.add_parser("resolve-venue-writing-style", help="Resolve functional venue and style preferences without copying prose.")
+    venue_style.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    scientific_editor = subparsers.add_parser("prepare-scientific-editor", help="Prepare bounded paragraph-local scientific revision tasks.")
+    scientific_editor.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    scientific_editor.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+    scientific_editor.add_argument("--input", required=True, help="Path to the section candidate to review.")
+    editor_revision = subparsers.add_parser("record-scientific-editor-revision", help="Record one auditable paragraph-local scientific editor iteration.")
+    editor_revision.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    editor_revision.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+    editor_revision.add_argument("--before", required=True, help="Section candidate before this local revision round.")
+    editor_revision.add_argument("--after", required=True, help="Section candidate after this local revision round.")
+    editor_revision.add_argument("--iteration", required=True, type=int, choices=[1, 2, 3])
+
+    functional_release = subparsers.add_parser("assess-functional-quality-release", help="Assess v0.22 functional quality-parity eligibility.")
+    functional_release.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     submit_section = subparsers.add_parser("submit-section-draft", help="Validate and install a freely composed manuscript section draft.")
     submit_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1502,6 +1552,57 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = reopen_evidence_snapshot(args.project, reason=args.reason)
         except (EvidenceSnapshotMismatch, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "build-paper-narrative":
+        try:
+            result = build_paper_narrative(args.project)
+        except (PaperNarrativeError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "prepare-section-outline":
+        try:
+            result = build_section_outline(args.project, args.section)
+        except (PaperNarrativeError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "build-results-synthesis":
+        try:
+            result = build_results_synthesis_plan(args.project)
+        except (PaperNarrativeError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command in {"build-argument-matrices", "build-section-lifecycles", "build-panel-contracts", "prepare-panel-repair", "resolve-venue-writing-style", "prepare-scientific-editor", "record-scientific-editor-revision", "assess-functional-quality-release"}:
+        try:
+            if args.command == "build-argument-matrices":
+                result = build_argument_matrices(args.project)
+            elif args.command == "build-section-lifecycles":
+                result = build_section_lifecycles(args.project)
+            elif args.command == "build-panel-contracts":
+                result = build_panel_writing_contracts(args.project)
+            elif args.command == "prepare-panel-repair":
+                result = prepare_panel_repair(args.project)
+            elif args.command == "resolve-venue-writing-style":
+                result = resolve_venue_style_adapter(args.project)
+            elif args.command == "prepare-scientific-editor":
+                result = prepare_scientific_editor(args.project, args.section, args.input)
+            elif args.command == "record-scientific-editor-revision":
+                result = record_scientific_editor_revision(args.project, args.section, args.before, args.after, args.iteration)
+            else:
+                result = assess_functional_quality_release(args.project)
+        except (WritingArchitectureError, PaperNarrativeError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))

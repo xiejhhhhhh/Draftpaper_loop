@@ -2,12 +2,12 @@
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
-"""Aggregate figure, Results, section, and citation quality into one release score."""
+"""Calibrated functional-quality and hard-correctness release assessment."""
 
 from __future__ import annotations
 
 import json
-import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,7 @@ from .project_state import load_project
 
 REPORT = "quality_checks/paper_quality_parity_report.json"
 MINIMUM_SCORE = 0.95
+CORE_SECTIONS = ("introduction", "data", "methods", "results", "discussion")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -34,76 +35,131 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _section_text(project: Path, section: str) -> str:
-    for relative in [f"{section}/{section}.tex", f"latex/sections/{section}.tex"]:
-        path = project / relative
-        if path.exists():
-            return path.read_text(encoding="utf-8-sig", errors="replace")
-    return ""
+def _bounded_score(value: Any) -> float:
+    try:
+        return round(max(0.0, min(1.0, float(value))), 4)
+    except (TypeError, ValueError):
+        return 0.0
 
 
-def _marker_score(text: str, groups: list[list[str]], *, minimum_citations: int = 0) -> float:
-    lowered = text.lower()
-    hits = sum(any(marker in lowered for marker in group) for group in groups)
-    denominator = len(groups) + (1 if minimum_citations else 0)
-    if minimum_citations:
-        citations = len(re.findall(r"\\cite\w*\{", text))
-        hits += citations >= minimum_citations
-    score = hits / max(1, denominator)
-    if re.search(r"(?:[A-Za-z]:[/\\]|results[/\\]figures|methods[/\\]|\.csv\b|\.py\b)", text, flags=re.I):
-        score = max(0.0, score - 0.25)
-    return round(score, 4)
+def _timestamp(value: Any) -> datetime | None:
+    text = str(value or "").strip().replace("Z", "+00:00")
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _section_report(project: Path, section: str) -> dict[str, Any]:
+    return _read_json(project / "writing" / "section_validation" / f"{section}.json")
+
+
+def _section_function_score(report: dict[str, Any]) -> float:
+    coverage = report.get("functional_job_coverage") if isinstance(report.get("functional_job_coverage"), dict) else {}
+    return _bounded_score(coverage.get("score"))
 
 
 def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
+    """Assess scientific function separately from non-negotiable correctness."""
     state = load_project(project)
     result_quality = _read_json(state.path / "review" / "results_manuscript_quality.json")
     if not result_quality:
         result_quality = _read_json(state.path / "review" / "result_discipline_review_report.json").get("manuscript_quality") or {}
     figure_quality = _read_json(state.path / "results" / "scientific_figure_quality_report.json")
     citation_quality = _read_json(state.path / "citation_audit" / "final_citation_audit_report.json")
-    coverage = citation_quality.get("reference_coverage") if isinstance(citation_quality.get("reference_coverage"), dict) else {}
-    citation_score = 1.0 if citation_quality.get("decision") == "pass" and int(citation_quality.get("blocking_issue_count") or 0) == 0 and float(coverage.get("coverage_ratio") or 1.0) >= 0.95 else 0.0
+    narrative = _read_json(state.path / "writing" / "paper_brief.json")
+    lifecycles = _read_json(state.path / "writing" / "section_lifecycles.json")
+    matrices = _read_json(state.path / "writing" / "argument_matrices.json")
+    panel_contracts = _read_json(state.path / "results" / "panel_figure_contracts.json")
+    section_reports = {section: _section_report(state.path, section) for section in CORE_SECTIONS}
 
-    section_scores = {
-        "introduction": _marker_score(_section_text(state.path, "introduction"), [
-            ["problem", "challenge", "unresolved"], ["gap", "however", "remains"], ["objective", "we therefore", "we investigate"], ["hypothesis", "test whether", "research question"],
-        ], minimum_citations=2),
-        "data": _marker_score(_section_text(state.path, "data"), [
-            ["data source", "dataset", "observations"], ["cohort", "sample", "sources"], ["processing", "processed", "harmonized", "quality control"], ["missingness", "coverage", "availability", "boundary"],
-        ]),
-        "methods": _marker_score(_section_text(state.path, "methods"), [
-            ["model", "method", "algorithm"], ["\\begin{equation}", "\\["], [" where ", " denotes ", " represents "], ["validation", "held-out", "cross-validation"], ["baseline", "ablation", "sensitivity"],
-        ]),
-        "discussion": _marker_score(_section_text(state.path, "discussion"), [
-            ["compared with", "prior work", "previous studies"], ["innovation", "contribution", "novel"], ["limitation", "constraint", "caveat"], ["future", "external validation", "follow-up", "motivates"],
-        ], minimum_citations=1),
-    }
+    result_score = _bounded_score(result_quality.get("score"))
+    figure_score = _bounded_score(figure_quality.get("score"))
+    intro_score = _section_function_score(section_reports["introduction"])
+    data_score = _section_function_score(section_reports["data"])
+    methods_score = _section_function_score(section_reports["methods"])
+    discussion_score = _section_function_score(section_reports["discussion"])
+    narrative_inputs = [bool(narrative), bool(panel_contracts), result_score >= MINIMUM_SCORE]
+    story_score = sum(float(item) for item in narrative_inputs) / len(narrative_inputs)
+    lifecycle_score = (data_score + methods_score + float(bool(lifecycles))) / 3.0
+    introduction_score = (intro_score + float(bool(matrices.get("introduction_gap_matrix")))) / 2.0
+    discussion_dimension = (discussion_score + float(bool(matrices.get("discussion_finding_comparison_matrix")))) / 2.0
+
+    snapshots = {str(report.get("evidence_snapshot_id") or "") for report in section_reports.values()}
+    snapshots.discard("")
+    all_free = all(
+        report.get("composition_mode") == "codex_free_candidate"
+        and str(report.get("decision") or report.get("status")) in {"pass", "accepted"}
+        and report.get("quality_parity_eligible") is True
+        for report in section_reports.values()
+    )
+    snapshot_consistent = len(snapshots) == 1
+    coherence_score = (float(all_free) + float(snapshot_consistent)) / 2.0
+
     dimensions = {
-        "figures": float(figure_quality.get("score") or 0.0),
-        "results": float(result_quality.get("score") or 0.0),
-        **section_scores,
-        "citations": citation_score,
+        "scientific_story_and_main_figure_narrative": _bounded_score(story_score),
+        "results_evidence_interpretation_and_comparison": result_score,
+        "reproducible_data_and_methods_expression": _bounded_score(lifecycle_score),
+        "introduction_problem_gap_and_contribution": _bounded_score(introduction_score),
+        "discussion_comparison_mechanism_limitation_innovation": _bounded_score(discussion_dimension),
+        "figure_readability_panel_logic_and_captions": figure_score,
+        "prose_naturalness_and_cross_section_coherence": _bounded_score(coherence_score),
     }
-    weights = {"figures": 0.20, "results": 0.25, "methods": 0.15, "data": 0.10, "introduction": 0.10, "discussion": 0.15, "citations": 0.05}
-    score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
+    weights = {
+        "scientific_story_and_main_figure_narrative": 0.20,
+        "results_evidence_interpretation_and_comparison": 0.20,
+        "reproducible_data_and_methods_expression": 0.15,
+        "introduction_problem_gap_and_contribution": 0.15,
+        "discussion_comparison_mechanism_limitation_innovation": 0.15,
+        "figure_readability_panel_logic_and_captions": 0.10,
+        "prose_naturalness_and_cross_section_coherence": 0.05,
+    }
+    functional_score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
+
+    coverage = citation_quality.get("reference_coverage") if isinstance(citation_quality.get("reference_coverage"), dict) else {}
+    citation_time = _timestamp(citation_quality.get("generated_at"))
+    section_times = [_timestamp(report.get("generated_at")) for report in section_reports.values()]
+    known_section_times = [item for item in section_times if item is not None]
+    citation_after_final_draft = citation_time is not None and bool(known_section_times) and citation_time >= max(known_section_times)
+    registry = _read_json(state.path / "writing" / "scientific_evidence_registry.json")
+    conflicts = registry.get("blocking_conflicts") or registry.get("conflicts") or []
+    hard_checks = {
+        "all_core_sections_validated_free_prose": all_free,
+        "single_approved_evidence_snapshot": snapshot_consistent,
+        "results_evidence_quality_passed": result_quality.get("decision") == "pass" and result_score >= MINIMUM_SCORE,
+        "figure_scientific_quality_passed": figure_quality.get("decision") == "pass" and figure_score >= MINIMUM_SCORE,
+        "no_blocking_evidence_conflicts": not bool(conflicts),
+        "citation_audit_passed": citation_quality.get("decision") == "pass" and int(citation_quality.get("blocking_issue_count") or 0) == 0,
+        "reference_coverage_preserved": _bounded_score(coverage.get("coverage_ratio", 1.0)) >= MINIMUM_SCORE,
+        "citation_audit_after_final_draft": citation_after_final_draft,
+    }
+    hard_correctness_score = round(sum(float(value) for value in hard_checks.values()) / len(hard_checks), 4)
+    hard_correctness_passed = all(hard_checks.values())
     repair_priorities = [
-        {"section": key, "score": dimensions[key], "weight": weights[key]}
+        {"dimension": key, "score": dimensions[key], "weight": weights[key]}
         for key in weights if dimensions[key] < MINIMUM_SCORE
     ]
     repair_priorities.sort(key=lambda item: (item["score"], -item["weight"]))
+    decision = "pass" if functional_score >= MINIMUM_SCORE and hard_correctness_passed else "repair_required"
     report = {
         "status": "written",
-        "schema_version": "v0.21.0",
+        "schema_version": "v0.22.0",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
-        "score": score,
+        "score": functional_score,
+        "functional_quality_score": functional_score,
         "minimum_score": MINIMUM_SCORE,
-        "decision": "pass" if score >= MINIMUM_SCORE and not repair_priorities else "repair_required",
+        "hard_correctness_score": hard_correctness_score,
+        "hard_correctness_required": 1.0,
+        "hard_correctness_passed": hard_correctness_passed,
+        "hard_checks": hard_checks,
+        "decision": decision,
         "dimensions": dimensions,
         "weights": weights,
         "repair_priorities": repair_priorities,
-        "policy": "The release score measures scientific function and evidence consistency, not lexical similarity to a reference manuscript.",
+        "policy": "Release quality measures scientific function rather than lexical similarity; every hard scientific correctness check must pass independently.",
     }
     _write_json(state.path / REPORT, report)
     return report

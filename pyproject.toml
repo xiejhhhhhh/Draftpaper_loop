@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.18.5"
+version = "0.22.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = { file = "LICENSE" }
@@ -14,6 +14,7 @@ dependencies = [
   "SciencePlots>=2.1",
   "numpy>=1.24",
   "pandas>=2.0",
+  "PyYAML>=6.0",
   "seaborn>=0.13",
 ]
 

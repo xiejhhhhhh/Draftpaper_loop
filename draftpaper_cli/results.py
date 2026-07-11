@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Jinray Xie
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -15,6 +15,7 @@ from .evidence_snapshot import EvidenceSnapshotMismatch, validate_evidence_snaps
 from .io_utils import read_json
 from .latex_utils import safe_latex_text
 from .manuscript_composer import SectionCompositionError, select_validated_section_draft
+from .paper_narrative import build_results_synthesis_plan
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .result_validity import ResultValidityError, validate_result_validity_for_results
@@ -804,11 +805,22 @@ def _entry_groups(entries: list[tuple[str, dict[str, Any]]]) -> list[list[tuple[
     return groups
 
 
-def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, dict[str, Any]]]) -> str:
+def render_results_tex(
+    project_meta: dict[str, Any],
+    entries: list[tuple[str, dict[str, Any]]],
+    synthesis_plan: dict[str, Any] | None = None,
+) -> str:
+    finding_blocks = (synthesis_plan or {}).get("finding_blocks") or []
+    by_artifact: dict[str, dict[str, Any]] = {}
+    for block in finding_blocks:
+        if not isinstance(block, dict):
+            continue
+        for artifact_id in block.get("figure_evidence") or []:
+            by_artifact[str(artifact_id)] = block
     lines = [
         "\\section{Results}",
         (
-            "The results follow the main evidence groups defined by the research plan. Each paragraph interprets the empirical pattern shown by a main figure and uses appendix diagnostics only where they qualify the reliability, scope, or stability of that interpretation."
+            "The Results section follows the empirical argument established by the approved figure story. Each finding reports what was observed, identifies the relevant comparison or diagnostic evidence, and states the boundary of the corresponding interpretation."
         ),
         "",
     ]
@@ -816,10 +828,34 @@ def render_results_tex(project_meta: dict[str, Any], entries: list[tuple[str, di
     if not main_entries and appendix_entries:
         main_entries = appendix_entries
         appendix_entries = []
+    rendered_findings: set[str] = set()
     for index, (kind, entry) in enumerate(main_entries, start=1):
         appendix_refs = _appendix_refs_for_main(entry, appendix_entries, fallback=index == 1)
-        paragraph = _safe_latex_prose_with_refs(_result_evidence_paragraph(index, entry, appendix_refs))
-        lines.extend([paragraph, "", _render_figure(entry), ""])
+        block = by_artifact.get(str(entry.get("id") or entry.get("path") or ""), {})
+        finding_id = str(block.get("finding_id") or "")
+        if block and finding_id not in rendered_findings:
+            rendered_findings.add(finding_id)
+            question = _sanitize_result_prose(str(block.get("scientific_question") or entry.get("scientific_question") or ""))
+            observed = _sanitize_result_prose(str(block.get("observed_result") or entry.get("result_claim") or ""))
+            scientific_sentence = _scientific_result_sentence(entry, _sanitize_result_prose(str(entry.get("result_claim") or ""))) or observed
+            reference = _entry_reference(kind, entry)
+            supporting = ""
+            if appendix_refs:
+                supporting = " Diagnostic or supporting evidence in " + " and ".join(appendix_refs) + " qualifies the stability or scope of this finding."
+            boundary = _sanitize_result_prose(str(block.get("claim_boundary") or entry.get("claim_boundary") or ""))
+            lead = f"The {_scientific_object_name(entry)} evaluates {_question_clause(question)}" if question else "This finding resolves the planned empirical comparison"
+            paragraph_text = (
+                f"{lead}. {scientific_sentence} The relevant empirical evidence is presented in {reference}."
+                f"{supporting} {boundary or 'The interpretation is limited to the represented cohort, method, and validation setting.'}"
+            )
+            paragraph_text = re.sub(r"\s+", " ", paragraph_text).replace(". .", ".")
+        elif not block:
+            paragraph_text = _result_evidence_paragraph(index, entry, appendix_refs)
+        else:
+            paragraph_text = ""
+        if paragraph_text:
+            lines.extend([_safe_latex_prose_with_refs(paragraph_text), ""])
+        lines.extend([_render_figure(entry), ""])
     if table_entries:
         refs = ", ".join(_entry_reference(kind, entry) for kind, entry in table_entries)
         lines.extend([
@@ -897,7 +933,8 @@ def write_results(project: str | Path) -> dict[str, Any]:
     summary_path = state.path / "results" / "results_summary_zh.md"
     blueprint_path = state.path / "results" / "figure_interpretation_blueprint.json"
     blueprint = build_figure_interpretation_blueprint(entries)
-    fallback_tex = render_results_tex(state.metadata, entries)
+    synthesis_plan = build_results_synthesis_plan(state.path)
+    fallback_tex = render_results_tex(state.metadata, entries, synthesis_plan)
     try:
         composition = select_validated_section_draft(state.path, "results", fallback_tex)
     except SectionCompositionError as exc:

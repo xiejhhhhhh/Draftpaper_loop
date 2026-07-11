@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Jinray Xie
+# Copyright (c) 2026 Jinray Xie
 # Contact: xiejinhui22@mails.ucas.ac.cn
 # Source-available for non-commercial use only; commercial use requires written authorization.
 
@@ -26,6 +26,25 @@ from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_lat
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .methods import MethodsGateError, verify_methods, write_methods
 from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
+from .paper_narrative import (
+    PaperNarrativeError,
+    build_paper_narrative,
+    build_results_synthesis_plan,
+    build_section_evidence_pack,
+    build_section_outline,
+    prepare_section_writing_context,
+)
+from .writing_architecture import (
+    WritingArchitectureError,
+    assess_functional_quality_release,
+    build_argument_matrices,
+    build_panel_writing_contracts,
+    build_section_lifecycles,
+    prepare_panel_repair,
+    prepare_scientific_editor,
+    record_scientific_editor_revision,
+    resolve_venue_style_adapter,
+)
 from .manuscript_quality import assess_results_manuscript_quality, build_results_narrative_contract
 from .scientific_figure_quality import assess_scientific_figure_quality
 from .paper_quality_parity import assess_paper_quality_parity
@@ -98,6 +117,8 @@ __all__ = [
     "FigureSemanticAnnotationError",
     "ResultEvidenceError",
     "SectionCompositionError",
+    "PaperNarrativeError",
+    "WritingArchitectureError",
     "CitationRepairError",
     "ArtifactDriftError",
     "LatexAssemblyError",
@@ -166,6 +187,19 @@ __all__ = [
     "validate_figure_semantics",
     "submit_figure_semantic_annotations",
     "build_section_evidence_packet",
+    "build_paper_narrative",
+    "build_results_synthesis_plan",
+    "build_section_evidence_pack",
+    "build_section_outline",
+    "prepare_section_writing_context",
+    "build_argument_matrices",
+    "build_panel_writing_contracts",
+    "build_section_lifecycles",
+    "prepare_panel_repair",
+    "prepare_scientific_editor",
+    "record_scientific_editor_revision",
+    "resolve_venue_style_adapter",
+    "assess_functional_quality_release",
     "submit_section_draft",
     "build_results_narrative_contract",
     "assess_results_manuscript_quality",

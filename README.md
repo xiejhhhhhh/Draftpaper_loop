@@ -27,6 +27,7 @@ Draftpaper-loop is also intended to become a learning research workflow rather t
 Current manuscript generation separates evidence control from prose control. Draftpaper-loop builds the auditable research evidence first, generates section-level writing briefs for Data and Methods, lets Codex compose natural scientific prose from those briefs, and then applies integrity, citation, formula, and result-evidence gates after writing.
 
 From v0.17.7 onward, manuscript writing is evidence-semantic free composition rather than rigid templating. Draftpaper-loop resolves facts from verified runs, validates each main figure against a scientific contract, freezes the human-confirmed evidence snapshot, and then leaves sentence-level scientific prose open enough for Codex to write naturally from that one verified evidence version.
+From v0.21.1 onward, that separation is organized by a Paper Narrative Engine. It converts the approved evidence snapshot, research plan, literature roles, plugin/run traces, and main/supporting figure relationships into a paper brief, figure story arc, argument matrices, section evidence packs, and paragraph jobs. Codex writes continuous scientific prose from those reasoning inputs; a bounded paragraph-local Scientific Editor repairs defects afterward without replacing the section with deterministic template text.
 
 The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
 
@@ -75,6 +76,8 @@ The loop is designed around five engineering components:
 - Project-specific figure planning before analysis-code generation.
 - Methods hard gate requiring successful local code execution.
 - Result validity gate before Results writing.
+- Paper Narrative Engine that organizes main and supporting figures into finding-level stories, builds section evidence packs, Introduction/Discussion argument matrices, Data/Methods lifecycles, and outline-first Codex free-writing jobs.
+- Scientific Editor and calibrated parity release: repair only affected paragraphs, reject deterministic fallback as a release candidate, require the final citation audit after all section validations, and separate 100% scientific correctness from the >=0.95 functional-quality target.
 - Core evidence gate before manuscript writing, checking data supplementation, data integration, method execution, figure production, figure metadata, and result validity before human figure confirmation.
 - Evidence-first manuscript writing: Results are written from confirmed figures first, then Introduction, Data, Methods, and Discussion are generated without leaking numeric results into earlier sections.
 - Brief-guided Data and Methods writing: the loop preserves hard evidence contracts while avoiding rigid context dumping, local paths, script names, and internal workflow language in manuscript prose.
@@ -416,6 +419,15 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.21.1-v0.22.0 (2026-07-12) -- Paper Narrative and Scientific Writing Architecture
+
+- Added the discipline-neutral Paper Narrative Engine. It reads true YAML/JSON research artifacts and produces `paper_brief.json`, `figure_story_arc.json`, `manuscript_argument_map.json`, and `section_claim_allocation.json`; main and supporting figures are grouped into finding-level stories with explicit questions, evidence, comparisons, and claim boundaries.
+- Added section evidence packs, paragraph outlines, and Results synthesis plans. Introduction and Discussion receive gap/comparison matrices; Data and Methods receive lifecycle reconstructions from inventories, stage-owned code, plugin ledgers, formulas, and figure-code traces. Metrics bind through evidence, run, or artifact identifiers rather than title-string guessing.
+- Added semantic panel contracts and `prepare-panel-repair`. Each panel declares its question, subset, scientific unit, data roles, method output, comparison, statistical check, chart grammar, expected conclusion, and claim boundary; repair remains local to the failed panel chain and cannot substitute weaker evidence.
+- Added venue writing contracts and functional style profiles that learn section order, information density, caption density, voice, numeric reporting, terminology, and reasoning function without copying wording from a reference manuscript.
+- Added a bounded paragraph-local Scientific Editor with at most three auditable iterations. It records paragraph hashes, rejects excessive whole-section churn, preserves evidence and citations, and forbids reference deletion as a shortcut for citation-audit repair.
+- Replaced marker-count parity scoring with calibrated scientific dimensions. A release requires validated `codex_free_candidate` prose for all core sections, one consistent evidence snapshot, passed Results and figure quality, no blocking evidence conflicts, preserved reference coverage, and a citation audit generated after the final validated draft. Hard scientific correctness remains mandatory; functional quality must reach at least 0.95.
+- Added cross-disciplinary architecture regressions for geography+machine learning, astronomy+machine learning, and bioinformatics/medicine to verify generality without embedding fixture-specific models, metrics, figure counts, or prose in generic code.
 
 ### v0.21.0 (2026-07-11) -- 95% Figure and Manuscript Quality Contracts
 
