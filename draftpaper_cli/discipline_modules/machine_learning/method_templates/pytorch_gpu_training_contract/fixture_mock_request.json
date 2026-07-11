@@ -1,0 +1,11 @@
+{
+  "plugin_id": "pytorch_gpu_training_contract",
+  "execution_mode": "mock_only",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  }
+}

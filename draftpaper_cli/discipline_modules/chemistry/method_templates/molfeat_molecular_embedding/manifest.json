@@ -1,0 +1,42 @@
+{
+  "display_name": "Molfeat molecular embedding",
+  "discipline": "chemistry",
+  "packages": [
+    "molfeat"
+  ],
+  "package_modules": [
+    "molfeat"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "molfeat molecular embedding"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "molfeat_molecular_embedding",
+  "method_family": "molfeat_molecular_embedding",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/molfeat_molecular_embedding.py",
+    "results/tables/molfeat_molecular_embedding_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

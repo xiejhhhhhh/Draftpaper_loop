@@ -1,0 +1,8 @@
+{
+  "plugin_id": "bids_pydicom_local_manifest",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

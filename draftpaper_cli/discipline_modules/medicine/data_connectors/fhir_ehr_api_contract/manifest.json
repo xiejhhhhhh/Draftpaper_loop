@@ -1,0 +1,45 @@
+{
+  "display_name": "FHIR EHR API task contract",
+  "discipline": "medicine",
+  "packages": [
+    "requests"
+  ],
+  "package_modules": [
+    "requests"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "remote_api",
+  "validation_level": "mock_validated",
+  "aliases": [
+    "fhir ehr api contract"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [
+      "FHIR_ACCESS_TOKEN"
+    ],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  },
+  "connector_id": "fhir_ehr_api_contract",
+  "access_modes": [
+    "api_access"
+  ],
+  "download_or_access": [
+    "Use parameterized local files or user-authorized exports."
+  ],
+  "data_formats": [
+    "csv",
+    "json",
+    "parquet"
+  ],
+  "requires_credentials": true,
+  "genericity_rules": [
+    "Do not store credentials, server locations, or project-specific samples."
+  ],
+  "credential_env_vars": [
+    "FHIR_ACCESS_TOKEN"
+  ]
+}

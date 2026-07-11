@@ -1,0 +1,8 @@
+{
+  "plugin_id": "experimental_design_planner",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

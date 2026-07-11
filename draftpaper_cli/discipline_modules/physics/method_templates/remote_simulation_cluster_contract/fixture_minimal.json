@@ -1,0 +1,8 @@
+{
+  "plugin_id": "remote_simulation_cluster_contract",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

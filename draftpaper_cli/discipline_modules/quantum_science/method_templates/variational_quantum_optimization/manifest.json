@@ -1,0 +1,42 @@
+{
+  "display_name": "Variational quantum optimization",
+  "discipline": "quantum_science",
+  "packages": [
+    "qiskit"
+  ],
+  "package_modules": [
+    "qiskit"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "variational quantum optimization"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "variational_quantum_optimization",
+  "method_family": "variational_quantum_optimization",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/variational_quantum_optimization.py",
+    "results/tables/variational_quantum_optimization_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

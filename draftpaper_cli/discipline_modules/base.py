@@ -26,6 +26,8 @@ class DataConnectorSpec:
     template_paths: list[str] = field(default_factory=list)
     fixture_paths: list[str] = field(default_factory=list)
     genericity_rules: list[str] = field(default_factory=list)
+    runtime_class: str = "local_optional_dependency"
+    validation_level: str = "plan_only"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +43,8 @@ class DataConnectorSpec:
             "template_paths": list(self.template_paths),
             "fixture_paths": list(self.fixture_paths),
             "genericity_rules": list(self.genericity_rules),
+            "runtime_class": self.runtime_class,
+            "validation_level": self.validation_level,
         }
 
 
@@ -66,6 +70,8 @@ class MethodTemplateSpec:
     variants: list[str] = field(default_factory=list)
     genericity_rules: list[str] = field(default_factory=list)
     maturity: str = "foundation"
+    runtime_class: str = "local_optional_dependency"
+    validation_level: str = "plan_only"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -87,6 +93,8 @@ class MethodTemplateSpec:
             "variants": list(self.variants),
             "genericity_rules": list(self.genericity_rules),
             "maturity": self.maturity,
+            "runtime_class": self.runtime_class,
+            "validation_level": self.validation_level,
         }
 
 
@@ -144,6 +152,8 @@ class ReviewRuleSpec:
     variants: list[str] = field(default_factory=list)
     provenance_notes: str = ""
     notes: list[str] = field(default_factory=list)
+    runtime_class: str = "local_pure_python"
+    validation_level: str = "fixture_runnable"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -192,6 +202,8 @@ class ReviewRuleSpec:
             "variants": list(self.variants),
             "provenance_notes": self.provenance_notes,
             "notes": list(self.notes),
+            "runtime_class": self.runtime_class,
+            "validation_level": self.validation_level,
         }
 
 
@@ -348,6 +360,8 @@ class DisciplineModuleSpec:
             rule.setdefault("support_layer_signal_refs", [])
             rule.setdefault("aliases", [])
             rule.setdefault("variants", [])
+            rule.setdefault("runtime_class", "local_pure_python")
+            rule.setdefault("validation_level", "fixture_runnable")
             rules.append(rule)
         return rules
 

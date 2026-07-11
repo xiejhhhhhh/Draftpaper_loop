@@ -255,6 +255,17 @@ SUPPORT_ROUTE_TARGETS: dict[str, dict[str, str]] = {
 
 CAPABILITY_IR_VERSION = "draftpaper.capability_ir.v1"
 FORMAL_DISCIPLINE_PLUGIN_TYPES = ["data_connector", "method_template", "review_rule"]
+
+RUNTIME_CLASSES = {
+    "local_pure_python",
+    "local_optional_dependency",
+    "remote_api",
+    "remote_server",
+    "gpu_model",
+    "laboratory_hardware",
+    "support_only",
+}
+VALIDATION_LEVELS = {"plan_only", "mock_validated", "fixture_runnable", "live_validated"}
 SUPPORT_LAYER_TYPES = ["workflow_recipe", "paper_contract", "shared_capability"]
 
 
@@ -728,6 +739,30 @@ def _capability_ir_from_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         "source_policy": manifest.get("source_policy"),
         "intended_target": target,
     }
+
+
+def _runtime_metadata(manifest: dict[str, Any]) -> dict[str, str]:
+    """Infer safe execution metadata without claiming an unrun external service."""
+
+    declared_class = str(manifest.get("runtime_class") or "")
+    declared_level = str(manifest.get("validation_level") or "")
+    access_modes = " ".join(str(item).lower() for item in manifest.get("access_modes") or [])
+    packages = " ".join(str(item).lower() for item in manifest.get("packages") or [])
+    method_text = " ".join(str(manifest.get(key) or "").lower() for key in ["method_family", "template_id", "connector_id"])
+    if declared_class in RUNTIME_CLASSES:
+        runtime_class = declared_class
+    elif any(token in access_modes for token in ["ssh", "remote_server", "cluster"]):
+        runtime_class = "remote_server"
+    elif any(token in access_modes for token in ["api", "archive_query", "web_download"]):
+        runtime_class = "remote_api"
+    elif any(token in f"{packages} {method_text}" for token in ["gpu", "cuda", "deepspeed", "megatron"]):
+        runtime_class = "gpu_model"
+    elif manifest.get("packages"):
+        runtime_class = "local_optional_dependency"
+    else:
+        runtime_class = "local_pure_python"
+    validation_level = declared_level if declared_level in VALIDATION_LEVELS else "plan_only"
+    return {"runtime_class": runtime_class, "validation_level": validation_level}
 
 
 def _capability_ir_records_from_hints(
@@ -1239,6 +1274,7 @@ def extract_skill_capabilities(
         manifest["support_candidate_ids"] = support_candidate_ids
     manifests = data_connectors + method_templates + review_rules
     for manifest in manifests:
+        manifest.update(_runtime_metadata(manifest))
         manifest["capability_ir"] = _capability_ir_from_manifest(manifest)
     for manifest in support_candidates:
         manifest["capability_ir"] = _capability_ir_from_manifest(manifest)
@@ -2738,6 +2774,7 @@ def summarize_plugin_candidates(project: str | Path, *, source_file: str | Path 
             "source_file": "local_project_source_not_packaged",
             "source_policy": "candidate_only_no_direct_upload",
             "intended_merge_target": f"draftpaper_cli/discipline_modules/{profile['discipline']}/method_templates/{template.get('template_id')}",
+            **_runtime_metadata(dict(template)),
         }
         _write_json(root / "candidate_manifest.json", manifest)
         (root / "source_excerpt.py").write_text(source_text[:20_000], encoding="utf-8")
@@ -2810,6 +2847,7 @@ def generalize_plugin_candidate(candidate: str | Path) -> dict[str, Any]:
             "genericity_rules": manifest.get("genericity_rules") or [],
             "source_skill_refs": manifest.get("source_skill_refs") or [f"{manifest.get('source')}:{manifest.get('source_skill_id')}"],
             "provenance_notes": manifest.get("provenance_notes") or "Candidate data connector generalized from skill/source text.",
+            **_runtime_metadata(manifest),
         }
         _write_json(generalized_dir / "data_connector.json", data_connector)
         template = "\n".join([
@@ -2908,6 +2946,7 @@ def generalize_plugin_candidate(candidate: str | Path) -> dict[str, Any]:
             "aliases": manifest.get("aliases") or [],
             "variants": manifest.get("variants") or [],
             "provenance_notes": manifest.get("provenance_notes") or "Candidate review rule generalized from skill/source text.",
+            **_runtime_metadata(manifest),
         }
         _write_json(generalized_dir / "review_rule.json", review_rule)
         template = "\n".join([
@@ -2968,6 +3007,7 @@ def generalize_plugin_candidate(candidate: str | Path) -> dict[str, Any]:
         "aliases": manifest.get("aliases") or [],
         "variants": manifest.get("variants") or [],
         "genericity_rules": manifest.get("genericity_rules") or [],
+        **_runtime_metadata(manifest),
     }
     _write_json(generalized_dir / "method_template.json", method_template)
     template = "\n".join([
@@ -3148,6 +3188,12 @@ def promote_plugin_candidate(
 
     module_root = Path(target_root).resolve() if target_root else Path(__file__).resolve().parent / "discipline_modules"
     target_dir = module_root / discipline / kind_dir / plugin_id
+    overlap = detect_plugin_overlap(root)
+    promotion_mode = "augment_existing" if overlap.get("decision") == "merge_with_existing" else "create_new"
+    canonical_manifest = _canonical_promoted_manifest(manifest, _read_json(required_generalized, {}), plugin_type)
+    canonical_manifest["merge_strategy"] = promotion_mode
+    canonical_manifest["promotion_mode"] = promotion_mode
+    canonical_manifest["intended_merge_target"] = str(target_dir)
     plan = {
         "status": "planned" if dry_run else "promoted",
         "generated_at": utc_now(),
@@ -3160,23 +3206,114 @@ def promote_plugin_candidate(
         "human_confirmation_required": True,
         "human_confirmation_received": require_human_confirmation,
         "policy": "Only generalized candidate files are copied; source evidence summaries and third-party source are not copied.",
+        "promotion_mode": promotion_mode,
+        "overlap_report": overlap,
+        "runtime_registration": "available_after_write_via_manifest.json",
+        "canonical_manifest": canonical_manifest,
     }
     _write_json(root / "promotion_plan.json", plan)
     if dry_run:
         return plan
 
     target_dir.mkdir(parents=True, exist_ok=True)
-    for source_path in sorted((root / "generalized_template").iterdir()):
-        if source_path.is_file() and source_path.name in {"data_connector.json", "method_template.json", "review_rule.json", "template.py"}:
-            shutil.copy2(source_path, target_dir / source_path.name)
+    existing_manifest = _read_json(target_dir / "manifest.json", {})
+    if existing_manifest:
+        canonical_manifest = _merge_promoted_manifest(existing_manifest, canonical_manifest)
+    elif promotion_mode == "augment_existing":
+        canonical_manifest["augmentation_of"] = overlap.get("existing_matches") or []
+    _copy_promotion_fixtures(root, target_dir, canonical_manifest, plugin_type)
+    _write_json(target_dir / "manifest.json", canonical_manifest)
+    template_path = root / "generalized_template" / "template.py"
+    if template_path.exists() and not (target_dir / "template.py").exists():
+        shutil.copy2(template_path, target_dir / "template.py")
     _write_json(target_dir / "PROMOTION_MANIFEST.json", plan)
+    _write_json(target_dir / "PLUGIN_PROVENANCE.json", {
+        "status": "written",
+        "candidate_id": manifest.get("candidate_id"),
+        "source": manifest.get("source"),
+        "source_skill_id": manifest.get("source_skill_id"),
+        "source_policy": manifest.get("source_policy"),
+        "promotion_mode": promotion_mode,
+        "overlap_report": overlap,
+        "source_text_copied": False,
+    })
     return plan
+
+
+def _canonical_promoted_manifest(
+    candidate: dict[str, Any],
+    generalized: dict[str, Any],
+    plugin_type: str,
+) -> dict[str, Any]:
+    """Build the single runtime manifest consumed by automatic registration."""
+
+    manifest = dict(generalized)
+    manifest.update({
+        "candidate_id": candidate.get("candidate_id"),
+        "discipline": candidate.get("discipline") or candidate.get("primary_discipline") or generalized.get("discipline") or "default",
+        "plugin_type": plugin_type,
+        "maturity": generalized.get("maturity") or candidate.get("maturity") or "foundation",
+        "aliases": list(dict.fromkeys(list(generalized.get("aliases") or []) + list(candidate.get("aliases") or []))),
+        "variants": list(dict.fromkeys(list(generalized.get("variants") or []) + list(candidate.get("variants") or []))),
+        "source_skill_refs": list(dict.fromkeys(list(generalized.get("source_skill_refs") or []) + list(candidate.get("source_skill_refs") or [f"{candidate.get('source')}:{candidate.get('source_skill_id')}"]))),
+        "provenance_notes": generalized.get("provenance_notes") or candidate.get("provenance_notes") or "Promoted generalized plugin candidate.",
+        **_runtime_metadata({**candidate, **generalized}),
+    })
+    if plugin_type == "data_connector":
+        manifest.setdefault("connector_id", candidate.get("connector_id"))
+        manifest.setdefault("template", "template.py")
+    elif plugin_type == "method_template":
+        manifest.setdefault("template_id", candidate.get("template_id"))
+        manifest.setdefault("template", "template.py")
+    else:
+        rule_id = generalized.get("rule_id") or candidate.get("rule_id") or candidate.get("rule_group_id")
+        manifest.setdefault("rule_id", rule_id)
+        manifest.setdefault("rule_group_id", rule_id)
+        manifest.setdefault("template", "template.py")
+    return manifest
+
+
+def _merge_promoted_manifest(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    """Merge duplicate contributions without weakening an existing runtime contract."""
+
+    merged = dict(existing)
+    for key, value in incoming.items():
+        current = merged.get(key)
+        if isinstance(current, list) and isinstance(value, list):
+            merged[key] = list(dict.fromkeys(current + value))
+        elif isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = {**current, **{name: item for name, item in value.items() if item not in (None, "", [], {})}}
+        elif current in (None, "", [], {}):
+            merged[key] = value
+    merged["merge_strategy"] = "augment_existing"
+    merged["promotion_mode"] = "augment_existing"
+    merged["merged_candidate_ids"] = list(dict.fromkeys(list(existing.get("merged_candidate_ids") or []) + [str(incoming.get("candidate_id") or "")]))
+    return merged
+
+
+def _copy_promotion_fixtures(root: Path, target_dir: Path, manifest: dict[str, Any], plugin_type: str) -> None:
+    fixture_paths: list[str] = []
+    if plugin_type == "review_rule":
+        for source_name, target_name in [("positive_fixture.json", "fixture_positive.json"), ("negative_fixture.json", "fixture_negative.json")]:
+            source = root / source_name
+            if source.exists():
+                shutil.copy2(source, target_dir / target_name)
+                fixture_paths.append(target_name)
+        manifest["fixture_paths"] = fixture_paths
+        manifest["positive_fixture_refs"] = ["fixture_positive.json"] if "fixture_positive.json" in fixture_paths else []
+        manifest["negative_fixture_refs"] = ["fixture_negative.json"] if "fixture_negative.json" in fixture_paths else []
+    elif not manifest.get("fixture_paths"):
+        manifest["fixture_paths"] = []
 
 
 def _candidate_schema_report(manifest: dict[str, Any], root: Path) -> dict[str, Any]:
     plugin_type = str(manifest.get("plugin_type") or "method_template")
     missing: list[str] = []
     warnings: list[str] = []
+    if manifest.get("runtime_class") not in RUNTIME_CLASSES:
+        missing.append("valid_runtime_class")
+    if manifest.get("validation_level") not in VALIDATION_LEVELS:
+        missing.append("valid_validation_level")
     if plugin_type == "review_rule":
         for field in [
             "rule_id",

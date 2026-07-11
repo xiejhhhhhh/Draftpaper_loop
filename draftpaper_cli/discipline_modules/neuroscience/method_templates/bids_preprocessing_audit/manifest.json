@@ -1,0 +1,42 @@
+{
+  "display_name": "BIDS preprocessing audit",
+  "discipline": "neuroscience",
+  "packages": [
+    "pybids"
+  ],
+  "package_modules": [
+    "bids"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "bids preprocessing audit"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "bids_preprocessing_audit",
+  "method_family": "bids_preprocessing_audit",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/bids_preprocessing_audit.py",
+    "results/tables/bids_preprocessing_audit_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

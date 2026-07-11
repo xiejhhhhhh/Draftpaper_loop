@@ -1,0 +1,33 @@
+{
+  "display_name": "NeuroKit2 physiology table",
+  "discipline": "medicine",
+  "packages": [
+    "neurokit2"
+  ],
+  "package_modules": [
+    "neurokit2"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "neurokit2 physiology table"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "connector_id": "neurokit2_physiology_table",
+  "access_modes": [
+    "local_files"
+  ],
+  "download_or_access": [
+    "Use parameterized local files or user-authorized exports."
+  ],
+  "data_formats": [
+    "csv",
+    "json",
+    "parquet"
+  ],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Do not store credentials, server locations, or project-specific samples."
+  ]
+}

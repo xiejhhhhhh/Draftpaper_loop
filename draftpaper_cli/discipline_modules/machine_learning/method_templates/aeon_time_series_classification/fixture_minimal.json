@@ -1,0 +1,8 @@
+{
+  "plugin_id": "aeon_time_series_classification",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

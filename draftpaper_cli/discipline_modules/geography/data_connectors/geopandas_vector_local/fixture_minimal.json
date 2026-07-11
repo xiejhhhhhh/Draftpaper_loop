@@ -1,0 +1,8 @@
+{
+  "plugin_id": "geopandas_vector_local",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

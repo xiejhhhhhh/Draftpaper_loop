@@ -1,0 +1,42 @@
+{
+  "display_name": "FlowIO cytometry quality control",
+  "discipline": "bioinformatics",
+  "packages": [
+    "flowio"
+  ],
+  "package_modules": [
+    "flowio"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "flowio cytometry qc"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "flowio_cytometry_qc",
+  "method_family": "flowio_cytometry_qc",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/flowio_cytometry_qc.py",
+    "results/tables/flowio_cytometry_qc_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

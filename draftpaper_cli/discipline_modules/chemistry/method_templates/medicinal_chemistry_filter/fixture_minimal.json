@@ -1,0 +1,8 @@
+{
+  "plugin_id": "medicinal_chemistry_filter",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

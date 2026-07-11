@@ -1,0 +1,54 @@
+{
+  "display_name": "Ray remote training task contract",
+  "discipline": "machine_learning",
+  "packages": [
+    "ray"
+  ],
+  "package_modules": [
+    "ray"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "remote_server",
+  "validation_level": "mock_validated",
+  "aliases": [
+    "ray remote training contract"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [
+      "RAY_ADDRESS"
+    ],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  },
+  "template_id": "ray_remote_training_contract",
+  "method_family": "ray_remote_training_contract",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/ray_remote_training_contract.py",
+    "results/tables/ray_remote_training_contract_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ],
+  "credential_env_vars": [
+    "RAY_ADDRESS"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "plugin_id": "matchms_spectral_library",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

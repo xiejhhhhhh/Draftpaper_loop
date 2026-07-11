@@ -1,0 +1,42 @@
+{
+  "display_name": "PyDESeq2 differential expression",
+  "discipline": "bioinformatics",
+  "packages": [
+    "pydeseq2"
+  ],
+  "package_modules": [
+    "pydeseq2"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "pydeseq2 differential expression"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "pydeseq2_differential_expression",
+  "method_family": "pydeseq2_differential_expression",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/pydeseq2_differential_expression.py",
+    "results/tables/pydeseq2_differential_expression_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

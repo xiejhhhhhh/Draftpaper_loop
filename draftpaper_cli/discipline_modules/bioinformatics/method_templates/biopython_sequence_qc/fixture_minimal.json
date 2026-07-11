@@ -1,0 +1,8 @@
+{
+  "plugin_id": "biopython_sequence_qc",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

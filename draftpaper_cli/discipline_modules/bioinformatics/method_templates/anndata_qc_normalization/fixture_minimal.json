@@ -1,0 +1,8 @@
+{
+  "plugin_id": "anndata_qc_normalization",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "plugin_id": "wcs_coordinate_transform",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

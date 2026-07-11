@@ -1,0 +1,42 @@
+{
+  "display_name": "Pymoo multi-objective model search",
+  "discipline": "machine_learning",
+  "packages": [
+    "pymoo"
+  ],
+  "package_modules": [
+    "pymoo"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "pymoo multiobjective model search"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "pymoo_multiobjective_model_search",
+  "method_family": "pymoo_multiobjective_model_search",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/pymoo_multiobjective_model_search.py",
+    "results/tables/pymoo_multiobjective_model_search_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

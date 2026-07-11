@@ -1,0 +1,41 @@
+{
+  "display_name": "ENA and SRA API task contract",
+  "discipline": "bioinformatics",
+  "packages": [
+    "requests"
+  ],
+  "package_modules": [
+    "requests"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "remote_api",
+  "validation_level": "mock_validated",
+  "aliases": [
+    "ena sra api contract"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  },
+  "connector_id": "ena_sra_api_contract",
+  "access_modes": [
+    "api_access"
+  ],
+  "download_or_access": [
+    "Use parameterized local files or user-authorized exports."
+  ],
+  "data_formats": [
+    "csv",
+    "json",
+    "parquet"
+  ],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Do not store credentials, server locations, or project-specific samples."
+  ],
+  "credential_env_vars": []
+}

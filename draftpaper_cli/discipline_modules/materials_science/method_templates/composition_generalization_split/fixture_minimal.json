@@ -1,0 +1,8 @@
+{
+  "plugin_id": "composition_generalization_split",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

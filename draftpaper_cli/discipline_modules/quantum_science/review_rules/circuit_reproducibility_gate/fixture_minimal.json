@@ -1,0 +1,8 @@
+{
+  "plugin_id": "circuit_reproducibility_gate",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

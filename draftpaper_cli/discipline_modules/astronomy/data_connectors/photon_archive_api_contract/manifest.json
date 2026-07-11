@@ -1,0 +1,46 @@
+{
+  "display_name": "Photon archive API task contract",
+  "discipline": "astronomy",
+  "packages": [
+    "requests"
+  ],
+  "package_modules": [
+    "requests"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "remote_api",
+  "validation_level": "mock_validated",
+  "aliases": [
+    "photon archive api contract"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [
+      "ASTRONOMY_ARCHIVE_TOKEN"
+    ],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  },
+  "connector_id": "photon_archive_api_contract",
+  "access_modes": [
+    "api_access",
+    "instrument_archive"
+  ],
+  "download_or_access": [
+    "Use parameterized local files or user-authorized exports."
+  ],
+  "data_formats": [
+    "csv",
+    "json",
+    "parquet"
+  ],
+  "requires_credentials": true,
+  "genericity_rules": [
+    "Do not store credentials, server locations, or project-specific samples."
+  ],
+  "credential_env_vars": [
+    "ASTRONOMY_ARCHIVE_TOKEN"
+  ]
+}

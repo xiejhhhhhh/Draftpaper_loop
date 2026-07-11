@@ -1,0 +1,8 @@
+{
+  "plugin_id": "single_cell_cluster_stability_gate",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

@@ -16,6 +16,18 @@ PLUGIN_KINDS = {
     "review_rules": "review",
 }
 
+RUNTIME_CLASSES = {
+    "local_pure_python",
+    "local_optional_dependency",
+    "remote_api",
+    "remote_server",
+    "gpu_model",
+    "laboratory_hardware",
+    "support_only",
+}
+
+VALIDATION_LEVELS = {"plan_only", "mock_validated", "fixture_runnable", "live_validated"}
+
 
 def _module_root() -> Path:
     return Path(__file__).resolve().parent / "discipline_modules"
@@ -49,6 +61,9 @@ def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
             "has_template": (plugin_dir / "template.py").exists(),
             "fixtures": fixtures,
             "maturity": manifest.get("maturity") or manifest.get("status") or "foundation",
+            "runtime_class": manifest.get("runtime_class") or "local_optional_dependency",
+            "validation_level": manifest.get("validation_level") or "plan_only",
+            "manifest_data": manifest,
         })
     return {
         "status": "written",
@@ -74,6 +89,20 @@ def validate_template_registry(root: Path | None = None) -> dict[str, Any]:
                 "severity": "error",
                 "code": "plugin_id_missing",
                 "plugin_id": "",
+                "path": str(entry["path"]),
+            })
+        if entry["runtime_class"] not in RUNTIME_CLASSES:
+            issues.append({
+                "severity": "error",
+                "code": "runtime_class_invalid",
+                "plugin_id": str(entry["plugin_id"]),
+                "path": str(entry["path"]),
+            })
+        if entry["validation_level"] not in VALIDATION_LEVELS:
+            issues.append({
+                "severity": "error",
+                "code": "validation_level_invalid",
+                "plugin_id": str(entry["plugin_id"]),
                 "path": str(entry["path"]),
             })
     blocking = [issue for issue in issues if issue["severity"] == "error"]

@@ -1,0 +1,4 @@
+{
+  "plugin_id": "medical_imaging_deidentification_gate",
+  "boundary": "No credentials, remote endpoint, project record, or private data."
+}

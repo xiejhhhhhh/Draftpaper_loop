@@ -333,6 +333,21 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.18.8 (2026-07-11) -- 本地 Skill 地基扩展与外部 mock 合同
+
+- 第一方本地 foundation catalog 已扩展到 159 个参数化插件，覆盖统计、实验设计、经典机器学习、表格/数组处理、科研可视化、地理、天文、生物信息、医学、化学、材料、物理和量子科学。所有插件只部署在对应学科的 `data_connectors`、`method_templates` 或 `review_rules` 目录中。
+- 原先合并的能力已拆成可独立选择的合同，包括 statistical analysis/power/design、Polars、Vaex、Dask local mode、Zarr、Matplotlib、Seaborn、NetworkX、GeoMaster 风格的本地坐标操作、Astropy FITS/WCS/Time/units/coordinates、生物信息 CPU 工作流、Pydicom/BIDS/NeuroKit2/survival、Molfeat、FluidSim CPU 和 Cirq 本地模拟。
+- 新增 12 个 API、远程服务器和 GPU 外部 foundation 合同。它们只使用 `mock_validated` fixture 和明确的 `task_contract`；全部记录 `live_execution_performed: false`，不会抓取数据或连接外部服务，并把所需凭证明确列为用户确认输入。
+- 真实外部验证严格按论文项目进行：只有用户授权的项目确实需要某个 API、SSH 服务器或 GPU 模型时才验证它，并带 provenance 升级该单个插件的 validation level，而不会把任何外部能力泛化为全局 live capability。
+
+### v0.18.7 (2026-07-11) -- Manifest 驱动的本地学科插件地基
+
+- 学科插件 manifest 已接入运行时模块注册。在 `discipline_modules/<discipline>/{data_connectors,method_templates,review_rules}/<plugin>/` 下新增合法目录后，会自动扩展该学科的 `DisciplineModuleSpec`；只有 manifest 的新学科也可被调用，不再必须新增静态 `module.py`。
+- 新增插件运行等级：`runtime_class` 用于区分 `local_pure_python`、`local_optional_dependency`、`remote_api`、`remote_server`、`gpu_model`、`laboratory_hardware` 和 `support_only`；`validation_level` 用于区分 `plan_only`、`mock_validated`、`fixture_runnable` 和 `live_validated`。本地模板不会把未安装 package、远程服务、集群或 GPU 作业伪装为已运行。
+- 新增 80 个第一方、参数化的基础插件，每个包含 `template.py`、manifest 以及正常/失败/边界 fixture，覆盖本地统计与经典机器学习、表格和数组处理、科研可视化、Astropy 的 FITS/WCS/Time/units/coordinates、GeoPandas 的矢量与 CRS 工作流，以及 chemistry、materials_science、physics、quantum_science、neuroscience 五个新学科地基。
+- 每个新学科先提供 3 个本地 data connector、5 个 method template 和 5 条证据绑定的 advisory review rule。review rule 在具备学科证据、fixture 和明确 promote 前保持 contextual candidate，不会直接成为硬阈值。
+- candidate promote 现在会在 `template.py`、fixture 和 provenance 旁边写入统一的 `manifest.json`，该 manifest 会立即被运行时自动注册器读取；与已有插件高重合的 candidate 会成为 `augment_existing` overlay，合并 aliases、variants、fixture refs 和 provenance，而不会静默生成重复的插件合同。
+
 ### v0.18.6 (2026-07-11) -- 第三方 skills 到学科插件与运行时 review rule 门控
 
 - 新增 metadata-only 的第三方 skills 转换链路：`snapshot-skill-source`、`inspect-skill-source`、`index-skill-source`、`classify-skill-source`、`map-skill-capabilities`、`extract-skill-capabilities` 和 `compile-skill-source`，用于把 AcademicForge 类 skill catalog、个人科研 skills 或本地项目中沉淀出的技能转为候选报告，而不是复制源码或直接安装插件。

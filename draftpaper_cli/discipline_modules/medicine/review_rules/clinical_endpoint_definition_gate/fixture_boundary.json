@@ -1,0 +1,4 @@
+{
+  "plugin_id": "clinical_endpoint_definition_gate",
+  "boundary": "No credentials, remote endpoint, project record, or private data."
+}

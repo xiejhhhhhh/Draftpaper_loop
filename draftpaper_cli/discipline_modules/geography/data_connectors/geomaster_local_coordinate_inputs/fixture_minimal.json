@@ -1,0 +1,8 @@
+{
+  "plugin_id": "geomaster_local_coordinate_inputs",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

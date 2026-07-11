@@ -1,0 +1,8 @@
+{
+  "plugin_id": "materials_property_visualization",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

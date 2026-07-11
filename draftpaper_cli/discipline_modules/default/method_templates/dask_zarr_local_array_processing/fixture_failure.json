@@ -1,0 +1,4 @@
+{
+  "plugin_id": "dask_zarr_local_array_processing",
+  "roles": []
+}

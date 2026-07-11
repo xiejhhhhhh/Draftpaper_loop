@@ -1,0 +1,8 @@
+{
+  "plugin_id": "bulk_rnaseq_count_matrix",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

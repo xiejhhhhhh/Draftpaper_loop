@@ -1,0 +1,42 @@
+{
+  "display_name": "ETE toolkit phylogeny",
+  "discipline": "bioinformatics",
+  "packages": [
+    "ete3"
+  ],
+  "package_modules": [
+    "ete3"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "etetoolkit phylogeny"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "etetoolkit_phylogeny",
+  "method_family": "etetoolkit_phylogeny",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/etetoolkit_phylogeny.py",
+    "results/tables/etetoolkit_phylogeny_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

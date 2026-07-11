@@ -1,0 +1,8 @@
+{
+  "plugin_id": "scanpy_matrix_local",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

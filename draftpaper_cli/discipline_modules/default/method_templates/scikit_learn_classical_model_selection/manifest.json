@@ -1,0 +1,42 @@
+{
+  "display_name": "Scikit-learn classical model selection",
+  "discipline": "default",
+  "packages": [
+    "scikit-learn"
+  ],
+  "package_modules": [
+    "sklearn"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "scikit learn classical model selection"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "scikit_learn_classical_model_selection",
+  "method_family": "scikit_learn_classical_model_selection",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/scikit_learn_classical_model_selection.py",
+    "results/tables/scikit_learn_classical_model_selection_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

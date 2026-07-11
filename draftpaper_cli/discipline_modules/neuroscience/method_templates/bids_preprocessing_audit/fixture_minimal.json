@@ -1,0 +1,8 @@
+{
+  "plugin_id": "bids_preprocessing_audit",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

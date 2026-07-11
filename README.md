@@ -417,6 +417,21 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.18.8 (2026-07-11) -- Expanded Local Skill Foundations and Mock External Contracts
+
+- Expanded the first-party local foundation catalog to 159 parameterized plugins across statistics, experimental design, classical ML, tabular/array processing, scientific visualization, geography, astronomy, bioinformatics, medicine, chemistry, materials science, physics, and quantum science. Every plugin is placed only under its discipline's `data_connectors`, `method_templates`, or `review_rules` directory.
+- Split previously combined capabilities into independently selectable contracts, including statistical analysis/power/design, Polars, Vaex, Dask local mode, Zarr, Matplotlib, Seaborn, NetworkX, GeoMaster-style local coordinate operations, Astropy FITS/WCS/Time/units/coordinates, Bioinformatics CPU workflows, Pydicom/BIDS/NeuroKit2/survival analysis, Molfeat, FluidSim CPU, and Cirq local simulation.
+- Added 12 external foundation contracts for API, remote-server, and GPU routes. They use `mock_validated` fixtures and an explicit `task_contract`; every one records `live_execution_performed: false`, does not fetch data or contact external services, and surfaces required credentials as user-confirmed inputs.
+- Real external validation is deliberately project-specific: validate an API, SSH server, or GPU model only when a user-authorized paper project needs it, then upgrade that individual plugin's validation level with provenance instead of claiming a globally live capability.
+
+### v0.18.7 (2026-07-11) -- Manifest-Driven Local Discipline Foundations
+
+- Discipline plugin manifests now participate in runtime module registration. Adding a valid directory under `discipline_modules/<discipline>/{data_connectors,method_templates,review_rules}/<plugin>/` automatically extends that discipline's `DisciplineModuleSpec`; a manifest-only discipline is available without adding a static `module.py`.
+- Added explicit plugin execution metadata: `runtime_class` distinguishes `local_pure_python`, `local_optional_dependency`, `remote_api`, `remote_server`, `gpu_model`, `laboratory_hardware`, and `support_only`; `validation_level` distinguishes `plan_only`, `mock_validated`, `fixture_runnable`, and `live_validated`. A local template never claims that an unavailable package, remote service, cluster, or GPU job has run.
+- Added 80 first-party, parameterized foundation plugins with `template.py`, manifest, and normal/failure/boundary fixtures. They cover local statistics and classic ML, tabular and array processing, scientific visualization, Astropy FITS/WCS/Time/units/coordinates, GeoPandas vector/CRS work, and five new foundations: chemistry, materials science, physics, quantum science, and neuroscience.
+- Each new discipline starts with 3 local data connectors, 5 method templates, and 5 advisory evidence-bound review rules. Review rules remain contextual candidates until discipline evidence, fixtures, and explicit promotion justify a blocking threshold.
+- Candidate promotion now writes one canonical `manifest.json` next to `template.py`, fixture files, and provenance. That manifest is immediately consumable by runtime auto-registration; overlapping candidates become `augment_existing` overlays that merge aliases, variants, fixture references, and provenance instead of silently creating duplicate plugin contracts.
+
 ### v0.18.6 (2026-07-11) -- Third-party Skills to Discipline Plugins and Runtime Review Rules
 
 - Added a metadata-only third-party skill conversion pipeline: `snapshot-skill-source`, `inspect-skill-source`, `index-skill-source`, `classify-skill-source`, `map-skill-capabilities`, `extract-skill-capabilities`, and `compile-skill-source`. It turns AcademicForge-style skill catalogs, personal research skills, or project-distilled skills into candidate reports without copying source code or installing plugins directly.

@@ -8,6 +8,7 @@ from .astronomy import MODULE as ASTRONOMY
 from .bioinformatics import MODULE as BIOINFORMATICS
 from .base import DisciplineModule
 from .base import DisciplineModuleSpec
+from .manifest_runtime import dynamic_manifest_module, merge_manifest_plugins
 from .default import MODULE as DEFAULT
 from .ecology import MODULE as ECOLOGY
 from .engineering import MODULE as ENGINEERING
@@ -122,17 +123,29 @@ def _module_order_from_profile(profile: dict[str, object]) -> list[str]:
 
 def get_discipline_module(profile_or_name: str | dict[str, object] | None) -> DisciplineModule:
     if isinstance(profile_or_name, dict):
-        module_ids = [item for item in _module_order_from_profile(profile_or_name) if item in MODULES]
+        requested_ids = _module_order_from_profile(profile_or_name)
+        runtime_modules = {
+            item: merge_manifest_plugins(MODULES[item]) if item in MODULES else dynamic_manifest_module(item)
+            for item in requested_ids
+        }
+        module_ids = [item for item in requested_ids if runtime_modules.get(item) is not None]
         visible = [item for item in module_ids if item != "default"]
         if len(visible) > 1:
             primary = str(profile_or_name.get("primary_discipline") or profile_or_name.get("discipline") or visible[0])
             secondary = [item for item in visible if item != primary]
-            return CompositeDisciplineModule([MODULES[item] for item in module_ids], primary=primary, secondary=secondary)
+            return CompositeDisciplineModule([runtime_modules[item] for item in module_ids if runtime_modules[item] is not None], primary=primary, secondary=secondary)
         name = visible[0] if visible else str(profile_or_name.get("discipline") or profile_or_name.get("engine") or "default")
     else:
         name = str(profile_or_name or "default")
-    return MODULES.get(name, DEFAULT)
+    return merge_manifest_plugins(MODULES[name]) if name in MODULES else (dynamic_manifest_module(name) or merge_manifest_plugins(DEFAULT))
 
 
 def list_discipline_modules() -> list[dict[str, object]]:
-    return [module.spec.as_dict() for module in MODULES.values()]
+    module_ids = set(MODULES) | set(dynamic_manifest_module_ids())
+    return [get_discipline_module(module_id).spec.as_dict() for module_id in sorted(module_ids)]
+
+
+def dynamic_manifest_module_ids() -> list[str]:
+    from .manifest_runtime import discovered_plugin_specs
+
+    return [discipline for discipline in discovered_plugin_specs() if discipline not in MODULES]

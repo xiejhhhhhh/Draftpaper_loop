@@ -1,0 +1,8 @@
+{
+  "plugin_id": "dask_local_parallel_analysis",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

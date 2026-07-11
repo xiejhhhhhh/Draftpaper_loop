@@ -1,0 +1,42 @@
+{
+  "display_name": "Astropy Time, units, and coordinates",
+  "discipline": "astronomy",
+  "packages": [
+    "astropy"
+  ],
+  "package_modules": [
+    "astropy"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "astropy time units coordinates"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "astropy_time_units_coordinates",
+  "method_family": "astropy_time_units_coordinates",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/astropy_time_units_coordinates.py",
+    "results/tables/astropy_time_units_coordinates_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

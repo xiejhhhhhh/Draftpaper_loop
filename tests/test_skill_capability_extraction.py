@@ -743,6 +743,85 @@ rescue routes before accepting predictive claims.
             self.assertEqual(promotion["status"], "planned")
             self.assertIn("discipline_modules", promotion["target_dir"])
 
+    def test_promotion_writes_runtime_manifest_with_propagated_execution_metadata(self) -> None:
+        from draftpaper_cli.discipline_modules.manifest_runtime import dynamic_manifest_module
+        from draftpaper_cli.plugin_candidates import (
+            extract_skill_capabilities,
+            generalize_plugin_candidate,
+            promote_plugin_candidate,
+            validate_plugin_candidate,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill = root / "SKILL.md"
+            skill.write_text("Use scikit-learn baseline model classification with local CSV features.", encoding="utf-8")
+            extracted = extract_skill_capabilities(
+                skill,
+                source="academicforge",
+                skill_id="local.preprocessing",
+                discipline="machine_learning",
+                output_root=root / "out",
+            )
+            candidate = Path(next(item["path"] for item in extracted["candidates"] if item["plugin_type"] == "method_template"))
+            candidate_manifest_path = candidate / "candidate_manifest.json"
+            candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
+            candidate_manifest["template_id"] = "local_preprocessing_example"
+            candidate_manifest["method_family"] = "local_preprocessing_example"
+            candidate_manifest_path.write_text(json.dumps(candidate_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+            generalize_plugin_candidate(candidate)
+            self.assertEqual(validate_plugin_candidate(candidate)["status"], "passed")
+            promotion = promote_plugin_candidate(
+                candidate,
+                require_human_confirmation=True,
+                dry_run=False,
+                target_root=root / "discipline_modules",
+            )
+            target = Path(promotion["target_dir"])
+            manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["runtime_class"], "local_optional_dependency")
+            self.assertEqual(manifest["validation_level"], "plan_only")
+            module = dynamic_manifest_module("machine_learning", root / "discipline_modules")
+            self.assertIsNotNone(module)
+            self.assertIn(manifest["template_id"], {item["template_id"] for item in module.spec.method_template_dicts()})
+
+    def test_overlapping_promotion_is_recorded_as_an_augmenting_merge(self) -> None:
+        from draftpaper_cli.plugin_candidates import (
+            extract_skill_capabilities,
+            generalize_plugin_candidate,
+            promote_plugin_candidate,
+            validate_plugin_candidate,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill = root / "SKILL.md"
+            skill.write_text("Use baseline model classification with train test validation.", encoding="utf-8")
+            extracted = extract_skill_capabilities(
+                skill,
+                source="academicforge",
+                skill_id="baseline.model",
+                discipline="machine_learning",
+                output_root=root / "out",
+            )
+            candidate = Path(next(item["path"] for item in extracted["candidates"] if item["plugin_type"] == "method_template"))
+            manifest_path = candidate / "candidate_manifest.json"
+            candidate_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            candidate_manifest["template_id"] = "baseline_model"
+            candidate_manifest["method_family"] = "baseline_model"
+            manifest_path.write_text(json.dumps(candidate_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+            generalize_plugin_candidate(candidate)
+            self.assertEqual(validate_plugin_candidate(candidate)["overlap_report"]["decision"], "merge_with_existing")
+            promotion = promote_plugin_candidate(
+                candidate,
+                require_human_confirmation=True,
+                dry_run=False,
+                target_root=root / "discipline_modules",
+            )
+            self.assertEqual(promotion["promotion_mode"], "augment_existing")
+            manifest = json.loads((Path(promotion["target_dir"]) / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["merge_strategy"], "augment_existing")
+
 
 if __name__ == "__main__":
     unittest.main()

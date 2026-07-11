@@ -1,0 +1,42 @@
+{
+  "display_name": "UMAP embedding analysis",
+  "discipline": "machine_learning",
+  "packages": [
+    "umap-learn"
+  ],
+  "package_modules": [
+    "umap"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "umap embedding analysis"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "umap_embedding_analysis",
+  "method_family": "umap_embedding_analysis",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/umap_embedding_analysis.py",
+    "results/tables/umap_embedding_analysis_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "display_name": "PyTorch GPU training task contract",
+  "discipline": "machine_learning",
+  "packages": [
+    "torch"
+  ],
+  "package_modules": [
+    "torch"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "gpu_model",
+  "validation_level": "mock_validated",
+  "aliases": [
+    "pytorch gpu training contract"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  },
+  "template_id": "pytorch_gpu_training_contract",
+  "method_family": "pytorch_gpu_training_contract",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/pytorch_gpu_training_contract.py",
+    "results/tables/pytorch_gpu_training_contract_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ],
+  "credential_env_vars": []
+}

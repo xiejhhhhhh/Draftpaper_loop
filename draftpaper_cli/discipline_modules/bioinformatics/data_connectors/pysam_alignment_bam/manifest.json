@@ -1,0 +1,33 @@
+{
+  "display_name": "Pysam alignment BAM input",
+  "discipline": "bioinformatics",
+  "packages": [
+    "pysam"
+  ],
+  "package_modules": [
+    "pysam"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "pysam alignment bam"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "connector_id": "pysam_alignment_bam",
+  "access_modes": [
+    "local_files"
+  ],
+  "download_or_access": [
+    "Use parameterized local files or user-authorized exports."
+  ],
+  "data_formats": [
+    "csv",
+    "json",
+    "parquet"
+  ],
+  "requires_credentials": false,
+  "genericity_rules": [
+    "Do not store credentials, server locations, or project-specific samples."
+  ]
+}

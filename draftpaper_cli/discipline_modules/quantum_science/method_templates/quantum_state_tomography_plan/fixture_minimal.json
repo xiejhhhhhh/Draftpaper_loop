@@ -1,0 +1,8 @@
+{
+  "plugin_id": "quantum_state_tomography_plan",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

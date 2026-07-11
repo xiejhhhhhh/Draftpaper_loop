@@ -1,0 +1,8 @@
+{
+  "plugin_id": "scikit_survival_time_to_event",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

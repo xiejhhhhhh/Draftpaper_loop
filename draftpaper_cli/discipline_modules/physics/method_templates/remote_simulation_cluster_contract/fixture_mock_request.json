@@ -1,0 +1,13 @@
+{
+  "plugin_id": "remote_simulation_cluster_contract",
+  "execution_mode": "mock_only",
+  "live_execution_performed": false,
+  "task_contract": {
+    "execution_mode": "mock_only",
+    "live_execution_performed": false,
+    "required_user_inputs": [
+      "SIMULATION_CLUSTER_HOST"
+    ],
+    "next_step": "Provide user-authorized credentials, endpoint or compute environment for live validation."
+  }
+}

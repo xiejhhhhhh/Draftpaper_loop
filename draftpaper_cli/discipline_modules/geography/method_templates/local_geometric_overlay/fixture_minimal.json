@@ -1,0 +1,8 @@
+{
+  "plugin_id": "local_geometric_overlay",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

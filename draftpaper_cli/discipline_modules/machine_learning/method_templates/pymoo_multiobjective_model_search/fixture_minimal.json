@@ -1,0 +1,8 @@
+{
+  "plugin_id": "pymoo_multiobjective_model_search",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

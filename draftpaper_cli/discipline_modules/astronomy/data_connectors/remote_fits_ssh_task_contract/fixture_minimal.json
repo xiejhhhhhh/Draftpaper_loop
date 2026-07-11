@@ -1,0 +1,8 @@
+{
+  "plugin_id": "remote_fits_ssh_task_contract",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

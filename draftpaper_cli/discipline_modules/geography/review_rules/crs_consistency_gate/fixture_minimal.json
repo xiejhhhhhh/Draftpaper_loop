@@ -1,0 +1,8 @@
+{
+  "plugin_id": "crs_consistency_gate",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

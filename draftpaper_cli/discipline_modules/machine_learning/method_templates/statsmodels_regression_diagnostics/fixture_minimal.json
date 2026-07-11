@@ -1,0 +1,8 @@
+{
+  "plugin_id": "statsmodels_regression_diagnostics",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

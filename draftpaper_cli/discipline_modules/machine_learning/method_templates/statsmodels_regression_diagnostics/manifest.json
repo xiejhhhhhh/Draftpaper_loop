@@ -1,0 +1,42 @@
+{
+  "display_name": "Statsmodels regression diagnostics",
+  "discipline": "machine_learning",
+  "packages": [
+    "statsmodels"
+  ],
+  "package_modules": [
+    "statsmodels"
+  ],
+  "maturity": "foundation",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": [
+    "statsmodels regression diagnostics"
+  ],
+  "provenance_notes": "First-party foundation distilled from publicly documented local scientific Python capabilities; no upstream source code is copied.",
+  "template_id": "statsmodels_regression_diagnostics",
+  "method_family": "statsmodels_regression_diagnostics",
+  "input_roles": [
+    "analysis_table_or_array"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "metadata"
+  ],
+  "output_artifacts": [
+    "methods/src/statsmodels_regression_diagnostics.py",
+    "results/tables/statsmodels_regression_diagnostics_summary.json"
+  ],
+  "figure_groups": [
+    "method_diagnostic_or_result_summary"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "input_schema_check",
+    "dependency_check",
+    "held_out_or_sensitivity_check"
+  ],
+  "genericity_rules": [
+    "Parameterize input columns, units, splits, and scientific hypotheses."
+  ]
+}

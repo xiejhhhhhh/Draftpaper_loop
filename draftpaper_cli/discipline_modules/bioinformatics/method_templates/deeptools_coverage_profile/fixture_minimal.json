@@ -1,0 +1,8 @@
+{
+  "plugin_id": "deeptools_coverage_profile",
+  "roles": [
+    "analysis_table_or_array",
+    "method_output",
+    "result_metric"
+  ]
+}

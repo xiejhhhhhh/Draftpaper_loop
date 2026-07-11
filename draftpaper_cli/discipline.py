@@ -217,6 +217,21 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         "boundary condition",
         "mesh",
     ]
+    chemistry_terms = [
+        "chemistry", "chemical", "molecule", "molecular", "smiles", "reaction", "qsar", "mass spectrometry", "compound", "ligand",
+    ]
+    materials_terms = [
+        "materials science", "material", "crystal", "alloy", "formation energy", "phase stability", "band gap", "pymatgen",
+    ]
+    physics_terms = [
+        "physics", "physical", "hamiltonian", "conservation law", "dynamical system", "dimensional analysis", "fluid dynamics",
+    ]
+    quantum_terms = [
+        "quantum", "qubit", "quantum circuit", "quantum state", "quantum simulation", "qiskit", "qutip",
+    ]
+    neuroscience_terms = [
+        "neuroscience", "neural imaging", "neuroimaging", "fmri", "eeg", "brain", "bids", "connectivity", "physiological signal",
+    ]
     geography_score = sum(1 for term in geography_terms if term in lowered)
     astronomy_score = sum(1 for term in astronomy_terms if term in lowered)
     machine_learning_score = sum(1 for term in machine_learning_terms if term in lowered)
@@ -226,6 +241,11 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
     medicine_score = sum(1 for term in medicine_terms if term in lowered)
     biology_score = sum(1 for term in biology_terms if term in lowered)
     engineering_score = sum(1 for term in engineering_terms if term in lowered)
+    chemistry_score = sum(1 for term in chemistry_terms if term in lowered)
+    materials_score = sum(1 for term in materials_terms if term in lowered)
+    physics_score = sum(1 for term in physics_terms if term in lowered)
+    quantum_score = sum(1 for term in quantum_terms if term in lowered)
+    neuroscience_score = sum(1 for term in neuroscience_terms if term in lowered)
     scores = {
         "geography": geography_score,
         "astronomy": astronomy_score,
@@ -236,6 +256,11 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
         "medicine": medicine_score,
         "biology": biology_score,
         "engineering": engineering_score,
+        "chemistry": chemistry_score,
+        "materials_science": materials_score,
+        "physics": physics_score,
+        "quantum_science": quantum_score,
+        "neuroscience": neuroscience_score,
     }
 
     def select_primary_discipline() -> str:
@@ -257,6 +282,11 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "bioinformatics",
             "finance",
             "engineering",
+            "chemistry",
+            "materials_science",
+            "physics",
+            "quantum_science",
+            "neuroscience",
             "ecology",
         ]
         subject_scores = {
@@ -371,6 +401,22 @@ def infer_discipline_from_text(text: str) -> dict[str, Any]:
             "confidence": "high" if engineering_score >= 4 else "medium",
             "matched_terms": [term for term in engineering_terms if term in lowered],
             "subdisciplines": sorted(set(subdisciplines)) or ["engineering"],
+        })
+    if primary_discipline in {"chemistry", "materials_science", "physics", "quantum_science", "neuroscience"}:
+        term_map = {
+            "chemistry": chemistry_terms,
+            "materials_science": materials_terms,
+            "physics": physics_terms,
+            "quantum_science": quantum_terms,
+            "neuroscience": neuroscience_terms,
+        }
+        score = scores[primary_discipline]
+        return with_composite_fields({
+            "discipline": primary_discipline,
+            "engine": primary_discipline,
+            "confidence": "high" if score >= 4 else "medium",
+            "matched_terms": [term for term in term_map[primary_discipline] if term in lowered],
+            "subdisciplines": [primary_discipline],
         })
     if primary_discipline == "ecology":
         subdisciplines = []
