@@ -417,6 +417,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.21.0 (2026-07-11) -- 95% Figure and Manuscript Quality Contracts
+
+- Added `results_narrative_contract.json`, which assigns distinct scientific jobs to main figures: study boundary, pre-model signal, model comparison, component attribution, and error/uncertainty. Each role is bound to run-consistent metrics, its scientific question, and claim boundary, while Codex retains free prose composition.
+- Added `prepare-section-writing` and `assess-manuscript-quality`. Results are scored for evidence fidelity, narrative coverage, scientific reasoning, claim calibration, and prose diversity; a formal candidate must reach 0.95, while wrong metrics and repetitive template prose enter repair.
+- Added `assess-figure-publication-quality`. A non-empty PNG is no longer sufficient: main figures must satisfy semantic contracts, data/method plugin run provenance, panel completeness, statistical interpretation, pixel dimensions, and legibility.
+- The generic plotter no longer silently replaces an unknown main-result figure with a data overview. Missing main-figure methods enter plugin rescue; generic diagnostic views remain available only when explicitly planned.
+
 ### v0.20.2 (2026-07-11) -- Post-Results Discipline Review and Capability Rescue Boundary
 
 - Figure contracts no longer execute discipline `review_rule` gates before plotting. Data and method plugins produce figures; only figures with actual plugin traces activate matching discipline rules in `review-results-with-discipline-rules`.

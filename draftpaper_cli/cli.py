@@ -38,7 +38,9 @@ from .integrity_gate import IntegrityGateError, run_integrity_gate
 from .journal_profile import JournalProfileError, resolve_journal_template
 from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
 from .literature_search import search_literature_for_project
-from .manuscript_composer import SectionCompositionError, submit_section_draft
+from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
+from .manuscript_quality import assess_results_manuscript_quality
+from .scientific_figure_quality import assess_scientific_figure_quality
 from .method_plan import MethodPlanError, collect_method_plan
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
@@ -443,6 +445,18 @@ def build_parser() -> argparse.ArgumentParser:
     submit_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     submit_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
     submit_section.add_argument("--input", required=True, help="Path to a Codex-composed LaTeX section candidate.")
+
+    prepare_section = subparsers.add_parser("prepare-section-writing", help="Build the evidence and narrative-contract packet for free Codex section writing.")
+    prepare_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    prepare_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+
+    manuscript_quality = subparsers.add_parser("assess-manuscript-quality", help="Score Results against evidence fidelity and scientific narrative contracts.")
+    manuscript_quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    manuscript_quality.add_argument("--section", default="results", choices=["results"])
+    manuscript_quality.add_argument("--input", default=None, help="Optional Results LaTeX file; defaults to results/results.tex.")
+
+    figure_publication_quality = subparsers.add_parser("assess-figure-publication-quality", help="Score rendered main figures against semantic, plugin-run, panel, evidence, and legibility contracts.")
+    figure_publication_quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
     submit_figure_semantics = subparsers.add_parser("submit-figure-semantic-annotations", help="Submit auditable semantic mappings for legacy rendered figures.")
     submit_figure_semantics.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1493,6 +1507,34 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "prepare-section-writing":
+        try:
+            result = build_section_evidence_packet(args.project, args.section)
+        except (SectionCompositionError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "assess-manuscript-quality":
+        try:
+            text = Path(args.input).read_text(encoding="utf-8-sig") if args.input else None
+            result = assess_results_manuscript_quality(args.project, text=text)
+        except (OSError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") == "pass" else 1
+
+    if args.command == "assess-figure-publication-quality":
+        try:
+            result = assess_scientific_figure_quality(args.project)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") == "pass" else 1
 
     if args.command == "submit-figure-semantic-annotations":
         try:

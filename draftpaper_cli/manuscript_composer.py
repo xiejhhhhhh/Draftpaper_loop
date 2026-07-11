@@ -56,6 +56,11 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
     except EvidenceSnapshotMismatch as exc:
         raise SectionCompositionError(str(exc)) from exc
     registry = _read_json(state.path / "writing" / "scientific_evidence_registry.json")
+    results_narrative_contract: dict[str, Any] = {}
+    if normalized == "results":
+        from .manuscript_quality import build_results_narrative_contract
+
+        results_narrative_contract = build_results_narrative_contract(state.path)
     packet = {
         "schema_version": "v0.17.6",
         "generated_at": utc_now(),
@@ -64,6 +69,7 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "scientific_evidence_registry": registry,
         "resolved_result_evidence": _read_json(state.path / "results" / "resolved_result_evidence.json"),
         "result_manifest": _read_json(state.path / "results" / "result_manifest.yaml"),
+        "results_narrative_contract": results_narrative_contract,
         "promoted_evidence_snapshot": promoted_snapshot,
         "hard_constraints": {
             "results_citations_forbidden": normalized == "results",
@@ -73,7 +79,9 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         },
         "instruction": (
             "Compose the section freely from the supplied scientific evidence. Paragraph order and sentence form are not "
-            "templated. The completed draft is accepted only after deterministic SectionWritingContract validation."
+            "templated. For Results, treat each narrative-contract role as a distinct scientific job: establish the study "
+            "boundary, diagnose pre-model signal, compare models, interpret ablations, and delimit uncertainty where present. "
+            "The completed draft is accepted only after deterministic evidence and quality validation."
         ),
     }
     output = state.path / "writing" / "section_packets" / f"{normalized}.json"
@@ -104,13 +112,30 @@ def select_validated_section_draft(project: str | Path, section: str, fallback_t
         (packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted"
     )
     report["candidate_path"] = candidate_path.relative_to(state.path).as_posix() if candidate_path.exists() else ""
+    quality_report: dict[str, Any] = {}
+    if normalized == "results" and len((packet.get("results_narrative_contract") or {}).get("figure_groups") or []) >= 3:
+        from .manuscript_quality import assess_results_manuscript_quality
+
+        quality_report = assess_results_manuscript_quality(
+            state.path,
+            text=text,
+            contract=packet.get("results_narrative_contract") or {},
+        )
+        report["manuscript_quality"] = quality_report
+        if mode == "codex_free_candidate" and quality_report.get("decision") != "pass":
+            report["decision"] = "blocked"
+            report.setdefault("issues", []).append({
+                "severity": "blocking",
+                "kind": "results_quality_below_target",
+                "detail": f"Results quality score {quality_report.get('score')} is below 0.95.",
+            })
     report_path = state.path / "writing" / "section_validation" / f"{normalized}.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     _write_json(report_path, report)
     if report.get("decision") == "blocked":
         details = "; ".join(str(item.get("detail") or item.get("kind")) for item in report.get("issues") or [])
         raise SectionCompositionError(f"{normalized.capitalize()} writing contract failed: {details}")
-    return {"text": text, "composition_mode": mode, "validation_report": report}
+    return {"text": text, "composition_mode": mode, "validation_report": report, "manuscript_quality": quality_report}
 
 
 def submit_section_draft(project: str | Path, section: str, input_path: str | Path) -> dict[str, Any]:
@@ -129,6 +154,20 @@ def submit_section_draft(project: str | Path, section: str, input_path: str | Pa
         text,
         packet.get("scientific_evidence_registry") or {},
     )
+    if normalized == "results" and len((packet.get("results_narrative_contract") or {}).get("figure_groups") or []) >= 3:
+        from .manuscript_quality import assess_results_manuscript_quality
+
+        quality_report = assess_results_manuscript_quality(
+            state.path,
+            text=text,
+            contract=packet.get("results_narrative_contract") or {},
+        )
+        report["manuscript_quality"] = quality_report
+        if quality_report.get("decision") != "pass":
+            raise SectionCompositionError(
+                f"Results quality contract failed: score {quality_report.get('score')} is below 0.95; "
+                "revise the evidence narrative before submission."
+            )
     if report.get("decision") == "blocked":
         details = "; ".join(str(item.get("detail") or item.get("kind")) for item in report.get("issues") or [])
         raise SectionCompositionError(f"{normalized.capitalize()} writing contract failed: {details}")

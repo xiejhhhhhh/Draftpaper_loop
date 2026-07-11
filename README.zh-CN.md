@@ -333,6 +333,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.21.0 (2026-07-11) -- 图表与文稿 95% 质量合同
+
+- 新增 `results_narrative_contract.json`，把每张主图区分为研究边界、建模前信号、模型对比、组件归因、误差与不确定性等独立叙事角色，并绑定同一运行中的指标、科学问题和论断边界。Codex 仍自由撰写，但不能再用同一段模板解释所有图。
+- 新增 `prepare-section-writing` 与 `assess-manuscript-quality`。Results 按证据真实性、叙事覆盖、科学推理、论断校准和行文多样性评分；正式候选稿最低要求为 0.95，错误指标或重复模板会进入修复路线。
+- 新增 `assess-figure-publication-quality`。PNG 存在不再等于合格，主图还必须满足语义合同、数据/方法插件运行追溯、面板完整性、统计解释、像素尺寸与可读性要求。
+- 通用绘图器不再把未知主图类型静默替换成数据概览图；主图缺少对应方法输出时进入插件补齐，只有明确的 supporting 图才允许使用通用诊断视图。
+
 ### v0.20.2 (2026-07-11) -- Results 后置学科审查与能力救援边界
 
 - 制图前的 figure contract 不再运行 `review_rule`。数据和方法插件负责产生图表；只有这些插件实际参与生成的图表，才会在 `review-results-with-discipline-rules` 阶段激活匹配的学科审稿规则。

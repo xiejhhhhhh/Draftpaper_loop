@@ -611,8 +611,15 @@ def render_scientific_figure(
         payload = _correlation_heatmap(path, figure, rows, numeric)
     elif kind in {"metric_summary", "performance", "model_performance"}:
         payload = _metric_summary(path, figure, metrics)
+    elif kind in {"data_overview", "sample_overview", "coverage_overview"}:
+        payload = _data_overview(path, figure, rows, numeric, label_column)
     elif kind in {"scatter_regression", "feature_relationship", "feature_response", "spatial_or_ranked_scatter", "time_series"}:
         payload = _scatter_regression(path, figure, rows, numeric, label_column)
+    elif str(figure.get("figure_role") or "main_result").lower() in {"main", "main_result", "primary"}:
+        raise ScientificPlotError(
+            f"Unsupported main-result figure type '{kind}' for {figure.get('id')}; "
+            "a bound plugin method output or project-specific implementation is required instead of a generic data-overview substitution."
+        )
     elif figure.get("no_flowchart_fallback", True):
         payload = _data_overview(path, figure, rows, numeric, label_column)
     else:

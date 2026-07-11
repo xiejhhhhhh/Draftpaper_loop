@@ -16,6 +16,8 @@ from .html_utils import write_html_report
 from .project_scaffold import utc_now
 from .project_state import load_project
 from .review_rule_runtime import assess_review_rules
+from .manuscript_quality import assess_results_manuscript_quality, build_results_narrative_contract
+from .scientific_figure_quality import assess_scientific_figure_quality
 
 
 REPORT_JSON = "review/result_discipline_review_report.json"
@@ -141,6 +143,21 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
     })
     results_bytes = results_path.read_bytes()
     results_semantic_audit = _audit_results_semantics(state.path, results_bytes.decode("utf-8-sig", errors="replace"))
+    narrative_contract = build_results_narrative_contract(state.path)
+    manuscript_quality = (
+        assess_results_manuscript_quality(
+            state.path,
+            text=results_bytes.decode("utf-8-sig", errors="replace"),
+            contract=narrative_contract,
+        )
+        if len(narrative_contract.get("figure_groups") or []) >= 3
+        else {"decision": "not_assessed", "score": None, "issues": []}
+    )
+    figure_quality = (
+        assess_scientific_figure_quality(state.path)
+        if len(narrative_contract.get("figure_groups") or []) >= 3
+        else {"decision": "not_assessed", "score": None, "issues": []}
+    )
     evidence_context = {
         "available_evidence_roles": ["results_prose", "figure_plugin_trace", "plugin_binding_plan"],
         "figure_plugin_trace_decision": trace.get("decision"),
@@ -165,9 +182,12 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
             "policy": "No data/method-plugin-generated figure was present, so discipline plugin review rules were not activated.",
         }
     semantic_repairs = [item for item in results_semantic_audit["issues"] if item.get("severity") == "repair_required"]
-    if semantic_repairs:
+    if semantic_repairs or manuscript_quality.get("decision") == "repair_required" or figure_quality.get("decision") == "repair_required":
         decision = "repair_required"
-        action = {"command": "write-results", "reason": "Results semantic audit found an untraceable metric, citation, or internal artifact expression."}
+        action = {
+            "command": "verify-methods" if figure_quality.get("decision") == "repair_required" else "write-results",
+            "reason": "Figures or Results require repair before they meet the 0.95 publication-quality contracts.",
+        }
     elif rule_gate.get("decision") == "revise_required":
         decision = "repair_required"
         rescue = (rule_gate.get("rescue_tasks") or [{}])[0]
@@ -191,6 +211,8 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "figure_plugin_trace": "results/figure_plugin_trace_report.json",
         "review_rule_gate": rule_gate,
         "results_semantic_audit": results_semantic_audit,
+        "manuscript_quality": manuscript_quality,
+        "figure_publication_quality": figure_quality,
         "recommended_next_action": action,
         "policy": "Only plugin-generated figures activate discipline review rules. Findings repair Results claims and scientific interpretation; they do not retroactively block figure generation. Citation audit remains later and preserves references.",
     }
