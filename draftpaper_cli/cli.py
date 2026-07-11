@@ -52,8 +52,19 @@ from .orchestrator import OrchestratorError, checkpoint_project, resume_project,
 from .passport import PassportError
 from .plugin_candidates import (
     PluginCandidateError,
+    classify_skill_source,
+    compile_skill_source,
+    extract_review_rule_signals,
+    extract_skill_capabilities,
     generalize_plugin_candidate,
+    index_skill_source,
+    inspect_skill_source,
+    map_skill_capabilities,
     package_plugin_contribution,
+    preflight_plugin_contribution_package,
+    promote_plugin_candidate,
+    review_plugin_contribution_package,
+    snapshot_skill_source,
     summarize_plugin_candidates,
     validate_plugin_candidate,
     write_github_contribution_guide,
@@ -97,10 +108,66 @@ from .result_validity import ResultValidityError, assess_result_validity
 from .result_support import ResultSupportError, assess_result_support
 from .result_rescue import ResultRescueError, prepare_result_rescue
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
+from .review_rule_runtime import assess_review_rules
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .template_registry import validate_template_registry
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
+
+
+def _read_cli_json(path: str | None) -> dict:
+    if not path:
+        return {}
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _skill_source_root_from_args(args: argparse.Namespace) -> str | None:
+    direct = getattr(args, "source_root", None) or getattr(args, "path", None)
+    if direct:
+        return direct
+    for attr in ["snapshot", "inspection", "index"]:
+        report = _read_cli_json(getattr(args, attr, None))
+        source_root = report.get("source_root")
+        if source_root:
+            return str(source_root)
+    return None
+
+
+def _single_skill_source_file_from_args(args: argparse.Namespace) -> str | None:
+    direct = getattr(args, "source_file", None) or getattr(args, "path", None)
+    if direct:
+        return str(direct)
+    snapshot = _read_cli_json(getattr(args, "snapshot", None))
+    if not snapshot:
+        return None
+    records = snapshot.get("records") or []
+    source_root = snapshot.get("source_root")
+    if len(records) != 1 or not source_root:
+        return None
+    relative_path = records[0].get("relative_path")
+    if not relative_path:
+        return None
+    return str(Path(str(source_root)) / str(relative_path))
+
+
+def _skill_source_label(args: argparse.Namespace) -> str:
+    return str(getattr(args, "adapter", None) or getattr(args, "source", None) or "local_skill")
+
+
+def _skill_source_url(args: argparse.Namespace) -> str | None:
+    explicit = getattr(args, "source_url", None)
+    if explicit:
+        return str(explicit)
+    repo = getattr(args, "repo", None)
+    if repo:
+        repo_text = str(repo)
+        if repo_text.startswith("http://") or repo_text.startswith("https://"):
+            return repo_text
+        return f"https://github.com/{repo_text}"
+    return None
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
 
 
@@ -294,6 +361,12 @@ def build_parser() -> argparse.ArgumentParser:
     result_validity.add_argument("--primary-metric", default=None, help="Override primary metric from methods/method_requirements.json.")
     result_validity.add_argument("--minimum-value", type=float, default=None, help="Override minimum acceptable primary metric value.")
 
+    review_rules = subparsers.add_parser("assess-review-rules", help="Assess discipline review rules against current project evidence for a workflow stage.")
+    review_rules.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    review_rules.add_argument("--stage", required=True, help="Workflow stage, such as method_plan, figure_contract, assess_result_validity, result_support_checkpoint, or citation_audit.")
+    review_rules.add_argument("--output", help="Optional output JSON path. Defaults to results/review_rule_gate_report.json unless --no-write is set.")
+    review_rules.add_argument("--no-write", action="store_true", help="Print the report without writing a runtime gate artifact.")
+
     result_support = subparsers.add_parser("assess-result-support", help="Assess whether current result evidence supports the research-plan claims.")
     result_support.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -435,14 +508,127 @@ def build_parser() -> argparse.ArgumentParser:
     summarize_candidate.add_argument("--source-file", default=None, help="Optional project or external source code file to summarize.")
     summarize_candidate.add_argument("--method", default=None, help="Optional method/template keyword to focus candidate generation.")
 
+    snapshot_skills = subparsers.add_parser("snapshot-skill-source", help="Write a metadata-only snapshot of a local skill/source tree or supported public registry.")
+    snapshot_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    snapshot_skills.add_argument("--path", default=None, help="Alias for --source-root, useful for local-skill adapters.")
+    snapshot_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    snapshot_skills.add_argument("--repo", default=None, help="Optional upstream repo. The AcademicForge adapter reads public registry/classification metadata but never clones source repositories.")
+    snapshot_skills.add_argument("--ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    snapshot_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    snapshot_skills.add_argument("--source-url", default=None, help="Optional upstream URL. Supported registry adapters may read public metadata from it; local adapters record it as provenance only.")
+    snapshot_skills.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    snapshot_skills.add_argument("--output-root", default=None, help="Optional output root for adapter reports.")
+    snapshot_skills.add_argument("--no-hashes", action="store_true", help="Skip SHA-256 file hashes in the metadata snapshot.")
+
+    inspect_skills = subparsers.add_parser("inspect-skill-source", help="Inspect a local skill/source tree without copying source text.")
+    inspect_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    inspect_skills.add_argument("--path", default=None, help="Alias for --source-root.")
+    inspect_skills.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    inspect_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    inspect_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    inspect_skills.add_argument("--source-url", default=None, help="Optional upstream URL recorded as provenance metadata only.")
+    inspect_skills.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    inspect_skills.add_argument("--output-root", default=None, help="Optional output root for adapter reports.")
+
+    index_skills = subparsers.add_parser("index-skill-source", help="Build a metadata index for skill/source files before extraction.")
+    index_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    index_skills.add_argument("--path", default=None, help="Alias for --source-root.")
+    index_skills.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    index_skills.add_argument("--inspection", default=None, help="Optional source_inspection.json from inspect-skill-source.")
+    index_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    index_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    index_skills.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    index_skills.add_argument("--source-url", default=None, help="Optional upstream URL recorded as provenance metadata only.")
+    index_skills.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    index_skills.add_argument("--output-root", default=None, help="Optional output root for adapter reports.")
+
+    classify_skills = subparsers.add_parser("classify-skill-source", help="Classify skill/source files into discipline-plugin, support, external-only, or reject routes.")
+    classify_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    classify_skills.add_argument("--path", default=None, help="Alias for --source-root.")
+    classify_skills.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    classify_skills.add_argument("--inspection", default=None, help="Optional source_inspection.json from inspect-skill-source.")
+    classify_skills.add_argument("--index", default=None, help="Optional SKILL_INDEX.json from index-skill-source.")
+    classify_skills.add_argument("--all", action="store_true", help="Classify all indexed records. Current implementation always classifies all local source files.")
+    classify_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    classify_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    classify_skills.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    classify_skills.add_argument("--source-url", default=None, help="Optional upstream URL recorded as provenance metadata only.")
+    classify_skills.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    classify_skills.add_argument("--output-root", default=None, help="Optional output root for adapter reports.")
+
+    map_skills = subparsers.add_parser("map-skill-capabilities", help="Map skill/source files to discipline plugin and support-layer targets.")
+    map_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    map_skills.add_argument("--path", default=None, help="Alias for --source-root.")
+    map_skills.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    map_skills.add_argument("--inspection", default=None, help="Optional source_inspection.json from inspect-skill-source.")
+    map_skills.add_argument("--index", default=None, help="Optional SKILL_INDEX.json from index-skill-source.")
+    map_skills.add_argument("--candidates", default=None, help="Compatibility placeholder for candidate directory inputs; current mapper uses source-root metadata.")
+    map_skills.add_argument("--against", default=None, help="Compatibility placeholder for target discipline_modules root.")
+    map_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    map_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    map_skills.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    map_skills.add_argument("--source-url", default=None, help="Optional upstream URL recorded as provenance metadata only.")
+    map_skills.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    map_skills.add_argument("--output-root", default=None, help="Optional output root for adapter reports.")
+
+    review_rule_signals = subparsers.add_parser("extract-review-rule-signals", help="Scan all skill/source records for review-rule backflow signals.")
+    review_rule_signals.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    review_rule_signals.add_argument("--path", default=None, help="Alias for --source-root.")
+    review_rule_signals.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    review_rule_signals.add_argument("--inspection", default=None, help="Optional source_inspection.json from inspect-skill-source.")
+    review_rule_signals.add_argument("--index", default=None, help="Optional SKILL_INDEX.json from index-skill-source.")
+    review_rule_signals.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    review_rule_signals.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    review_rule_signals.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    review_rule_signals.add_argument("--source-url", default=None, help="Optional upstream URL recorded as provenance metadata only.")
+    review_rule_signals.add_argument("--source-ref", default=None, help="Optional upstream branch/tag/commit recorded as provenance metadata only.")
+    review_rule_signals.add_argument("--output-root", default=None, help="Optional output root for signal reports.")
+
+    skill_capabilities = subparsers.add_parser("extract-skill-capabilities", help="Extract Draftpaper-loop candidate plugins from a local skill/source text file.")
+    skill_capabilities.add_argument("--source-file", default=None, help="Path to SKILL.md, README, or source description to inspect.")
+    skill_capabilities.add_argument("--path", default=None, help="Alias for --source-file when extracting a single skill file.")
+    skill_capabilities.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json. If it contains one record, that file is used; otherwise use compile-skill-source for batch extraction.")
+    skill_capabilities.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    skill_capabilities.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    skill_capabilities.add_argument("--skill-id", default=None, help="Stable skill id; defaults to the source file stem.")
+    skill_capabilities.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    skill_capabilities.add_argument("--output-root", default=None, help="Optional output root for candidate reports.")
+
+    compile_skills = subparsers.add_parser("compile-skill-source", help="Batch-convert a skill/source folder into candidate-only Draftpaper-loop plugin reports.")
+    compile_skills.add_argument("--source-root", default=None, help="Folder containing SKILL.md, Markdown, or text skill/source files.")
+    compile_skills.add_argument("--path", default=None, help="Alias for --source-root.")
+    compile_skills.add_argument("--snapshot", default=None, help="Optional SNAPSHOT.json from snapshot-skill-source.")
+    compile_skills.add_argument("--inspection", default=None, help="Optional source_inspection.json from inspect-skill-source.")
+    compile_skills.add_argument("--index", default=None, help="Optional SKILL_INDEX.json from index-skill-source.")
+    compile_skills.add_argument("--adapter", default=None, help="Adapter label, e.g. academicforge or local-skill. Alias for --source.")
+    compile_skills.add_argument("--source", default="local_skill", help="Source label, e.g. academicforge or local_skill.")
+    compile_skills.add_argument("--discipline", default="auto", help="Target discipline or auto.")
+    compile_skills.add_argument("--output-root", default=None, help="Optional output root for candidate reports.")
+    compile_skills.add_argument("--stop-after", default="candidate", choices=["candidate"], help="Current command is candidate-only and never promotes plugins.")
+    compile_skills.add_argument("--jobs", type=int, default=1, help="Reserved for future parallel extraction; current runner is sequential.")
+    compile_skills.add_argument("--resume", action="store_true", help="Reserved flag recorded in the compile report.")
+
     generalize_candidate = subparsers.add_parser("generalize-plugin-candidate", help="Convert a project-specific candidate into a generic plugin template.")
     generalize_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
 
     validate_candidate = subparsers.add_parser("validate-plugin-candidate", help="Run privacy, genericity, overlap, and fixture checks for a plugin candidate.")
     validate_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
 
+    promote_candidate = subparsers.add_parser("promote-plugin-candidate", help="Prepare or perform a guarded formal discipline plugin promotion.")
+    promote_candidate.add_argument("--candidate", required=True, help="Path to a validated formal plugin candidate.")
+    promote_candidate.add_argument("--require-human-confirmation", action="store_true", help="Required acknowledgement before any promotion plan or write.")
+    promote_candidate.add_argument("--dry-run", action="store_true", default=True, help="Write promotion_plan.json without modifying discipline_modules. This is the default.")
+    promote_candidate.add_argument("--write", action="store_true", help="Actually copy generalized files into the target discipline module directory.")
+    promote_candidate.add_argument("--target-root", default=None, help="Optional discipline_modules root for testing or controlled promotion.")
+
     package_candidate = subparsers.add_parser("package-plugin-contribution", help="Package a validated plugin candidate for fork/PR review.")
     package_candidate.add_argument("--candidate", required=True, help="Path to plugin_candidates/<discipline>/<candidate_id>.")
+
+    preflight_package = subparsers.add_parser("preflight-plugin-contribution", help="Validate a packaged plugin contribution before fork/PR review.")
+    preflight_package.add_argument("--package", required=True, help="Path to a generated contribution_package directory.")
+
+    review_package = subparsers.add_parser("review-plugin-contribution", help="Create a read-only maintainer review report for a packaged plugin contribution.")
+    review_package.add_argument("--package", required=True, help="Path to a generated contribution_package directory, candidate root, or generalized_template child.")
 
     github_guide = subparsers.add_parser("write-github-contribution-guide", help="Write project-local fork/PR contribution guide for plugin candidates.")
     github_guide.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1034,6 +1220,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "assess-review-rules":
+        try:
+            state = load_project(args.project)
+            output = None if args.no_write else Path(args.output) if args.output else state.path / "results" / "review_rule_gate_report.json"
+            result = assess_review_rules(state.path, stage=args.stage, write_path=output)
+        except ProjectStateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") in {"pass", "warn_and_repair"} else 1
+
     if args.command == "assess-result-support":
         try:
             result = assess_result_support(args.project)
@@ -1441,6 +1641,154 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
 
+    if args.command == "snapshot-skill-source":
+        try:
+            result = snapshot_skill_source(
+                _skill_source_root_from_args(args),
+                source=_skill_source_label(args),
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref or args.ref,
+                include_hashes=not args.no_hashes,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "inspect-skill-source":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("inspect-skill-source requires --source-root/--path or a SNAPSHOT.json with source_root.")
+            result = inspect_skill_source(
+                source_root,
+                source=_skill_source_label(args),
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "index-skill-source":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("index-skill-source requires --source-root/--path or a snapshot/inspection report with source_root.")
+            result = index_skill_source(
+                source_root,
+                source=_skill_source_label(args),
+                discipline=args.discipline,
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "classify-skill-source":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("classify-skill-source requires --source-root/--path or a snapshot/inspection/index report with source_root.")
+            result = classify_skill_source(
+                source_root,
+                source=_skill_source_label(args),
+                discipline=args.discipline,
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "map-skill-capabilities":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("map-skill-capabilities requires --source-root/--path or a snapshot/inspection/index report with source_root.")
+            result = map_skill_capabilities(
+                source_root,
+                source=_skill_source_label(args),
+                discipline=args.discipline,
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "extract-review-rule-signals":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("extract-review-rule-signals requires --source-root/--path or a snapshot/inspection/index report with source_root.")
+            result = extract_review_rule_signals(
+                source_root,
+                source=_skill_source_label(args),
+                discipline=args.discipline,
+                output_root=args.output_root,
+                source_url=_skill_source_url(args),
+                source_ref=args.source_ref,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "extract-skill-capabilities":
+        try:
+            source_file = _single_skill_source_file_from_args(args)
+            if not source_file:
+                raise PluginCandidateError("extract-skill-capabilities requires --source-file/--path or a SNAPSHOT.json with exactly one source record. Use compile-skill-source for multi-file snapshots.")
+            result = extract_skill_capabilities(
+                source_file,
+                source=_skill_source_label(args),
+                skill_id=args.skill_id,
+                discipline=args.discipline,
+                output_root=args.output_root,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
+    if args.command == "compile-skill-source":
+        try:
+            source_root = _skill_source_root_from_args(args)
+            if not source_root:
+                raise PluginCandidateError("compile-skill-source requires --source-root/--path or a snapshot/inspection/index report with source_root.")
+            result = compile_skill_source(
+                source_root,
+                source=_skill_source_label(args),
+                discipline=args.discipline,
+                output_root=args.output_root,
+                stop_after=args.stop_after,
+                jobs=args.jobs,
+                resume=args.resume,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "generalize-plugin-candidate":
         try:
             result = generalize_plugin_candidate(args.candidate)
@@ -1459,6 +1807,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("status") == "passed" else 1
 
+    if args.command == "promote-plugin-candidate":
+        try:
+            result = promote_plugin_candidate(
+                args.candidate,
+                require_human_confirmation=args.require_human_confirmation,
+                dry_run=not args.write,
+                target_root=args.target_root,
+            )
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if args.command == "package-plugin-contribution":
         try:
             result = package_plugin_contribution(args.candidate)
@@ -1467,6 +1829,24 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "preflight-plugin-contribution":
+        try:
+            result = preflight_plugin_contribution_package(args.package)
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "review-plugin-contribution":
+        try:
+            result = review_plugin_contribution_package(args.package)
+        except PluginCandidateError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("maintainer_recommendation") == "ready_for_human_review" else 1
 
     if args.command == "write-github-contribution-guide":
         try:

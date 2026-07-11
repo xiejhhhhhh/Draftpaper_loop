@@ -1,0 +1,32 @@
+name: plugin contribution preflight
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  plugin-contribution-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install Draftpaper-loop
+        run: python -m pip install -e .[dev]
+      - name: Preflight and review packaged plugin contributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(find . -path '*/contribution_package/candidate_manifest.json' -printf '%h\n' | sort -u)
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "No packaged plugin contributions found."
+            exit 0
+          fi
+          for package in "${packages[@]}"; do
+            echo "Preflight ${package}"
+            python -m draftpaper_cli.cli preflight-plugin-contribution --package "${package}"
+            echo "Maintainer review ${package}"
+            python -m draftpaper_cli.cli review-plugin-contribution --package "${package}"
+          done

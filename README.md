@@ -313,6 +313,55 @@ python -m pip install -e third_party\paper-fetch-skill
 
 The third-party runtime is MIT licensed. Keep its license notice when redistributing.
 
+Third-party research skills, skills distilled from local research projects, and external skill catalogs such as AcademicForge can be converted into Draftpaper-loop candidate plugin reports through a metadata-only pipeline. The pipeline reads file names, summaries, dependencies, input/output shapes, artifact types, keywords, and structured descriptions; it does not copy third-party `SKILL.md` bodies, source code, paper PDFs, private data, credentials, or local paths.
+
+Recommended pipeline:
+
+```powershell
+python -m draftpaper_cli.cli snapshot-skill-source --source-root .\external_skills --output-root .\plugin_mining
+python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\SNAPSHOT.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli index-skill-source --inspection .\plugin_mining\SKILL_SOURCE_INSPECTION.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli map-skill-capabilities --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli compile-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+```
+
+For an AcademicForge-style registry, start from registry metadata rather than copying upstream skill files:
+
+```powershell
+python -m draftpaper_cli.cli snapshot-skill-source --source academicforge --repo HughYau/AcademicForge --ref site-first --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli index-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
+```
+
+This writes derived metadata profiles under the output folder and records `ACADEMICFORGE_REGISTRY_ADAPTER.json`. The profiles are generated from registry fields such as id, summary, tags, repository, license, and install metadata; upstream `SKILL.md` bodies and source code are not copied.
+
+The adapter resolves the requested GitHub ref to an immutable commit when GitHub metadata access is available, then reconciles collection-level `skill_count` declarations with AcademicForge's public classification metadata. Every declared subskill enters the snapshot ledger: records with classification metadata become detailed profiles, while unresolved collection-only declarations remain explicit `requires_source_inspection` placeholders. The adapter reports `declared_skill_count`, `expanded_skill_count`, `placeholder_skill_count`, and `silent_loss_count` so a top-level collection count cannot be mistaken for complete skill coverage.
+
+Formal discipline modules accept only three promotable subplugin types: `data_connector`, `method_template`, and `review_rule`. `workflow_recipe`, `paper_contract`, and `shared_capability` are preserved as support-layer candidates rather than written directly into `discipline_modules/<discipline>/`. However, their verifiable statistical, model-baseline, ablation, split/leakage, figure-claim, citation-support, data/code-availability, and reproducibility conditions are scanned with `review_rule_signal_scan` and can backflow into discipline-specific `review_rule_candidate`s.
+
+Use `extract-review-rule-signals` when you want to audit this backflow before generating candidate packages. It scans every skill/source record, including workflow, paper-contract, and shared-capability material, and writes `REVIEW_RULE_SIGNAL_REPORT.json` / `.md` without promoting anything into the formal discipline modules.
+
+A `review_rule` is not plain reviewer-comment text. It is an evidence-bound scientific quality gate that must declare its applicable discipline, method family, data roles, evidence roles, threshold source, failure route, and human-confirmation state. Thresholds such as F1, AUC, R², RMSE, MAE, p values, FDR, sample size, spatial resolution, and temporal coverage default to `contextual`, `comparative`, or `human_confirmed` rules unless they are backed by journal guidance, discipline convention, a public benchmark, or explicit user confirmation; they are not promoted as global fixed thresholds automatically.
+
+Before a candidate becomes a formal contribution, run:
+
+```powershell
+python -m draftpaper_cli.cli generalize-plugin-candidate --candidate <candidate_dir>
+python -m draftpaper_cli.cli validate-plugin-candidate --candidate <candidate_dir>
+python -m draftpaper_cli.cli package-plugin-contribution --candidate <candidate_dir>
+python -m draftpaper_cli.cli preflight-plugin-contribution --package <candidate_dir>\contribution_package
+python -m draftpaper_cli.cli review-plugin-contribution --package <candidate_dir>\contribution_package
+python -m draftpaper_cli.cli promote-plugin-candidate --candidate <candidate_dir> --require-human-confirmation
+```
+
+Support-layer candidates cannot be packaged as formal discipline plugins directly. Submit their generalized formal candidates instead. A `review_rule` remains non-promotable while its maturity is `candidate` or `validated`; it must have an executable discipline fixture, reach at least `runnable`, pass validation, and receive explicit human confirmation before promotion.
+
+PRs that include packaged plugin contributions are checked by `.github/workflows/plugin-contribution-preflight.yml`. The workflow scans for `contribution_package/candidate_manifest.json`, runs `preflight-plugin-contribution`, and then runs `review-plugin-contribution` on each package so maintainers can review metadata, generalized templates, fixtures, validation reports, provenance, support-layer backflow families, threshold policy, human-confirmation requirements, files to review, and a read-only merge recommendation without ingesting third-party source text.
+
 ## Contributors, License, Commercial Use, And Contact
 
 Draftpaper-loop welcomes reusable discipline-module contributions, especially data connectors, method templates, reviewer rules, fixtures, and project-tested workflow lessons that can be generalized without private paths, credentials, raw data, or project-specific claims.
@@ -368,7 +417,22 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
-### v0.18.5 (2026-07-10) -- Claim Contract and Result Rescue Routes
+### v0.18.6 (2026-07-11) -- Third-party Skills to Discipline Plugins and Runtime Review Rules
+
+- Added a metadata-only third-party skill conversion pipeline: `snapshot-skill-source`, `inspect-skill-source`, `index-skill-source`, `classify-skill-source`, `map-skill-capabilities`, `extract-skill-capabilities`, and `compile-skill-source`. It turns AcademicForge-style skill catalogs, personal research skills, or project-distilled skills into candidate reports without copying source code or installing plugins directly.
+- AcademicForge collection records are expanded against public classification metadata and reconciled with each collection's declared skill count. Detailed records and unresolved placeholders are both indexed, with an explicit silent-loss count; a live metadata-only check currently reconciles all 340 declared skills as 299 detailed registry/classification records plus 41 source-inspection placeholders.
+- Clarified that formal discipline modules accept only three promotable subplugin types: `data_connector`, `method_template`, and `review_rule`. `workflow_recipe`, `paper_contract`, and `shared_capability` remain support-layer candidates rather than being written into `discipline_modules/<discipline>/`.
+- Added `review_rule_signal_scan` and support-layer backflow records so statistical validation, model baseline/ablation, split/leakage, figure-claim consistency, citation support, data/code availability, and reproducibility conditions from workflow, paper-contract, and shared-capability skills can become discipline-specific `review_rule_candidate`s.
+- Expanded `ReviewRuleSpec`: review rules are evidence-bound scientific quality gates with explicit discipline, method family, data role, evidence binding, criterion type, threshold mode, threshold validation status, support-layer signal refs, fixture refs, aliases/variants, backflow source type, threshold source, failure route, maturity, and human-confirmation metadata. Model-score, goodness-of-fit, and statistical-significance thresholds default to contextual/comparative/human-confirmed rules unless backed by journal guidance, discipline convention, public benchmarks, or user confirmation.
+- Added runtime review-rule gates. `prepare-method-blueprint`, Semantic Figure Contract assessment, `assess-result-validity`, `assess-result-support`, and citation audit now write review-rule gate reports so promoted, runnable/mature, evidence-bound rules can block weak or unsupported claims while candidate/foundation rules remain advisory.
+- Runtime gates now consume `evidence_binding.required_fields` and `evidence_binding.forbidden_conflicts`, so promoted rules can block missing evidence or contradictions such as train/test leakage while support-layer and candidate rules remain non-blocking until reviewed.
+- Review-rule gate reports now include `rescue_tasks` and `recommended_next_commands`, routing failures to data rescue, method rescue, result downgrade, manuscript repair, citation repair, or human checkpoints instead of leaving weak rules as plain reviewer text.
+- Added `assess-review-rules` for direct inspection of the active discipline review rules at stages such as `method_plan`, `assess_result_validity`, `result_support_checkpoint`, and `citation_audit`.
+- Added package/preflight/provenance safeguards: contribution packages contain only generalized templates, fixtures, validation reports, and provenance/backflow summaries. Support-layer candidates cannot be submitted as formal discipline plugins directly; contributors should submit the generalized and tested formal candidates that backflow from them.
+- Generalized templates now retain source identifiers and matched signal metadata only; bounded source excerpts stay outside contribution packages and are not embedded back into generated Python templates. Review-rule validation checks the positive/negative synthetic fixture contract, while promotion additionally requires runnable-or-higher maturity and explicit human confirmation.
+- Added `review-plugin-contribution`, a read-only maintainer review helper that summarizes package preflight status, metadata-only source policy, support-layer backflow families, threshold and human-confirmation policy, files to review, and whether the package is ready for human review before any promotion.
+
+### v0.18.1-v0.18.5 (2026-07-10) -- Result Support, Claim Contracts, and Rescue Routes
 
 - Added `research_plan/claim_contract.json`, generated with the research plan. It records planned claims, active claims, claim strength, linked figures, evidence roles, and claim boundaries so later writing follows an explicit scientific contract instead of silently overclaiming from weak figures.
 - Added `apply-result-downgrade`. When current verified figures and metrics are scientifically usable but weaker than the original research plan, this command freezes the existing result artifacts in `results/result_evidence_freeze.json` and a versioned `results/evidence_snapshots/result_freeze_*.json`, downgrades only the active claim boundary, and does not rerun data, methods, figures, or metrics.
@@ -376,13 +440,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added decision-aware stale propagation. Downgrade stales manuscript and claim-boundary consumers while preserving current result evidence; supplement stales data, method planning, figure contracts, code, method verification, result validity, core evidence, results, and downstream manuscript stages.
 - Updated `status` and `run-pipeline` so failed result support becomes a clear human decision point with the two executable routes: `apply-result-downgrade` or `prepare-result-rescue`. The pipeline stops there instead of continuing into manuscript writing or blind quality checks.
 
-### v0.18.1 (2026-07-10) -- Result Support Checkpoint
-
 - Added `assess-result-support`, a scientific support checkpoint between `assess-result-validity` and `assess-core-evidence`. Technical result validity still checks outputs, metrics, and figure execution, while result support checks whether the current evidence can actually sustain the planned research claims.
 - Added `results/result_support_checkpoint.json/.md/.html`. When figures or metrics only partially support the research plan, the report stops manuscript writing and records two user-facing routes: downgrade the research claims to the current evidence, or supplement data/method evidence and regenerate core figures.
 - Updated the staged pipeline so `status` and `run-pipeline` stop at `result_support` when the support decision fails. Existing failed checkpoints also block `write-results`, preventing the loop from turning weak or contradictory evidence into manuscript claims.
 
-### v0.17.7 (2026-07-10) -- evidence-semantic manuscript safeguards
+### v0.17.0-v0.17.7 (2026-07-08 to 2026-07-10) -- Evidence-Semantic Manuscript Safeguards and Freer Writing
 
 - Replaced the permissive fact-ledger writing path with a domain-neutral Scientific Evidence Registry. Evidence records carry role, cohort, sample unit, split, run, model, source, and confidence so contradictory cohort facts block writing instead of becoming prose hallucinations.
 - Added run-aware result-evidence resolution. Metrics are selected from verified method runs and explicitly anchored sibling tables rather than from an arbitrary generic `metrics.csv`; Results, Methods, validity checks, and figure metadata share evidence identifiers and provenance.
@@ -392,51 +454,37 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Preserved Codex freedom at sentence level through section evidence packets and post-writing contracts. Freely composed section candidates are accepted only when they respect result-citation, evidence coverage, formula explanation, internal-language, and result-leakage rules.
 - Added `submit-figure-semantic-annotations` for explicit, auditable legacy-figure mappings; the loop does not infer scientific meaning from an old PNG. Cross-project v0.18.0 release regression remains a separate forthcoming validation step.
 
-### v0.17.0 (2026-07-08) -- scientific fact ledger and interpretation-first writing
-
 - Added `writing/scientific_fact_ledger.json`, a shared manuscript-facing ledger for must-preserve scientific facts such as sample sizes, class balance, token coverage, stress-test boundaries, and result metrics.
 - Connected the fact ledger to Data and Methods writing briefs, Data/Methods prose, Discussion comparison, and the final quality gate, so cleaning internal paths or raw fields no longer silently removes key scientific facts.
 - Added `results/figure_interpretation_blueprint.json` so Results writing is driven by main figure groups, scientific questions, primary metrics, claim boundaries, and appendix diagnostics rather than generic artifact summaries.
 - Added relevance filtering for Introduction, Data, and Discussion citation insertion, preventing same-discipline but weakly related literature from being written into inappropriate manuscript positions.
 - Extended quality checks with must-preserve fact coverage, and verified the astronomy regression sections against the current `main.pdf`: v0.17.0 keeps Results citation-free and subsection-free, increases formula and figure-reference coverage, removes path/raw-field leakage, and preserves the current evidence ledger's key data facts.
 
-### v0.16.9 (2026-07-08) -- style learning and full astronomy regression
+### v0.16.1-v0.16.9 (2026-07-07 to 2026-07-08) -- Manuscript Writing, Figure Contracts, and Regression Hardening
 
 - Added the `learn-writing-style-from-draft` path and `writing_style.py` profile so approved drafts can provide non-verbatim style signals without weakening evidence gates.
 - Completed a full astronomy regression on the local time-aware flaring-source project: refreshed plan/data/method/figure stages, verified methods, compiled the APJS/AAS PDF, passed the integrity gate, and passed the final quality gate.
 - Confirmed the regression keeps 6/6 main figure contracts satisfied, records 13 rendered scientific figures, excludes 4 unrendered supporting figures from the result manifest, preserves 12/12 BibTeX references in the assembled manuscript, and keeps Results free of citations and subsections.
 
-### v0.16.8 (2026-07-08) -- Discussion writer artifact cleanup
-
 - Reworked Discussion generation so filesystem artifacts, figure paths, table paths, manifest names, and Draftpaper-loop implementation language are sanitized before they can enter manuscript prose.
 - Added discussion comparison preparation and citation-evidence coverage so Discussion can compare results with literature while preserving the post-writing citation audit principle: repair weak claims and placements, do not delete confirmed references.
 - Added regression coverage for discussion artifact sanitization and citation-evidence expansion.
-
-### v0.16.7 (2026-07-08) -- Data and Methods writer evidence upgrade
 
 - Upgraded Data writing to preserve scientific detail such as sample roles, class balance, token coverage, modality availability, and claim boundaries while keeping paths, filenames, script names, and raw field dumps out of manuscript text.
 - Upgraded Methods writing to use method-stage manifests, extracted formulas, formula-variable explanations, and figure-code traces, so Methods prose is organized around sample construction, feature/token construction, model logic, validation, metrics, and ablation evidence.
 - Added AASTeX-safe LaTeX assembly fallbacks for author metadata, table rendering, and missing local bibliography styles so local review PDFs can compile reliably.
 
-### v0.16.6 (2026-07-08) -- Results writer rewrite
-
 - Rewrote Results generation around `results/result_manifest.yaml`, figure metadata, metrics, captions, scientific questions, and claim boundaries instead of generic artifact summaries.
 - Results now cites main figures and appendix diagnostics by role, removes literature citations, avoids subsections, and converts internal identifiers such as `row_count` or `source_id` into manuscript-facing scientific wording.
 - Added idempotent Results behavior so confirmed Results are not rewritten when downstream manuscript stages rerun with unchanged result evidence.
-
-### v0.16.5 (2026-07-08) -- result manifest upgrade
 
 - Upgraded `inventory-results` to write a structured v0.16.5 result manifest with `main_figures`, `appendix_figures`, `supporting_links`, `claim_boundaries`, internal tables, and figure-code traces.
 - Fixed stale-output handling: planned generated figures that were not rendered in the current run are listed under `excluded_unrendered_figures` and no longer enter Results or quality checks merely because an old PNG remains on disk.
 - Added regression coverage to ensure unrendered supporting/appendix figures remain in diagnosis/repair context but are excluded from the scientific result inventory.
 
-### v0.16.4 (2026-07-08) -- Data Role and Figure Contract repair
-
 - Expanded Data Role aliases for event-level samples, sample groups, current-observation tokens, historical sequence tokens, modality availability, feature matrices, astronomy products, and model-evaluation fields.
 - Strengthened figure contract validation so 5-6 main figure groups are checked separately from supporting or appendix diagnostics, and planned main results cannot be silently replaced by validation artifacts.
 - Connected method feasibility, figure execution diagnosis, result validity, and core evidence checks so missing data or method coverage routes to repair before human confirmation.
-
-### v0.16.3 (2026-07-07) -- main figure groups, appendix diagnostics, and repair-driven figure execution
 
 - Reframed the figure contract around 5-6 main figure groups instead of a hard cap on generated PNG files. A main figure group may contain multiple panels or generated artifacts, so extra generated outputs are valid when they serve the planned figure story.
 - Added main/supporting/appendix figure accounting to `figure_plan.json` and `figure_contracts.json`. Supporting diagnostics no longer replace main results, but can be cited as Appendix Figures when they strengthen reliability or validation arguments in Results and Discussion.
@@ -446,15 +494,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Made final `quality-check` fail when citation reference coverage fails, preserving the no-delete citation audit principle that retained literature summaries must be represented in the manuscript rather than silently dropped.
 - Added regression tests for main-figure-group accounting, contract-gate repair tasks, appendix figure citations in Results, citation coverage quality gating, and astronomy Methods prose cleanup.
 
-### v0.16.2 (2026-07-07) -- safe method execution and canonical code contracts
-
 - Hardened `verify-methods` after the local code audit: verification now resolves commands to an argv list, executes with `shell=False`, rejects shell operators and explicit shell runners, and records `shell_used=false` in `methods/run_manifest.yaml`.
 - Added `verify_command_argv` and `{python}` placeholders to generated method-code manifests so project artifacts no longer embed the developer machine's Python executable path. The legacy `verify_command` string remains only for compatibility.
 - Moved full method stdout/stderr into project-local `methods/run_logs/` files while keeping bounded excerpts and log metadata in the run manifest.
 - Clarified the analysis-code output contract: generated analysis code is canonical under `methods/`, while `code/` is a compatibility copy for older workflows.
 - Removed duplicated core-evidence test setup by sharing one test helper, and added regression coverage for manifest-driven argv execution, shell rejection, log manifests, and canonical/compatibility output separation.
-
-### v0.16.1 (2026-07-07) -- evidence contracts, feasibility gates, and freer manuscript writing
 
 - Added a Data/Methods writing-brief layer. `build-data-context` and `build-method-context` now write `data/data_writing_brief.json/.html` and `methods/method_writing_brief.json/.html` before manuscript prose is generated.
 - Reworked Data and Methods writing so section text is guided by required evidence roles and method stages instead of mechanically dumping context fields into the manuscript.
@@ -473,7 +517,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Local verification: `python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
 - Full local verification: `python -m pytest`, 241 tests passed.
 
-### v0.15.12 (2026-07-06) -- manuscript evidence consistency and no-delete citation audit
+### v0.15.1-v0.15.12 (2026-07-01 to 2026-07-06) -- Evidence-First Loop, Citation Audit, and CLI Hardening
 
 - Hardened Data/Methods manuscript generation so local paths, filenames, workflow artifacts, implementation-only script names, and internal manifest language are cleaned before they can enter paper prose.
 - Added astronomy-aware observation-product wording for spectral, response, light-curve, event, image, and exposure products, so technical columns such as PHA, ARF, RMF, and light-curve descriptors are translated into manuscript-facing data descriptions.
@@ -483,15 +527,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Local verification: `python -m pytest`
 - Current suite: 228 tests
 
-### v0.15.11 (2026-07-06) -- idempotent Results writing after evidence confirmation
-
 - Fixed `write-results` so repeated calls no longer rewrite `results/results.tex` or `results/results_summary_zh.md` when the result manifest and generated text are unchanged.
 - Prevented accidental downstream stale propagation after confirmed Results writing: Introduction, Data, Methods, Discussion, LaTeX, and quality stages are no longer marked stale merely because `write-results` is called again during later manuscript assembly.
 - Added a regression test for the evidence-first writing order where Results are confirmed first and later writing stages continue without being invalidated by an unchanged Results rerun.
 - Local verification: `python -m pytest`
 - Current suite: 224 tests
-
-### v0.15.10 (2026-07-05) -- stage-owned code provenance and formula-trace writing
 
 - Added `classify-code-ownership`, `route-stage-code`, `build-code-provenance`, `extract-method-formulas`, and `trace-figures-to-code` so project-specific or legacy scripts under `code/` can be routed into stage-owned `data/scripts/`, `methods/scripts/`, `methods/src/`, and `methods/plotting/` locations.
 - Added `data/data_code_manifest.json`, extended `methods/method_code_manifest.json`, added `methods/method_formula_manifest.json`, `methods/method_formulas.tex`, and `results/figure_code_trace.json` as manuscript-facing provenance inputs.
@@ -500,56 +540,38 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Extended astronomy, geography, and machine-learning discipline modules with stage-owned code-layout and formula/figure-trace constraints.
 - Revalidated the migration path on the local astronomy project: legacy `code/` scripts were classified, routed, formula-scanned, and traced to result figures; Methods context remained correctly blocked while the upstream method-plan stage was stale after artifact-drift synchronization.
 
-### v0.15.9 (2026-07-03) -- pytest CI and discipline-template resource cleanup
-
 - Switched GitHub Actions to install `.[dev]` and run `python -m pytest`, matching the local verification path used during development.
 - Fixed direct `csv.DictReader(path.open(...))` patterns in built-in discipline templates so CSV inputs are opened through context managers.
 - Local verification: `python -m pytest`
 - Current suite: 219 tests
 
-### v0.15.8 (2026-07-03) -- discipline template registry validation
-
 - Added `draftpaper_cli/template_registry.py` and `draftpaper validate-template-registry` for validating built-in discipline plugin manifests, template files, fixtures, plugin identifiers, and maturity metadata.
 - Added tests so future discipline plugin contributions can be checked before promotion into the formal module library.
-
-### v0.15.7 (2026-07-03) -- shared IO, LaTeX, and citation utilities
 
 - Added `io_utils`, `latex_utils`, and `citation_utils` to reduce repeated JSON/text loading, LaTeX escaping, BibTeX parsing, and citation-key parsing logic.
 - Migrated high-risk manuscript and gate modules, including Methods, Results, Introduction, Discussion, LaTeX assembly, and quality checks, onto shared helpers.
 - Preserved support for common LaTeX citation commands such as `\cite{}` and `\citep{}`.
 
-### v0.15.6 (2026-07-03) -- audit-driven CLI and gate hardening groundwork
-
 - Added focused common-utility tests and aligned gate behavior around shared parsing helpers.
 - Kept `methods/` as the canonical generated-analysis-code location while retaining `code/` as compatibility output.
-
-### v0.15.5 (2026-07-03) -- manifest-driven method verification and figure contracts
 
 - `verify-methods` now reads `methods/method_code_manifest.json` when `--command` is not supplied, using generated verification metadata, declared outputs, and selected input data.
 - Method verification now checks `results/figure_contracts.json`; missing or placeholder contracted main figures fail the hard gate.
 - `generate-analysis-code` now writes manifest-driven verification and plotting-install metadata and recommends a shorter manifest-driven verification command.
 
-### v0.15.4 (2026-07-03) -- packaged paper-fetch fallback and fulltext extras
-
 - Packaged the paper-fetch runtime under `draftpaper_cli/_vendor/paper_fetch_skill` so wheel installs retain the fallback source instead of relying on a source-tree-only `third_party/` path.
 - Added a `fulltext` optional extra for heavier article/PDF extraction dependencies while keeping the default install lighter.
 - Verified with `python -m pip wheel . --no-deps` that the wheel contains the vendored paper-fetch CLI and third-party license.
-
-### v0.15.3 (2026-07-03) -- hard-gate exit codes and portable project metadata
 
 - Fixed `verify-methods` CLI semantics so failed method verification returns a non-zero process exit code while still printing the run manifest JSON. Automation can now treat the command as a real hard gate.
 - Removed the developer-local historical source path from newly generated `project.json` files and replaced it with a neutral `legacy_mvp_reference` note, improving project portability across machines and public examples.
 - Added regression tests for failed `verify-methods` exit codes and portable project scaffolding metadata.
 - Refreshed README workflow wording so the documented paper loop stays evidence-first: literature and planning are followed by data/method execution, figure generation, result validity, and core evidence review before manuscript writing.
 
-### v0.15.2 (2026-07-02) -- strict figure contracts and repair-first execution
-
 - Upgraded `plan-figures` so research-plan storyboard figures become strict main-result contracts written to `results/figure_contracts.json` and checked through `results/storyboard_alignment_report.json`.
 - Upgraded `generate-analysis-code` to write `results/figure_execution_diagnosis.json` and `.html`; missing data and missing method code are diagnosed explicitly instead of silently replacing a failed main figure with a validation, workflow, or supporting plot.
 - Added `diagnose-figure-execution`, `repair-figure-data`, and `repair-figure-method`. These commands create data/method repair plans using existing connectors, public data/API routes, remote-server workflows, discipline plugins, public research-code repositories, literature implementation repositories, or Codex-generated project-specific method code.
 - Upgraded `assess-core-evidence`, `status`, `run-pipeline`, and the final quality path so unsatisfied main-figure contracts route to data/method repair first; human confirmation is reserved for cases where automated repair still cannot produce the planned core evidence.
-
-### v0.15.1 (2026-07-01) -- evidence-first paper loop and core evidence gate
 
 - Reordered the main paper pipeline so literature and research planning are followed by data acquisition/integration, method/code execution, figure production, result validity, and a core evidence gate before manuscript-section writing.
 - Added `assess-core-evidence`, writing `core_evidence/core_evidence_report.json` and `.html` to check data supplementation, data integration, method analysis, figure production, figure metadata, and result validity before human figure confirmation.
@@ -557,21 +579,17 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Updated Results writing to keep continuous prose without per-figure subsections and to write `results/results_summary_zh.md` for Chinese review of figure-level interpretation.
 - Updated orchestration, LaTeX assembly, quality gates, review routing, and the Codex skill wrapper to follow the evidence-first loop.
 
-### v0.14.13 (2026-07-01) -- remote FITS/ZIP streaming data connector
+### v0.14.0-v0.14.13 (2026-06-24 to 2026-07-01) -- Discipline Plugins, Citation Repair, IP Protection, and Data Connectors
 
 - Added the astronomy `remote_fits_zip_stream` data connector for remote-server or instrument-archive workflows where large FITS/ZIP observation products remain external and Draftpaper-loop only persists compact manifests, processed tables, parse-status reports, and provenance records.
 - Added a generic public template for event-product manifest construction, ZIP member availability inspection, dense observation-window selection, and streaming data contracts without hard-coded private server addresses, user names, passwords, source identifiers, or project-specific labels.
 - Split training smoke validation into method templates: astronomy now exposes `source_holdout_stream_smoke_test`, while machine learning exposes `group_holdout_training_smoke_test`, so event-random metrics remain leakage-risk contrasts and group/source-held-out metrics become the primary validation path when feasible.
 - Upgraded `prepare-data-acquisition` to detect `fits_zip_stream` access patterns and route astronomy missing-data tasks toward the proper connector.
 
-### v0.14.12 (2026-06-30) -- clickable reference links and compact query phrases
-
 - Made DOI and URL fields clickable in per-paper literature summary HTML files.
 - Reworked literature query planning so idea/title text is reduced to short phrases such as method, instrument, data, and task terms before being crossed with data and method queries.
 - Prevented long full-title research ideas from being repeated across every search query while keeping discipline anchors such as high-energy time-domain astronomy and X-ray transient classification.
 - Revalidated the astronomy workflow with `search-literature -> generate-plan`; the generated query plan now avoids full-sentence idea duplication while preserving 12 retained references, 6 planned figures, and 1 planned core table.
-
-### v0.14.11 (2026-06-30) -- research-plan Markdown contract and structured literature query plan
 
 - Changed `generate-plan` so the human-facing research plan is written as `research_plan/research_plan.md` and `research_plan/research_plan.zh-CN.md`; `research_plan.html` and separate `research_questions.*` outputs are no longer generated.
 - Embedded research questions, figure storyboard, method-plan contract, expected tables, risk checks, and the literature-summary index link directly into the research plan Markdown files.
@@ -580,15 +598,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added low-count fallback searches for astronomy-style projects and records query provenance in `references/search_queries.json`, `references/literature_items.json`, and per-paper literature summary HTML files.
 - Verified the new flow on the local astronomy project by rerunning `search-literature -> generate-plan`; the project now records 12 retained references, 30 citation-evidence rows, 6 planned main figures, and 1 planned core table.
 
-### v0.14.10 (2026-06-30) -- citation preservation and reference coverage audit
-
 - Added citation-use metadata for claim-level audit records, including citation intent, support status, topic relevance score, claim-alignment score, blocking status, and repair hints.
 - Updated citation repair planning so unsupported or imprecise citation usages preserve retained references and rewrite manuscript claims to match existing evidence; citation audit no longer plans reference deletion or citation-bearing sentence deletion.
 - Added `references/reference_usage_plan.json` so retained literature summaries are assigned to manuscript sections and must be cited at least once outside Results.
 - Added `citation_audit/reference_coverage_report.json` and `citation_audit/reference_coverage_report.html` to compare `references/literature_summaries/` against unique cited references; summarized-but-uncited literature is now a blocking citation-audit failure instead of a silent bibliography shrinkage.
 - Added regression tests for preserving method/tool/background citations, keeping relevant contextual citations available for rewrite, and reporting reference-coverage gaps separately from unsupported citations.
-
-### v0.14.9 (2026-06-28) -- public IP protection and DPL schema provenance layer
 
 - Added public compliance documentation that clarifies the non-commercial source-available boundary, commercial authorization requirement, sponsorship-not-license rule, and prohibited anti-abuse mechanisms such as hidden payloads, telemetry, device fingerprinting, remote license checks, or destructive checks.
 - Added the public DPL schema family documentation and generated project provenance blocks for project metadata, stage manifests, and project passports.
@@ -596,14 +610,10 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added public forensic-fingerprinting guidance at a high level.
 - Updated commercial license and trademark notes so project terms such as Draftpaper-loop, DPL loop engine, project passport, claim trace, and evidence binding cannot be used to imply commercial authorization or official endorsement.
 
-### v0.14.8 (2026-06-28) -- citation audit and repair loop
-
 - Added an independent citation audit and repair loop: `audit-citations`, `generate-citation-repair-plan`, `apply-citation-repair`, `re-audit-citations`, and `run-citation-repair-loop`.
 - Added claim-level local citation support checking against BibTeX and `references/citation_evidence.csv`, with RefCheck-style HTML reports under `citation_audit/iterations/` and a final pass report at `citation_audit/final_citation_audit_report.html`.
 - Updated `status` and `run-pipeline` so final quality checks are blocked after integrity checks until citation audit passes; failed citation audits now route into the citation repair loop instead of continuing blindly to `quality-check`.
 - Upgraded `quality-check` so direct calls require `citation_audit/final_citation_audit_report.json` with `status=passed`, preventing source-support verification from being skipped.
-
-### v0.14.7 (2026-06-26) -- learning loop and runnable foundation modules
 
 - Added discipline module maturity metadata with `foundation`, `runnable`, and `mature` as the intended progression.
 - Added `capture-discipline-learning`, which summarizes reusable project lessons from observations, method artifacts, review plans, data contexts, result metadata, and rescue plans into `plugin_candidates/from_loop/...` without copying raw data or hidden reasoning.
@@ -611,48 +621,34 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Upgraded finance, medicine, biology, and engineering from foundation-only specs to runnable foundation modules by adding one standard-library fixture-backed method template per discipline.
 - Added foundation reviewer engines for finance, medicine, biology, and engineering so these disciplines no longer fall back directly to the default reviewer route.
 
-### v0.14.6 (2026-06-26) -- repository inspection and foundation discipline seeds
-
 - Added `inspect-research-repo`, which reads a candidate repository checkout as structure/docs/package metadata only and writes `repository_structure.json`, `file_inventory.csv`, `package_manifest.json`, and HTML inspection reports without copying source code.
 - Added `map-repository-workflow`, which maps repository file roles into data connector, preprocessing, method, figure, validation, review, environment, and documentation capabilities.
 - Added `bootstrap-discipline-foundation`, which writes candidate-only discipline foundation suggestions from workflow maps; it does not modify formal modules by default.
 - Added foundation discipline modules for finance, medicine, biology, and engineering, each with initial data connector specs, method template specs, and reviewer-rule groups.
-
-### v0.14.5 (2026-06-26) -- metadata-only research-code mining
 
 - Added the first minimal public research-code mining chain: `discover-research-repos`, `score-research-repos`, and `extract-plugin-candidates`.
 - The new flow writes metadata-only JSON/HTML reports under `research_code_mining/`, ranking repositories by license safety, reproducibility metadata, linked-paper signals, workflow completeness, and reusable capability hints.
 - Candidate extraction produces `candidate_manifest.json`, `candidate_report.html`, and an index report while explicitly avoiding repository cloning, third-party source copying, or direct plugin installation.
 - This creates a safer front door for future discipline-module expansion: public code can inspire generalized data/method/figure/review templates only after license, privacy, overlap, fixture, and maintainer review.
 
-### v0.14.4 (2026-06-25) -- public wording and license positioning
-
 - Kept the custom source-available non-commercial license instead of switching to Apache-2.0 or another standard SPDX license, because preserving commercial authorization requirements needs non-standard terms.
 - Cleaned public update wording so plugin seeds are described by reusable capabilities rather than by specific source projects or private validation targets.
 - Added a README policy expectation that future public changelog entries should avoid exposing concrete internal project names, local validation folders, private datasets, or project-specific research directions.
-
-### v0.14.3 (2026-06-25) -- composite discipline modules
 
 - Added runtime composite discipline modules for cross-disciplinary papers. The loop now records `primary_discipline`, `secondary_disciplines`, `discipline_scores`, and ordered `discipline_modules`.
 - `get_discipline_module` can now merge `default`, the primary discipline, and secondary disciplines, deduplicating connectors, method templates, and review rules by stable ids.
 - Cross-disciplinary projects such as geography + machine learning or astronomy + machine learning can expose both domain data/method plugins and ML modelling/reviewer plugins in `prepare-method-blueprint`, `prepare-data-acquisition`, and `plan-figures`.
 - Plugin candidate manifests now record primary and secondary disciplines while still keeping stable reusable capabilities under their intended home module.
 
-### v0.14.2 (2026-06-24) -- geography and tabular-ML plugin seeds
-
 - Added built-in geography data connectors for Earth Engine precipitation export planning, NetCDF-to-GeoTIFF planning, gridded text-to-raster conversion, and ArcGIS/project-bound zonal statistics manifests.
 - Added geography method templates for monthly remote-sensing index summaries, phenology curve smoothing, NDVI temporal K-means zoning, and cluster statistical diagnostics.
 - Added machine-learning data/model seeds for tabular environmental dataset profiling, sanitized saved-model manifests, RF/XGBoost/GBDT/stacking regression plans, observed-predicted diagnostics, feature importance, PDP/ICE, SHAP planning, and a model statistical-validity reviewer gate.
 - Kept these seeds fixture-backed and dependency-light so reusable plugin code stays generic while project-specific paths, API accounts, data windows, and model binaries remain local.
 
-### v0.14.1 (2026-06-24) -- astronomy and deep-learning plugin sedimentation
-
 - Added astronomy connector and method seeds for photon-event access planning, observation/product manifests, long-term light-curve feature extraction, and event-level sequence input construction.
 - Added machine-learning/deep-learning connector and method seeds for vision catalog alignment, pretrained backbone metadata, self-supervised training plans, checkpoint compatibility diagnostics, embedding health checks, few-label evaluation, and similarity retrieval.
 - Added fixture-backed tests so these discipline plugins can be validated without private data, API credentials, large checkpoints, or GPU training.
 - Kept project-specific paths, credentials, checkpoint binaries, and sample selections out of reusable plugin templates; real projects bind those values locally through Draftpaper-loop project files.
-
-### v0.14.0 (2026-06-24) -- discipline plugin contribution workflow
 
 - Added full `DataConnectorSpec` and `MethodTemplateSpec` schemas for discipline modules.
 - Reorganized discipline modules toward a three-layer model: `data_connectors/`, `method_templates/`, and `review_rules/`.
@@ -661,14 +657,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added plugin contribution preflight commands: `summarize-plugin-candidates`, `generalize-plugin-candidate`, `validate-plugin-candidate`, `package-plugin-contribution`, and `write-github-contribution-guide`.
 - Documented fork/PR rules: forks and branches are temporary contribution channels; stable reusable capabilities merge into `main` under the matching discipline module after privacy, genericity, overlap, fixture, and validation checks.
 
-### v0.13.1 (2026-06-24) -- discipline figure policy and data connector catalog
+### v0.13.0-v0.13.1 (2026-06-24) -- Stage-Owned Method Code and Discipline Figure Policies
 
 - Upgraded `plan-figures` so discipline modules can declare `minimum_main_figures`, `target_main_figures`, and `required_figure_groups`; first drafts now aim for at least five generated main figures when data are available.
 - Extended discipline modules with data connector catalogs that include packages, import modules, API/download routes, credential requirements, expected data formats, and local feasibility status.
 - Added `ecology` and `bioinformatics` module skeletons alongside `default`, `geography`, `astronomy`, and `machine_learning`.
 - Expanded geography/agriculture, astronomy, ecology/environment, machine-learning, and bioinformatics data acquisition routes for research-plan data suggestions and missing-data rescue.
-
-### v0.13.0 (2026-06-24) -- stage-owned method code and discipline modules
 
 - Added a stage-owned code layout: data acquisition/preprocessing code belongs under `data/scripts`, method/model/statistical/spatial/figure-generation code belongs under `methods/scripts` and `methods/src`, and `results` keeps only produced figures, tables, and metadata.
 - Added `prepare-method-blueprint`, which writes `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`.
@@ -676,14 +670,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Upgraded `generate-analysis-code` so canonical generated code is saved under `methods/` while `code/` remains a compatibility launcher/copy for older workflows.
 - Added contributor documentation under `docs/discipline_modules/` for future discipline-module submissions.
 
-### v0.12.1 (2026-06-24) -- reviewer/rescue data acquisition tasks
+### v0.12.0-v0.12.1 (2026-06-23 to 2026-06-24) -- Pluggable Data Acquisition and Reviewer Rescue Tasks
 
 - Connected reviewer/rescue missing-data advice to `prepare-data-acquisition`.
 - `prepare-data-acquisition` now reads `review/actionable_analysis_tasks.json`, `review/review_engineering_plan.json`, `review/statistical_rescue_plan.json`, `review/revision_plan.json`, and `review/gate_failure_diagnosis.json`.
 - Added `data/data_acquisition_tasks.json` and `data/data_acquisition_tasks.html`, turning blocked analysis tasks into explicit missing-data requests with `needed_data`, `optional_data`, `suggested_connectors`, and user-confirmation questions.
 - Updated `status` and `run-pipeline` so review/rescue execution now recommends `prepare-data-acquisition` after `prepare-analysis-revision` and before `plan-figures --use-review-tasks`.
-
-### v0.12.0 (2026-06-23) -- pluggable data acquisition planning
 
 - Added a shared discipline inference layer used by both data-acquisition planning and reviewer-engineering engines, so Data and review/rescue routes no longer maintain separate discipline guesses.
 - Added `classify-data-access`, `prepare-data-acquisition`, and `inventory-data-sources` for plan-first data access classification.
@@ -692,7 +684,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added design and implementation notes under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 - Validated the generic layer against a local cross-discipline source tree while detecting local-file, API-access, and remote-server data modes without documenting private paths or project-specific identifiers.
 
-### v0.11.1 (2026-06-23) -- source-available protection and generator provenance
+### v0.11.0-v0.11.1 (2026-06-21 to 2026-06-23) -- Publication Readiness, Statistical Rescue, and Source-Available Protection
 
 - Added repository-level protection files: `NOTICE`, `COMMERCIAL_LICENSE.md`, and `TRADEMARK.md`.
 - Updated `LICENSE` wording from the older DraftPaper CLI identity to Draftpaper-loop and clarified commercial-use examples such as API services, manuscript-production services, and paid course bundles.
@@ -700,8 +692,6 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Added stable Draftpaper-loop generator provenance to generated LaTeX, HTML reports, generated Python scripts, and JSON reports that include `generated_at`.
 - Local verification: `python -m unittest discover -s tests`
 - Current suite: 130 tests
-
-### v0.11.0 (2026-06-21) -- publication-readiness reviewer and statistical rescue planning
 
 - Added `assess-publication-readiness` to score target-journal submission readiness from saved loop artifacts, including data feasibility, method verification, result validity, figure metadata, integrity, quality, and journal profile state.
 - Added `discover-review-workflow-gaps` and `propose-review-engineering-plan` for discipline-specific reviewer-engineering. The first deterministic engine is geography, covering remote sensing, agricultural geography, spatial scale alignment, remote-sensing QC, spatial autocorrelation, stratified heterogeneity, and weak-fit backtracking; astronomy and machine-learning engines are now reserved with baseline reviewer rules; unmatched projects use a default fallback.
@@ -748,13 +738,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 - Upgraded `run-pipeline` so multi-step Data and Methods stages are not marked complete until required context and manuscript outputs exist.
 - Added quality-gate lint that fails Data/Methods sections containing local filenames, filesystem paths, execution commands, or manifest-style output text.
 
-### v0.7.1 (2026-06-15) -- preserved Zotero evidence in literature summaries
+### v0.7.0-v0.7.1 (2026-06-15) -- Zotero Reference Import and Literature Evidence Preservation
 
 - Preserved Zotero-imported references as user-curated evidence outside external-search ranking, recency, abstract/PDF filtering, and the default 30-paper external cap.
 - Added Zotero source/origin/collection/selection-policy metadata to literature review notes, per-paper HTML summaries, and `references/literature_summaries/index.html`.
 - Added tests confirming Zotero references appear together with searched literature while remaining distinguishable.
-
-### v0.7.0 (2026-06-15) -- Zotero collection import for references
 
 - Added `list-zotero-collections` for inspecting Zotero collection names from Codex or the local CLI.
 - Added `search-literature --zotero-collection` so a paper project can import user-curated references from one Zotero collection.

@@ -312,7 +312,17 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     if figure_contracts and figure_contracts.get("decision") == "blocked":
         action = figure_contracts.get("recommended_next_action") or {}
         command = str(action.get("command") or "revise-research-plan")
-        if command not in {"repair-figure-data", "repair-figure-method", "revise-research-plan", "assess-figure-contracts"}:
+        if command not in {
+            "repair-figure-data",
+            "repair-figure-method",
+            "revise-research-plan",
+            "assess-figure-contracts",
+            "prepare-data-acquisition",
+            "prepare-method-blueprint",
+            "prepare-result-rescue",
+            "apply-result-downgrade",
+            "checkpoint",
+        }:
             command = "revise-research-plan"
         return {
             "stage": "figure_contracts",

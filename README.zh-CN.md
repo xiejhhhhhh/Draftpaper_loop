@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 [![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#功能概览)
 [![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-模型)
@@ -229,6 +229,55 @@ python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mi
 
 第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
 
+第三方科研 skills、个人项目中沉淀出的 skills，或 AcademicForge 这类外部 skill catalog，可以先通过 metadata-only 流程转换为 Draftpaper-loop 的候选插件报告。该流程只读取文件名、摘要、依赖、输入输出、artifact 类型、关键词和结构化描述，不复制第三方 `SKILL.md` 全文、源码、论文 PDF、私有数据、账号凭证或本地路径。
+
+推荐链路如下：
+
+```powershell
+python -m draftpaper_cli.cli snapshot-skill-source --source-root .\external_skills --output-root .\plugin_mining
+python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\SNAPSHOT.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli index-skill-source --inspection .\plugin_mining\SKILL_SOURCE_INSPECTION.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli map-skill-capabilities --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python -m draftpaper_cli.cli compile-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+```
+
+如果接入 AcademicForge 这类 registry，可以从 registry 元数据开始，而不是复制上游 skill 文件：
+
+```powershell
+python -m draftpaper_cli.cli snapshot-skill-source --source academicforge --repo HughYau/AcademicForge --ref site-first --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli index-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
+python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
+```
+
+该流程会在输出目录下生成派生 metadata profiles，并记录 `ACADEMICFORGE_REGISTRY_ADAPTER.json`。这些 profile 只来自 registry 中的 id、summary、tags、repository、license 和 install metadata，不复制上游 `SKILL.md` 正文或源码。
+
+在 GitHub metadata 可访问时，adapter 会先把请求的分支或 tag 解析为 immutable commit，再把集合级 `skill_count` 声明与 AcademicForge 的公开分类 metadata 对齐。所有声明的子 skill 都必须进入 snapshot ledger：已有分类 metadata 的条目生成详细 profile，只有集合声明但缺少明细的条目则显式标记为 `requires_source_inspection` placeholder。报告会写出 `declared_skill_count`、`expanded_skill_count`、`placeholder_skill_count` 和 `silent_loss_count`，避免把顶层集合数量误当成完整 skill 覆盖。
+
+正式学科模块只接收三类可 promote 的子插件：`data_connector`、`method_template` 和 `review_rule`。`workflow_recipe`、`paper_contract` 和 `shared_capability` 会作为支撑层候选保留，不直接写入 `discipline_modules/<discipline>/`；但其中关于统计检验、模型 baseline/ablation、split/leakage、图表-论断一致性、引用支撑、data/code availability 和可复现性的可验证条件，会通过 `review_rule_signal_scan` 回流为学科化 `review_rule_candidate`。
+
+如果只想先审计这些回流信号，可以单独运行 `extract-review-rule-signals`。它会扫描所有 skill/source 记录，包括 workflow、paper contract 和 shared capability，输出 `REVIEW_RULE_SIGNAL_REPORT.json` / `.md`，但不会把任何内容 promote 到正式学科模块。
+
+`review_rule` 不是普通审稿意见文本，而是证据绑定的科研质量门。每条规则必须声明适用学科、方法族、数据角色、证据角色、阈值来源、失败路由和人工确认状态。F1、AUC、R²、RMSE、MAE、p 值、FDR、样本量、空间分辨率和时间覆盖等阈值，如果没有期刊规范、领域共识、公共 benchmark 或用户确认，默认只能生成 `contextual`、`comparative` 或 `human_confirmed` 规则，不能自动变成全局 fixed threshold。
+
+候选插件进入正式贡献前，应先执行：
+
+```powershell
+python -m draftpaper_cli.cli generalize-plugin-candidate --candidate <candidate_dir>
+python -m draftpaper_cli.cli validate-plugin-candidate --candidate <candidate_dir>
+python -m draftpaper_cli.cli package-plugin-contribution --candidate <candidate_dir>
+python -m draftpaper_cli.cli preflight-plugin-contribution --package <candidate_dir>\contribution_package
+python -m draftpaper_cli.cli review-plugin-contribution --package <candidate_dir>\contribution_package
+python -m draftpaper_cli.cli promote-plugin-candidate --candidate <candidate_dir> --require-human-confirmation
+```
+
+支撑层候选不能直接 package 成正式学科插件，应提交其回流出的正式候选。`review_rule` 在成熟度为 `candidate` 或 `validated` 时不能 promote；只有具备可执行学科 fixture、至少达到 `runnable`、通过验证并得到明确人工确认后，才允许进入正式学科模块。
+
+如果 PR 中包含已经打包的插件贡献，`.github/workflows/plugin-contribution-preflight.yml` 会自动扫描 `contribution_package/candidate_manifest.json`，并对每个 package 运行 `preflight-plugin-contribution`。这样维护者可以审查 metadata、通用模板、fixture、验证报告和 provenance，而不会把第三方源码正文纳入仓库。
+
 ## 贡献者、许可证、商业使用和联系方式
 
 Draftpaper-loop 欢迎可复用的学科模块贡献，尤其是数据 connector、方法模板、审稿规则、fixture，以及可以从真实项目中泛化出来的工作流经验。贡献内容不应包含私有路径、账号凭证、原始数据或项目专属结论。
@@ -284,7 +333,22 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
-### v0.18.5 (2026-07-10) -- Claim Contract 与结果补救路线
+### v0.18.6 (2026-07-11) -- 第三方 skills 到学科插件与运行时 review rule 门控
+
+- 新增 metadata-only 的第三方 skills 转换链路：`snapshot-skill-source`、`inspect-skill-source`、`index-skill-source`、`classify-skill-source`、`map-skill-capabilities`、`extract-skill-capabilities` 和 `compile-skill-source`，用于把 AcademicForge 类 skill catalog、个人科研 skills 或本地项目中沉淀出的技能转为候选报告，而不是复制源码或直接安装插件。
+- AcademicForge 集合记录会根据公开分类 metadata 展开，并与各集合声明的 skill 数量核对。详细记录和待进一步读取来源的 placeholder 都进入索引，同时显式报告静默丢失数量；当前 live metadata-only 验证已对齐 340 条声明，其中 299 条已有 registry/classification 明细，41 条保留为待 source inspection 的 placeholder。
+- 明确正式学科模块只接受 `data_connector`、`method_template` 和 `review_rule` 三类可 promote 子插件；`workflow_recipe`、`paper_contract` 和 `shared_capability` 保留为支撑层候选，不直接写入 `discipline_modules/<discipline>/`。
+- 新增 `review_rule_signal_scan` 和支撑层回流记录，使 workflow、paper contract 和 shared capability 中的统计验证、模型 baseline/ablation、split/leakage、图表-论断一致性、引用支撑、data/code availability 和可复现性条件可以沉淀为学科化 `review_rule_candidate`。
+- 扩展 `ReviewRuleSpec`：review rule 现在是证据绑定的科研质量门，必须声明适用学科、方法族、数据角色、证据绑定、规则类型、阈值模式、阈值验证状态、支撑层信号来源、fixture refs、aliases/variants、回流来源、阈值来源、失败路由、成熟度和人工确认状态；模型精度、拟合优度和统计显著性阈值在缺少期刊规范、领域共识、公共 benchmark 或用户确认时默认只能作为 contextual/comparative/human_confirmed 规则。
+- 新增运行时 review-rule gate。`prepare-method-blueprint`、Semantic Figure Contract 核查、`assess-result-validity`、`assess-result-support` 和 citation audit 都会写入 review-rule gate 报告，使已 promote、达到 runnable/mature 且完成证据绑定的规则可以阻断弱证据或不充分论断，而 candidate/foundation 规则仍保持 advisory。
+- 运行时 gate 现在会读取 `evidence_binding.required_fields` 和 `evidence_binding.forbidden_conflicts`，因此已 promote 的规则可以基于缺失证据或 train/test leakage 等证据冲突阻断写作；支撑层和 candidate 规则在人工审阅前仍不会自动变成硬门槛。
+- Review-rule gate 报告现在会写出 `rescue_tasks` 和 `recommended_next_commands`，把失败规则路由到补数据、补方法、结果降论断、正文修复、引用修复或人工确认，而不是只停留在普通审稿建议文本。
+- 新增 `assess-review-rules`，可直接检查当前学科模块在 `method_plan`、`assess_result_validity`、`result_support_checkpoint`、`citation_audit` 等阶段会启用哪些 review rules。
+- 新增 package/preflight/provenance 防护：贡献包只允许包含泛化模板、fixture、验证报告和 provenance/backflow 摘要；支撑层候选不能直接作为正式学科插件提交，必须提交其回流出的、已泛化并通过测试的正式三类候选。
+- 泛化模板现在只保留来源标识和命中的信号元数据，不再把候选审阅用的源文本片段嵌回 Python 模板。review-rule 验证会检查正反 synthetic fixture 合同；正式 promote 还必须满足 runnable 或更高成熟度，并获得明确人工确认。
+- 新增 `review-plugin-contribution` 维护者只读审阅助手，用于汇总贡献包 preflight 状态、metadata-only 来源策略、支撑层回流规则族、阈值与人工确认策略、需要审阅的文件，以及在 promote 前是否已准备好进入人工审阅。
+
+### v0.18.1-v0.18.5 (2026-07-10) -- 结果支撑、主张合同与补救路线
 
 - 新增 `research_plan/claim_contract.json`，在 research plan 阶段同步生成。它会记录 planned claim、active claim、主张强度、关联图表、证据角色和 claim boundary，避免后续写作在图表证据较弱时静默写出过强结论。
 - 新增 `apply-result-downgrade`。当当前图表和指标本身可用、但不足以支撑原始强主张时，该命令会把现有结果冻结到 `results/result_evidence_freeze.json` 和版本化的 `results/evidence_snapshots/result_freeze_*.json`，只降低 active claim boundary，不重新跑数据、方法、图表或指标。
@@ -292,13 +356,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 decision-aware stale propagation。降维路线只 stale 正文和 claim boundary 的消费者，并保留当前结果证据；补充路线会 stale 数据、方法计划、图表合同、代码、方法验证、结果有效性、核心证据、结果和下游正文阶段。
 - 升级 `status` 和 `run-pipeline`：当 result support 失败时，流程会明确停在人工决策点，并给出两条可执行路线 `apply-result-downgrade` 或 `prepare-result-rescue`，而不是继续进入正文写作或盲目 quality check。
 
-### v0.18.1 (2026-07-10) -- 结果支撑检查点
-
 - 新增 `assess-result-support`，放在 `assess-result-validity` 和 `assess-core-evidence` 之间。`assess-result-validity` 继续检查运行产物、指标和图表执行质量，而结果支撑检查点专门判断当前证据是否真的能支撑研究计划中的核心主张。
 - 新增 `results/result_support_checkpoint.json/.md/.html`。当图表或指标只能部分支撑研究计划时，报告会停止正文写作，并给出两条人工路线：把研究主张降维到当前证据能够支撑的范围，或者继续补充数据和方法后重新生成核心图表。
 - 更新阶段管线：`status` 和 `run-pipeline` 会在 result support 失败时停在路线选择点；如果已有失败的 result support checkpoint，`write-results` 也会拒绝继续写作，避免把较弱或矛盾的证据硬写成论文结论。
 
-### v0.17.7 (2026-07-10) -- 证据语义论文保护层
+### v0.17.0-v0.17.7 (2026-07-08 至 2026-07-10) -- 证据语义论文保护层与更自由的正文写作
 
 - 用领域无关的 Scientific Evidence Registry 替代宽松的事实账本写作路径。每条证据记录角色、cohort、样本单位、数据划分、运行、模型、来源与置信度；同一 cohort 内的矛盾事实会阻塞写作，而不是被写成幻觉。
 - 新增 run-aware 结果证据解析。指标只从已验证的方法运行及具有明确锚点的关联表中选择，不再任意读取通用 `metrics.csv`；Results、Methods、有效性检查和图表 metadata 共用证据 ID 与来源。
@@ -308,51 +370,37 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 使用章节证据包与写后合同，在不放松 Results 无引用、证据覆盖、公式解释、内部语言和结果泄漏限制的前提下保留 Codex 的自由写作能力。
 - 新增 `submit-figure-semantic-annotations`，用于提交旧图表的显式、可审计语义映射；系统不会从旧 PNG 猜测科学含义。v0.18.0 的跨项目完整回归仍是后续独立验证步骤。
 
-### v0.17.0 (2026-07-08) -- 科研事实账本与解释优先的自由写作
-
 - 新增 `writing/scientific_fact_ledger.json`，作为所有正文写作阶段共享的科研事实账本，用于保存必须保留的样本规模、类别平衡、token 覆盖、stress-test 边界和结果指标等关键信息。
 - 将科研事实账本接入 Data/Methods writing brief、Data/Methods 正文、Discussion 对比分析和最终 quality gate，避免在清洗路径、字段名和内部 artifact 表达时把关键科研事实一起删掉。
 - 新增 `results/figure_interpretation_blueprint.json`，让 Results 写作围绕主图组、科学问题、主指标、claim boundary 和 appendix diagnostics 展开，而不是泛泛总结图表文件。
 - 为 Introduction、Data 和 Discussion 的引用插入增加相关性过滤，避免同属一个大学科但与当前 idea/data/method 弱相关的文献被写进不合适的正文位置。
 - 扩展 quality-check，新增 must-preserve scientific fact coverage 检查；并用当前天文学回归项目对比 `main.pdf`，确认 v0.17.0 保持 Results 无引用、无小标题，增强公式和图表引用覆盖，清除了路径/原始字段污染，并保留当前证据账本中的关键数据事实。
 
-### v0.16.9 (2026-07-08) -- 写作风格学习与完整天文学回归验证
+### v0.16.1-v0.16.9 (2026-07-07 至 2026-07-08) -- 正文写作、图表合同与回归加固
 
 - 新增 `learn-writing-style-from-draft` 路径和 `writing_style.py` 风格画像，让已经人工认可的文稿提供非逐字复用的写作风格信号，同时不削弱证据门控。
 - 使用本地 time-aware flaring-source 天文学项目完成完整回归：重新刷新 research plan、data、method、figure、methods verification、APJS/AAS PDF 编译、integrity gate 和最终 quality gate。
 - 回归结果确认 6/6 个主图合同满足、13 张实际渲染科研图进入证据清单、4 张未渲染 supporting 图被排除在 result manifest 外、12/12 条 BibTeX 文献被正文覆盖，并且 Results 保持无引用、无小标题。
 
-### v0.16.8 (2026-07-08) -- Discussion 写作器重写与 artifact 清洗
-
 - 重写 Discussion 生成逻辑，禁止文件路径、图表路径、表格路径、manifest 名称和 Draftpaper-loop 实现语言进入论文正文。
 - 增加 Discussion 比较文献准备和 citation evidence 覆盖，让讨论部分可以对比结果与已有研究，同时延续“引用核查只修 claim 和引用位置，不删除已确认参考文献”的原则。
 - 新增 Discussion artifact sanitizer 和引用证据扩展的回归测试。
-
-### v0.16.7 (2026-07-08) -- Data/Methods 写作证据升级
 
 - 升级 Data 写作：保留样本角色、类别平衡、token 覆盖、模态可用性和 claim boundary 等科研细节，同时避免路径、文件名、脚本名和原始字段堆砌进入正文。
 - 升级 Methods 写作：读取阶段代码 manifest、公式提取、公式变量解释和 figure-code trace，使方法部分围绕样本构建、特征/token 构建、模型逻辑、验证设计、指标和 ablation 证据展开。
 - 增加 AASTeX 友好的 LaTeX 装配 fallback，包括作者信息占位、表格渲染和本地缺失 bibliography style 的回退，保证本地 review PDF 更稳定编译。
 
-### v0.16.6 (2026-07-08) -- Results Writer 重写
-
 - 将 Results 生成改为围绕 `results/result_manifest.yaml`、figure metadata、metrics、caption、scientific question 和 claim boundary 展开，而不是泛化总结 artifact。
 - Results 现在会按角色引用主图和附录诊断图，不生成文献引用，不生成小标题，并把 `row_count`、`source_id` 等内部标识转换为面向论文的科学表达。
 - 保留 Results 幂等写作：当结果证据没有变化时，后续 Introduction/Data/Methods/Discussion 重跑不会再次改写已经确认的 Results。
-
-### v0.16.5 (2026-07-08) -- Result Manifest 升级
 
 - 升级 `inventory-results`，写出 v0.16.5 结构化 result manifest，包含 `main_figures`、`appendix_figures`、`supporting_links`、`claim_boundaries`、内部表格和 figure-code trace。
 - 修复旧图污染问题：计划内但本轮没有渲染成功的 generated figures 会进入 `excluded_unrendered_figures`，不会因为磁盘上残留旧 PNG 就被写入 Results 或质量门。
 - 新增回归测试，确保未渲染的 supporting/appendix 图保留在诊断和修复语境中，但不会进入正式科学结果清单。
 
-### v0.16.4 (2026-07-08) -- Data Role 和 Figure Contract 修复
-
 - 扩展 Data Role aliases，覆盖 event-level samples、sample groups、current-observation tokens、historical sequence tokens、modality availability、feature matrices、天文学观测产品和模型评估字段。
 - 强化 figure contract validation：5-6 个主图组与 supporting/appendix diagnostics 分开检查，计划中的主结果图不能被验证图或中间诊断图静默替代。
 - 打通 method feasibility、figure execution diagnosis、result validity 和 core evidence 检查；缺数据或缺方法时先进入 repair 路线，再进入人工确认。
-
-### v0.16.3 (2026-07-07) -- 主图组合同、附录诊断图与修复驱动的图表执行
 
 - 将图表硬性合同从“最多生成 5-6 张 PNG”调整为“默认 5-6 个主图组”。每个主图组可以由多个 panel 或多个生成图像构成，因此 `generated_figure_count > 6` 本身不再被视为失败。
 - 在 `figure_plan.json` 和 `figure_contracts.json` 中增加主图组、支撑图和附录图统计。支撑性诊断图不会替代主结果图，但如果它们对故事完整性、可靠性验证或模型诊断有帮助，可以作为 Appendix Figure 被 Results 和 Discussion 引用。
@@ -362,15 +410,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 升级最终 `quality-check`：当 citation audit 的 reference coverage 失败时，最终质量门会失败，继续坚持“不删已确认参考文献，而是让正文覆盖、收窄和修复引用”的原则。
 - 新增回归测试覆盖主图组统计、合同失败修复任务、Results 中的附录图引用、引用覆盖质量门，以及 astronomy Methods 正文清洗。
 
-### v0.16.2 (2026-07-07) -- 安全方法执行与规范代码输出契约
-
 - 根据本地代码审计结果加固 `verify-methods`：方法验证命令会先解析为 argv 列表，再以 `shell=False` 执行；shell 操作符和显式 shell runner 会被拒绝，`methods/run_manifest.yaml` 会记录 `shell_used=false`。
 - 新增 `verify_command_argv` 与 `{python}` 占位符，生成的 method-code manifest 不再固化开发机器上的 Python 绝对路径；旧版 `verify_command` 字符串仅作为兼容字段保留。
 - 将完整 stdout/stderr 写入项目本地 `methods/run_logs/`，run manifest 只保存截断摘要、日志路径和长度信息，避免 manifest 过大。
 - 收敛 analysis-code 输出契约：正式生成代码以 `methods/` 为 canonical location，`code/` 仅作为旧流程兼容副本。
 - 去除测试中的重复 core-evidence helper，并新增回归测试覆盖 manifest argv 执行、shell 拒绝、run log manifest 和 canonical/compatibility 输出分离。
-
-### v0.16.1 (2026-07-07) -- 证据合同、可行性门控与更自由的论文正文写作
 
 - 新增 Data/Methods writing brief 层。`build-data-context` 和 `build-method-context` 会在生成正文前写出 `data/data_writing_brief.json/.html` 与 `methods/method_writing_brief.json/.html`。
 - 重构 Data 和 Methods 写作逻辑：正文由证据角色、方法阶段、公式、图表 trace 和 claim boundary 引导，而不是机械拼接 context 字段。
@@ -389,7 +433,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 本地验证：`python -m pytest tests/test_data_feasibility.py tests/test_methods.py tests/test_integrity_gate.py tests/test_composite_discipline_modules.py tests/test_method_blueprint.py`
 - 全量验证：`python -m pytest`，241 tests passed。
 
-### v0.15.12 (2026-07-06) -- 正文证据一致性与不删文献的引用核查
+### v0.15.1-v0.15.12 (2026-07-01 至 2026-07-06) -- 证据优先 loop、引用核查与 CLI 加固
 
 - 加强 Data/Methods 正文生成逻辑：本地路径、文件名、workflow 产物、仅用于实现的脚本名称和内部 manifest 语言，会在进入论文正文前被清理成面向论文的科学表述。
 - 增加天文观测数据产品的正文表达转换：光谱、响应矩阵、光变曲线、事件、图像和曝光等数据产品会被写成可读的数据描述，避免把 PHA、ARF、RMF、LC 等字段名生硬写进论文。
@@ -399,15 +443,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 本地验证：`python -m pytest`
 - 当前测试规模：228 tests
 
-### v0.15.11 (2026-07-06) -- 结果写作幂等化与确认后状态保护
-
 - 修复 `write-results`：当 `results/result_manifest.yaml` 和生成正文没有变化时，重复调用不会再重写 `results/results.tex` 或 `results/results_summary_zh.md`。
 - 避免核心图表与 Results 已经确认后，后续 Introduction、Data、Methods、Discussion、LaTeX 和 quality 阶段因为一次无变化的 `write-results` 被重新标记为 stale。
 - 新增回归测试，覆盖“先确认 Results，再继续写 Introduction/Data/Methods/Discussion”的 evidence-first 写作顺序。
 - 本地验证：`python -m pytest`
 - 当前测试规模：224 tests
-
-### v0.15.10 (2026-07-05) -- 阶段归属代码溯源与公式追踪写作
 
 - 新增 `classify-code-ownership`、`route-stage-code`、`build-code-provenance`、`extract-method-formulas` 和 `trace-figures-to-code`，用于把项目专属或历史遗留的 `code/` 脚本归属到 `data/scripts/`、`methods/scripts/`、`methods/src/` 和 `methods/plotting/`。
 - 新增 `data/data_code_manifest.json`，扩展 `methods/method_code_manifest.json`，并新增 `methods/method_formula_manifest.json`、`methods/method_formulas.tex` 和 `results/figure_code_trace.json`，用于记录数据代码、方法代码、公式来源和图表代码溯源。
@@ -416,56 +456,38 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 在 astronomy、geography 和 machine_learning 学科模块中补充阶段归属代码布局、公式提取和图表代码追踪约束。
 - 已用本地 astronomy 项目验证迁移链路：旧 `code/` 脚本完成分类、路由、公式扫描和结果图表追踪；在 artifact drift 同步后，Methods context 因上游 method-plan stale 被正确拦截，没有绕过状态机。
 
-### v0.15.9 (2026-07-03) -- pytest CI 与学科模板资源清理
-
 - GitHub Actions 改为安装 `.[dev]` 并运行 `python -m pytest`，与本地开发验证路径保持一致。
 - 修复内置学科模板中的 `csv.DictReader(path.open(...))` 直接打开文件模式，统一改为 context manager，避免 ResourceWarning。
 - 本地验证：`python -m pytest`
 - 当前测试规模：219 tests。
 
-### v0.15.8 (2026-07-03) -- 学科模板注册表验证
-
 - 新增 `draftpaper_cli/template_registry.py` 和 `draftpaper validate-template-registry`，用于检查内置学科插件 manifest、template 文件、fixture、插件 ID 和成熟度元数据。
 - 新增测试，方便后续外部贡献的学科插件在合并前先完成结构检查。
-
-### v0.15.7 (2026-07-03) -- 共享 IO、LaTeX 与引用工具
 
 - 新增 `io_utils`、`latex_utils` 和 `citation_utils`，减少 JSON/text 读取、LaTeX 转义、BibTeX 解析和 citation key 解析的重复实现。
 - 将 Methods、Results、Introduction、Discussion、LaTeX assembly 和 quality gate 等高风险模块迁移到共享 helper。
 - 保留 `\cite{}`、`\citep{}` 等常见 LaTeX 引用命令兼容。
 
-### v0.15.6 (2026-07-03) -- 审计驱动的 CLI 与门控加固基础
-
 - 新增公共工具层测试，并让 gate 行为围绕统一解析 helper 对齐。
 - 继续保持 `methods/` 作为生成分析代码的 canonical location，`code/` 仅作为兼容输出保留。
-
-### v0.15.5 (2026-07-03) -- manifest 驱动的方法验证与图表合同
 
 - `verify-methods` 在未传入 `--command` 时会读取 `methods/method_code_manifest.json`，使用生成的验证 metadata、declared outputs 和 selected input data 完成验证。
 - 方法验证现在检查 `results/figure_contracts.json`；缺失、占位或 metadata 不匹配的主结果图会导致 hard gate 失败。
 - `generate-analysis-code` 会把 manifest-driven 的验证和绘图安装 metadata 写入 manifest，并推荐更短的 manifest-driven verification command。
 
-### v0.15.4 (2026-07-03) -- 打包 paper-fetch fallback 与全文解析扩展
-
 - 将 paper-fetch runtime 打包到 `draftpaper_cli/_vendor/paper_fetch_skill`，使 wheel 安装也能保留 fallback source，而不是只依赖源码目录中的 `third_party/` 路径。
 - 新增 `fulltext` optional extra，用于安装更重的文章/PDF 全文解析依赖，同时保持默认安装相对轻量。
 - 已用 `python -m pip wheel . --no-deps` 验证 wheel 中包含 vendored paper-fetch CLI 和第三方 license。
-
-### v0.15.3 (2026-07-03) -- 硬门控退出码与可迁移项目元数据
 
 - 修复 `verify-methods` 的 CLI 退出码语义：当方法验证写入 `status=failed` 时，命令会返回非零退出码，同时继续输出 run manifest JSON，避免 shell、Codex 自动化或 CI 把失败的方法验证误判为成功。
 - 移除新建项目 `project.json` 中的开发者本机历史路径，改为中性的 `legacy_mvp_reference` 说明字段，提升项目在不同电脑、公开示例和 fork 环境中的可迁移性。
 - 新增回归测试，覆盖失败的 `verify-methods` 退出码和新项目元数据不包含本机私有路径。
 - 刷新 README 中的论文生成流程说明，强调当前主流程是 evidence-first：文献和 research plan 之后先完成数据/方法执行、主图生成、result validity 和 core evidence 审阅，再进入 Results、Introduction、Data、Methods 和 Discussion 写作。
 
-### v0.15.2 (2026-07-02) -- 严格图表合同与修复优先执行
-
 - 升级 `plan-figures`：research plan 中的 figure storyboard 会被视为严格的主结果图合同，并写入 `results/figure_contracts.json` 与 `results/storyboard_alignment_report.json`。
 - 升级 `generate-analysis-code`：生成流程会输出 `results/figure_execution_diagnosis.json` 和 `.html`；当主图缺少数据或缺少方法代码时，系统会明确诊断原因，而不是静默生成验证图、流程图或辅助图来替代主图。
 - 新增 `diagnose-figure-execution`、`repair-figure-data` 和 `repair-figure-method`。这些命令会根据现有数据连接器、公开数据库/API、远端服务器流程、学科插件、公开科研代码仓库、文献实现仓库或 Codex 生成的项目专属方法代码，形成数据或方法修复计划。
 - 升级 `assess-core-evidence`、`status`、`run-pipeline` 和最终 quality path：如果研究计划中的主图合同未满足，流程会优先推荐数据/方法修复；只有自动修复仍无法产出核心图表时，才进入人工 core evidence 确认。
-
-### v0.15.1 (2026-07-01) -- 证据优先论文 loop 与核心证据门控
 
 - 调整主论文流程：文献调研和 research plan 之后，先完成数据补充与整合、方法代码运行、核心图表生成、result validity 和 core evidence gate，再进入正文写作。
 - 新增 `assess-core-evidence`，输出 `core_evidence/core_evidence_report.json` 和 `.html`，用于检查数据补充、数据整合、方法分析、图表生成、figure metadata 和结果有效性，并保留人工确认核心图表的检查点。
@@ -473,21 +495,17 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - Results 写作改为连续自然段，不再默认按每张图拆小节，并新增 `results/results_summary_zh.md`，用于中文概括结果部分和图表解释，方便人工审图。
 - 同步更新 orchestrator、LaTeX assembly、quality gate、review routing 和 Codex skill wrapper，使其遵循 evidence-first loop。
 
-### v0.14.13 (2026-07-01) -- 远端 FITS/ZIP 流式数据连接器
+### v0.14.0-v0.14.13 (2026-06-24 至 2026-07-01) -- 学科插件、引用修复、IP 保护与数据连接器
 
 - 新增 astronomy 学科模块的 `remote_fits_zip_stream` 数据连接器，用于大型 FITS/ZIP 观测产品保留在远端服务器或仪器归档中的场景；Draftpaper-loop 本地只保留 compact manifest、processed tables、parse-status reports 和 provenance records。
 - 新增公开通用模板，支持 event-product manifest 构建、ZIP 成员可用性检查、密集观测窗口选择和 streaming data contract 输出；模板不写死私有服务器地址、用户名、密码、真实源 ID 或项目专属类别标签。
 - 将训练冒烟验证拆到方法模板层：astronomy 模块新增 `source_holdout_stream_smoke_test`，machine learning 模块新增 `group_holdout_training_smoke_test`，从而让 event-random 指标只作为泄漏风险对照，source/group-held-out 指标在可行时作为主要验证路径。
 - 升级 `prepare-data-acquisition`，可以识别 `fits_zip_stream` 数据访问模式，并将 astronomy 缺失数据任务路由到更合适的远端流式数据连接器。
 
-### v0.14.12 (2026-06-30) -- 可点击参考文献链接与紧凑检索词组
-
 - 每篇文献 summary HTML 中的 DOI 和 URL 现在会渲染为可点击链接，方便人工复查文献来源。
 - 调整文献检索 query plan：先从 idea/title 中抽取方法、仪器、数据和任务相关的短关键词，再与 data/method query 组合检索。
 - 避免把完整研究题目或整句 idea 反复塞进每一条检索 query，同时保留 high-energy time-domain astronomy、X-ray transient classification 等学科锚点。
 - 已用 astronomy 项目重新运行 `search-literature -> generate-plan` 验证：新的 query plan 不再重复完整 idea，同时保留 12 篇参考文献、6 张计划主图和 1 个核心表格。
-
-### v0.14.11 (2026-06-30) -- 研究计划 Markdown 合同与结构化文献检索计划
 
 - 调整 `generate-plan`：面向用户阅读的 research plan 只生成 `research_plan/research_plan.md` 和 `research_plan/research_plan.zh-CN.md`，不再额外生成 `research_plan.html` 和单独的 `research_questions.*` 文件。
 - 将研究问题、figure storyboard、method-plan contract、预期表格、风险检查和文献综述索引链接直接合并进 research plan Markdown，减少用户需要打开的分散文件。
@@ -496,15 +514,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 为天文学等项目增加低数量自动补检，并把 query provenance 写入 `references/search_queries.json`、`references/literature_items.json` 和每篇文献的 HTML summary。
 - 已用本地 astronomy 项目重新运行 `search-literature -> generate-plan` 验证：当前项目保留 12 篇参考文献、30 条 citation-evidence rows、6 张计划主图和 1 个核心表格。
 
-### v0.14.10 (2026-06-30) -- 引用保留与参考文献覆盖核查
-
 - 为 claim-level 引用核查记录补充 citation intent、support status、topic relevance score、claim-alignment score、blocking status 和 repair hints。
 - 升级 citation repair plan：对于语义相关、方法/工具背景相关、部分支持或不贴切的引用，保留已确认参考文献，并优先收窄和改写正文 claim，使其符合文献证据；引用核查阶段不再规划删除参考文献或删除带引用的正文句子。
 - 新增 `references/reference_usage_plan.json`，把 retained literature summaries 分配到对应正文章节，并要求每篇保留文献都必须在 Results 之外至少引用一次。
 - 新增 `citation_audit/reference_coverage_report.json` 和 `citation_audit/reference_coverage_report.html`，用于对比 `references/literature_summaries/` 中保留的文献和正文中实际去重引用的文献；summary 中存在但正文未引用的文献现在会导致 citation audit 阻塞失败，不再允许最终参考文献数量被静默缩小。
 - 新增回归测试，覆盖方法/工具/背景类引用保留、上下文相关引用改写，以及 reference coverage gap 与 unsupported citation 的分离报告。
-
-### v0.14.9 (2026-06-28) -- 公开 IP 保护与 DPL 结构溯源层
 
 - 新增公开合规文档，明确非商业 source-available 边界、商业授权要求、赞助不等于授权规则，以及禁止使用隐藏 payload、遥测、设备指纹、远程许可证检查或破坏性检查等反滥用机制。
 - 新增公开 DPL schema family 文档，并在项目 metadata、stage manifest 和 project passport 中写入可审计的项目 provenance 信息。
@@ -512,14 +526,10 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增公开 forensic fingerprinting 高层说明。
 - 更新商业许可和商标说明，明确 Draftpaper-loop、DPL loop engine、project passport、claim trace 和 evidence binding 等项目术语不得被用于暗示商业授权或官方背书。
 
-### v0.14.8 (2026-06-28) -- 引用核查与修复循环
-
 - 新增独立的引用核查与修复 loop：`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop`。
 - 新增 claim-level 本地引用支持度核查：将论文正文中的引用论断与 BibTeX 和 `references/citation_evidence.csv` 对比，并在 `citation_audit/iterations/` 保存中间 HTML 审查报告，通过后生成 `citation_audit/final_citation_audit_report.html`。
 - 升级 `status` 和 `run-pipeline`：integrity gate 通过后不会直接进入 `quality-check`，而是先要求最终引用核查通过；如果审查失败，会推荐进入 citation repair loop。
 - 升级 `quality-check`：直接调用时也要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，防止跳过参考文献来源与论断一致性核查。
-
-### v0.14.7 (2026-06-26) -- 学习型 loop 与可运行基础模块
 
 - 新增学科模块成熟度字段，以 `foundation`、`runnable` 和 `mature` 作为后续演进层级。
 - 新增 `capture-discipline-learning`，可以从 observations、methods、review、data context、result metadata 和 rescue plan 等项目归档中总结可复用经验，写入 `plugin_candidates/from_loop/...`，不会复制原始数据或隐藏推理。
@@ -527,48 +537,34 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 将 finance、medicine、biology 和 engineering 从 foundation-only spec 升级为 runnable foundation module，每个学科先补充一条标准库兼容、fixture-backed 的可运行方法模板。
 - 新增 finance、medicine、biology 和 engineering 的 foundation reviewer engines，使这些学科不再直接回退到 default 审稿路线。
 
-### v0.14.6 (2026-06-26) -- 仓库结构检查与基础学科种子模块
-
 - 新增 `inspect-research-repo`，只读取候选仓库 checkout 的结构、docs 和 package metadata，并输出 `repository_structure.json`、`file_inventory.csv`、`package_manifest.json` 和 HTML 检查报告，不复制源码。
 - 新增 `map-repository-workflow`，把仓库文件角色映射为 data connector、preprocessing、method、figure、validation、review、environment 和 documentation 等候选能力。
 - 新增 `bootstrap-discipline-foundation`，根据 workflow map 生成候选级学科基座建议；默认只写 candidate，不直接修改正式学科模块。
 - 新增 finance、medicine、biology 和 engineering 四个基础学科模块，每个模块都先内置数据 connector spec、方法 template spec 和 reviewer-rule groups。
-
-### v0.14.5 (2026-06-26) -- 仅基于元数据的科研代码挖掘
 
 - 新增最小版公开科研代码挖掘链路：`discover-research-repos`、`score-research-repos` 和 `extract-plugin-candidates`。
 - 新流程会在 `research_code_mining/` 下生成元数据级 JSON/HTML 报告，并根据许可证安全性、可复现性元数据、论文关联信号、工作流完整性和可复用能力提示对仓库排序。
 - 候选抽取会生成 `candidate_manifest.json`、`candidate_report.html` 和候选索引报告，同时明确避免 clone 仓库、复制第三方源码或直接安装插件。
 - 这为后续学科模块扩展提供了更安全的入口：公开代码只能启发通用 data/method/figure/review 模板，真正合并前仍需经过许可证、隐私、overlap、fixture 和维护者审阅。
 
-### v0.14.4 (2026-06-25) -- 公开表述与许可证定位
-
 - 保留当前 source-available non-commercial 自定义许可，没有切换为 Apache-2.0 或其它标准 SPDX 许可证，因为商业授权边界需要非标准条款才能表达清楚。
 - 清理公开更新日志中的具体项目来源表述，后续公开 README 默认用可复用能力描述插件 seed，而不是暴露内部项目名、私有验证目标或具体研究方向。
 - 明确后续公开 changelog 应避免写入本地验证文件夹、私有数据集、项目级样本选择、真实项目名称或过细的研究场景来源。
-
-### v0.14.3 (2026-06-25) -- 复合学科模块
 
 - 新增 runtime composite discipline modules，用于交叉学科论文；loop 现在会记录 `primary_discipline`、`secondary_disciplines`、`discipline_scores` 和有序 `discipline_modules`。
 - `get_discipline_module` 现在可以合并 `default`、主学科和辅学科，并按稳定 id 去重 data connectors、method templates 和 review rules。
 - geography + machine learning、astronomy + machine learning 等交叉项目可以在 `prepare-method-blueprint`、`prepare-data-acquisition` 和 `plan-figures` 中同时暴露领域插件与 ML 建模/审稿插件。
 - 插件候选 manifest 现在会记录主学科和辅学科，但稳定可复用能力仍然归入其对应 home module，避免按论文方向拆永久分支。
 
-### v0.14.2 (2026-06-24) -- 地理学与表格机器学习插件种子
-
 - 新增 geography 数据 connector：Earth Engine 降水导出规划、NetCDF-to-GeoTIFF 转换规划、栅格文本转 raster、ArcGIS/project-bound 分区统计 manifest。
 - 新增 geography 方法模板：月尺度遥感指数汇总、物候曲线平滑、NDVI 时序 K-means 分区、聚类统计诊断。
 - 新增 machine-learning 数据/模型 seed：表格环境数据 profile、脱敏 saved-model manifest、RF/XGBoost/GBDT/Stacking 回归计划、observed-predicted 诊断、feature importance、PDP/ICE、SHAP plan，以及模型统计有效性 reviewer gate。
 - 这些 seed 均保持 fixture-backed 与 dependency-light：可复用插件代码保持通用，项目路径、API 账号、数据窗口和模型二进制文件只留在本地项目绑定中。
 
-### v0.14.1 (2026-06-24) -- 天文学与深度学习插件沉淀
-
 - 新增 astronomy connector 和 method seed，覆盖 photon/event 数据访问规划、观测产品 manifest、长时标光变特征提取和事件级序列输入构建。
 - 新增 machine-learning/deep-learning connector 和 method seed，覆盖视觉目录对齐、预训练 backbone 元数据、自监督训练规划、checkpoint 兼容性诊断、embedding 健康检查、少标签评估和相似性检索。
 - 为这些学科插件补充 fixture-backed tests，使其不依赖私有数据、API 凭证、大模型 checkpoint 或 GPU 训练即可完成基础验证。
 - 通用插件模板不保存项目私有路径、账号凭证、checkpoint 二进制文件或固定样本选择；真实项目中的具体路径和参数由 Draftpaper-loop 项目本地绑定。
-
-### v0.14.0 (2026-06-24) -- 学科插件贡献工作流
 
 - 新增完整的 `DataConnectorSpec` 和 `MethodTemplateSpec` schema。
 - 将学科模块推进为三层结构：`data_connectors/`、`method_templates/` 和 `review_rules/`。
@@ -577,14 +573,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增插件贡献 preflight 命令：`summarize-plugin-candidates`、`generalize-plugin-candidate`、`validate-plugin-candidate`、`package-plugin-contribution` 和 `write-github-contribution-guide`。
 - 明确 fork/PR 规则：fork 和 branch 只是临时贡献通道；稳定通用能力必须在隐私、通用性、overlap、fixture 和 validation 检查后合并进 `main` 对应学科模块。
 
-### v0.13.1 (2026-06-24) -- 学科图表策略与数据连接器目录
+### v0.13.0-v0.13.1 (2026-06-24) -- 阶段归属方法代码与学科图表策略
 
 - 升级 `plan-figures`：学科模块可以声明 `minimum_main_figures`、`target_main_figures` 和 `required_figure_groups`，在数据可用时默认初稿会尽量规划至少 5 张 generated 主图。
 - 扩展学科模块的数据获取 connector catalog，记录 package、import module、API/下载路径、凭证要求、可获取数据格式和本地 feasibility 状态。
 - 新增 `ecology` 和 `bioinformatics` 学科模块骨架，并与 `default`、`geography`、`astronomy`、`machine_learning` 一起接入 registry。
 - 补充 geography/agriculture、astronomy、ecology/environment、machine_learning 和 bioinformatics 的数据获取路线，用于 research plan 阶段的数据补充建议和 reviewer/rescue 缺失数据回退。
-
-### v0.13.0 (2026-06-24) -- 阶段归属方法代码与学科模块
 
 - 新增阶段归属代码结构：数据获取和预处理代码进入 `data/scripts`，模型、统计、空间分析、验证和科研绘图代码进入 `methods/scripts` 与 `methods/src`，`results` 只保存图表、表格和 metadata。
 - 新增 `prepare-method-blueprint`，输出 `methods/method_blueprint.json`、`methods/method_data_contract.json`、`methods/method_code_plan.json` 和 `methods/method_formula_plan.json`。
@@ -592,14 +586,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 升级 `generate-analysis-code`：主生成代码默认保存到 `methods/`，`code/` 仅作为旧流程兼容入口。
 - 新增 `docs/discipline_modules/`，用于说明后续不同学科模块如何由 Codex 总结、测试并接入。
 
-### v0.12.1 (2026-06-24) -- 审稿/救援数据获取任务
+### v0.12.0-v0.12.1 (2026-06-23 至 2026-06-24) -- 可插拔数据获取与审稿救援任务
 
 - 将 reviewer/rescue 中的缺失数据建议接入 `prepare-data-acquisition`。
 - `prepare-data-acquisition` 现在会读取 `review/actionable_analysis_tasks.json`、`review/review_engineering_plan.json`、`review/statistical_rescue_plan.json`、`review/revision_plan.json` 和 `review/gate_failure_diagnosis.json`。
 - 新增 `data/data_acquisition_tasks.json` 和 `data/data_acquisition_tasks.html`，把 blocked analysis task 转换成明确的缺失数据请求，记录 `needed_data`、`optional_data`、`suggested_connectors` 和需要用户确认的问题。
 - 升级 `status` 和 `run-pipeline`，让 review/rescue 执行链在 `prepare-analysis-revision` 之后、`plan-figures --use-review-tasks` 之前自动推荐 `prepare-data-acquisition`。
-
-### v0.12.0 (2026-06-23) -- 可插拔数据获取规划
 
 - 新增共享学科推断层，供数据获取规划和审稿工程共同使用，避免 Data 插件和 review/rescue 插件各自重复判断学科。
 - 新增 `classify-data-access`、`prepare-data-acquisition` 和 `inventory-data-sources`，用于在正式数据清点前生成 plan-first 的数据获取规划。
@@ -608,7 +600,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增设计文档和实施计划，保存在 `docs/superpowers/specs/` 和 `docs/superpowers/plans/`。
 - 已用本地 cross-discipline 源目录验证通用层，同时检测到 local files、API access 和 remote server 三类数据获取模式；公开文档不记录私有路径或具体项目标识。
 
-### v0.11.1 (2026-06-23) -- 源码可见许可保护与生成器溯源
+### v0.11.0-v0.11.1 (2026-06-21 至 2026-06-23) -- 发表就绪度、统计救援与源码可见保护
 
 - 新增仓库级保护文件：`NOTICE`、`COMMERCIAL_LICENSE.md` 和 `TRADEMARK.md`。
 - 将 `LICENSE` 中较早的 DraftPaper CLI 表述更新为 Draftpaper-loop，并补充 API 服务、论文生产服务、付费课程捆绑等商业使用示例。
@@ -616,8 +608,6 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 在生成的 LaTeX、HTML 报告、生成式 Python 脚本，以及包含 `generated_at` 的 JSON 报告中加入稳定的 Draftpaper-loop generator provenance。
 - 本地验证：`python -m unittest discover -s tests`
 - 当前测试规模：130 tests
-
-### v0.11.0 (2026-06-21) -- 发表就绪度审稿与统计救援规划
 
 - 新增 `discover-review-workflow-gaps` 和 `propose-review-engineering-plan`，用于学科分支审稿工程。第一版确定性 engine 是 geography，覆盖遥感、农业地理、空间尺度匹配、遥感质量控制、空间自相关、分层异质性和弱拟合回退；同时预留并实装 astronomy 与 machine_learning 的基础审稿规则，分别覆盖天文目录交叉匹配、光变曲线采样、源分类验证，以及机器学习数据泄漏、baseline/ablation、验证拆分、校准和类别不平衡；无法识别学科时使用 default fallback。
 - 新增审稿工程输出：`review/review_discipline_profile.json`、`review/review_workflow_gap_report.json`、`review/review_workflow_gap_report.html`、`review/review_engineering_plan.json`、`review/review_engineering_plan.html` 和 `review/user_confirmation_requests.json`。`codex_enhancement_context` 作为 C 层接口，供 Codex 基于文献、学科和已写稿件补充差异化审稿建议。
@@ -664,13 +654,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 升级 `run-pipeline`，Data 和 Methods 这类多子步骤 stage 只有在 context 和 manuscript 输出都存在后才会被视为完成。
 - 升级 quality gate，如果 Data/Methods 正文包含本地文件名、路径、执行命令或 manifest 式输出文本，会直接失败。
 
-### v0.7.1 (2026-06-15) -- 文献摘要中保留 Zotero 证据
+### v0.7.0-v0.7.1 (2026-06-15) -- Zotero 文献导入与文献证据保留
 
 - 将 Zotero 导入文献作为用户精选证据完整保留，不再受外部检索 ranking、近年文献偏好、abstract/PDF 过滤和默认 30 篇外部文献上限约束。
 - 在 literature review notes、每篇文献 HTML summary 和 `references/literature_summaries/index.html` 中加入 Zotero source、origin、collection 和 selection policy 信息。
 - 增加测试，确认 Zotero 文献会与检索文献一起出现在 HTML index 中，同时保持来源可区分。
-
-### v0.7.0 (2026-06-15) -- 参考文献的 Zotero 文献集导入
 
 - 新增 `list-zotero-collections`，方便 Codex 或本地 CLI 查看 Zotero collection 名称。
 - 新增 `search-literature --zotero-collection`，允许单篇论文项目从用户指定的 Zotero collection 导入参考文献。

@@ -30,8 +30,18 @@ from .orchestrator import OrchestratorError, checkpoint_project, resume_project,
 from .passport import PassportError, load_project_passport, refresh_project_passport
 from .plugin_candidates import (
     PluginCandidateError,
+    classify_skill_source,
+    compile_skill_source,
+    extract_review_rule_signals,
+    extract_skill_capabilities,
     generalize_plugin_candidate,
+    index_skill_source,
+    inspect_skill_source,
+    map_skill_capabilities,
     package_plugin_contribution,
+    promote_plugin_candidate,
+    review_plugin_contribution_package,
+    snapshot_skill_source,
     summarize_plugin_candidates,
     validate_plugin_candidate,
     write_github_contribution_guide,
@@ -63,6 +73,7 @@ from .review_revision import (
 from .review_engines import ReviewEngineError, discover_review_workflow_gaps, infer_review_discipline, propose_review_engineering_plan
 from .results import ResultsGateError, inventory_results, write_results
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
+from .review_rule_runtime import assess_review_rules, build_review_rule_rescue_tasks, collect_review_rule_evidence_roles, load_discipline_review_rules
 from .scientific_fact_ledger import build_scientific_fact_ledger, load_or_build_scientific_fact_ledger
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
@@ -123,9 +134,19 @@ __all__ = [
     "load_project_passport",
     "refresh_project_passport",
     "summarize_plugin_candidates",
+    "snapshot_skill_source",
+    "inspect_skill_source",
+    "index_skill_source",
+    "classify_skill_source",
+    "map_skill_capabilities",
+    "extract_skill_capabilities",
+    "compile_skill_source",
+    "extract_review_rule_signals",
     "generalize_plugin_candidate",
     "validate_plugin_candidate",
+    "promote_plugin_candidate",
     "package_plugin_contribution",
+    "review_plugin_contribution_package",
     "write_github_contribution_guide",
     "detect_artifact_drift",
     "sync_artifact_stale",
@@ -143,6 +164,10 @@ __all__ = [
     "build_section_evidence_packet",
     "submit_section_draft",
     "resolve_result_evidence",
+    "assess_review_rules",
+    "build_review_rule_rescue_tasks",
+    "collect_review_rule_evidence_roles",
+    "load_discipline_review_rules",
     "prepare_analysis_revision",
     "write_introduction",
     "inventory_data",

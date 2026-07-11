@@ -54,7 +54,7 @@ class CompositeDisciplineModule(DisciplineModule):
             code_generation_constraints=_merge_lists(module.spec.code_generation_constraints for module in ordered),
             data_connectors=_merge_dicts_by_id((module.spec.connector_dicts() for module in ordered), "connector_id"),
             method_templates=_merge_dicts_by_id((module.spec.method_template_dicts() for module in ordered), "template_id"),
-            review_rule_groups=_merge_dicts_by_id((module.spec.review_rule_groups for module in ordered), "rule_group_id"),
+            review_rule_groups=_merge_dicts_by_id((module.spec.review_rule_dicts() for module in ordered), "rule_group_id"),
         )
         self.primary_discipline = primary
         self.secondary_disciplines = list(secondary)

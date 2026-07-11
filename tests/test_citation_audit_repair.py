@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.discipline_modules.default import MODULE as DEFAULT_MODULE
 
 
 def _write_minimal_citation_project(root: str) -> Path:
@@ -159,6 +160,41 @@ def _write_citation_preservation_project(root: str) -> Path:
 
 
 class CitationAuditRepairTests(unittest.TestCase):
+    def test_promoted_review_rule_is_part_of_citation_audit_decision(self) -> None:
+        from draftpaper_cli.citation_audit import audit_citations
+
+        rule = {
+            "rule_id": "citation_scope_gate_test",
+            "rule_group_id": "citation_scope_gate_test",
+            "rule_family": "citation_and_manuscript_validity",
+            "evidence_binding": {
+                "registry_record_types": ["citation", "manuscript"],
+                "required_fields": ["citation_evidence", "manual_citation_scope_confirmation"],
+                "forbidden_conflicts": [],
+            },
+            "minimum_evidence_required": ["citation_evidence", "manual_citation_scope_confirmation"],
+            "blocking_level": "block_claim",
+            "failure_route": "citation_repair",
+            "pipeline_hooks": {"citation_audit": "required"},
+            "threshold_policy": {"mode": "contextual"},
+            "threshold_source": {"type": "discipline_convention"},
+            "maturity": "mature",
+            "deployment_state": "promoted_review_rule",
+        }
+        DEFAULT_MODULE.spec.review_rule_groups.append(rule)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                project_path = _write_minimal_citation_project(tmp)
+
+                report = audit_citations(project_path)
+
+                self.assertEqual(report["status"], "failed")
+                self.assertEqual(report["review_rule_gate_decision"], "revise_required")
+                self.assertTrue(report["review_rule_rescue_tasks"])
+                self.assertTrue((project_path / "citation_audit" / "review_rule_gate_report.json").exists())
+        finally:
+            DEFAULT_MODULE.spec.review_rule_groups.remove(rule)
+
     def test_final_audit_requires_all_final_manuscript_sections(self) -> None:
         from draftpaper_cli.citation_audit import CitationAuditError, audit_citations
 

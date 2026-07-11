@@ -15,6 +15,7 @@ from .html_utils import write_html_report
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
+from .review_rule_runtime import assess_review_rules, review_rule_validation_checks
 
 
 METHOD_BLUEPRINT_JSON = "methods/method_blueprint.json"
@@ -22,6 +23,7 @@ METHOD_BLUEPRINT_HTML = "methods/method_blueprint.html"
 METHOD_DATA_CONTRACT_JSON = "methods/method_data_contract.json"
 METHOD_CODE_PLAN_JSON = "methods/method_code_plan.json"
 METHOD_FORMULA_PLAN_JSON = "methods/method_formula_plan.json"
+METHOD_REVIEW_RULE_GATE_JSON = "methods/method_review_rule_gate.json"
 
 METHOD_BLUEPRINT_OUTPUTS = [
     METHOD_BLUEPRINT_JSON,
@@ -29,6 +31,7 @@ METHOD_BLUEPRINT_OUTPUTS = [
     METHOD_DATA_CONTRACT_JSON,
     METHOD_CODE_PLAN_JSON,
     METHOD_FORMULA_PLAN_JSON,
+    METHOD_REVIEW_RULE_GATE_JSON,
 ]
 
 
@@ -210,6 +213,16 @@ def _render_blueprint_markdown(blueprint: dict[str, Any]) -> str:
     lines.extend(["", "## Validation Checks", ""])
     for check in code_plan.get("validation_checks") or []:
         lines.append(f"- {check}")
+    review_gate = blueprint.get("review_rule_gate_plan") or {}
+    lines.extend(["", "## Review Rule Gate Plan", ""])
+    lines.append(f"Decision: {review_gate.get('decision', 'not_assessed')}")
+    lines.append("")
+    for assessment in review_gate.get("rule_assessments") or []:
+        lines.append(
+            f"- {assessment.get('rule_id', 'review_rule')}: "
+            f"{assessment.get('decision', 'unknown')} "
+            f"({assessment.get('runtime_level', 'advisory')})"
+        )
     lines.extend(["", "## Figure Families", ""])
     for figure in code_plan.get("figure_families") or []:
         lines.append(f"- {figure}")
@@ -256,6 +269,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "research_plan_excerpt": _read_text(state.path / "research_plan" / "research_plan.md"),
     }
     hints = module.method_blueprint_hints(context)
+    review_rule_gate = assess_review_rules(state.path, stage="method_plan")
     available_roles = _available_data_roles(inventory, acquisition_plan)
     selected_templates = _select_method_templates(hints, context)
     selected_roles = _selected_template_values(selected_templates, "input_roles")
@@ -266,7 +280,10 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     method_families = list(dict.fromkeys(list(requirements.get("method_families") or []) + selected_method_families + selected_template_ids))
     if not method_families:
         method_families = list(hints.get("method_code_hints") or [])
-    validation_checks = list(dict.fromkeys(_selected_template_values(selected_templates, "validation_checks") or list(hints.get("validation_hints") or [])))
+    validation_checks = list(dict.fromkeys(
+        (_selected_template_values(selected_templates, "validation_checks") or list(hints.get("validation_hints") or []))
+        + review_rule_validation_checks(review_rule_gate)
+    ))
     figure_families = list(dict.fromkeys(_selected_template_values(selected_templates, "figure_groups") or list(hints.get("figure_hints") or [])))
     formula_families = list(dict.fromkeys(_selected_template_values(selected_templates, "formula_families") or list(hints.get("formula_hints") or [])))
     method_data_contract = {
@@ -290,6 +307,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "code_generation_constraints": list(hints.get("code_generation_constraints") or []),
         "stage_owned_code_locations": ["methods/scripts", "methods/src"],
         "compatibility_locations": ["code/scripts", "code/src"],
+        "review_rule_gate_decision": review_rule_gate.get("decision"),
+        "review_rule_validation_checks": review_rule_validation_checks(review_rule_gate),
     }
     method_formula_plan = {
         "status": "planned",
@@ -313,6 +332,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         "method_template_hints": hints.get("method_template_hints") or [],
         "selected_method_template_hints": selected_templates,
         "review_rule_hints": hints.get("review_rule_hints") or [],
+        "review_rule_gate_plan": review_rule_gate,
         "composite_discipline": hints.get("composite_discipline") or {},
         "review_task_count": len(review_tasks.get("tasks") or []) if isinstance(review_tasks, dict) else 0,
         "next_command": f'python -m draftpaper_cli.cli generate-analysis-code --project "{state.path}"',
@@ -324,6 +344,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     _write_json(state.path / METHOD_DATA_CONTRACT_JSON, method_data_contract)
     _write_json(state.path / METHOD_CODE_PLAN_JSON, method_code_plan)
     _write_json(state.path / METHOD_FORMULA_PLAN_JSON, method_formula_plan)
+    _write_json(state.path / METHOD_REVIEW_RULE_GATE_JSON, review_rule_gate)
     _set_method_plan_manifest(state.path)
     update_stage_status(state.path, "method_plan", "draft")
     return {

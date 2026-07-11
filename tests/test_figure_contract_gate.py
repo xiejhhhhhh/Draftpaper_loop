@@ -11,6 +11,7 @@ from pathlib import Path
 
 from draftpaper_cli.figure_contract_gate import assess_figure_contracts
 from draftpaper_cli.figure_repair import repair_figure_data
+from draftpaper_cli.discipline_modules.default import MODULE as DEFAULT_MODULE
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -20,6 +21,55 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 class FigureContractGateTests(unittest.TestCase):
+    def test_promoted_review_rule_can_block_figure_contract_and_emit_rescue(self) -> None:
+        rule = {
+            "rule_id": "external_validation_figure_gate_test",
+            "rule_group_id": "external_validation_figure_gate_test",
+            "rule_family": "model_validity",
+            "evidence_binding": {
+                "registry_record_types": ["figure", "method_output"],
+                "required_fields": ["external_validation"],
+                "forbidden_conflicts": [],
+            },
+            "minimum_evidence_required": ["external_validation"],
+            "blocking_level": "block_claim",
+            "failure_route": "supplement_data_and_method",
+            "pipeline_hooks": {"figure_contract": "required"},
+            "threshold_policy": {"mode": "contextual"},
+            "threshold_source": {"type": "discipline_convention"},
+            "maturity": "mature",
+            "deployment_state": "promoted_review_rule",
+        }
+        DEFAULT_MODULE.spec.review_rule_groups.append(rule)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                project = create_project(root=tmp, idea="External validation figure", field="machine learning")
+                contracts = [
+                    {
+                        "figure_id": f"fig_main_{index}",
+                        "required_data": [],
+                        "required_method": [],
+                        "expected_finding": "A validated predictive result.",
+                    }
+                    for index in range(1, 6)
+                ]
+                _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+                _write_json(project.path / "results" / "figure_plan.json", {"figure_policy": {"minimum_main_figures": 5}, "main_figure_group_count": 5})
+                _write_json(project.path / "results" / "storyboard_alignment_report.json", {"all_storyboard_figures_planned": True})
+                _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+                _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+
+                result = assess_figure_contracts(project.path)
+                report = json.loads((project.path / "results" / "figure_contract_gate_report.json").read_text(encoding="utf-8"))
+
+                self.assertEqual(result["decision"], "blocked")
+                self.assertEqual(report["review_rule_gate_decision"], "revise_required")
+                self.assertTrue(report["review_rule_rescue_tasks"])
+                self.assertIn("prepare-result-rescue", report["recommended_next_commands"][0])
+                self.assertEqual(report["recommended_next_action"]["command"], "prepare-result-rescue")
+        finally:
+            DEFAULT_MODULE.spec.review_rule_groups.remove(rule)
+
     def test_legacy_metadata_can_be_completed_by_auditable_semantic_annotation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Legacy scientific figure", field="ecology")

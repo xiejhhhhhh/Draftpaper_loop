@@ -20,6 +20,7 @@ from .evidence_snapshot import (
 from .metadata import GENERATOR_HTML_META
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
+from .review_rule_runtime import assess_review_rules
 
 
 CITATION_PATTERN = re.compile(
@@ -518,6 +519,13 @@ def _render_html(report: dict[str, Any], *, title: str) -> str:
   <ul>{''.join(f'<li>{escape(str(item))}</li>' for item in coverage.get('summarized_but_uncited') or []) or '<li>None</li>'}</ul>
   <h3>Topic suspect references</h3>
   <ul>{''.join(f'<li>{escape(str(item))}</li>' for item in coverage.get('topic_suspect_references') or []) or '<li>None</li>'}</ul>
+  <h2>Discipline Review Rules</h2>
+  <p>Decision: {escape(str(report.get('review_rule_gate_decision') or 'not assessed'))}.</p>
+  <ul>{''.join(
+      f'<li>{escape(str(item.get("rule_id") or "review_rule"))}: {escape(str(item.get("decision") or "unknown"))}</li>'
+      for item in ((report.get('review_rule_gate') or {}).get('rule_assessments') or [])
+      if isinstance(item, dict) and item.get('decision') != 'satisfied'
+  ) or '<li>No active discipline review-rule issue.</li>'}</ul>
 </body>
 </html>
 """
@@ -560,7 +568,28 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
     summary["summarized_reference_count"] = coverage.get("summarized_reference_count", 0)
     summary["summarized_but_uncited_count"] = coverage.get("summarized_but_uncited_count", 0)
     summary["reference_coverage_status"] = coverage.get("coverage_status", "unknown")
-    status = "passed" if summary["blocking_issue_count"] == 0 and coverage.get("coverage_status") == "passed" else "failed"
+    review_rule_gate = assess_review_rules(
+        state.path,
+        stage="citation_audit",
+        evidence_context={
+            "available_evidence_roles": [
+                "citation_audit",
+                "citation_evidence",
+                "manuscript_claims",
+                "reference_coverage",
+            ],
+            "observed_conflicts": [
+                "unsupported_claim" if summary.get("unsupported") else "",
+                "citation_scope_mismatch" if summary.get("partially_supported") else "",
+            ],
+        },
+        write_path=state.path / "citation_audit" / "review_rule_gate_report.json",
+    )
+    status = "passed" if (
+        summary["blocking_issue_count"] == 0
+        and coverage.get("coverage_status") == "passed"
+        and review_rule_gate.get("decision") != "revise_required"
+    ) else "failed"
     report = {
         "status": status,
         "generated_at": utc_now(),
@@ -577,6 +606,11 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
         },
         "summary": summary,
         "reference_coverage": coverage,
+        "review_rule_gate_decision": review_rule_gate.get("decision"),
+        "review_rule_gate_report": "citation_audit/review_rule_gate_report.json",
+        "review_rule_gate": review_rule_gate,
+        "review_rule_rescue_tasks": review_rule_gate.get("rescue_tasks") or [],
+        "recommended_next_commands": review_rule_gate.get("recommended_next_commands") or [],
         "usages": [asdict(usage) for usage in usages],
         "manuscript_snapshot": manuscript_snapshot(state.path),
         "evidence_snapshot_id": str(promoted_snapshot.get("snapshot_id") or "legacy_unpromoted"),
