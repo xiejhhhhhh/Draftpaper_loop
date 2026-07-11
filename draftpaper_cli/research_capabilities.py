@@ -102,6 +102,30 @@ def _extract_requirements(project_path: Path, profile: dict[str, Any]) -> tuple[
     claims = _as_list(_read_json(project_path / "research_plan" / "claim_contract.json").get("claims"))
     storyboard_payload = _read_json(project_path / "results" / "figure_storyboard.json")
     figures = _as_list(storyboard_payload.get("figures") or storyboard_payload.get("storyboard"))
+    figure_contracts = _read_json(project_path / "results" / "figure_contracts.json")
+    planned_contracts = _as_list(
+        figure_contracts.get("main_contracts")
+        or figure_contracts.get("contracts")
+        or figure_contracts.get("figures")
+    )
+    if planned_contracts:
+        storyboard_by_id = {
+            str(item.get("figure_id") or item.get("id") or ""): item
+            for item in figures
+            if item.get("figure_id") or item.get("id")
+        }
+        figures = [
+            {
+                **storyboard_by_id.get(str(contract.get("storyboard_id") or contract.get("figure_id") or contract.get("id") or ""), {}),
+                **contract,
+                "figure_id": str(contract.get("figure_id") or contract.get("storyboard_id") or contract.get("id") or ""),
+                "required_data_roles": contract.get("required_data_roles") or contract.get("required_data") or contract.get("data_roles") or [],
+                "method_families": contract.get("required_method_roles") or contract.get("required_methods") or contract.get("required_method") or contract.get("method_families") or [],
+                "method_output_roles": contract.get("required_method_outputs") or contract.get("method_outputs") or [],
+            }
+            for contract in planned_contracts
+            if str(contract.get("manuscript_role") or "main").lower() != "appendix"
+        ]
     method_requirements = _read_json(project_path / "methods" / "method_requirements.json")
     if not figures:
         figures = [{

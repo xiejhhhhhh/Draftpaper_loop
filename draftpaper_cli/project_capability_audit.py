@@ -26,6 +26,7 @@ ROLE_TERMS = {
     "spectral_features": {"spectral", "hardness", "pha", "arf", "rmf", "spectrum"},
     "multiwavelength_features": {"multiwavelength", "multi_wavelength", "multiband", "counterpart", "crossmatch", "catalog_match"},
     "multimodal_learning": {"multimodal", "fusion", "transformer", "token", "timeaware", "time_aware"},
+    "modality_availability": {"dataset_quality", "completeness", "inventory", "availability", "token", "spectrum"},
 }
 
 
@@ -128,7 +129,7 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
     bindings = [item for item in bindings_payload.get("bindings") or [] if isinstance(item, dict)]
     audit_items = []
     for requirement in assessments:
-        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "covered_project_local"}:
+        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "covered_project_local", "true_missing"}:
             continue
         candidates = []
         for path in _candidate_files(state.path, str(requirement["kind"])):

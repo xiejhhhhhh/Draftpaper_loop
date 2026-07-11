@@ -69,6 +69,26 @@ def test_resolve_contract_builds_composite_interfaces_for_geography_ml(tmp_path:
     assert any(item["figure_id"] == "fig_spatial_model" for item in capabilities["requirements"])
 
 
+def test_resolve_contract_prefers_current_main_figure_contracts_over_stale_storyboard(tmp_path: Path) -> None:
+    from draftpaper_cli.research_capabilities import resolve_research_capabilities
+
+    project = _project_with_contract_inputs(
+        tmp_path,
+        idea="Astronomy classification with a transformer.",
+        field="astronomy machine learning",
+        figure={"figure_id": "figure_01", "claim_ids": ["claim_main"], "manuscript_role": "main"},
+    )
+    _write_json(project / "results" / "figure_contracts.json", {"main_contracts": [{
+        "figure_id": "fig_actual", "storyboard_id": "figure_01", "required_data_roles": ["label"],
+        "required_method_roles": ["baseline_model"], "manuscript_role": "main",
+    }]})
+
+    resolve_research_capabilities(project)
+    capabilities = json.loads((project / "research_plan" / "research_capability_contract.json").read_text(encoding="utf-8"))
+
+    assert {item.get("figure_id") for item in capabilities["requirements"]} == {"fig_actual"}
+
+
 def test_sufficiency_blocks_main_figure_when_no_executable_method_exists(tmp_path: Path) -> None:
     from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 
