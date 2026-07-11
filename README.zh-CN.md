@@ -333,6 +333,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## 最近更新
 
+### v0.20.2 (2026-07-11) -- Results 后置学科审查与能力救援边界
+
+- 制图前的 figure contract 不再运行 `review_rule`。数据和方法插件负责产生图表；只有这些插件实际参与生成的图表，才会在 `review-results-with-discipline-rules` 阶段激活匹配的学科审稿规则。
+- Results 中无法追溯的指标、内部路径式表达、错误引用位置和图表解释缺失现在进入 `repair_required`，优先重写或收紧论断，不再被误判为图表生成失败。
+- 插件缺口先进入 `rescue_required`，依次审计项目本地资产、现有注册表、AcademicForge 和 GitHub 科研代码。新增 `record-plugin-rescue-outcome`；只有四条路线都有可审计检索记录且仍找不到必要数据/方法能力时，才进入 `blocked_unavailable` 并提示用户无法生成对应图表。
+
 ### v0.20.1 (2026-07-11) -- 项目本地能力审计与 Results 语义核查
 
 - 在插件充分性门与外部救援之间新增 `audit-project-capabilities`。该命令会审计阶段归属的数据和方法资产，记录隐私安全的相对证据路径及哈希；只有当前项目可验证的实现才会形成受限 `covered_project_local` 绑定，不会修改全局学科模块，也不会绕过 candidate 验证和明确 promote。

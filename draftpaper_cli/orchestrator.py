@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import hashlib
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -313,7 +314,7 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "cli": _cli_for(project_path, "assess-plugin-sufficiency"),
             "reason": "Planned core figures need structured data/method/runtime plugin sufficiency assessment before execution.",
         }
-    if sufficiency_report.get("decision") == "blocked":
+    if sufficiency_report.get("decision") in {"rescue_required", "blocked", "blocked_unavailable"}:
         audit_report = _read_report(project_path, "research_plan/project_capability_audit.json")
         if not audit_report:
             return {
@@ -321,6 +322,14 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
                 "command": "audit-project-capabilities",
                 "cli": _cli_for(project_path, "audit-project-capabilities"),
                 "reason": "Apparent plugin gaps must first be audited against stage-owned project-local data and method assets before external rescue or a figure block.",
+            }
+        if sufficiency_report.get("decision") == "blocked_unavailable":
+            return {
+                "stage": "research_plan",
+                "command": "checkpoint",
+                "cli": _cli_for(project_path, "checkpoint"),
+                "reason": "A required data or method plugin remained unavailable after documented local, AcademicForge, and GitHub rescue attempts; the planned figure cannot be generated without user input.",
+                "plugin_gap_plan": "research_plan/plugin_gap_plan.json",
             }
         return {
             "stage": "research_plan",
@@ -341,14 +350,19 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         }
     results_path = project_path / "results" / "results.tex"
     result_discipline_review = _read_report(project_path, "review/result_discipline_review_report.json")
-    if (project_path / "research_plan" / "research_capability_contract.json").exists() and results_path.exists() and not result_discipline_review:
+    current_results_hash = hashlib.sha256(results_path.read_bytes()).hexdigest() if results_path.exists() else ""
+    review_matches_results = bool(
+        result_discipline_review
+        and result_discipline_review.get("results_sha256") == current_results_hash
+    )
+    if (project_path / "research_plan" / "research_capability_contract.json").exists() and results_path.exists() and not review_matches_results:
         return {
             "stage": "results",
             "command": "review-results-with-discipline-rules",
             "cli": _cli_for(project_path, "review-results-with-discipline-rules"),
             "reason": "Results prose must be checked against the complete main-figure plugin trace and composite discipline review rules before downstream manuscript sections.",
         }
-    if (project_path / "research_plan" / "research_capability_contract.json").exists() and result_discipline_review.get("decision") == "revise_required":
+    if (project_path / "research_plan" / "research_capability_contract.json").exists() and result_discipline_review.get("decision") in {"repair_required", "revise_required"}:
         action = result_discipline_review.get("recommended_next_action") or {}
         command = str(action.get("command") or "prepare-result-rescue")
         return {

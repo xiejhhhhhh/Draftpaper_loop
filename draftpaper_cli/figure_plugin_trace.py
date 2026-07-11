@@ -72,9 +72,10 @@ def _render(report: dict[str, Any]) -> str:
 def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
     """Validate planned and completed trace chains for every main figure.
 
-    ``ready_for_codegen`` means claim, data/method, and review bindings exist;
-    it permits analysis-code generation. ``pass`` additionally requires a real
-    project method run output. Fixture-only events never satisfy that final link.
+    ``ready_for_codegen`` means executable data and method bindings exist and
+    permits analysis-code generation. Claims remain auditable provenance and
+    review rules are selected only after Results exist. ``pass`` additionally
+    requires a real project method run output.
     """
     state = load_project(project)
     capabilities = _read_json(state.path / "research_plan" / "research_capability_contract.json")
@@ -87,6 +88,11 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
         for item in capabilities.get("requirements") or []
         if isinstance(item, dict) and item.get("kind") == "figure" and item.get("core")
     }
+    capability_requirements_by_figure: dict[str, list[dict[str, Any]]] = {}
+    for item in capabilities.get("requirements") or []:
+        if not isinstance(item, dict) or item.get("kind") not in {"data", "method"} or not item.get("core"):
+            continue
+        capability_requirements_by_figure.setdefault(str(item.get("figure_id") or ""), []).append(item)
     checks = []
     for index, contract in enumerate(_main_figures(contracts), start=1):
         figure_id = _figure_id(contract, index)
@@ -100,23 +106,40 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
         data_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "data" and item.get("plugin_id")]
         method_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "method" and item.get("plugin_id")]
         review_ids = [str(item.get("plugin_id")) for item in bound if item.get("kind") == "review" and item.get("plugin_id")]
+        bound_requirement_ids = {str(item.get("requirement_id")) for item in bound if item.get("requirement_id")}
+        expected_capabilities = capability_requirements_by_figure.get(figure_id) or []
         issues = []
         claim_ids = [str(item) for item in requirement.get("claim_ids") or []]
+        warnings = []
         if not claim_ids:
-            issues.append({"kind": "missing_research_plan_claim", "detail": "No main-figure claim is bound in research_capability_contract.json."})
-        if not data_ids:
+            warnings.append({"kind": "missing_research_plan_claim", "detail": "No main-figure claim is bound; repair provenance before final Results acceptance."})
+        expected_data = [item for item in expected_capabilities if item.get("kind") == "data"]
+        expected_methods = [item for item in expected_capabilities if item.get("kind") == "method"]
+        missing_data_requirements = [item for item in expected_data if str(item.get("requirement_id")) not in bound_requirement_ids]
+        missing_method_requirements = [item for item in expected_methods if str(item.get("requirement_id")) not in bound_requirement_ids]
+        for item in missing_data_requirements:
+            issues.append({
+                "kind": "missing_data_plugin_requirement",
+                "requirement_id": str(item.get("requirement_id")),
+                "detail": "A contracted data capability has no covered binding for this figure.",
+            })
+        for item in missing_method_requirements:
+            issues.append({
+                "kind": "missing_method_plugin_requirement",
+                "requirement_id": str(item.get("requirement_id")),
+                "detail": "A contracted method capability has no covered binding for this figure.",
+            })
+        if not expected_data and not data_ids:
             issues.append({"kind": "missing_data_plugin_binding", "detail": "No covered data plugin is bound to this main figure."})
-        if not method_ids:
+        if not expected_methods and not method_ids:
             issues.append({"kind": "missing_method_plugin_binding", "detail": "No covered method plugin is bound to this main figure."})
-        if not review_ids:
-            issues.append({"kind": "missing_review_rule_binding", "detail": "No review-rule route is bound to this main figure."})
         method_events = [item for item in events if item.get("figure_id") == figure_id and item.get("plugin_id") in method_ids]
         real_event = next((item for item in method_events if item.get("status") == "project_executed" and item.get("scientific_evidence_status") == "project_result"), None)
         run_success = str(run_manifest.get("status") or "").lower() == "success"
         if not issues and not (real_event and run_success):
             decision = "ready_for_codegen"
         elif issues:
-            decision = "blocked"
+            decision = "capability_rescue_required"
         else:
             decision = "pass"
         checks.append({
@@ -129,9 +152,10 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
             "run_output_event_id": real_event.get("event_id") if real_event else None,
             "run_manifest_status": run_manifest.get("status"),
             "issues": issues,
+            "warnings": warnings,
         })
-    decision = "blocked" if any(item["decision"] == "blocked" for item in checks) else ("pass" if checks and all(item["decision"] == "pass" for item in checks) else "ready_for_codegen")
-    report = {"status": "written", "generated_at": utc_now(), "project_id": state.metadata.get("project_id"), "decision": decision, "figure_checks": checks, "policy": "A fixture or plan event is not a scientific run output. Main figures must reach pass before Results writing or evidence confirmation."}
+    decision = "capability_rescue_required" if any(item["decision"] == "capability_rescue_required" for item in checks) else ("pass" if checks and all(item["decision"] == "pass" for item in checks) else "ready_for_codegen")
+    report = {"status": "written", "generated_at": utc_now(), "project_id": state.metadata.get("project_id"), "decision": decision, "figure_checks": checks, "policy": "Data and method plugins gate code generation. Claim provenance and applicable review rules are repaired or assessed after Results; fixture events never count as scientific run output."}
     _write_json(state.path / TRACE_JSON, report)
     write_html_report(state.path / TRACE_HTML, _render(report), title="Figure Plugin Trace Report")
     return report

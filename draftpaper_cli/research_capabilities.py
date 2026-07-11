@@ -188,9 +188,11 @@ def _extract_requirements(project_path: Path, profile: dict[str, Any]) -> tuple[
             "kind": "review",
             "figure_id": figure_id,
             "claim_ids": claim_ids,
-            "core": is_main,
+            "core": False,
             "discipline": "composite" if secondaries else primary,
             "required_outputs": ["review_rule_assessment"],
+            "activation_stage": "post_results",
+            "activation_policy": "Select applicable rules only when this figure has a data or method plugin execution trace.",
         })
     return requirements, {"claims": claims, "figures": figures, "method_requirements": method_requirements}
 
@@ -429,13 +431,13 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
-        "decision": "blocked" if blocking else "pass",
-        "core_figure_decision": "blocked" if blocking else "pass",
+        "decision": "rescue_required" if blocking else "pass",
+        "core_figure_decision": "rescue_required" if blocking else "pass",
         "requirement_assessments": assessments,
         "covered_count": sum(item.get("state") == "covered" for item in assessments),
         "blocking_count": len(blocking),
         "rescue_tasks": rescue_tasks,
-        "policy": "Mock, plan-only, and external plugin contracts do not count as executable support for a main figure.",
+        "policy": "Mock, plan-only, and external plugin contracts do not count as executable support. A gap enters project-local, AcademicForge, and GitHub rescue; it is not a final block until those routes are explicitly exhausted.",
     }
     binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "bindings": bindings}
     gap_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "gaps": rescue_tasks, "requires_human_confirmation": bool(rescue_tasks)}

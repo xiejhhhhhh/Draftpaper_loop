@@ -72,7 +72,7 @@ from .plugin_candidates import (
 )
 from .project_scaffold import ProjectAlreadyExistsError, create_project
 from .project_capability_audit import audit_project_capabilities
-from .plugin_rescue import PluginRescueError, prepare_plugin_rescue
+from .plugin_rescue import PluginRescueError, prepare_plugin_rescue, record_plugin_rescue_outcome
 from .plugin_execution import PluginExecutionError, execute_data_plugins, execute_method_plugins
 from .research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 from .project_state import (
@@ -272,6 +272,14 @@ def build_parser() -> argparse.ArgumentParser:
     plugin_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     plugin_rescue.add_argument("--academicforge-root", default=None, help="Optional local AcademicForge skill root used only for candidate extraction commands.")
     plugin_rescue.add_argument("--github-metadata", default=None, help="Optional offline GitHub-search-style metadata JSON used for scoped discovery commands.")
+
+    plugin_rescue_outcome = subparsers.add_parser("record-plugin-rescue-outcome", help="Record whether scoped local, AcademicForge, and GitHub capability rescue found an executable route.")
+    plugin_rescue_outcome.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    plugin_rescue_outcome.add_argument("--requirement-id", required=True, help="Requirement identifier from review/plugin_rescue_plan.json.")
+    plugin_rescue_outcome.add_argument("--outcome", required=True, choices=["capability_found", "not_found_after_search"])
+    plugin_rescue_outcome.add_argument("--attempted-route", action="append", default=[], help="Audited route; repeat for project_local, existing_registry, academicforge, and github_research_code.")
+    plugin_rescue_outcome.add_argument("--route-evidence", action="append", default=[], help="Structured evidence artifact as route=project-relative-or-absolute-path; repeat for every attempted route.")
+    plugin_rescue_outcome.add_argument("--evidence-note", required=True, help="Short auditable summary of the search result.")
 
     plan_feasibility = subparsers.add_parser("assess-research-plan-feasibility", help="Check research-plan figure/storyboard feasibility before data and method execution.")
     plan_feasibility.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -967,7 +975,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("decision") == "pass" else 1
+        return 0 if result.get("decision") in {"pass", "rescue_required"} else 1
 
     if args.command == "audit-project-capabilities":
         try:
@@ -976,7 +984,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("decision") == "pass" else 1
+        return 0 if result.get("decision") in {"pass", "rescue_required"} else 1
 
     if args.command == "prepare-plugin-rescue":
         try:
@@ -990,6 +998,28 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(result, ensure_ascii=False))
         return 0
+
+    if args.command == "record-plugin-rescue-outcome":
+        try:
+            route_evidence = {}
+            for item in args.route_evidence:
+                if "=" not in item:
+                    raise PluginRescueError("--route-evidence must use route=path syntax.")
+                route, path = item.split("=", 1)
+                route_evidence[route.strip()] = path.strip()
+            result = record_plugin_rescue_outcome(
+                args.project,
+                requirement_id=args.requirement_id,
+                outcome=args.outcome,
+                attempted_routes=args.attempted_route,
+                route_evidence=route_evidence,
+                evidence_note=args.evidence_note,
+            )
+        except (PluginRescueError, ProjectStateError) as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("decision") != "blocked_unavailable" else 1
 
     if args.command == "inventory-data":
         try:
@@ -1435,7 +1465,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("decision") == "pass" else 1
+        return 0 if result.get("decision") in {"pass", "repair_required"} else 1
 
     if args.command == "resolve-result-evidence":
         try:

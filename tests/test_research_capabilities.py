@@ -89,7 +89,7 @@ def test_resolve_contract_prefers_current_main_figure_contracts_over_stale_story
     assert {item.get("figure_id") for item in capabilities["requirements"]} == {"fig_actual"}
 
 
-def test_sufficiency_blocks_main_figure_when_no_executable_method_exists(tmp_path: Path) -> None:
+def test_sufficiency_requires_rescue_before_declaring_capability_unavailable(tmp_path: Path) -> None:
     from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 
     project = _project_with_contract_inputs(
@@ -110,8 +110,8 @@ def test_sufficiency_blocks_main_figure_when_no_executable_method_exists(tmp_pat
     report = assess_plugin_sufficiency(project)
 
     saved = json.loads((project / "research_plan" / "plugin_sufficiency_report.json").read_text(encoding="utf-8"))
-    assert report["decision"] == "blocked"
-    assert saved["core_figure_decision"] == "blocked"
+    assert report["decision"] == "rescue_required"
+    assert saved["core_figure_decision"] == "rescue_required"
     assert (project / "research_plan" / "plugin_gap_plan.json").exists()
     assert any(item["state"] in {"missing", "blocked_external", "incompatible"} for item in saved["requirement_assessments"])
 

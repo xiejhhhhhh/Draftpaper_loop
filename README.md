@@ -417,6 +417,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
 
+### v0.20.2 (2026-07-11) -- Post-Results Discipline Review and Capability Rescue Boundary
+
+- Figure contracts no longer execute discipline `review_rule` gates before plotting. Data and method plugins produce figures; only figures with actual plugin traces activate matching discipline rules in `review-results-with-discipline-rules`.
+- Untraceable metrics, internal artifact language, misplaced citations, and missing figure interpretation now enter `repair_required`, which prioritizes rewriting or narrowing Results claims instead of treating prose defects as figure-generation failures.
+- Capability gaps first enter `rescue_required` and are checked against project-local assets, the registered plugin catalog, AcademicForge, and GitHub research code. The new `record-plugin-rescue-outcome` command permits `blocked_unavailable` only after all four routes have auditable search evidence and the required data or method capability still cannot be found.
+
 ### v0.20.1 (2026-07-11) -- Project-Local Capability Audit and Results Semantics
 
 - Added `audit-project-capabilities` between plugin sufficiency and external rescue. It audits stage-owned local data and method assets, records privacy-safe relative evidence paths plus hashes, and creates constrained `covered_project_local` bindings only for the active project. These bindings never modify global discipline modules or bypass candidate validation and explicit promotion.

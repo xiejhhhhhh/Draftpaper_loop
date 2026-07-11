@@ -61,6 +61,36 @@ def _write_validity_project_inputs(project_path: Path) -> None:
 
 
 class ReviewRuleRuntimeTests(unittest.TestCase):
+    def test_results_review_filters_rules_by_active_figure_plugins(self) -> None:
+        matching = {
+            "rule_id": "baseline_only_rule",
+            "rule_family": "model_validity",
+            "applicable_methods": ["baseline_model"],
+            "pipeline_hooks": {"assess_result_validity": "required"},
+        }
+        unrelated = {
+            "rule_id": "spatial_only_rule",
+            "rule_family": "model_validity",
+            "applicable_methods": ["spatial_block_validation"],
+            "pipeline_hooks": {"assess_result_validity": "required"},
+        }
+        MACHINE_LEARNING_MODULE.spec.review_rule_groups.extend([matching, unrelated])
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                project = create_project(root=tmp, idea="Baseline model", field="machine learning")
+                report = assess_review_rules(
+                    project.path,
+                    stage="assess_result_validity",
+                    evidence_context={"active_plugin_ids": ["baseline_model"]},
+                )
+                selected = {item["rule_id"] for item in report["rule_assessments"]}
+
+                self.assertIn("baseline_only_rule", selected)
+                self.assertNotIn("spatial_only_rule", selected)
+        finally:
+            MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(matching)
+            MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(unrelated)
+
     def test_fixed_threshold_accepts_schema_authoritative_source_names(self) -> None:
         rule = {
             "rule_id": "discipline_convention_threshold_test",
@@ -111,7 +141,7 @@ class ReviewRuleRuntimeTests(unittest.TestCase):
             self.assertEqual(blueprint["method_code_plan"]["review_rule_gate_decision"], "pass")
             self.assertGreaterEqual(blueprint["review_rule_gate_plan"]["advisory_count"], 1)
 
-    def test_result_validity_writes_review_rule_gate_report(self) -> None:
+    def test_result_validity_defers_review_rules_until_post_results(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="ML result validity", field="machine learning")
             _write_validity_project_inputs(project.path)
@@ -120,10 +150,10 @@ class ReviewRuleRuntimeTests(unittest.TestCase):
 
             self.assertIn(result["decision"], {"pass", "conditional_pass"})
             report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
-            self.assertIn("review_rule_gate", report)
-            self.assertTrue((project.path / "results" / "review_rule_gate_report.json").exists())
+            self.assertNotIn("review_rule_gate", report)
+            self.assertFalse((project.path / "results" / "review_rule_gate_report.json").exists())
 
-    def test_promoted_blocking_review_rule_blocks_when_evidence_is_missing(self) -> None:
+    def test_promoted_blocking_review_rule_does_not_block_result_validity(self) -> None:
         rule = {
             "rule_group_id": "external_validation_required_for_strong_claims_test",
             "rule_id": "external_validation_required_for_strong_claims_test",
@@ -149,17 +179,9 @@ class ReviewRuleRuntimeTests(unittest.TestCase):
 
                 result = assess_result_validity(project.path)
 
-                self.assertEqual(result["decision"], "revise_required")
+                self.assertIn(result["decision"], {"pass", "conditional_pass"})
                 report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
-                self.assertIn("review_rules", report["failure_causes"])
-                self.assertTrue(report["review_rule_issues"])
-                gate = report["review_rule_gate"]
-                self.assertGreaterEqual(gate["rescue_task_count"], 1)
-                task = next(item for item in gate["rescue_tasks"] if item["rule_id"] == "external_validation_required_for_strong_claims_test")
-                self.assertTrue(task["blocking"])
-                self.assertEqual(task["failure_route"], "supplement_data_and_method")
-                self.assertEqual(task["recommended_command"], "prepare-result-rescue")
-                self.assertIn("external_validation", task["missing_evidence_roles"])
+                self.assertNotIn("review_rules", report.get("failure_causes") or [])
         finally:
             MACHINE_LEARNING_MODULE.spec.review_rule_groups.remove(rule)
 

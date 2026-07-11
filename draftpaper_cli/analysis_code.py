@@ -850,6 +850,11 @@ def _validate_figure_contract_gate(project_path: Path) -> dict[str, Any]:
         command = action.get("command") or "repair-figure-data / repair-figure-method / revise-research-plan"
         reason = action.get("reason") or "contracted main figures are not executable"
         raise AnalysisCodeGenerationError(f"Figure contract gate is blocked: {reason}. Next command: {command}.")
+    if decision == "rescue_required":
+        raise AnalysisCodeGenerationError(
+            "Figure generation is paused while a required data or method capability is rescued. "
+            "Run audit-project-capabilities and prepare-plugin-rescue."
+        )
     if decision not in {"pass", "conditional"}:
         raise AnalysisCodeGenerationError("Figure contract gate has an unknown decision. Rerun assess-figure-contracts.")
     return payload
@@ -862,10 +867,12 @@ def _validate_plugin_trace_for_codegen(project_path: Path) -> dict[str, Any] | N
     from .figure_plugin_trace import validate_figure_plugin_trace
 
     trace = validate_figure_plugin_trace(project_path)
-    if trace.get("decision") == "blocked":
+    if trace.get("decision") in {"blocked", "blocked_unavailable", "capability_rescue_required"}:
+        final_block = trace.get("decision") in {"blocked", "blocked_unavailable"}
         raise AnalysisCodeGenerationError(
-            "Figure plugin trace is blocked: a main figure lacks a research-plan claim, covered data/method plugin, or review-rule binding. "
-            "Run assess-plugin-sufficiency and prepare-plugin-rescue before generating substitute code."
+            ("Figure generation is blocked because a required data or method capability remained unavailable after rescue. " if final_block else
+             "Figure generation is paused because a required data or method capability needs rescue. ")
+            + "Run audit-project-capabilities and prepare-plugin-rescue; review-rule selection occurs after Results writing."
         )
     return trace
 def generate_analysis_code(

@@ -12,13 +12,11 @@ from .figure_semantics import validate_figure_semantics
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
-from .review_rule_runtime import assess_review_rules
 
 
 FIGURE_CONTRACT_GATE_JSON = "results/figure_contract_gate_report.json"
 FIGURE_CONTRACT_GATE_HTML = "results/figure_contract_gate_report.html"
 FIGURE_SEMANTIC_REPORT_JSON = "results/figure_semantic_validation_report.json"
-FIGURE_REVIEW_RULE_GATE_JSON = "results/figure_contract_review_rule_gate.json"
 
 
 class FigureContractGateError(RuntimeError):
@@ -47,11 +45,17 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     available_data_roles = normalize_roles((data_coverage or {}).get("available_roles") or []) if isinstance(data_coverage, dict) else []
     method_status = str((method_feasibility or {}).get("decision") or "missing") if isinstance(method_feasibility, dict) else "missing"
     issues: list[dict[str, str]] = []
-    if (plugin_trace or {}).get("decision") == "blocked":
+    if (plugin_trace or {}).get("decision") == "capability_rescue_required":
+        issues.append({
+            "severity": "rescue_required",
+            "kind": "missing_plugin_trace_chain",
+            "detail": "At least one main figure lacks executable data or method capability. Run the project-local audit and plugin rescue before code generation.",
+        })
+    elif (plugin_trace or {}).get("decision") in {"blocked", "blocked_unavailable"}:
         issues.append({
             "severity": "blocking",
-            "kind": "missing_plugin_trace_chain",
-            "detail": "At least one main figure lacks its required claim/data-plugin/method-plugin/review-rule binding. Run assess-plugin-sufficiency and prepare-plugin-rescue.",
+            "kind": "plugin_capability_unavailable_after_search",
+            "detail": "A required data or method capability remained unavailable after auditable rescue attempts.",
         })
     contract_checks: list[dict[str, Any]] = []
     metadata_by_id = {
@@ -175,53 +179,15 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     for figure_id in missing_storyboard:
         issues.append({"severity": "blocking", "kind": "missing_storyboard_alignment", "detail": figure_id})
 
-    observed_conflicts = sorted({
-        str(item.get("kind"))
-        for item in issues
-        if item.get("kind") in {
-            "identifier_axis_as_scientific_variable",
-            "mixed_metric_dimension",
-            "missing_rendered_semantic_metadata",
-        }
-    })
-    review_rule_gate = assess_review_rules(
-        state.path,
-        stage="figure_contract",
-        evidence_context={
-            "available_evidence_roles": [
-                "figure_contract",
-                "figure_claim_evidence",
-                *available_data_roles,
-            ],
-            "observed_conflicts": observed_conflicts,
-        },
-        write_path=state.path / FIGURE_REVIEW_RULE_GATE_JSON,
-    )
-    for assessment in review_rule_gate.get("rule_assessments") or []:
-        if not isinstance(assessment, dict) or assessment.get("runtime_level") != "blocking":
-            continue
-        detail = str(assessment.get("review_question") or assessment.get("scientific_risk") or assessment.get("decision") or "Review rule failed.")
-        issues.append({
-            "severity": "blocking",
-            "kind": "review_rule_gate_failed",
-            "detail": detail,
-            "rule_id": str(assessment.get("rule_id") or "review_rule"),
-        })
-
     if any(item.get("severity") == "blocking" for item in issues):
         decision = "blocked"
+    elif any(item.get("severity") == "rescue_required" for item in issues):
+        decision = "rescue_required"
     elif issues:
         decision = "conditional"
     else:
         decision = "pass"
     next_action = _next_action(decision, issues)
-    if review_rule_gate.get("decision") == "revise_required" and review_rule_gate.get("rescue_tasks"):
-        rescue_task = review_rule_gate["rescue_tasks"][0]
-        next_action = {
-            "command": str(rescue_task.get("recommended_command") or "prepare-result-rescue"),
-            "reason": str(rescue_task.get("reason") or "A promoted discipline review rule requires scientific evidence repair."),
-            "rule_id": str(rescue_task.get("rule_id") or "review_rule"),
-        }
     report = {
         "status": "written",
         "generated_at": utc_now(),
@@ -236,15 +202,11 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
         "contract_checks": contract_checks,
         "storyboard_alignment_missing": missing_storyboard,
         "issues": issues,
-        "review_rule_gate_decision": review_rule_gate.get("decision"),
-        "review_rule_gate_report": FIGURE_REVIEW_RULE_GATE_JSON,
-        "review_rule_gate": review_rule_gate,
-        "review_rule_rescue_tasks": review_rule_gate.get("rescue_tasks") or [],
-        "recommended_next_commands": review_rule_gate.get("recommended_next_commands") or [],
+        "review_rule_stage": "post_results",
         "recommended_next_action": next_action,
         "figure_plugin_trace": plugin_trace,
         "figure_plugin_trace_decision": (plugin_trace or {}).get("decision"),
-        "policy": "Every planned main figure group must keep its research-plan contract before code generation. The contract is 5-6 main figure groups; generated PNG/panel count may exceed six when supporting or appendix diagnostics are scientifically useful. Validation or diagnostic figures cannot replace contracted main results.",
+        "policy": "Before code generation this gate checks executable data/method readiness and figure contracts only. Discipline review rules are selected from the plugins that actually generated figures and are assessed after Results writing.",
     }
     results_dir = state.path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -359,7 +321,6 @@ def _set_stage_manifest(project_path: Path) -> None:
         FIGURE_CONTRACT_GATE_JSON,
         FIGURE_CONTRACT_GATE_HTML,
         FIGURE_SEMANTIC_REPORT_JSON,
-        FIGURE_REVIEW_RULE_GATE_JSON,
     ]
     _write_json(manifest_path, manifest)
 

@@ -158,7 +158,7 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
         if isinstance(item, dict) and item.get("core") and item.get("kind") in {"data", "method"} and item.get("state") not in {"covered", "covered_project_local"}
     ]
     sufficiency["requirement_assessments"] = assessments
-    sufficiency["decision"] = "blocked" if core_unresolved else "pass"
+    sufficiency["decision"] = "rescue_required" if core_unresolved else "pass"
     sufficiency["core_figure_decision"] = sufficiency["decision"]
     sufficiency["rescue_tasks"] = [item for item in sufficiency.get("rescue_tasks") or [] if item.get("requirement_id") in {row.get("requirement_id") for row in core_unresolved}]
     bindings_payload.update({"status": "written", "generated_at": utc_now(), "bindings": bindings})

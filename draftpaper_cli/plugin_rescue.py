@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from .project_state import load_project
 RESCUE_PLAN = "review/plugin_rescue_plan.json"
 RESCUE_HTML = "review/plugin_rescue_plan.html"
 SUFFICIENCY_REPORT = "research_plan/plugin_sufficiency_report.json"
+REQUIRED_EXHAUSTION_ROUTES = {"project_local", "existing_registry", "academicforge", "github_research_code"}
 
 
 class PluginRescueError(RuntimeError):
@@ -147,3 +149,95 @@ def prepare_plugin_rescue(
     _write_json(state.path / RESCUE_PLAN, payload)
     write_html_report(state.path / RESCUE_HTML, _render(payload), title="Plugin Rescue Plan")
     return {"status": "written", "project_path": str(state.path), "decision": payload["decision"], "task_count": len(tasks), "plugin_rescue_plan": RESCUE_PLAN}
+
+
+def record_plugin_rescue_outcome(
+    project: str | Path,
+    *,
+    requirement_id: str,
+    outcome: str,
+    attempted_routes: list[str],
+    route_evidence: dict[str, str],
+    evidence_note: str,
+) -> dict[str, Any]:
+    """Record a scoped rescue outcome and permit final blocking only with evidence."""
+    state = load_project(project)
+    plan = _read_json(state.path / RESCUE_PLAN)
+    sufficiency = _read_json(state.path / SUFFICIENCY_REPORT)
+    tasks = [item for item in plan.get("tasks") or [] if isinstance(item, dict)]
+    task = next((item for item in tasks if item.get("requirement_id") == requirement_id), None)
+    if task is None:
+        raise PluginRescueError(f"Unknown rescue requirement: {requirement_id}")
+    if outcome not in {"capability_found", "not_found_after_search"}:
+        raise PluginRescueError("Outcome must be capability_found or not_found_after_search.")
+    routes = {str(item).strip() for item in attempted_routes if str(item).strip()}
+    if outcome == "not_found_after_search" and not REQUIRED_EXHAUSTION_ROUTES.issubset(routes):
+        missing = sorted(REQUIRED_EXHAUSTION_ROUTES - routes)
+        raise PluginRescueError(f"Final blocking requires all required search routes; missing: {', '.join(missing)}")
+    verified_evidence: dict[str, dict[str, str]] = {}
+    if outcome == "not_found_after_search":
+        for route in sorted(REQUIRED_EXHAUSTION_ROUTES):
+            raw_path = route_evidence.get(route)
+            if not raw_path:
+                raise PluginRescueError(f"Final blocking requires an evidence artifact for route: {route}")
+            evidence_path = Path(raw_path).resolve()
+            try:
+                relative = evidence_path.relative_to(state.path.resolve())
+            except ValueError as exc:
+                raise PluginRescueError(f"Route evidence must be stored inside the project: {route}") from exc
+            payload = _read_json(evidence_path)
+            if not evidence_path.is_file() or not payload or str(payload.get("status") or "").lower() not in {"completed", "written", "pass", "no_match"}:
+                raise PluginRescueError(f"Route evidence is missing a completed structured report: {route}")
+            if str(payload.get("route") or route) != route:
+                raise PluginRescueError(f"Route evidence does not match the declared route: {route}")
+            verified_evidence[route] = {
+                "artifact": str(relative).replace("\\", "/"),
+                "sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+                "status": str(payload.get("status")),
+            }
+    if not evidence_note.strip():
+        raise PluginRescueError("A rescue outcome requires a non-empty evidence note.")
+
+    task.update({
+        "search_status": outcome,
+        "attempted_routes": sorted(routes),
+        "route_evidence": verified_evidence,
+        "evidence_note": evidence_note.strip(),
+        "recorded_at": utc_now(),
+    })
+    target_state = "unavailable_after_search" if outcome == "not_found_after_search" else "rescue_candidate_found"
+    for item in sufficiency.get("requirement_assessments") or []:
+        if isinstance(item, dict) and item.get("requirement_id") == requirement_id:
+            item["state"] = target_state
+            item["rescue_evidence"] = {
+                "attempted_routes": sorted(routes),
+                "route_evidence": verified_evidence,
+                "evidence_note": evidence_note.strip(),
+                "recorded_at": task["recorded_at"],
+            }
+    unavailable = [
+        item for item in sufficiency.get("requirement_assessments") or []
+        if isinstance(item, dict) and item.get("core") and item.get("state") == "unavailable_after_search"
+    ]
+    unresolved = [
+        item for item in sufficiency.get("requirement_assessments") or []
+        if isinstance(item, dict)
+        and item.get("core")
+        and item.get("kind") in {"data", "method"}
+        and item.get("state") not in {"covered", "covered_project_local"}
+    ]
+    decision = "blocked_unavailable" if unavailable else "rescue_required" if unresolved else "pass"
+    sufficiency["decision"] = decision
+    sufficiency["core_figure_decision"] = decision
+    plan["decision"] = "blocked_unavailable" if unavailable else "candidate_found" if outcome == "capability_found" else plan.get("decision")
+    _write_json(state.path / RESCUE_PLAN, plan)
+    _write_json(state.path / SUFFICIENCY_REPORT, sufficiency)
+    write_html_report(state.path / RESCUE_HTML, _render(plan), title="Plugin Rescue Plan")
+    return {
+        "status": "written",
+        "project_path": str(state.path),
+        "requirement_id": requirement_id,
+        "outcome": outcome,
+        "decision": decision,
+        "plugin_rescue_plan": RESCUE_PLAN,
+    }
