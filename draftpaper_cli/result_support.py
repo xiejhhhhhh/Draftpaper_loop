@@ -26,6 +26,7 @@ RESULT_SUPPORT_INPUTS = [
     "research_plan/figure_storyboard.json",
     "results/figure_plan.json",
     "results/result_validity_report.json",
+    "results/resolved_result_evidence.json",
     "results/result_manifest.yaml",
     "methods/run_manifest.yaml",
 ]
@@ -100,6 +101,23 @@ def _collect_metrics(project_path: Path, run_manifest: dict[str, Any], result_ma
             numeric = _to_float(value)
             if numeric is not None:
                 metrics.setdefault(_normalise_key(str(key)), numeric)
+    resolved = _read_json(project_path / "results" / "resolved_result_evidence.json", {})
+    for item in resolved.get("metrics") or [] if isinstance(resolved, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        numeric = _to_float(item.get("value"))
+        metric_name = _normalise_key(str(item.get("metric_name") or ""))
+        model_id = _normalise_key(str(item.get("model") or item.get("model_id") or ""))
+        if numeric is None or not metric_name:
+            continue
+        key = f"{model_id}_{metric_name}" if model_id else metric_name
+        metrics[key] = numeric
+    primary = resolved.get("primary_metric") if isinstance(resolved, dict) else {}
+    if isinstance(primary, dict):
+        numeric = _to_float(primary.get("value"))
+        metric_name = _normalise_key(str(primary.get("metric_name") or ""))
+        if numeric is not None and metric_name:
+            metrics[f"primary_{metric_name}"] = numeric
     return metrics
 
 
@@ -199,7 +217,7 @@ def _compare_planned_improvement(metrics: dict[str, float]) -> dict[str, Any] | 
     baseline, proposed = _metric_groups(metrics)
     if not baseline or not proposed:
         return None
-    suffixes = ("f1", "macro_f1", "accuracy", "auc", "roc_auc", "r2")
+    suffixes = ("f1", "f1_macro", "macro_f1", "accuracy", "auc", "roc_auc", "r2")
     baseline_best = _best_metric_value(baseline, suffixes)
     proposed_best = _best_metric_value(proposed, suffixes)
     if baseline_best is None or proposed_best is None:
@@ -252,7 +270,7 @@ def _decision(claim_assessments: list[dict[str, Any]], validity: dict[str, Any])
     statuses = {str(item.get("support_status") or "") for item in claim_assessments}
     if "not_supported" in statuses:
         return "route_decision_required", "failed", True
-    if "partially_supported" in statuses or validity_decision == "conditional_pass":
+    if "partially_supported" in statuses:
         return "route_decision_required", "partial", True
     return "pass", "supported", False
 
@@ -320,7 +338,12 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     if not isinstance(validity, dict) or not validity:
         raise ResultSupportError("Run assess-result-validity before assess-result-support.")
-    result_manifest = _read_json(state.path / "results" / "result_manifest.yaml", {})
+    results_stage = (state.metadata.get("stages") or {}).get("results") or {}
+    result_manifest = (
+        _read_json(state.path / "results" / "result_manifest.yaml", {})
+        if results_stage.get("status") in {"draft", "approved", "completed"} and not results_stage.get("stale")
+        else {}
+    )
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     claims = _planned_claims(state.path, result_manifest if isinstance(result_manifest, dict) else {})
     metrics = _collect_metrics(state.path, run_manifest if isinstance(run_manifest, dict) else {}, result_manifest if isinstance(result_manifest, dict) else {})

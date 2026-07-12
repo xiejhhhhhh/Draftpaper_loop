@@ -354,18 +354,27 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
             metadata = metadata_by_path.get(relative)
             if not metadata:
                 issues.append(QualityIssue("error", "figure_metadata_entry_missing", f"Figure lacks scientific metadata: {relative}", "results/figure_metadata.json"))
-            elif (
-                metadata.get("is_placeholder")
-                or metadata.get("file_format") != "png"
-                or not metadata.get("has_axes")
-                or not metadata.get("axis_labels")
-                or not metadata.get("text_elements")
-                or not metadata.get("figure_size_inches")
-                or not metadata.get("publication_ready")
-                or not metadata.get("statistics")
-                or not metadata.get("interpretation_summary")
-            ):
-                issues.append(QualityIssue("error", "figure_metadata_not_scientific", f"Figure metadata does not satisfy scientific-result requirements: {relative}", "results/figure_metadata.json"))
+            else:
+                plot_grammar = str(metadata.get("plot_grammar") or "").strip().lower()
+                is_workflow_schematic = plot_grammar == "workflow_schematic"
+                common_metadata_missing = (
+                    metadata.get("is_placeholder")
+                    or metadata.get("file_format") != "png"
+                    or not metadata.get("text_elements")
+                    or not metadata.get("figure_size_inches")
+                    or not metadata.get("publication_ready")
+                    or not metadata.get("statistics")
+                    or not metadata.get("interpretation_summary")
+                )
+                empirical_axes_missing = not is_workflow_schematic and (
+                    not metadata.get("has_axes") or not metadata.get("axis_labels")
+                )
+                schematic_semantics_missing = is_workflow_schematic and (
+                    "data_flow" not in (metadata.get("variable_roles") or [])
+                    or not metadata.get("method_outputs")
+                )
+                if common_metadata_missing or empirical_axes_missing or schematic_semantics_missing:
+                    issues.append(QualityIssue("error", "figure_metadata_not_scientific", f"Figure metadata does not satisfy scientific-result requirements: {relative}", "results/figure_metadata.json"))
         text = " ".join(str(entry.get(key) or "") for key in ("caption_draft", "result_claim"))
         if has_citation_command(text):
             issues.append(QualityIssue("error", "result_manifest_contains_citation", "Results manifest contains a citation command.", "results/result_manifest.yaml"))
@@ -433,6 +442,8 @@ def _check_scientific_evidence_registry(project_path: Path, issues: list[Quality
 
 def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
     main_tex = _read_text(project_path / "latex" / "main.tex")
+    journal_profile = ArtifactRepository(project_path).read_mapping("journal_profile/journal_profile.json")
+    documentclass = str(journal_profile.get("documentclass") or "").strip().lower()
     bibtex = _read_text(project_path / "latex" / "library.bib")
     introduction_tex = _read_text(project_path / "introduction" / "introduction.tex") + "\n" + _read_text(project_path / "latex" / "sections" / "introduction.tex")
     data_tex = _read_text(project_path / "data" / "data.tex") + "\n" + _read_text(project_path / "latex" / "sections" / "data.tex")
@@ -462,7 +473,8 @@ def _check_bibliography(project_path: Path, issues: list[QualityIssue]) -> dict[
         issues.append(QualityIssue("error", "citation_not_in_evidence_table", "Introduction/Discussion cite keys absent from citation_evidence.csv: " + ", ".join(untraced[:12]), "references/citation_evidence.csv"))
     if "\\bibliography{" not in main_tex:
         issues.append(QualityIssue("error", "bibliography_command_missing", "latex/main.tex has no bibliography command.", "latex/main.tex"))
-    if "natbib" not in main_tex and main_citations:
+    natbib_provided_by_class = documentclass.startswith("aastex")
+    if "natbib" not in main_tex and main_citations and not natbib_provided_by_class:
         issues.append(QualityIssue("warning", "natbib_missing", "latex/main.tex cites literature but does not load natbib.", "latex/main.tex"))
     section_citation_report = {}
     for section, tex, file_name in [

@@ -146,6 +146,8 @@ def _plan_entries(project_path: Path) -> list[dict[str, Any]]:
 
 
 def _story_key(entry: dict[str, Any], index: int) -> str:
+    if str(entry.get("manuscript_role") or "main").lower() != "appendix" and entry.get("storyboard_id"):
+        return str(entry.get("storyboard_id"))
     return str(
         entry.get("figure_group_id")
         or entry.get("figure_group")
@@ -175,7 +177,21 @@ def _metric_is_bound(metric: dict[str, Any], story: dict[str, Any]) -> bool:
     return bool((artifact_ids & metric_artifacts) or (evidence_ids & metric_evidence) or (run_ids & metric_runs))
 
 
-def _infer_narrative_job(text: str, index: int) -> str:
+def _infer_narrative_job(text: str, index: int, plot_grammar: str = "") -> str:
+    grammar = _text(plot_grammar).lower().replace("-", "_").replace(" ", "_")
+    grammar_roles = {
+        "workflow_schematic": "study_boundary",
+        "data_overview": "study_boundary",
+        "class_distribution": "study_boundary",
+        "relationship": "premodel_signal",
+        "feature_relationship": "premodel_signal",
+        "model_comparison": "model_comparison",
+        "ablation": "component_attribution",
+        "uncertainty_summary": "error_uncertainty",
+        "confusion_matrix": "error_uncertainty",
+    }
+    if grammar in grammar_roles:
+        return grammar_roles[grammar]
     lowered = text.lower()
     keyword_roles = (
         ("ablation", "component_attribution"),
@@ -227,7 +243,13 @@ def _figure_story_arc(project_path: Path, entries: list[dict[str, Any]]) -> list
         source = {**planned_item, **primary}
         claim = _text(source.get("result_claim") or source.get("expected_finding") or source.get("claim"))
         question = _scientific_question(source)
-        role = _infer_narrative_job(" ".join([key, question, claim, _text(source.get("caption_draft"))]), index)
+        role = _infer_narrative_job(
+            " ".join([key, question, claim, _text(source.get("caption_draft"))]),
+            index,
+            _text(source.get("plot_grammar") or source.get("visual_grammar") or source.get("suggested_plot_type")),
+        )
+        if role == "premodel_signal" and any(term in question.lower() for term in ["outperform", "baseline", "improve over"]):
+            question = "What class-dependent structure is visible in the measured feature space before model fitting?"
         appendix = [
             str(item.get("id") or item.get("path") or f"appendix_{item_index}")
             for item_index, item in enumerate(members, start=1)
@@ -257,19 +279,44 @@ def _figure_story_arc(project_path: Path, entries: list[dict[str, Any]]) -> list
 
 def _reference_items(project_path: Path) -> list[dict[str, str]]:
     summaries_dir = project_path / "references" / "literature_summaries"
-    if not summaries_dir.exists():
-        return []
     rows: list[dict[str, str]] = []
-    for path in summaries_dir.glob("*.json"):
-        payload = _read_json(path)
-        if not payload:
-            continue
-        rows.append({
-            "citation_key": _text(payload.get("citation_key") or payload.get("key") or path.stem, 160),
-            "title": _text(payload.get("title"), 360),
-            "summary": _text(payload.get("summary") or payload.get("evidence_summary") or payload.get("abstract"), 800),
-        })
-    return rows
+    literature_items_path = project_path / "references" / "literature_items.json"
+    if literature_items_path.exists():
+        try:
+            literature_items = json.loads(literature_items_path.read_text(encoding="utf-8-sig"))
+        except (json.JSONDecodeError, OSError):
+            literature_items = []
+        for item in literature_items if isinstance(literature_items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            deep = item.get("deep_summary") if isinstance(item.get("deep_summary"), dict) else {}
+            rows.append({
+                "citation_key": _text(item.get("bibtex_key") or item.get("citation_key") or item.get("key"), 160),
+                "title": _text(item.get("title"), 360),
+                "summary": _text(
+                    deep.get("relevance_to_study") or deep.get("research_question")
+                    or item.get("evidence_notes") or item.get("abstract"),
+                    800,
+                ),
+                "search_contexts": [str(value) for value in item.get("search_contexts") or [] if str(value)],
+            })
+    if summaries_dir.exists():
+        for path in summaries_dir.glob("*.json"):
+            payload = _read_json(path)
+            if not payload:
+                continue
+            rows.append({
+                "citation_key": _text(payload.get("citation_key") or payload.get("key") or path.stem, 160),
+                "title": _text(payload.get("title"), 360),
+                "summary": _text(payload.get("summary") or payload.get("evidence_summary") or payload.get("abstract"), 800),
+                "search_contexts": [str(value) for value in payload.get("search_contexts") or [] if str(value)],
+            })
+    deduped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = str(row.get("citation_key") or "").strip()
+        if key:
+            deduped.setdefault(key, row)
+    return list(deduped.values())
 
 
 def _section_claims(arc: list[dict[str, Any]], records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -284,7 +331,12 @@ def _section_claims(arc: list[dict[str, Any]], records: list[dict[str, Any]]) ->
         }
         allocation["results"].append({**base, "claim_role": "observed_finding"})
         allocation["discussion"].append({**base, "claim_role": "interpretation_and_comparison"})
-        allocation["introduction"].append({**base, "claim_role": "research_question_or_contribution"})
+        allocation["introduction"].append({
+            **base,
+            "claim": item.get("scientific_question") or "What evidence is required to evaluate this part of the study?",
+            "claim_boundary": "Frame this as an unresolved question, hypothesis, or planned comparison; do not reveal observed results.",
+            "claim_role": "research_question_or_contribution",
+        })
     for record in records:
         targets = {str(item).lower() for item in record.get("target_sections") or []}
         target_sections = targets & set(SECTIONS) if targets else {"data", "methods"}

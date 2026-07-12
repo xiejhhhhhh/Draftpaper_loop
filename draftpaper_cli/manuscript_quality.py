@@ -73,6 +73,26 @@ def _metrics(run_manifest: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+def _resolved_metrics(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    result = []
+    for item in payload.get("metrics") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            numeric = float(item.get("value"))
+        except (TypeError, ValueError):
+            continue
+        result.append({
+            "metric_name": str(item.get("metric_name") or item.get("name") or ""),
+            "value": numeric,
+            "run_id": str(item.get("run_id") or ""),
+            "model_id": str(item.get("model_id") or item.get("model") or ""),
+            "cohort_id": str(item.get("cohort_id") or item.get("cohort") or ""),
+            "split": str(item.get("split") or ""),
+        })
+    return result
+
+
 def _metrics_for_role(metrics: list[dict[str, Any]], role: str) -> list[dict[str, Any]]:
     terms = {
         "study_boundary": {"count", "sample", "source", "event", "coverage", "imbalance"},
@@ -95,7 +115,9 @@ def build_results_narrative_contract(project: str | Path) -> dict[str, Any]:
         str(item.get("figure_id") or item.get("storyboard_id") or item.get("id") or ""): item
         for item in manifest_figures if isinstance(item, dict)
     }
-    verified_metrics = _metrics(_read_json(state.path / "methods" / "run_manifest.yaml"))
+    verified_metrics = _resolved_metrics(_read_json(state.path / "results" / "resolved_result_evidence.json"))
+    if not verified_metrics:
+        verified_metrics = _metrics(_read_json(state.path / "methods" / "run_manifest.yaml"))
     groups = []
     for index, raw in enumerate(contracts, start=1):
         if not isinstance(raw, dict) or str(raw.get("manuscript_role") or "main").lower() == "appendix":

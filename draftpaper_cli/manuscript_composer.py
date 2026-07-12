@@ -14,6 +14,7 @@ from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
 from .section_contracts import validate_section_writing
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
+from .evidence_registry import ensure_registry_consistent
 from .paper_narrative import prepare_section_writing_context
 from .writing_architecture import (
     build_argument_matrices,
@@ -57,6 +58,132 @@ def _read_json(path: Path) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _compact_registry(registry: dict[str, Any], section: str) -> dict[str, Any]:
+    records = []
+    for record in registry.get("records") or []:
+        if not isinstance(record, dict):
+            continue
+        targets = [str(item).lower() for item in (record.get("target_sections") or [])]
+        if targets and section not in targets:
+            continue
+        records.append({
+            key: record.get(key)
+            for key in (
+                "evidence_id", "entity_role", "value", "unit", "metric_dimension",
+                "run_id", "cohort_id", "sample_unit", "split", "model_id",
+                "source_artifact", "confidence", "target_sections", "claim_boundary",
+                "binding_complete", "missing_binding_fields",
+            )
+            if record.get(key) not in (None, "", [], {})
+        })
+    return {
+        key: registry.get(key)
+        for key in ("status", "schema_version", "project_id", "preferred_run_id", "policy")
+        if registry.get(key) not in (None, "", [], {})
+    } | {"record_count": len(records), "records": records}
+
+
+def _narrative_claims(items: Any) -> list[dict[str, Any]]:
+    """Registry records carry numeric facts; allocations carry prose jobs only."""
+    return [
+        item for item in (items or [])
+        if isinstance(item, dict) and str(item.get("claim_role") or "") != "scientific_fact"
+    ]
+
+
+def _compact_result_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: manifest.get(key)
+        for key in (
+            "schema_version", "figures", "tables", "supporting_links",
+            "claim_boundaries", "inventory_scope",
+        )
+        if manifest.get(key) not in (None, [], {})
+    }
+
+
+def _compact_resolved_evidence(resolved: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: resolved.get(key)
+        for key in (
+            "status", "schema_version", "run_id", "bound_sources",
+            "anchor_verified_sources", "primary_metric", "primary_metric_selection",
+            "policy", "evidence_fingerprint",
+        )
+        if resolved.get(key) not in (None, [], {})
+    }
+
+
+def _compact_paper_brief(brief: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: brief.get(key)
+        for key in (
+            "project_id", "title_or_idea", "field", "paper_pitch",
+            "central_contribution", "figure_one_hook", "story_progression",
+            "claim_boundaries", "reference_count",
+        )
+        if brief.get(key) not in (None, [], {})
+    }
+
+
+def _compact_writing_context(
+    section: str,
+    writing_context: dict[str, Any],
+    argument_matrices: dict[str, Any],
+    section_lifecycles: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    narrative = writing_context.get("narrative") or {}
+    allocation = (narrative.get("section_claim_allocation") or {}).get("sections") or {}
+    compact_narrative = {
+        "paper_brief": _compact_paper_brief(narrative.get("paper_brief") or {}),
+        "figure_story_arc": narrative.get("figure_story_arc") or {},
+        "manuscript_argument_map": narrative.get("manuscript_argument_map") or {},
+        "section_claim_allocation": {section: _narrative_claims(allocation.get(section))},
+    }
+    pack = writing_context.get("section_evidence_pack") or {}
+    compact_pack = {
+        "section": section,
+        "paper_brief": _compact_paper_brief(pack.get("paper_brief") or {}),
+        "allocated_claims": _narrative_claims(pack.get("allocated_claims")),
+        "figure_story_links": pack.get("figure_story_links") or [],
+        "reference_items": pack.get("reference_items") or [],
+        "section_policy": pack.get("section_policy") or {},
+        "evidence_registry_reference": "writing/scientific_evidence_registry.json",
+    }
+    compact_matrices: dict[str, Any] = {}
+    if section == "introduction":
+        compact_matrices["introduction_gap_matrix"] = argument_matrices.get("introduction_gap_matrix") or []
+    elif section == "discussion":
+        compact_matrices["discussion_finding_comparison_matrix"] = argument_matrices.get("discussion_finding_comparison_matrix") or []
+    compact_lifecycles: dict[str, Any] = {}
+    if section == "data":
+        lifecycle = section_lifecycles.get("data_lifecycle") or {}
+        compact_lifecycles["data_lifecycle"] = {
+            key: lifecycle.get(key)
+            for key in ("stages", "stage_owned_code", "forbidden_prose")
+            if lifecycle.get(key) not in (None, [], {})
+        }
+    elif section == "methods":
+        lifecycle = section_lifecycles.get("method_lifecycle") or {}
+        plugin_events = [item for item in lifecycle.get("plugin_execution") or [] if isinstance(item, dict)]
+        compact_lifecycles["method_lifecycle"] = {
+            key: lifecycle.get(key)
+            for key in (
+                "stages", "stage_owned_code", "formula_contracts", "formula_coverage_status",
+                "deterministic_no_formula_reason", "figure_code_trace",
+                "variable_explanation_required", "forbidden_prose",
+            )
+            if lifecycle.get(key) not in (None, [], {})
+        }
+        compact_lifecycles["method_lifecycle"]["plugin_execution_summary"] = {
+            "event_count": len(plugin_events),
+            "plugin_ids": sorted({str(item.get("plugin_id")) for item in plugin_events if item.get("plugin_id")}),
+            "statuses": sorted({str(item.get("status")) for item in plugin_events if item.get("status")}),
+            "audit_source": "methods/plugin_execution_ledger.jsonl",
+        }
+    return compact_narrative, compact_pack, compact_matrices, compact_lifecycles
 
 
 def _write_quantitative_claim_bindings(
@@ -131,7 +258,12 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         promoted_snapshot = validate_promoted_snapshot_for_writing(state.path)
     except EvidenceSnapshotMismatch as exc:
         raise SectionCompositionError(str(exc)) from exc
-    registry = _read_json(state.path / "writing" / "scientific_evidence_registry.json")
+    existing_registry = _read_json(state.path / "writing" / "scientific_evidence_registry.json")
+    registry = (
+        ensure_registry_consistent(state.path)
+        if promoted_snapshot.get("snapshot_id") or not existing_registry.get("records")
+        else existing_registry
+    )
     results_narrative_contract: dict[str, Any] = {}
     if normalized == "results":
         from .manuscript_quality import build_results_narrative_contract
@@ -142,21 +274,26 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
     section_lifecycles = build_section_lifecycles(state.path)
     panel_contracts = build_panel_writing_contracts(state.path) if normalized in {"results", "discussion"} else {}
     venue_style = resolve_venue_style_adapter(state.path)
+    compact_narrative, compact_pack, compact_matrices, compact_lifecycles = _compact_writing_context(
+        normalized, writing_context, argument_matrices, section_lifecycles,
+    )
+    resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json")
+    result_manifest = _read_json(state.path / "results" / "result_manifest.yaml")
     packet = {
-        "schema_version": "v0.21.3",
+        "schema_version": "v0.23.1",
         "generated_at": utc_now(),
         "section": normalized,
         "composition_mode": "outline_then_codex_free_writing_with_post_validation",
-        "scientific_evidence_registry": registry,
-        "resolved_result_evidence": _read_json(state.path / "results" / "resolved_result_evidence.json"),
-        "result_manifest": _read_json(state.path / "results" / "result_manifest.yaml"),
+        "scientific_evidence_registry": _compact_registry(registry, normalized),
+        "resolved_result_evidence": _compact_resolved_evidence(resolved_evidence),
+        "result_manifest": _compact_result_manifest(result_manifest),
         "results_narrative_contract": results_narrative_contract,
         "promoted_evidence_snapshot": promoted_snapshot,
-        "paper_narrative": writing_context.get("narrative") or {},
-        "section_evidence_pack": writing_context.get("section_evidence_pack") or {},
+        "paper_narrative": compact_narrative,
+        "section_evidence_pack": compact_pack,
         "section_outline": writing_context.get("section_outline") or {},
         "results_synthesis_plan": writing_context.get("results_synthesis_plan") or {},
-        "argument_matrices": argument_matrices,
+        "argument_matrices": compact_matrices,
         "section_reasoning_inputs": (
             argument_matrices.get("introduction_gap_matrix", []) if normalized == "introduction"
             else argument_matrices.get("discussion_finding_comparison_matrix", []) if normalized == "discussion"
@@ -164,9 +301,16 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
                   else section_lifecycles.get("method_lifecycle", {}).get("stages", []) if normalized == "methods"
                   else (writing_context.get("results_synthesis_plan") or {}).get("finding_blocks", []))
         ),
-        "section_lifecycles": section_lifecycles,
+        "section_lifecycles": compact_lifecycles,
         "panel_figure_contracts": panel_contracts,
         "venue_style_adapter": venue_style,
+        "audit_sources": {
+            "scientific_evidence_registry": "writing/scientific_evidence_registry.json",
+            "resolved_result_evidence": "results/resolved_result_evidence.json",
+            "result_manifest": "results/result_manifest.yaml",
+            "section_lifecycles": "writing/section_lifecycles.json",
+            "note": "Full audit ledgers remain on disk; this packet contains the active section slice.",
+        },
         "hard_constraints": {
             "results_citations_forbidden": normalized == "results",
             "internal_artifact_language_forbidden": True,

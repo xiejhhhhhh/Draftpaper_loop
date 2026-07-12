@@ -86,6 +86,8 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
             suffix = sentence[match.end(): match.end() + 2]
             claims.append({
                 "value": value,
+                "raw_value": match.group(0),
+                "decimal_places": len(match.group(0).split(".", 1)[1]) if "." in match.group(0) else 0,
                 "sentence": sentence.strip(),
                 "percent": "%" in suffix,
                 "start": match.start(),
@@ -102,7 +104,9 @@ def _value_matches(claim: dict[str, Any], record: dict[str, Any]) -> bool:
     values = [claim["value"]]
     if claim.get("percent"):
         values.append(claim["value"] / 100.0)
-    return any(abs(value - candidate) <= max(1e-8, abs(candidate) * 5e-5) for value in values)
+    decimals = int(claim.get("decimal_places") or 0)
+    rounding_tolerance = 0.5 * (10 ** (-decimals)) if decimals else 1e-8
+    return any(abs(value - candidate) <= max(1e-8, rounding_tolerance, abs(candidate) * 5e-5) for value in values)
 
 
 def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
@@ -116,6 +120,10 @@ def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
     }
     if role in hints:
         return any(re.search(rf"\b{re.escape(term)}\b", normalized) for term in hints[role])
+    if "token" in role and re.search(r"\btokens?\b", normalized):
+        return True
+    if "prediction" in role and re.search(r"\bpredictions?\b", normalized):
+        return True
     if role.startswith("result_metric_"):
         metric = role.removeprefix("result_metric_").replace("_", " ")
         aliases = {"f1 macro": ("macro f1", "macro-f1"), "roc auc": ("roc auc", "roc-auc", "auc")}
@@ -164,7 +172,8 @@ def _metric_matches(expected: str, observed: str) -> bool:
         "r2": {"r2", "r_squared", "goodness_of_fit"},
         "p_value": {"p_value", "pvalue", "p"},
     }
-    return observed in aliases.get(expected, {expected})
+    family = aliases.get(expected, {expected})
+    return observed in family or any(observed.endswith(f"_{item}") for item in family)
 
 
 def _metric_dimension_matches(record: dict[str, Any], metric: str, claim: dict[str, Any]) -> bool:
@@ -172,7 +181,7 @@ def _metric_dimension_matches(record: dict[str, Any], metric: str, claim: dict[s
     if not dimension:
         return False
     if metric in {"f1", "f1_macro", "auc", "roc_auc", "accuracy", "precision", "recall", "r2"}:
-        return dimension in {"score", "probability", "proportion", "fraction", "dimensionless", "percent"}
+        return dimension in {"score", "dimensionless_score", "probability", "proportion", "fraction", "dimensionless", "percent"}
     if metric == "p_value":
         return dimension in {"score", "probability", "proportion", "dimensionless", "p_value"}
     if claim.get("percent"):
@@ -180,7 +189,9 @@ def _metric_dimension_matches(record: dict[str, Any], metric: str, claim: dict[s
     return True
 
 
-def _resolve_numeric_claim(claim: dict[str, Any], records: list[dict[str, Any]], section: str) -> dict[str, Any]:
+def _resolve_numeric_claim(
+    claim: dict[str, Any], records: list[dict[str, Any]], section: str, preferred_run_id: str = "",
+) -> dict[str, Any]:
     candidates = [record for record in records if _value_matches(claim, record)]
     if not candidates:
         return {
@@ -195,6 +206,12 @@ def _resolve_numeric_claim(claim: dict[str, Any], records: list[dict[str, Any]],
     ]
     if section_candidates:
         candidates = section_candidates
+    preferred = [record for record in candidates if preferred_run_id and _binding_value(record, "run_id") == preferred_run_id]
+    if preferred:
+        candidates = preferred
+    run_verified = [record for record in candidates if str(record.get("confidence") or "") == "verified_run_output"]
+    if run_verified:
+        candidates = run_verified
     metric_signal = _metric_signal(claim["sentence"], claim)
     if metric_signal:
         metric_matches = [record for record in candidates if _metric_matches(metric_signal, _record_metric(record))]
@@ -219,16 +236,24 @@ def _resolve_numeric_claim(claim: dict[str, Any], records: list[dict[str, Any]],
 
     scope_signals: dict[str, set[str]] = {}
     for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id", "metric_dimension"):
-        known = {_binding_value(record, field) for record in records}
-        mentioned = {value for value in known if value and _scope_mentioned(claim["sentence"], value)}
+        known_all = {_binding_value(record, field) for record in records}
+        mentioned = {value for value in known_all if value and _scope_mentioned(claim["sentence"], value)}
         if mentioned:
             scope_signals[field] = mentioned
+            if not any(_binding_value(record, field) in mentioned for record in candidates):
+                return {
+                    "status": "scope_mismatch",
+                    "value": claim["value"],
+                    "sentence": claim["sentence"],
+                    "scope_signals": {key: sorted(values) for key, values in scope_signals.items()},
+                }
             candidates = [record for record in candidates if _binding_value(record, field) in mentioned]
+    serialized_scope_signals = {field: sorted(values) for field, values in scope_signals.items()}
 
     if not candidates:
         return {
             "status": "scope_mismatch" if scope_signals else "unsupported",
-            "value": claim["value"], "sentence": claim["sentence"], "scope_signals": scope_signals,
+            "value": claim["value"], "sentence": claim["sentence"], "scope_signals": serialized_scope_signals,
         }
     complete = [record for record in candidates if all(_binding_value(record, field) for field in REQUIRED_BINDING_FIELDS)]
     if not complete:
@@ -244,7 +269,7 @@ def _resolve_numeric_claim(claim: dict[str, Any], records: list[dict[str, Any]],
     if len(scopes) > 1:
         return {
             "status": "ambiguous", "value": claim["value"], "sentence": claim["sentence"],
-            "evidence_ids": [record.get("evidence_id") for record in complete], "scope_signals": scope_signals,
+            "evidence_ids": [record.get("evidence_id") for record in complete], "scope_signals": serialized_scope_signals,
         }
     record = complete[0]
     return {
@@ -287,6 +312,32 @@ def validate_section_writing(section: str, text: str, registry: dict[str, Any]) 
         if len(re.findall(r"[A-Za-z]+", sentence)) >= 8
     ]
     repeated = sorted({sentence for sentence in plain_sentences if plain_sentences.count(sentence) > 1})
+    control_characters = sorted({ord(character) for character in text if ord(character) < 32 and character not in "\n\r\t"})
+    if control_characters:
+        issues.append({
+            "severity": "blocking",
+            "kind": "latex_control_character",
+            "detail": f"Candidate contains non-whitespace control characters: {control_characters}.",
+        })
+    prose_outside_math = re.sub(
+        r"\\begin\{equation\}.*?\\end\{equation\}|\\\[.*?\\\]|\\\(.*?\\\)|\$[^$]*\$",
+        "",
+        text,
+        flags=re.S,
+    )
+    prose_outside_math = re.sub(
+        r"\\(?:includegraphics|input|label|ref|pageref|cite\w*|bibliography)\*?"
+        r"(?:\[[^\]]*\])?(?:\{[^{}]*\})+",
+        "",
+        prose_outside_math,
+        flags=re.I,
+    )
+    if re.search(r"(?<!\\)_[A-Za-z0-9{]", prose_outside_math):
+        issues.append({
+            "severity": "blocking",
+            "kind": "unescaped_underscore_outside_math",
+            "detail": "Candidate contains an underscore outside a LaTeX math environment.",
+        })
     if repeated:
         issues.append({
             "severity": "blocking",
@@ -336,7 +387,9 @@ def validate_section_writing(section: str, text: str, registry: dict[str, Any]) 
     numeric_bindings: list[dict[str, Any]] = []
     if normalized_section in {"results", "data", "discussion"}:
         for claim in _numeric_claims_with_context(text):
-            binding = _resolve_numeric_claim(claim, records, normalized_section)
+            binding = _resolve_numeric_claim(
+                claim, records, normalized_section, str(registry.get("preferred_run_id") or ""),
+            )
             numeric_bindings.append(binding)
             issue_kinds = {
                 "unsupported": "unsupported_numeric_claim",

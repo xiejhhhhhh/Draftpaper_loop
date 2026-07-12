@@ -82,6 +82,9 @@ tables: []
             self.assertEqual(groups[0]["main_artifact_ids"], ["main-performance"])
             self.assertEqual(groups[0]["supporting_artifact_ids"], ["robustness-panel"])
             self.assertIn("metric-main", groups[0]["evidence_ids"])
+            introduction_claim = narrative["section_claim_allocation"]["sections"]["introduction"][0]
+            self.assertEqual(introduction_claim["claim"], groups[0]["scientific_question"])
+            self.assertIn("do not reveal observed results", introduction_claim["claim_boundary"].lower())
 
     def test_results_metrics_require_explicit_binding(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -90,6 +93,21 @@ tables: []
             block = plan["finding_blocks"][0]
             self.assertEqual(block["metric_evidence"][0]["value"], 0.81)
             self.assertIn("robustness-panel", block["supporting_evidence"])
+
+    def test_reference_items_support_consolidated_literature_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            (project.path / "references" / "literature_items.json").write_text(
+                json.dumps([{
+                    "bibtex_key": "Current2026",
+                    "title": "Current evidence",
+                    "abstract": "A structured abstract supports the introduction.",
+                    "search_contexts": ["introduction"],
+                }]),
+                encoding="utf-8",
+            )
+            narrative = build_paper_narrative(project.path)
+            self.assertEqual(narrative["paper_brief"]["reference_count"], 2)
 
     def test_reasoning_lifecycle_panel_style_and_editor_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +133,22 @@ tables: []
             self.assertEqual(editor["max_iterations"], 3)
             self.assertEqual(revision["iteration"], 1)
             self.assertTrue(repair["tasks"])
+
+    def test_scientific_editor_ignores_latex_figure_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            text = (
+                "\\section{Results}\n\n"
+                "The held-out comparison establishes the study boundary and explains the observed evidence, "
+                "while uncertainty limits interpretation to the current cohort and validation design. "
+                "This paragraph contains enough scientific reasoning to stand on its own.\n\n"
+                "\\begin{figure}[htbp]\n\\includegraphics{results/figures/main.png}\n"
+                "\\caption{A scientific result figure.}\n\\end{figure}\n"
+            )
+            candidate = project.path / "candidate_with_figure.tex"
+            candidate.write_text(text, encoding="utf-8")
+            editor = prepare_scientific_editor(project.path, "results", candidate)
+            self.assertFalse(any("internal_artifact_language" in task["issues"] for task in editor["tasks"]))
 
     def test_release_rejects_missing_free_prose_sections(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

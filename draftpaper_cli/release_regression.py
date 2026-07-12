@@ -248,7 +248,8 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     }]})
     registry = build_scientific_evidence_registry(project)
     _assert(registry["status"] == "ready" and registry["incomplete_binding_count"] == 0, f"{fixture_name}: evidence registry is incomplete")
-    result_sentence = f"Across the {spec['cohort_id']} cohort, {spec['metric_label']} was {spec['metric_value']}."
+    cohort_label = str(spec["cohort_id"]).replace("_", " ")
+    result_sentence = f"Across the {cohort_label} cohort, {spec['metric_label']} was {spec['metric_value']}."
     section_validation = validate_section_writing("results", result_sentence, registry)
     _assert(section_validation["decision"] == "pass", f"{fixture_name}: Results evidence binding failed")
 
@@ -283,7 +284,11 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
 
     writing_action = formal_writing_release_action(project)
     _assert(
-        writing_action is not None and writing_action.get("command") in {"prepare-section-writing", "compose-section-with-agent"},
+        writing_action is not None and writing_action.get("command") in {
+            "inventory-results",
+            "prepare-section-writing",
+            "compose-section-with-agent",
+        },
         f"{fixture_name}: formal writing route did not require the free-prose lifecycle",
     )
     before_status = _project_hashes(project)

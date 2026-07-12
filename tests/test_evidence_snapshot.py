@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from draftpaper_cli.evidence_snapshot import (
     EvidenceSnapshotMismatch,
@@ -69,6 +70,18 @@ class EvidenceSnapshotTests(unittest.TestCase):
             self.assertEqual(report["archived_snapshot_id"], snapshot["snapshot_id"])
             self.assertFalse((project.path / "results" / "promoted_evidence_snapshot.json").exists())
             self.assertTrue((project.path / "results" / "evidence_snapshots" / f"{snapshot['snapshot_id']}.json").exists())
+
+    def test_orchestrator_requires_reopen_before_upstream_scientific_regeneration(self) -> None:
+        from draftpaper_cli.orchestrator import _next_action
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Reopen before code", field="astronomy")
+            create_evidence_snapshot(project.path)
+
+            with patch("draftpaper_cli.orchestrator._next_stage", return_value="code"):
+                action = _next_action(project.path, project.metadata)
+
+            self.assertEqual(action["command"], "reopen-core-evidence")
 
 
 if __name__ == "__main__":

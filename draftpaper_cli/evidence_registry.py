@@ -201,22 +201,38 @@ def _records_from_payload(path: Path, project_path: Path) -> list[dict[str, Any]
     return normalized
 
 
+def _flatten_numeric_metrics(value: Any, prefix: str = "") -> list[tuple[str, float]]:
+    if isinstance(value, dict):
+        rows: list[tuple[str, float]] = []
+        for key, child in value.items():
+            name = f"{prefix}_{key}".strip("_")
+            rows.extend(_flatten_numeric_metrics(child, name))
+        return rows
+    numeric = _numeric(value)
+    return [(prefix, numeric)] if prefix and numeric is not None else []
+
+
 def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[str, Any]]:
     payload = _read_json(path)
     relative = path.relative_to(project_path).as_posix()
     source_hash = _sha256(path)
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    resolved = _read_json(project_path / "results" / "resolved_result_evidence.json")
+    primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
+    current_run_id = str(run_manifest.get("run_id") or primary.get("run_id") or "")
+    current_split = str(primary.get("split") or run_manifest.get("split") or "current_run")
     records: list[dict[str, Any]] = []
     figures = payload.get("figures") if isinstance(payload.get("figures"), list) else []
     for figure in figures:
         if not isinstance(figure, dict) or not isinstance(figure.get("metrics"), dict):
             continue
         figure_id = str(figure.get("storyboard_id") or figure.get("id") or figure.get("path") or "figure")
-        for metric, value in figure["metrics"].items():
-            numeric = _numeric(value)
-            if numeric is None:
-                continue
+        for metric, numeric in _flatten_numeric_metrics(figure["metrics"]):
             metric_name = str(metric).strip().lower()
-            unit = "count" if any(token in metric_name for token in ["count", "number", "row", "_n"]) else "score"
+            count_tokens = ["count", "number", "row", "_n", "event", "source", "prediction"]
+            unit = "count" if any(token in metric_name for token in count_tokens) or "_as_" in metric_name else "score"
+            data_count_tokens = ("sample", "cohort", "row", "event_count", "source_count", "source_support", "inventory", "token_model", "token_ready")
+            data_sections = ["results", "data", "discussion"] if unit == "count" and any(token in metric_name for token in data_count_tokens) else ["results", "discussion"]
             record = _normalize_record(
                 {
                     "entity_role": f"result_metric_{metric_name}",
@@ -224,10 +240,12 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                     "unit": unit,
                     "cohort": "main",
                     "sample_unit": "figure_evidence",
+                    "run_id": current_run_id,
+                    "split": current_split,
                     "model_id": figure_id,
                     "metric_dimension": unit,
-                    "confidence": "figure_metadata_unbound",
-                    "target_sections": ["results", "discussion"],
+                    "confidence": "figure_metadata_bound",
+                    "target_sections": data_sections,
                 },
                 source_artifact=relative,
                 source_hash=source_hash,
@@ -256,6 +274,8 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     result_manifest = state.path / "results" / "result_manifest.yaml"
     if result_manifest.exists():
         records.extend(_records_from_result_manifest(result_manifest, state.path))
+    resolved = _read_json(state.path / "results" / "resolved_result_evidence.json")
+    primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
     conflicts = _conflicts(records)
     incomplete = [record for record in records if not record.get("binding_complete")]
     registry = {
@@ -265,6 +285,7 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         "project_id": state.metadata.get("project_id"),
         "record_count": len(records),
         "records": records,
+        "preferred_run_id": str(primary.get("run_id") or ""),
         "blocking_conflict_count": len(conflicts),
         "incomplete_binding_count": len(incomplete),
         "incomplete_binding_evidence_ids": [record.get("evidence_id") for record in incomplete],

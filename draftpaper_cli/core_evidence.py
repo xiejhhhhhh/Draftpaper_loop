@@ -58,6 +58,7 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
             "caption": metadata.get("caption") or plan.get("caption_draft") or "",
             "scientific_question": plan.get("scientific_question") or "",
             "interpretation_summary": metadata.get("interpretation_summary") or "",
+            "plot_grammar": metadata.get("plot_grammar") or plan.get("plot_grammar") or "",
             "has_axes": bool(metadata.get("has_axes")),
             "axis_labels": metadata.get("axis_labels") or {},
             "publication_ready": bool(metadata.get("publication_ready")),
@@ -74,6 +75,7 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
                 "caption": plan.get("caption_draft") or "",
                 "scientific_question": plan.get("scientific_question") or "",
                 "interpretation_summary": plan.get("result_claim_template") or "",
+                "plot_grammar": plan.get("plot_grammar") or "",
                 "has_axes": False,
                 "axis_labels": {},
                 "publication_ready": False,
@@ -97,9 +99,10 @@ def _reviewable_figure_issues(project_path: Path, figures: list[dict[str, Any]])
             issues.append(f"{path_text} lacks a title or caption.")
         if not item.get("interpretation_summary"):
             issues.append(f"{path_text} lacks an interpretation summary.")
-        if not item.get("has_axes"):
+        is_workflow_schematic = str(item.get("plot_grammar") or "").lower() == "workflow_schematic"
+        if not item.get("has_axes") and not is_workflow_schematic:
             issues.append(f"{path_text} does not confirm axes or a scientific scale.")
-        if not item.get("axis_labels"):
+        if not item.get("axis_labels") and not is_workflow_schematic:
             issues.append(f"{path_text} does not declare axis labels.")
         if not item.get("publication_ready"):
             issues.append(f"{path_text} is not marked publication_ready in figure metadata.")
@@ -181,6 +184,17 @@ def _figure_contract_coverage(
 
 def _decision_from_report(payload: dict[str, Any]) -> str:
     return str(payload.get("decision") or payload.get("status") or "").strip().lower()
+
+
+def _dependency_state_issues(metadata: dict[str, Any], stage: str) -> list[str]:
+    stages = metadata.get("stages") or {}
+    stage_meta = stages.get(stage) or {}
+    issues: list[str] = []
+    for dependency in stage_meta.get("depends_on") or []:
+        dependency_meta = stages.get(str(dependency)) or {}
+        if dependency_meta.get("stale") or dependency_meta.get("status") not in {"draft", "approved", "completed"}:
+            issues.append(f"Scientific dependency is not current: {dependency}.")
+    return issues
 
 
 def _workflow_coverage(project_path: Path, run_manifest: dict[str, Any], validity: dict[str, Any]) -> dict[str, bool]:
@@ -336,7 +350,8 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     figures = _figure_items(figure_plan if isinstance(figure_plan, dict) else {}, figure_metadata if isinstance(figure_metadata, dict) else {})
-    issues = _reviewable_figure_issues(state.path, figures)
+    issues = _dependency_state_issues(state.metadata, "core_evidence")
+    issues.extend(_reviewable_figure_issues(state.path, figures))
     coverage = _workflow_coverage(state.path, run_manifest if isinstance(run_manifest, dict) else {}, validity if isinstance(validity, dict) else {})
     contract_coverage = _figure_contract_coverage(
         state.path,

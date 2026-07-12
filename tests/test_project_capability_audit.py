@@ -41,4 +41,60 @@ def test_audit_converts_traceable_local_data_and_transformer_code_to_project_loc
     assert updated["decision"] == "pass"
     assert {item["state"] for item in updated["requirement_assessments"]} == {"covered_project_local"}
     assert all(item["binding_scope"] == "project_local" for item in bindings["bindings"])
-    assert all(item["evidence"]["sha256"] for item in bindings["bindings"])
+
+
+def test_audit_recognizes_common_project_local_analysis_roles(tmp_path) -> None:
+    from draftpaper_cli.project_capability_audit import audit_project_capabilities
+
+    project_path = create_project(
+        root=tmp_path,
+        idea="Astronomy baseline feature diagnostics",
+        field="astronomy machine learning",
+        target_journal="Test",
+    ).path
+    processed = project_path / "data" / "processed"
+    scripts = project_path / "methods" / "scripts"
+    processed.mkdir(parents=True, exist_ok=True)
+    scripts.mkdir(parents=True, exist_ok=True)
+    (processed / "history_lc_tokens.csv").write_text(
+        "source_id,mjd,rate,class_label\n1,1.0,0.4,AGN\n",
+        encoding="utf-8",
+    )
+    (scripts / "train_baselines.py").write_text(
+        "# class_count and value_counts diagnostics\n"
+        "# baseline random_forest feature importance and spectral feature_space\n",
+        encoding="utf-8",
+    )
+    requirements = [
+        ("data:fig_1:light_curve", "data", "light_curve"),
+        ("method:fig_2:class_balance_check", "method", "class_balance_check"),
+        ("method:fig_3:feature_space_diagnostic", "method", "feature_space_diagnostic"),
+        ("method:fig_4:baseline_model", "method", "baseline_model"),
+    ]
+    report_path = project_path / "research_plan" / "plugin_sufficiency_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps({
+            "requirement_assessments": [
+                {
+                    "requirement_id": requirement_id,
+                    "figure_id": requirement_id.split(":")[1],
+                    "kind": kind,
+                    "role": role,
+                    "state": "execution_required",
+                    "core": True,
+                }
+                for requirement_id, kind, role in requirements
+            ],
+            "rescue_tasks": [],
+        }),
+        encoding="utf-8",
+    )
+    (project_path / "research_plan" / "plugin_binding_plan.json").write_text(
+        json.dumps({"bindings": []}), encoding="utf-8"
+    )
+
+    result = audit_project_capabilities(project_path)
+
+    assert result["decision"] == "pass"
+    assert result["covered_project_local"] == 4

@@ -23,7 +23,7 @@ class FigureContractGateError(RuntimeError):
     """Raised when the figure contract gate cannot be evaluated."""
 
 
-def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
+def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool = True) -> dict[str, Any]:
     state = load_project(project)
     contracts = read_json(state.path / "results" / "figure_contracts.json", {})
     figure_plan = read_json(state.path / "results" / "figure_plan.json", {})
@@ -78,7 +78,20 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
         for item in ((semantic_annotations or {}).get("annotations") or [])
         if isinstance(item, dict) and item.get("path")
     }
-    execution_complete = str((run_manifest or {}).get("status") or "").lower() == "success"
+    declared_run_outputs = {
+        str(path).replace("\\", "/")
+        for path in ((run_manifest or {}).get("output_files") or [])
+    }
+    current_contract_paths = {
+        str(contract.get("path") or "").replace("\\", "/")
+        for contract in main_contracts
+        if contract.get("path")
+    }
+    execution_complete = (
+        str((run_manifest or {}).get("status") or "").lower() == "success"
+        and bool(current_contract_paths)
+        and current_contract_paths.issubset(declared_run_outputs)
+    )
     semantic_checks: list[dict[str, Any]] = []
 
     for index, contract in enumerate(main_contracts, start=1):
@@ -103,7 +116,8 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
                 figure_issues.append({"severity": "blocking", "kind": "missing_data_role", "detail": role})
         if required_methods and method_status in {"blocked", "missing"}:
             figure_issues.append({"severity": "blocking", "kind": "missing_method_feasibility", "detail": method_status})
-        if required_methods and method_source_status not in {
+        codegen_ready = (plugin_trace or {}).get("decision") in {"ready_for_codegen", "pass"}
+        if required_methods and not codegen_ready and method_source_status not in {
             "implemented",
             "available",
             "project_code_available",
@@ -119,7 +133,10 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
         if coverage.get("partial_missing_roles"):
             for role in coverage.get("partial_missing_roles") or []:
                 figure_issues.append({"severity": "conditional", "kind": "partial_data_role", "detail": role})
-        produced = metadata_by_id.get(figure_id) or metadata_by_path.get(str(contract.get("path") or "").replace("\\", "/"))
+        contract_path = str(contract.get("path") or "").replace("\\", "/")
+        produced = None
+        if contract_path in declared_run_outputs:
+            produced = metadata_by_id.get(figure_id) or metadata_by_path.get(contract_path)
         if produced:
             annotation = annotations_by_id.get(figure_id) or annotations_by_path.get(str(contract.get("path") or "").replace("\\", "/"))
             if annotation:
@@ -232,7 +249,8 @@ def assess_figure_contracts(project: str | Path) -> dict[str, Any]:
     _write_json(state.path / FIGURE_CONTRACT_GATE_JSON, report)
     write_html_report(state.path / FIGURE_CONTRACT_GATE_HTML, _render_report(report), title="Figure Contract Gate")
     _set_stage_manifest(state.path)
-    update_stage_status(state.path, "figure_contracts", "draft" if decision != "blocked" else "failed")
+    if propagate_stage_state:
+        update_stage_status(state.path, "figure_contracts", "draft" if decision != "blocked" else "failed")
     return {
         "status": "written",
         "project_path": str(state.path),

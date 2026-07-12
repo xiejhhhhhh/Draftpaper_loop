@@ -23,10 +23,14 @@ AUDIT_HTML = "research_plan/project_capability_audit.html"
 
 ROLE_TERMS = {
     "label": {"label", "class", "category", "target", "source_class"},
+    "light_curve": {"light_curve", "lightcurve", "history_lc", "time_series", "mjd", "rate"},
     "spectral_features": {"spectral", "hardness", "pha", "arf", "rmf", "spectrum"},
     "multiwavelength_features": {"multiwavelength", "multi_wavelength", "multiband", "counterpart", "crossmatch", "catalog_match"},
     "multimodal_learning": {"multimodal", "fusion", "transformer", "token", "timeaware", "time_aware"},
     "modality_availability": {"dataset_quality", "completeness", "inventory", "availability", "token", "spectrum"},
+    "class_balance_check": {"class_balance", "class_count", "label", "category", "value_counts"},
+    "feature_space_diagnostic": {"feature_space", "feature", "spectral", "importance", "embedding"},
+    "baseline_model": {"baseline", "dummy", "logistic", "random_forest", "majority"},
 }
 
 
@@ -129,7 +133,7 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
     bindings = [item for item in bindings_payload.get("bindings") or [] if isinstance(item, dict)]
     audit_items = []
     for requirement in assessments:
-        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "covered_project_local", "true_missing"}:
+        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "execution_required", "covered_project_local", "true_missing"}:
             continue
         candidates = []
         for path in _candidate_files(state.path, str(requirement["kind"])):
@@ -166,6 +170,8 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
+        "research_capability_contract_sha256": sufficiency.get("research_capability_contract_sha256") or "",
+        "source_sufficiency_generated_at": sufficiency.get("generated_at") or "",
         "decision": sufficiency["decision"],
         "assessments": audit_items,
         "unresolved_requirement_ids": [item.get("requirement_id") for item in core_unresolved],

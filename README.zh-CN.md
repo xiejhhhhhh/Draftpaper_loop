@@ -341,6 +341,10 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增对抗回归，强制拒绝错误 run/cohort/unit/split/model、错误 metric/量纲、伪 metadata 空白图、仅有合同或 fixture 的插件，以及引用中的否定冲突、数值不符和因果反转。`status` 还必须保持项目文件哈希不变。
 - 95% 质量不再由自动关键词、metadata 或文件存在性分数授权。新增 `prepare-blind-quality-evaluation` 和 `record-blind-quality-evaluation`；正式 parity 还要求至少两位独立盲评者比较完整稿件与真实图表、科学正确性为 100%、平均质量比例不低于 0.95。
 - wheel 隔离安装会核对源码与安装包都发现 209 个插件、545 个 fixture，并在安装环境中运行三领域与对抗回归。CI 同时覆盖 Python 3.10-3.12、Linux 和 Windows。
+- 完成一次 astronomy+machine learning 的 evidence-first 全流程实跑，覆盖研究合同、项目本地能力补齐、六组科研主图、五个章节的自由撰写与 Scientific Editor 生命周期、最终 PDF 组装和引用复核。最终快照保留全部 12 篇总结文献，共形成 25 处引用，`unsupported=0`、阻断项为 0。
+- PDF 技术对比确认自动稿保留了已验证的 cohort、baseline/Transformer 指标、消融方向、不确定性边界和六图叙事。Introduction 与 Discussion 的结构和文献整合已达到可比或更好水平；直接观测示例以及 Data/Methods/Results 的细节仍少于参考稿。自动功能评分为 0.9825，但在缺少两位独立盲评者之前不宣称正式达到 95%。
+- 使用 `tiktoken` `o200k_base` 统计可观察写作消耗：章节证据包输入 122,238 tokens，接受稿输出 5,716 tokens，共 127,954 tokens；Results 40,075、Introduction 15,691、Data 17,139、Methods 22,920、Discussion 32,129。确定性 CLI 阶段不消耗模型 tokens，隐藏推理与平台开销不作估算。完整问题链与统计见 [`docs/audits/2026-07-12-astronomy-v0230-full-run.md`](docs/audits/2026-07-12-astronomy-v0230-full-run.md)。
+- 全流程完成后的本地测试为 `441 passed`。最终质量门已没有未解决的科学、写作、图表、证据快照、PDF 或引用错误；在两位独立盲评者的完整稿件对比尚未录入前，系统仍会按设计拒绝正式发布。
 
 ### v0.22.1-v0.22.8（2026-07-12）-- 证据语义、运行真值与状态内核
 

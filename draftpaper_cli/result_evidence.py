@@ -21,6 +21,7 @@ METRIC_PREFERENCE = ["f1_macro", "macro_f1", "f1", "roc_auc", "auc", "balanced_a
 NON_METRIC_COLUMNS = {
     "model",
     "model_name",
+    "model_id",
     "split",
     "split_type",
     "fold",
@@ -35,6 +36,9 @@ NON_METRIC_COLUMNS = {
     "n_test",
     "row_count",
     "sample_size",
+    "sample_count",
+    "run_id",
+    "metric_dimension",
     "cohort",
     "cohort_id",
     "sample_unit",
@@ -82,7 +86,7 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
         return []
     columns = [str(column or "").strip() for column in rows[0].keys()]
     source_hash = _source_hash(path)
-    model_column = next((item for item in ["model", "model_name", "variant"] if item in columns), "")
+    model_column = next((item for item in ["model_id", "model", "model_name", "variant"] if item in columns), "")
     split_column = next((item for item in ["split", "split_type"] if item in columns), "")
     fold_column = next((item for item in ["fold", "fold_id"] if item in columns), "")
     cohort_column = next((item for item in ["cohort_id", "cohort"] if item in columns), "")
@@ -96,16 +100,18 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                 records.append({
                     "metric_name": metric_name,
                     "value": value,
-                    "model": "",
-                    "split": "",
-                    "fold": "",
+                    "model": str(row.get(model_column) or "").strip() if model_column else "",
+                    "split": str(row.get(split_column) or "").strip() if split_column else "",
+                    "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
                     "aggregation": "reported_scalar",
-                    "run_id": run_id,
+                    "run_id": str(row.get("run_id") or run_id).strip(),
                     "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
                     "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
+                    "sample_count": _numeric(row.get("sample_count")),
+                    "metric_dimension": str(row.get("metric_dimension") or "score").strip(),
                     "source_artifact": relative,
                     "source_hash": source_hash,
-                    "priority": 10,
+                    "priority": 100 if model_column else 10,
                 })
         return records
     for row in rows:
@@ -134,7 +140,7 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
 
 
 def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         grouped[(
             str(record.get("metric_name") or ""),
@@ -142,9 +148,11 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             str(record.get("split") or ""),
             str(record.get("run_id") or ""),
             str(record.get("source_artifact") or ""),
+            str(record.get("cohort_id") or ""),
+            str(record.get("sample_unit") or ""),
         )].append(record)
     aggregated: list[dict[str, Any]] = []
-    for (metric_name, model, split, run_id, source_artifact), items in grouped.items():
+    for (metric_name, model, split, run_id, source_artifact, cohort_id, sample_unit), items in grouped.items():
         values = [float(item["value"]) for item in items]
         item = dict(items[0])
         item["value"] = mean(values)
@@ -155,6 +163,8 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         item["split"] = split
         item["run_id"] = run_id
         item["source_artifact"] = source_artifact
+        item["cohort_id"] = cohort_id
+        item["sample_unit"] = sample_unit
         item.pop("fold", None)
         aggregated.append(item)
     return aggregated
@@ -167,6 +177,55 @@ def _metric_rank(record: dict[str, Any]) -> tuple[int, int, float]:
     except ValueError:
         preference = 0
     return int(record.get("priority") or 0), preference, float(record.get("value") or 0.0)
+
+
+def _metric_family(value: Any) -> str:
+    name = str(value or "").strip().lower()
+    if name in {"f1", "f1_macro", "macro_f1"}:
+        return "f1"
+    if name in {"auc", "roc_auc"}:
+        return "auc"
+    return name
+
+
+def _select_primary_metric(
+    records: list[dict[str, Any]],
+    *,
+    configured_metric: str,
+    configured_model: str,
+    bound_sources: list[str],
+) -> tuple[dict[str, Any], str]:
+    metric_candidates = [
+        item for item in records
+        if not configured_metric or _metric_family(item.get("metric_name")) == _metric_family(configured_metric)
+    ]
+    if configured_model:
+        exact = [item for item in metric_candidates if str(item.get("model") or "") == configured_model]
+        if exact:
+            return max(exact, key=_metric_rank), "configured_model_id"
+    directly_bound_models = [
+        item for item in metric_candidates
+        if str(item.get("model") or "").strip() and item.get("source_artifact") in bound_sources
+    ]
+    proposed = []
+    for item in directly_bound_models or metric_candidates:
+        model = str(item.get("model") or "").lower()
+        tokens = {token for token in model.replace("-", "_").split("_") if token}
+        if tokens & {"full", "main", "primary", "proposed"} and not tokens & {"baseline", "without", "no"}:
+            proposed.append(item)
+    if proposed:
+        return max(proposed, key=_metric_rank), "inferred_full_or_proposed_model"
+    if directly_bound_models:
+        return max(directly_bound_models, key=_metric_rank), "highest_ranked_run_bound_model"
+    summaries = [
+        item for item in metric_candidates
+        if not str(item.get("model") or "").strip() and item.get("source_artifact") in bound_sources
+    ]
+    if summaries:
+        return max(summaries, key=_metric_rank), "run_bound_summary"
+    if metric_candidates:
+        return max(metric_candidates, key=_metric_rank), "highest_ranked_verified_model"
+    return {}, "no_primary_metric"
 
 
 def _matches_anchor(value: float, anchors: list[float]) -> bool:
@@ -250,18 +309,14 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
     candidates = [item for item in records if item.get("metric_name") in METRIC_PREFERENCE]
     requirements = _read_json(state.path / "methods" / "method_requirements.json")
     configured_primary = str(requirements.get("primary_metric") or "").strip().lower()
-    configured_summary = [
-        item
-        for item in records
-        if configured_primary
-        and item.get("metric_name") == configured_primary
-        and not str(item.get("model") or "").strip()
-        and item.get("source_artifact") in bound_sources
-    ]
-    primary_metric = (
-        max(configured_summary, key=_metric_rank)
-        if configured_summary
-        else max(candidates, key=_metric_rank) if candidates else {}
+    configured_model = str(
+        requirements.get("primary_model_id") or run_manifest.get("primary_model_id") or run_manifest.get("model_id") or ""
+    ).strip()
+    primary_metric, primary_selection = _select_primary_metric(
+        records,
+        configured_metric=configured_primary,
+        configured_model=configured_model,
+        bound_sources=bound_sources,
     )
     evidence_records = []
     for item in records:
@@ -272,16 +327,17 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             "entity_role": f"result_metric_{item.get('metric_name')}",
             "value": item.get("value"),
             "unit": "score",
-            "metric_dimension": "score",
+            "metric_dimension": item.get("metric_dimension") or "score",
             "cohort_id": item.get("cohort_id") or run_manifest.get("cohort_id") or "main",
             "sample_unit": item.get("sample_unit") or run_manifest.get("sample_unit") or "model_evaluation",
             "split": item.get("split") or run_manifest.get("evaluation_split") or "run_summary",
-            "run_id": run_id,
+            "run_id": item.get("run_id") or run_id,
             "source_artifact": item.get("source_artifact"),
             "source_hash": item.get("source_hash"),
             "confidence": "verified_run_output",
             "target_sections": ["results", "methods", "discussion"],
             "model_id": item.get("model") or run_manifest.get("model_id") or "run_summary",
+            "sample_count": item.get("sample_count"),
         })
     report = {
         "status": "resolved" if primary_metric else "no_primary_metric",
@@ -294,6 +350,7 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         "metric_count": len(records),
         "metrics": sorted(records, key=_metric_rank, reverse=True),
         "primary_metric": primary_metric,
+        "primary_metric_selection": primary_selection,
         "evidence_records": evidence_records,
         "policy": "Model- and split-specific verified run outputs outrank generic scalar metric files.",
     }

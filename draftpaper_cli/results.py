@@ -96,6 +96,43 @@ def _rendered_metadata_paths(project_path: Path) -> set[str]:
     return paths
 
 
+def _normalized_artifact_path(value: Any) -> str:
+    return str(value or "").strip().replace("\\", "/").lstrip("./")
+
+
+def _current_run_artifact_paths(project_path: Path) -> tuple[set[str], set[str], bool, bool]:
+    """Return artifacts explicitly bound to the successful method run."""
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    if str(run_manifest.get("status") or "").lower() != "success":
+        return set(), set(), False, False
+
+    declared: set[str] = set()
+    figure_inventory_declared = "figures_generated" in run_manifest
+    table_inventory_declared = "tables_generated" in run_manifest
+    for key in ("figures_generated", "tables_generated", "output_files", "declared_outputs"):
+        values = run_manifest.get(key) or []
+        if isinstance(values, str):
+            values = [values]
+        for value in values:
+            relative = _normalized_artifact_path(value)
+            if relative:
+                declared.add(relative)
+
+    metadata_paths = _rendered_metadata_paths(project_path)
+    figure_paths = {
+        relative for relative in declared
+        if Path(relative).suffix.lower() in FIGURE_EXTENSIONS
+        and relative.startswith("results/figures/")
+        and relative in metadata_paths
+    }
+    table_paths = {
+        relative for relative in declared
+        if Path(relative).suffix.lower() in TABLE_EXTENSIONS
+        and relative.startswith("results/tables/")
+    }
+    return figure_paths, table_paths, figure_inventory_declared, table_inventory_declared
+
+
 def _unrendered_planned_figure_paths(project_path: Path) -> dict[str, dict[str, Any]]:
     """Return planned generated figures that should not be inventoried as results.
 
@@ -175,6 +212,8 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, Any]]:
             "linked_main_figure": str(figure.get("linked_main_figure") or figure.get("supports_figure") or figure.get("supports_storyboard_id") or ""),
             "metrics": (metadata or {}).get("metrics") or (metadata or {}).get("statistics") or {},
             "interpretation_summary": interpretation,
+            "plot_grammar": str((metadata or {}).get("plot_grammar") or figure.get("plot_grammar") or figure.get("suggested_plot_type") or ""),
+            "variable_roles": list((metadata or {}).get("variable_roles") or figure.get("variable_roles") or []),
         }
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
     method_families = ", ".join(str(item).replace("_", " ") for item in (analysis_manifest.get("method_families") or []))
@@ -244,6 +283,8 @@ def _figure_entry(project_path: Path, path: Path, index: int, context: dict[str,
         "claim_boundary": _manuscript_result_text(details.get("claim_boundary") or ""),
         "linked_main_figure": details.get("linked_main_figure") or "",
         "metrics": details.get("metrics") or {},
+        "plot_grammar": details.get("plot_grammar") or "",
+        "variable_roles": details.get("variable_roles") or [],
         "caption_draft": _manuscript_result_text(details.get("caption") or f"Result figure {index}: {path.stem.replace('_', ' ')}."),
         "result_claim": _manuscript_result_text(details.get("claim") or "The figure provides visual evidence for one result and should be interpreted directly from the plotted empirical pattern."),
     }
@@ -309,14 +350,30 @@ def inventory_results(project: str | Path) -> dict[str, Any]:
     tables_dir.mkdir(parents=True, exist_ok=True)
 
     excluded_planned = _unrendered_planned_figure_paths(state.path)
-    figure_paths = sorted(
-        path
-        for path in figures_dir.iterdir()
-        if path.is_file()
-        and path.suffix.lower() in FIGURE_EXTENSIONS
-        and path.relative_to(state.path).as_posix() not in excluded_planned
-    )
-    table_paths = sorted(path for path in tables_dir.iterdir() if path.is_file() and path.suffix.lower() in TABLE_EXTENSIONS)
+    current_figure_paths, current_table_paths, figure_inventory_declared, table_inventory_declared = _current_run_artifact_paths(state.path)
+    use_current_run_inventory = figure_inventory_declared or table_inventory_declared
+    if figure_inventory_declared:
+        figure_paths = sorted(
+            state.path / relative
+            for relative in current_figure_paths
+            if (state.path / relative).is_file() and relative not in excluded_planned
+        )
+    else:
+        figure_paths = sorted(
+            path
+            for path in figures_dir.iterdir()
+            if path.is_file()
+            and path.suffix.lower() in FIGURE_EXTENSIONS
+            and path.relative_to(state.path).as_posix() not in excluded_planned
+        )
+    if table_inventory_declared:
+        table_paths = sorted(
+            state.path / relative
+            for relative in current_table_paths
+            if (state.path / relative).is_file()
+        )
+    else:
+        table_paths = sorted(path for path in tables_dir.iterdir() if path.is_file() and path.suffix.lower() in TABLE_EXTENSIONS)
     try:
         resolved_evidence = resolve_result_evidence(state.path)
     except ResultEvidenceError:
@@ -338,6 +395,7 @@ def inventory_results(project: str | Path) -> dict[str, Any]:
         "claim_boundaries": _claim_boundaries(figures),
         "figure_code_trace": _load_figure_code_trace(state.path),
         "resolved_result_evidence": resolved_evidence,
+        "inventory_scope": "current_successful_run" if use_current_run_inventory else "legacy_directory_fallback",
     }
     _write_json(results_dir / "result_manifest.yaml", manifest)
     update_stage_status(state.path, "results", "draft")

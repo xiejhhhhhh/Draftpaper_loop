@@ -426,12 +426,16 @@ def _stage_matches(rule: dict[str, Any], stage: str) -> bool:
 def _available_metric_roles(run_manifest: dict[str, Any], result_evidence: dict[str, Any]) -> set[str]:
     roles: set[str] = set()
     metric_names = {_normalise(key) for key in (run_manifest.get("metrics") or {}).keys()}
+    model_names: set[str] = set()
     for item in list(result_evidence.get("metrics") or []) + list(result_evidence.get("evidence_records") or []):
         if isinstance(item, dict):
             metric_names.add(_normalise(
                 item.get("metric_name") or item.get("name")
                 or str(item.get("entity_role") or "").removeprefix("result_metric_")
             ))
+            model_names.add(_normalise(" ".join(str(item.get(key) or "") for key in (
+                "model_id", "model", "cohort_id", "cohort", "source_artifact",
+            ))))
     if metric_names:
         roles.update({"result_metric", "performance_metric", "primary_metric"})
     if any("r2" in item or "r_squared" in item for item in metric_names):
@@ -440,9 +444,9 @@ def _available_metric_roles(run_manifest: dict[str, Any], result_evidence: dict[
         roles.add("p_value")
     if any(item in {"rmse", "mae", "mse", "error"} for item in metric_names):
         roles.add("error_metric")
-    if any("baseline" in item for item in metric_names):
+    if any("baseline" in item for item in metric_names | model_names):
         roles.add("baseline_metric")
-    if any("ablation" in item for item in metric_names):
+    if any("ablation" in item or item.startswith("no_") or "without" in item for item in metric_names | model_names):
         roles.add("ablation_result")
     if any("calibration" in item for item in metric_names):
         roles.add("calibration_metric")
@@ -497,7 +501,10 @@ def build_review_evidence_bundle(project: str | Path, extra_context: dict[str, A
         "metric_values": metric_map,
         "run_manifest": run_manifest,
         "conflicts": conflicts,
-        "baseline_metrics": [item for item in metrics if "baseline" in _normalise(item.get("model_id") or item.get("entity_role"))],
+        "baseline_metrics": [
+            item for item in metrics
+            if "baseline" in _normalise(" ".join(str(item.get(key) or "") for key in ("model_id", "entity_role", "cohort_id", "source_artifact")))
+        ],
         "ablation_metrics": [item for item in metrics if "ablation" in _normalise(item.get("model_id") or item.get("entity_role")) or any(token in _normalise(item.get("model_id")) for token in ("no_", "without"))],
         "uncertainty_records": [item for item in records + metrics if any(token in _normalise(item.get("entity_role")) for token in ("confidence_interval", "uncertainty", "standard_error", "bootstrap"))],
         "results_text": (project_path / "results" / "results.tex").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "results" / "results.tex").exists() else "",
@@ -550,9 +557,12 @@ def _scientific_bundle_findings(rule: dict[str, Any], bundle: dict[str, Any]) ->
         name = _normalise(item.get("metric_name") or str(item.get("entity_role") or "").removeprefix("result_metric_"))
         dimensions.setdefault(name, set()).add(_normalise(item.get("metric_dimension")))
     for name, values in dimensions.items():
-        values.discard("")
-        if len(values) > 1:
-            findings.append({"code": "mixed_metric_dimension", "severity": "repair_required", "metric_name": name, "dimensions": sorted(values)})
+        canonical_values = {
+            "score" if value in {"score", "dimensionless", "dimensionless_score"} else value
+            for value in values if value
+        }
+        if len(canonical_values) > 1:
+            findings.append({"code": "mixed_metric_dimension", "severity": "repair_required", "metric_name": name, "dimensions": sorted(canonical_values)})
     if "baseline" in blob and not bundle.get("baseline_metrics"):
         findings.append({"code": "baseline_evidence_missing", "severity": "repair_required"})
     if "ablation" in blob and not bundle.get("ablation_metrics"):
@@ -609,6 +619,8 @@ def collect_review_rule_evidence_roles(project: str | Path, extra_context: dict[
         roles.update({"data_inventory", "sample_unit"})
     if run_manifest:
         roles.update({"method_run", "run_manifest", "method_output", "reproducibility_manifest"})
+        if run_manifest.get("run_id") or result_evidence.get("run_id"):
+            roles.add("run_id")
         if run_manifest.get("status") == "success":
             roles.add("successful_method_run")
         text = json.dumps(run_manifest, ensure_ascii=False, default=str).lower().replace("-", "_")

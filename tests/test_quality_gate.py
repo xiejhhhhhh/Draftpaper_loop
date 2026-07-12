@@ -100,10 +100,63 @@ def prepared_assembled_project(tmp: str) -> Path:
     write_discussion(project.path)
     write_data(project.path)
     write_methods(project.path)
+    _write_current_result_quality_fixture(project.path)
+    create_evidence_snapshot(project.path)
+    _write_v022_formal_release_fixture(project.path)
     assemble_latex(project.path)
     audit_citations(project.path, final=True)
-    _write_v022_formal_release_fixture(project.path)
     return project.path
+
+
+def _write_current_result_quality_fixture(project_path: Path) -> None:
+    figures = []
+    metadata = []
+    plan = []
+    for index in range(1, 6):
+        relative = f"results/figures/result_figure_{index}.png"
+        figure_id = f"result_figure_{index}"
+        figures.append({
+            "id": figure_id,
+            "figure_id": figure_id,
+            "storyboard_id": figure_id,
+            "path": relative,
+            "caption_draft": f"Scientific result figure {index}.",
+            "result_claim": f"Figure {index} reports a distinct verified result.",
+        })
+        plan.append({"id": figure_id, "path": relative, "generation_mode": "generated_code"})
+        metadata.append({
+            "figure_id": figure_id,
+            "path": relative,
+            "file_format": "png",
+            "is_placeholder": False,
+            "has_axes": True,
+            "axis_labels": {"x": "Predictor", "y": "Response"},
+            "text_elements": ["Predictor", "Response"],
+            "figure_size_inches": [7.2, 4.8],
+            "publication_ready": True,
+            "statistics": {"sample_count": 40},
+            "interpretation_summary": f"Figure {index} provides a verified scientific comparison.",
+        })
+    (project_path / "results" / "figure_plan.json").write_text(json.dumps({"figures": plan}), encoding="utf-8")
+    (project_path / "results" / "figure_metadata.json").write_text(json.dumps({"figures": metadata}), encoding="utf-8")
+    (project_path / "results" / "figure_quality_report.json").write_text(json.dumps({"status": "passed"}), encoding="utf-8")
+    (project_path / "results" / "result_manifest.yaml").write_text(
+        json.dumps({"figures": figures, "main_figures": figures, "tables": []}), encoding="utf-8"
+    )
+    paragraphs = [
+        "The held-out evaluation establishes the study boundary before interpreting model performance. "
+        "Figure 1 describes the available sample and Figure 2 shows the measured predictor structure. "
+        "Together these results demonstrate that the tested observations contain usable variation while keeping all conclusions within the declared cohort and validation split.",
+        "The model comparison in Figure 3 reports the primary performance result against a transparent baseline. "
+        "The observed difference is interpreted as evidence about generalization under the held-out design rather than as proof of a universal advantage. "
+        "Figure 4 then isolates the contribution of individual components so that the aggregate score is not mistaken for evidence that every method stage is beneficial.",
+        "Figure 5 summarizes the remaining error and uncertainty structure. "
+        "The overlap between prediction groups identifies observations that require follow-up rather than forced high-confidence labels. "
+        "Across all five figures, the supported conclusion is therefore limited to the present data, method implementation, and validation boundary; broader deployment requires independent data and prospective evaluation.",
+        "This bounded interpretation preserves the distinction between an observed result and a future hypothesis. "
+        "It also ensures that model comparison, component attribution, and uncertainty remain tied to the same scientific sample and held-out evaluation design.",
+    ]
+    (project_path / "results" / "results.tex").write_text("\n\n".join(paragraphs) + "\n", encoding="utf-8")
 
 
 def _write_v022_formal_release_fixture(project_path: Path) -> None:
@@ -191,6 +244,7 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertEqual(report["methods"]["run_manifest_status"], "success")
             self.assertEqual(report["results"]["citation_command_count"], 0)
             self.assertEqual(report["bibliography"]["missing_citation_keys"], [])
+            self.assertNotIn("natbib_missing", {issue["code"] for issue in report["issues"]})
 
             manifest = json.loads((project_path / "quality_checks" / "stage_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "draft")
@@ -308,6 +362,47 @@ class QualityGateUpgradeTests(unittest.TestCase):
             codes = {issue["code"] for issue in report["issues"]}
             self.assertIn("figure_metadata_not_scientific", codes)
             self.assertIn("result_subsection_missing_figure", codes)
+
+    def test_quality_check_accepts_workflow_schematic_without_fake_axes(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            (project_path / "results" / "figure_plan.json").write_text(
+                json.dumps({
+                    "figures": [{
+                        "id": "study_workflow",
+                        "path": "results/figures/result_figure_1.png",
+                        "generation_mode": "generated_code",
+                    }]
+                }),
+                encoding="utf-8",
+            )
+            (project_path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [{
+                        "path": "results/figures/result_figure_1.png",
+                        "file_format": "png",
+                        "is_placeholder": False,
+                        "publication_ready": True,
+                        "has_axes": False,
+                        "axis_labels": {},
+                        "text_elements": ["data", "method", "validation"],
+                        "figure_size_inches": [7.2, 4.8],
+                        "plot_grammar": "workflow_schematic",
+                        "variable_roles": ["data_flow"],
+                        "method_outputs": ["pipeline_completeness"],
+                        "statistics": {"pipeline_completeness": 1.0},
+                        "interpretation_summary": "The schematic traces the scientific workflow.",
+                    }]
+                }),
+                encoding="utf-8",
+            )
+
+            report = run_quality_check(project_path)
+
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertNotIn("figure_metadata_not_scientific", codes)
 
     def test_quality_check_fails_missing_bibtex_key_and_untraced_citation(self) -> None:
         from draftpaper_cli.quality_gate import run_quality_check

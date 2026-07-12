@@ -114,6 +114,7 @@ class FigureContractGateTests(unittest.TestCase):
                 {
                     "storyboard_id": f"fig_main_{index}",
                     "figure_id": f"fig_main_{index}",
+                    "path": f"results/figures/fig_main_{index}.png",
                     "required_data": [],
                     "required_method": [],
                     "scientific_question": "What evidence answers the research question?",
@@ -130,7 +131,10 @@ class FigureContractGateTests(unittest.TestCase):
             })
             _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
             _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
-            _write_json(project.path / "methods" / "run_manifest.yaml", {"status": "success", "output_files": []})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {
+                "status": "success",
+                "output_files": [f"results/figures/fig_main_{index}.png" for index in range(1, 6)],
+            })
             _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
             _write_json(project.path / "results" / "figure_metadata.json", {"figures": []})
 
@@ -149,6 +153,7 @@ class FigureContractGateTests(unittest.TestCase):
                 {
                     "storyboard_id": f"fig_main_{index}",
                     "figure_id": f"fig_main_{index}",
+                    "path": f"results/figures/fig_main_{index}.png",
                     "required_data": [],
                     "required_method": [],
                     "scientific_question": "Does temporal behavior distinguish source classes?",
@@ -166,11 +171,16 @@ class FigureContractGateTests(unittest.TestCase):
             })
             _write_json(project.path / "results" / "storyboard_alignment_report.json", {"decision": "pass", "all_storyboard_figures_planned": True})
             _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {
+                "status": "success",
+                "output_files": [f"results/figures/fig_main_{index}.png" for index in range(1, 6)],
+            })
             _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
             _write_json(project.path / "results" / "figure_metadata.json", {
                 "figures": [
                     {
                         "figure_id": "fig_main_1",
+                        "path": "results/figures/fig_main_1.png",
                         "x_role": "source_id",
                         "y_role": "obs_id",
                         "plot_grammar": "scatter",

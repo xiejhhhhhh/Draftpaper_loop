@@ -62,7 +62,7 @@ from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_
 from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
 from .observations import ObservationError, record_observation
 from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
-from .passport import PassportError
+from .passport import PassportError, refresh_project_passport
 from .plugin_candidates import (
     PluginCandidateError,
     classify_skill_source,
@@ -778,7 +778,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8")
@@ -2172,6 +2172,39 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.print_help()
     return 1
+
+
+_READ_ONLY_PROJECT_COMMANDS = {
+    "load-project",
+    "validate-project",
+    "inspect-project-migration",
+    "status",
+    "run-pipeline",
+    "detect-artifact-drift",
+}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run one CLI command and commit successful managed writes to the passport."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    project = getattr(args, "project", None)
+    command = str(getattr(args, "command", "") or "")
+    preexisting_drift = False
+    if project and command not in _READ_ONLY_PROJECT_COMMANDS and command != "sync-artifact-stale":
+        try:
+            preexisting_drift = detect_artifact_drift(project).get("status") == "drift_detected"
+        except (ArtifactDriftError, PassportError, ProjectStateError, OSError):
+            preexisting_drift = True
+    exit_code = _main_without_passport_refresh(argv)
+    if project and command not in _READ_ONLY_PROJECT_COMMANDS and command != "sync-artifact-stale" and not preexisting_drift:
+        try:
+            event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
+            refresh_project_passport(project, event=event)
+        except (PassportError, ProjectStateError, OSError) as exc:
+            print(json.dumps({"status": "error", "message": f"Command succeeded but passport refresh failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            return 1
+    return exit_code
 
 
 if __name__ == "__main__":

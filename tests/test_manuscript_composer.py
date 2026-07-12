@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 
@@ -44,6 +45,10 @@ class ManuscriptComposerTests(unittest.TestCase):
             self.assertEqual(selected["composition_mode"], "codex_free_candidate")
             self.assertIn("0.8667", selected["text"])
             self.assertEqual(packet["section"], "results")
+            self.assertEqual(packet["schema_version"], "v0.23.1")
+            self.assertIn("audit_sources", packet)
+            self.assertNotIn("resolved_result_evidence", packet["result_manifest"])
+            self.assertEqual(packet["section_lifecycles"], {})
 
     def test_invalid_candidate_is_rejected_instead_of_silently_using_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -58,6 +63,27 @@ class ManuscriptComposerTests(unittest.TestCase):
 
             with self.assertRaises(SectionCompositionError):
                 select_validated_section_draft(project.path, "results", "Fallback prose.")
+
+    def test_numeric_claim_bindings_are_json_serializable(self) -> None:
+        from draftpaper_cli.section_contracts import validate_section_writing
+
+        registry = json.loads(self.EVIDENCE_REGISTRY)
+        report = validate_section_writing(
+            "results",
+            "Across held-out events, the classifier reached macro-F1=0.8667.",
+            registry,
+        )
+        json.dumps(report["numeric_claim_bindings"])
+
+    def test_section_contract_rejects_control_characters_and_unescaped_math_subscripts(self) -> None:
+        from draftpaper_cli.section_contracts import validate_section_writing
+
+        control = validate_section_writing("methods", "Where " + chr(8) + "ar{h} denotes the pooled state.", {})
+        underscore = validate_section_writing("methods", "Where omega_j denotes a frequency.", {})
+        self.assertEqual(control["decision"], "blocked")
+        self.assertEqual(underscore["decision"], "blocked")
+        self.assertIn("latex_control_character", {item["kind"] for item in control["issues"]})
+        self.assertIn("unescaped_underscore_outside_math", {item["kind"] for item in underscore["issues"]})
 
     def test_submit_section_draft_validates_before_installing_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

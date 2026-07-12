@@ -109,6 +109,61 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             self.assertEqual(result["support_level"], "supported")
             self.assertFalse(result["requires_user_decision"])
 
+    def test_bounded_claim_passes_with_conditional_validity_when_no_claim_is_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Bounded model comparison", field="machine learning astronomy")
+            _write_validity_inputs(project.path)
+            (project.path / "results" / "result_validity_report.json").write_text(
+                json.dumps({"decision": "conditional_pass", "evidence_strength": "no_threshold_configured"}),
+                encoding="utf-8",
+            )
+            (project.path / "research_plan" / "claim_contract.json").write_text(
+                json.dumps({"claims": [{
+                    "claim_id": "bounded_comparison",
+                    "claim_text": "The models are compared under the declared validation and evidence boundary.",
+                    "strength": "moderate",
+                }]}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success"}), encoding="utf-8"
+            )
+
+            result = assess_result_support(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+            self.assertFalse(result["requires_user_decision"])
+
+    def test_result_support_prefers_run_aware_model_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Resolved comparison", field="machine learning astronomy")
+            _write_validity_inputs(project.path)
+            (project.path / "research_plan" / "claim_contract.json").write_text(
+                json.dumps({"claims": [{
+                    "claim_id": "claim_model_improvement",
+                    "claim_text": "The proposed Transformer improves classification performance over baseline methods.",
+                    "strength": "strong",
+                }]}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "metrics": {"f1": 0.5}}), encoding="utf-8"
+            )
+            (project.path / "results" / "resolved_result_evidence.json").write_text(
+                json.dumps({"metrics": [
+                    {"model": "logistic_baseline", "metric_name": "f1_macro", "value": 0.8667},
+                    {"model": "transformer_full", "metric_name": "f1_macro", "value": 0.8053},
+                ]}),
+                encoding="utf-8",
+            )
+
+            result = assess_result_support(project.path)
+            report = json.loads((project.path / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "route_decision_required")
+            self.assertEqual(report["metrics"]["logistic_baseline_f1_macro"], 0.8667)
+            self.assertEqual(report["metrics"]["transformer_full_f1_macro"], 0.8053)
+
     def test_write_results_blocks_when_existing_support_checkpoint_failed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Blocked results", field="machine learning astronomy")

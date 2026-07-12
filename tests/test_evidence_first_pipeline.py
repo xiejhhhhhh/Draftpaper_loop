@@ -16,6 +16,19 @@ from draftpaper_cli.project_state import update_stage_status
 
 
 class EvidenceFirstPipelineTests(unittest.TestCase):
+    def test_method_feasibility_routing_ignores_historical_blueprint(self) -> None:
+        from draftpaper_cli.orchestrator import _method_feasibility_stage_command
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Current method plan", field="workflow engineering")
+            (project.path / "methods" / "method_blueprint.json").write_text("{}\n", encoding="utf-8")
+            (project.path / "method_plan" / "stage_manifest.json").write_text(
+                json.dumps({"output_files": ["methods/method_plan.md", "methods/method_requirements.json"]}),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(_method_feasibility_stage_command(project.path), "prepare-method-blueprint")
+
     def test_scaffold_places_writing_after_core_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Evidence-first paper", field="workflow engineering")
@@ -124,10 +137,12 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
             (data / "data_inventory.json").write_text(json.dumps({"files": [{"path": "data/raw/sample.csv"}]}), encoding="utf-8")
             (data / "data_quality_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
             (data / "data_feasibility_report.json").write_text(json.dumps({"decision": "pass"}), encoding="utf-8")
+            for stage in ["data", "figure_plan", "methods", "result_support"]:
+                update_stage_status(project.path, stage, "draft")
 
             report = assess_core_evidence(project.path)
 
-            self.assertEqual(report["decision"], "pass")
+            self.assertEqual(report["decision"], "pass", report["issues"])
             self.assertTrue(report["requires_user_confirmation"])
             self.assertEqual(report["figure_count"], 5)
             self.assertTrue(report["workflow_coverage"]["data_supplementation"])
@@ -136,6 +151,18 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
             self.assertTrue(report["workflow_coverage"]["figure_production"])
             self.assertTrue(report["workflow_coverage"]["result_validity"])
             self.assertTrue((project.path / "core_evidence" / "core_evidence_report.html").exists())
+
+    def test_core_evidence_rejects_stale_scientific_dependency(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Stale evidence", field="workflow engineering")
+            for stage in ["data", "methods", "figure_plan", "result_support"]:
+                update_stage_status(project.path, stage, "draft")
+            update_stage_status(project.path, "methods", "stale")
+
+            report = assess_core_evidence(project.path)
+
+            self.assertEqual(report["decision"], "revise_required")
+            self.assertIn("Scientific dependency is not current: methods.", report["issues"])
 
 
 if __name__ == "__main__":

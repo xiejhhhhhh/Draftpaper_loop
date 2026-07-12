@@ -682,6 +682,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     _write_json(state.path / DATA_WRITING_CONTEXT_JSON, context)
     _write_json(state.path / DATA_KEY_FACTS_JSON, key_facts)
     write_html_report(state.path / DATA_WRITING_CONTEXT_HTML, _render_data_context_md(context), title="Data Writing Context")
+    update_stage_status(state.path, "data_writing", "draft")
     _set_data_writing_manifest(state.path)
     return context
 

@@ -181,13 +181,20 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             prepare_project(project.path)
             collect_method_plan(project.path, primary_metric="f1", minimum_primary_metric=0.7)
             (project.path / "results" / "tables" / "metrics.csv").write_text("metric,value\nf1,0.88\n", encoding="utf-8")
+            (project.path / "results" / "figures" / "fig_bad_ids.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 256)
             (project.path / "methods" / "run_manifest.yaml").write_text(
-                json.dumps({"status": "success", "output_files": ["results/tables/metrics.csv"], "metrics": {"f1": 0.88}}),
+                json.dumps({
+                    "status": "success",
+                    "output_files": ["results/tables/metrics.csv", "results/figures/fig_bad_ids.png"],
+                    "figures_generated": ["results/figures/fig_bad_ids.png"],
+                    "metrics": {"f1": 0.88},
+                }),
                 encoding="utf-8",
             )
             (project.path / "results" / "figure_contracts.json").write_text(
                 json.dumps({"contracts": [{
                     "figure_id": "fig_bad_ids",
+                    "path": "results/figures/fig_bad_ids.png",
                     "scientific_question": "Do temporal features distinguish classes?",
                     "required_variable_roles": ["temporal_feature", "class_label"],
                     "forbidden_variable_roles": ["identifier"],
@@ -204,6 +211,7 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             (project.path / "results" / "figure_metadata.json").write_text(
                 json.dumps({"figures": [{
                     "figure_id": "fig_bad_ids",
+                    "path": "results/figures/fig_bad_ids.png",
                     "x_role": "source_id",
                     "y_role": "obs_id",
                     "plot_grammar": "scatter",
@@ -252,6 +260,31 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             self.assertEqual(report["observed_value"], 0.8667)
             self.assertEqual(report["resolved_run_id"], "run-aware-validity")
             self.assertEqual(report["resolved_metric_source"], "results/tables/verified_models.csv")
+
+    def test_result_validity_treats_f1_and_f1_macro_as_same_metric_family(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Macro F1 validity", field="machine learning")
+            prepare_project(project.path)
+            collect_method_plan(project.path, primary_metric="f1")
+            (project.path / "results" / "tables" / "verified_models.csv").write_text(
+                "run_id,model_id,split,metric,value\nrun-1,proposed_full,test,f1_macro,0.8053\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "run_id": "run-1",
+                    "output_files": ["results/tables/verified_models.csv"],
+                }),
+                encoding="utf-8",
+            )
+
+            result = assess_result_validity(project.path)
+            report = json.loads((project.path / "results" / "result_validity_report.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "conditional_pass")
+            self.assertEqual(report["observed_value"], 0.8053)
+            self.assertEqual(report["resolved_run_id"], "run-1")
 
     def test_cli_collect_method_plan_and_assess_result_validity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -188,17 +188,26 @@ def build_panel_writing_contracts(project: str | Path) -> dict[str, Any]:
     """Create panel-aware scientific contracts and isolate repair to affected panels."""
     state = load_project(project)
     plan = _read(state.path / "results" / "figure_plan.json")
+    semantic_contracts = _read(state.path / "results" / "figure_contracts.json")
     metadata = _read(state.path / "results" / "figure_metadata.json")
-    groups = plan.get("figure_groups") if isinstance(plan.get("figure_groups"), list) else []
+    groups = semantic_contracts.get("contracts") if isinstance(semantic_contracts.get("contracts"), list) else []
+    if groups:
+        groups = [item for item in groups if isinstance(item, dict) and str(item.get("figure_role") or "main_result") != "supporting"]
+    if not groups:
+        groups = plan.get("figure_groups") if isinstance(plan.get("figure_groups"), list) else []
     if not groups:
         groups = plan.get("figures") if isinstance(plan.get("figures"), list) else []
     metadata_rows = _items(metadata, "figures", "records")
-    by_id = {str(item.get("id") or item.get("figure_id") or item.get("panel_id") or item.get("path")): item for item in metadata_rows}
+    by_id: dict[str, dict[str, Any]] = {}
+    for item in metadata_rows:
+        for key in [item.get("id"), item.get("figure_id"), item.get("storyboard_id"), item.get("panel_id"), item.get("path")]:
+            if key:
+                by_id[str(key)] = item
     contracts: list[dict[str, Any]] = []
     for group_index, group in enumerate(groups, start=1):
         if not isinstance(group, dict):
             continue
-        group_id = str(group.get("id") or group.get("figure_group_id") or f"figure_group_{group_index}")
+        group_id = str(group.get("storyboard_id") or group.get("figure_id") or group.get("id") or group.get("figure_group_id") or f"figure_group_{group_index}")
         panels = group.get("panels") if isinstance(group.get("panels"), list) else []
         if not panels:
             panels = [group]
@@ -206,22 +215,22 @@ def build_panel_writing_contracts(project: str | Path) -> dict[str, Any]:
         for panel_index, panel in enumerate(panels, start=1):
             if not isinstance(panel, dict):
                 continue
-            panel_id = str(panel.get("id") or panel.get("panel_id") or f"{group_id}_panel_{panel_index}")
+            panel_id = str(panel.get("storyboard_id") or panel.get("figure_id") or panel.get("id") or panel.get("panel_id") or f"{group_id}_panel_{panel_index}")
             observed = by_id.get(panel_id, {})
             contract = {
                 "panel_question": panel.get("panel_question") or panel.get("scientific_question") or group.get("scientific_question"),
                 "data_subset": panel.get("data_subset") or panel.get("cohort") or group.get("data_subset") or group.get("cohort"),
                 "scientific_unit": panel.get("scientific_unit") or panel.get("analysis_unit") or group.get("scientific_unit") or group.get("analysis_unit"),
-                "data_roles": panel.get("data_roles") or panel.get("input_data_roles") or group.get("data_roles") or [],
-                "method_output": panel.get("method_output") or panel.get("method_outputs") or group.get("method_output") or group.get("method_outputs") or [],
+                "data_roles": panel.get("required_data") or panel.get("data_roles") or panel.get("input_data_roles") or group.get("required_data") or group.get("data_roles") or [],
+                "method_output": panel.get("required_method_outputs") or panel.get("method_output") or panel.get("method_outputs") or group.get("required_method_outputs") or group.get("method_output") or group.get("method_outputs") or observed.get("method_outputs") or [],
                 "comparison": panel.get("comparison") or panel.get("comparison_entities") or group.get("comparison"),
                 "required_statistical_check": panel.get("required_statistical_check") or panel.get("statistical_check") or group.get("required_statistical_check"),
-                "chart_grammar": panel.get("chart_grammar") or panel.get("visual_grammar") or panel.get("plot_type") or group.get("visual_grammar"),
-                "expected_conclusion": panel.get("expected_conclusion") or panel.get("result_claim") or group.get("expected_conclusion") or group.get("result_claim"),
-                "claim_boundary": panel.get("claim_boundary") or group.get("claim_boundary"),
+                "chart_grammar": panel.get("plot_grammar") or panel.get("chart_grammar") or panel.get("visual_grammar") or panel.get("plot_type") or group.get("plot_grammar") or group.get("visual_grammar") or observed.get("plot_grammar"),
+                "expected_conclusion": panel.get("expected_claim") or panel.get("expected_finding") or panel.get("expected_conclusion") or panel.get("result_claim") or group.get("expected_claim") or group.get("expected_finding") or group.get("expected_conclusion") or group.get("result_claim") or observed.get("interpretation_summary"),
+                "claim_boundary": panel.get("claim_boundary") or panel.get("scientific_claim_boundary") or group.get("claim_boundary") or group.get("scientific_claim_boundary") or observed.get("claim_boundary"),
                 "parent_figure_group": group_id,
             }
-            required_keys = ("panel_question", "data_subset", "scientific_unit", "method_output", "chart_grammar", "expected_conclusion", "claim_boundary")
+            required_keys = ("panel_question", "method_output", "chart_grammar", "expected_conclusion", "claim_boundary")
             missing = [key for key in required_keys if not contract.get(key)]
             panel_contracts.append({
                 "panel_id": panel_id,
@@ -332,7 +341,31 @@ def _hash_text(text: str) -> str:
 
 
 def _paragraphs(text: str) -> list[str]:
-    return [item.strip() for item in re.split(r"\n\s*\n", text) if item.strip() and not item.lstrip().startswith("\\section")]
+    prose = re.sub(
+        r"\\begin\{(?:figure\*?|table\*?|deluxetable\*?)\}.*?\\end\{(?:figure\*?|table\*?|deluxetable\*?)\}",
+        "",
+        text,
+        flags=re.S,
+    )
+    return [item.strip() for item in re.split(r"\n\s*\n", prose) if item.strip() and not item.lstrip().startswith("\\section")]
+
+
+def _normalized_reference(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower()).removeprefix("fig").removeprefix("table")
+
+
+def _jobs_for_paragraph(paragraph: str, jobs: list[Any]) -> list[dict[str, Any]]:
+    paragraph_key = _normalized_reference(paragraph)
+    matches: list[dict[str, Any]] = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        for link in job.get("figure_or_table_links") or []:
+            link_key = _normalized_reference(link)
+            if link_key and link_key in paragraph_key:
+                matches.append(job)
+                break
+    return matches
 
 
 def prepare_scientific_editor(project: str | Path, section: str, input_path: str | Path) -> dict[str, Any]:
@@ -348,7 +381,8 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
     jobs = outline.get("paragraphs") or []
     tasks: list[dict[str, Any]] = []
     for index, paragraph in enumerate(paragraphs):
-        job = jobs[index] if index < len(jobs) and isinstance(jobs[index], dict) else {}
+        paragraph_jobs = _jobs_for_paragraph(paragraph, jobs)
+        job = paragraph_jobs[0] if paragraph_jobs else {}
         issues: list[str] = []
         if len(re.findall(r"[A-Za-z]+", paragraph)) < 35:
             issues.append("underdeveloped_scientific_reasoning")
@@ -368,9 +402,15 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
                 "before_hash": _hash_text(paragraph),
                 "instruction": "Revise only this paragraph. Preserve supported facts, evidence bindings, claim boundaries, citations, and surrounding transitions.",
             })
-    if len(paragraphs) < len(jobs):
-        for index in range(len(paragraphs), len(jobs)):
-            job = jobs[index] if isinstance(jobs[index], dict) else {}
+    matched_job_ids = {
+        str(job.get("paragraph_id") or "")
+        for paragraph in paragraphs
+        for job in _jobs_for_paragraph(paragraph, jobs)
+    }
+    for index, job in enumerate(jobs):
+        if not isinstance(job, dict) or str(job.get("paragraph_id") or "") in matched_job_ids:
+            continue
+        if job.get("figure_or_table_links"):
             tasks.append({
                 "paragraph_index": index + 1,
                 "issues": ["paragraph_job_missing"],

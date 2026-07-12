@@ -63,6 +63,15 @@ def _metric_semantics(metric: str) -> str:
     return "performance_metric"
 
 
+def _metric_family(metric: Any) -> str:
+    normalized = str(metric or "").strip().lower().replace("-", "_")
+    if normalized in {"f1", "f1_macro", "macro_f1"}:
+        return "f1"
+    if normalized in {"auc", "roc_auc"}:
+        return "auc"
+    return normalized
+
+
 def _default_threshold(metric: str, configured_threshold: Any) -> float | None:
     threshold = _to_float(configured_threshold)
     if threshold is not None:
@@ -322,7 +331,7 @@ def assess_result_validity(
     figure_contracts = _read_json(state.path / "results" / "figure_contracts.json")
     if figure_contracts:
         try:
-            assess_figure_contracts(state.path)
+            assess_figure_contracts(state.path, propagate_stage_state=False)
         except FigureContractGateError:
             pass
     figure_contract_gate = _read_json(state.path / "results" / "figure_contract_gate_report.json")
@@ -339,12 +348,12 @@ def assess_result_validity(
     resolved_candidates = [
         item
         for item in (resolved_evidence.get("metrics") or [])
-        if str(item.get("metric_name") or "").lower() == metric
+        if _metric_family(item.get("metric_name")) == _metric_family(metric)
     ]
     primary = resolved_evidence.get("primary_metric") or {}
     resolved_metric = (
         primary
-        if str(primary.get("metric_name") or "").lower() == metric
+        if _metric_family(primary.get("metric_name")) == _metric_family(metric)
         else resolved_candidates[0] if resolved_candidates else {}
     )
     observed = _to_float(resolved_metric.get("value")) if resolved_metric else _to_float(metrics.get(metric))
@@ -402,14 +411,14 @@ def assess_result_validity(
         "primary_metric": metric,
         "metric_semantics": metric_interpretation["metric_semantics"],
         "observed_value": observed,
-        "resolved_run_id": resolved_evidence.get("run_id") or "",
+        "resolved_run_id": resolved_metric.get("run_id") or resolved_evidence.get("run_id") or "",
         "resolved_metric_source": resolved_metric.get("source_artifact") or "",
         "resolved_evidence_id": next(
             (
                 item.get("evidence_id")
                 for item in (resolved_evidence.get("evidence_records") or [])
-                if item.get("entity_role") == f"result_metric_{metric}"
-                and item.get("model") == resolved_metric.get("model")
+                if _metric_family(str(item.get("entity_role") or "").removeprefix("result_metric_")) == _metric_family(metric)
+                and item.get("model_id") == resolved_metric.get("model")
                 and item.get("split") == resolved_metric.get("split")
             ),
             "",

@@ -43,6 +43,10 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _sha256_or_empty(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
+
+
 def _render(report: dict[str, Any]) -> str:
     lines = ["# Results Discipline Review", "", f"Decision: `{report.get('decision')}`", "", "## Next Action", ""]
     action = report.get("recommended_next_action") or {}
@@ -73,7 +77,9 @@ def _numeric_metrics(project_path: Path) -> list[dict[str, Any]]:
             values.append({"metric_name": _canonical_metric_name(name), "value": float(value), "run_id": manifest.get("run_id")})
         except (TypeError, ValueError):
             continue
-    evidence = _read_json(project_path / "results" / "result_evidence_resolution.json")
+    evidence = _read_json(project_path / "results" / "resolved_result_evidence.json")
+    if not evidence:
+        evidence = _read_json(project_path / "results" / "result_evidence_resolution.json")
     for item in evidence.get("metrics") or []:
         if not isinstance(item, dict):
             continue
@@ -159,7 +165,7 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         else {"decision": "not_assessed", "score": None, "issues": []}
     )
     evidence_context = {
-        "available_evidence_roles": ["results_prose", "figure_plugin_trace", "plugin_binding_plan"],
+        "available_evidence_roles": ["results_prose", "figure_plugin_trace", "plugin_binding_plan", "run_id"],
         "figure_plugin_trace_decision": trace.get("decision"),
         "active_plugin_ids": active_plugin_ids,
         "reviewed_figure_ids": reviewed_figure_ids,
@@ -204,6 +210,9 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "project_id": state.metadata.get("project_id"),
         "decision": decision,
         "results_sha256": hashlib.sha256(results_bytes).hexdigest(),
+        "evidence_snapshot_id": _read_json(state.path / "core_evidence" / "core_evidence_report.json").get("promoted_evidence_snapshot_id") or "",
+        "result_manifest_sha256": _sha256_or_empty(state.path / "results" / "result_manifest.yaml"),
+        "figure_plugin_trace_sha256": _sha256_or_empty(state.path / "results" / "figure_plugin_trace_report.json"),
         "trace_decision": trace.get("decision"),
         "reviewed_figure_ids": reviewed_figure_ids,
         "skipped_figure_ids": skipped_figure_ids,

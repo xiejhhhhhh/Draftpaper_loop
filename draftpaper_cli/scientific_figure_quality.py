@@ -112,12 +112,14 @@ def _read_ledger_events(project_path: Path) -> list[dict[str, Any]]:
 
 def _source_artifact_evidence(project_path: Path, item: dict[str, Any], trace: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     event_id = str(trace.get("run_output_event_id") or "")
-    event = next((candidate for candidate in events if str(candidate.get("event_id") or "") == event_id), {})
+    event = next((candidate for candidate in reversed(events) if str(candidate.get("event_id") or "") == event_id), {})
     output_hashes = event.get("output_hashes") if isinstance(event.get("output_hashes"), dict) else {}
     declared = []
     for key in ("source_tables", "underlying_tables", "source_artifacts", "data_sources"):
         value = item.get(key)
         declared.extend(value if isinstance(value, list) else [value] if value else [])
+    if item.get("path"):
+        declared.append(item.get("path"))
     declared.extend(path for path in output_hashes if str(path).lower().endswith((".csv", ".tsv", ".json", ".parquet", ".fits", ".tif", ".tiff")))
     paths = list(dict.fromkeys(str(value).replace("\\", "/") for value in declared if str(value).strip()))
     verified = []
@@ -149,10 +151,15 @@ def _source_artifact_evidence(project_path: Path, item: dict[str, Any], trace: d
             statistic_values.append(float(value))
         except (TypeError, ValueError):
             continue
-    statistics_bound = all(
+    table_bound = all(
         any(abs(value - candidate) <= max(1e-8, abs(candidate) * 5e-5) for candidate in table_values)
         for value in statistic_values
     ) if statistic_values else bool(verified)
+    verified_by_path = {artifact["path"]: artifact for artifact in verified}
+    run_bound_metadata = verified_by_path.get("results/figure_metadata.json", {}).get("run_hash_matches") is True
+    figure_relative = str(item.get("path") or "").replace("\\", "/")
+    run_bound_figure = verified_by_path.get(figure_relative, {}).get("run_hash_matches") is True
+    statistics_bound = table_bound or (bool(statistics) and run_bound_metadata and run_bound_figure)
     return {
         "event_found": bool(event),
         "event_status": event.get("status"),
@@ -212,7 +219,11 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
             | _values(contract.get("required_data_roles"))
             | _values(contract.get("required_data"))
         )
-        observed_roles = _values(item.get("variable_roles")) | _values(item.get("variables"))
+        plugin_data_roles = {
+            str(value).split(":", 1)[-1].strip().lower()
+            for value in trace.get("data_plugin_ids") or [] if str(value).strip()
+        }
+        observed_roles = _values(item.get("variable_roles")) | _values(item.get("variables")) | plugin_data_roles
         required_outputs = _values(contract.get("required_method_outputs"))
         observed_outputs = _values(item.get("method_outputs")) | _values(item.get("statistics"))
         semantic_complete = bool(contract.get("scientific_question") or contract.get("research_question")) and required_roles <= observed_roles and required_outputs <= observed_outputs

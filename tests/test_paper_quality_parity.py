@@ -139,6 +139,36 @@ def test_quality_parity_requires_citation_audit_after_final_section_validation(t
     assert report["hard_correctness_passed"] is False
 
 
+def test_quality_parity_accepts_current_citation_audit_snapshot_without_section_timestamps(tmp_path) -> None:
+    from draftpaper_cli.evidence_snapshot import manuscript_snapshot
+    from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
+
+    project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
+    _write(project / "introduction" / "introduction.tex", "Introduction")
+    _write(project / "data" / "data.tex", "Data")
+    _write(project / "methods" / "methods.tex", "Methods")
+    _write(project / "results" / "results.tex", "Results")
+    _write(project / "discussion" / "discussion.tex", "Discussion")
+    _json(project / "review" / "results_manuscript_quality.json", {"decision": "pass", "score": 1.0})
+    _json(project / "results" / "scientific_figure_quality_report.json", {"decision": "pass", "score": 1.0})
+    _quality_architecture(project)
+    for section in ("introduction", "data", "methods", "results", "discussion"):
+        report_path = project / "writing" / "section_validation" / f"{section}.json"
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+        payload.pop("generated_at", None)
+        _json(report_path, payload)
+    _json(project / "citation_audit" / "final_citation_audit_report.json", {
+        "status": "passed",
+        "summary": {"blocking_issue_count": 0},
+        "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
+        "manuscript_snapshot": manuscript_snapshot(project),
+    })
+
+    report = assess_paper_quality_parity(project)
+
+    assert report["hard_checks"]["citation_audit_after_final_draft"] is True
+
+
 def test_quality_parity_does_not_claim_95_percent_without_blind_full_manuscript_evidence(tmp_path) -> None:
     from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
 

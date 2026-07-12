@@ -165,7 +165,8 @@ class ResultEvidenceResolverTests(unittest.TestCase):
             self.assertEqual(by_model["random_forest_event_static"], 0.8486)
             self.assertEqual(by_model["token_transformer_time2vec_full"], 0.8053)
             self.assertEqual(by_model["token_transformer_no_history"], 0.8205)
-            self.assertEqual(report["primary_metric"]["value"], 0.8667)
+            self.assertEqual(report["primary_metric"]["value"], 0.8053)
+            self.assertEqual(report["primary_metric"]["model"], "token_transformer_time2vec_full")
             self.assertNotEqual(report["primary_metric"]["value"], 0.5)
             self.assertEqual(report["run_id"], "astro-run-1")
 
@@ -193,6 +194,39 @@ class ResultEvidenceResolverTests(unittest.TestCase):
 
             self.assertEqual(report["primary_metric"]["value"], 0.73)
             self.assertNotIn("results/tables/metrics.csv", report["bound_sources"])
+
+    def test_long_form_model_metrics_preserve_identity_and_select_full_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Time-aware classifier", field="astronomy machine learning")
+            table = project.path / "results" / "tables" / "verified_model_metrics.csv"
+            table.write_text(
+                "run_id,cohort_id,sample_unit,split,model_id,metric,metric_dimension,sample_count,value\n"
+                "run-1,baseline,event,source_held_out,logistic_event_static,f1_macro,dimensionless_score,6290,0.8667\n"
+                "run-1,baseline,event,source_held_out,random_forest_event_static,f1_macro,dimensionless_score,6290,0.8486\n"
+                "run-1,token,event,source_held_out,token_transformer_time2vec_full,f1_macro,dimensionless_score,5980,0.8053\n"
+                "run-1,token,event,source_held_out,token_transformer_no_history,f1_macro,dimensionless_score,5980,0.8205\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "f1"}), encoding="utf-8"
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1", "output_files": ["results/tables/verified_model_metrics.csv"]}),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+
+            by_model = {item["model"]: item["value"] for item in report["metrics"] if item.get("model")}
+            self.assertEqual(by_model, {
+                "logistic_event_static": 0.8667,
+                "random_forest_event_static": 0.8486,
+                "token_transformer_time2vec_full": 0.8053,
+                "token_transformer_no_history": 0.8205,
+            })
+            self.assertEqual(report["primary_metric"]["model"], "token_transformer_time2vec_full")
+            self.assertEqual(report["primary_metric"]["value"], 0.8053)
+            self.assertEqual(report["primary_metric_selection"], "inferred_full_or_proposed_model")
 
 
 if __name__ == "__main__":

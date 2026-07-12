@@ -211,7 +211,7 @@ def _storyboard_figures(
         titles = [
             "End-to-end time-aware flaring-source classification workflow",
             "Class support and modality completeness for the source sample",
-            "Temporal-spectral feature space before model training",
+            "Spectral-feature structure before model training",
             "Baseline versus time-aware multimodal model performance",
             "Ablation of sequence, current-observation, and spectral feature blocks",
             "Error structure and uncertainty across confused source classes",
@@ -221,7 +221,7 @@ def _storyboard_figures(
         data = [
             ["source_catalog", "light_curve", "current_observation_tokens", "spectral_features"],
             ["class_label", "modality_availability"],
-            ["hardness", "flux", "class_label"],
+            ["spectral_features", "class_label"],
             ["features", "class_label", "validation_split"],
             ["light_curve", "current_observation_tokens", "spectral_features", "class_label"],
             ["predicted_label", "class_label", "prediction_score"],

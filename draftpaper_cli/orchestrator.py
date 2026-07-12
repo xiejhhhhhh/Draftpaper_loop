@@ -297,6 +297,11 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     research_plan = project_path / "research_plan" / "research_plan.md"
     discipline_contract = project_path / "research_plan" / "discipline_contract.json"
     sufficiency_report = _read_report(project_path, "research_plan/plugin_sufficiency_report.json")
+    capability_contract_path = project_path / "research_plan" / "research_capability_contract.json"
+    if capability_contract_path.exists():
+        current_capability_hash = hashlib.sha256(capability_contract_path.read_bytes()).hexdigest()
+        if sufficiency_report.get("research_capability_contract_sha256") != current_capability_hash:
+            sufficiency_report = {}
     capability_inputs_present = (project_path / "research_plan" / "claim_contract.json").exists() or (project_path / "research_plan" / "figure_storyboard.json").exists()
     if research_plan.exists() and capability_inputs_present and not discipline_contract.exists():
         return {
@@ -342,6 +347,12 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         }
     if sufficiency_report.get("decision") in {"rescue_required", "blocked", "blocked_unavailable"}:
         audit_report = _read_report(project_path, "research_plan/project_capability_audit.json")
+        if capability_contract_path.exists() and audit_report:
+            if (
+                audit_report.get("research_capability_contract_sha256") != sufficiency_report.get("research_capability_contract_sha256")
+                or audit_report.get("source_sufficiency_generated_at") != sufficiency_report.get("generated_at")
+            ):
+                audit_report = {}
         if not audit_report:
             return {
                 "stage": "research_plan",
@@ -376,19 +387,47 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         }
     results_path = project_path / "results" / "results.tex"
     result_discipline_review = _read_report(project_path, "review/result_discipline_review_report.json")
+    results_stage_meta = ((load_project(project_path).metadata.get("stages") or {}).get("results") or {})
+    results_stage_current = bool(
+        results_stage_meta.get("status") in COMPLETE_STATUSES
+        and not results_stage_meta.get("stale")
+    )
     current_results_hash = hashlib.sha256(results_path.read_bytes()).hexdigest() if results_path.exists() else ""
+    core_evidence_report = _read_report(project_path, "core_evidence/core_evidence_report.json")
+    promoted_snapshot_id = str(core_evidence_report.get("promoted_evidence_snapshot_id") or "")
+    result_manifest_path = project_path / "results" / "result_manifest.yaml"
+    trace_path = project_path / "results" / "figure_plugin_trace_report.json"
+    current_result_manifest_hash = hashlib.sha256(result_manifest_path.read_bytes()).hexdigest() if result_manifest_path.exists() else ""
+    current_trace_hash = hashlib.sha256(trace_path.read_bytes()).hexdigest() if trace_path.exists() else ""
     review_matches_results = bool(
         result_discipline_review
         and result_discipline_review.get("results_sha256") == current_results_hash
     )
-    if (project_path / "research_plan" / "research_capability_contract.json").exists() and results_path.exists() and not review_matches_results:
+    if promoted_snapshot_id:
+        review_matches_results = bool(
+            review_matches_results
+            and result_discipline_review.get("evidence_snapshot_id") == promoted_snapshot_id
+            and result_discipline_review.get("result_manifest_sha256") == current_result_manifest_hash
+            and result_discipline_review.get("figure_plugin_trace_sha256") == current_trace_hash
+        )
+    if (
+        results_stage_current
+        and (project_path / "research_plan" / "research_capability_contract.json").exists()
+        and results_path.exists()
+        and not review_matches_results
+    ):
         return {
             "stage": "results",
             "command": "review-results-with-discipline-rules",
             "cli": _cli_for(project_path, "review-results-with-discipline-rules"),
             "reason": "Results prose must be checked against the complete main-figure plugin trace and composite discipline review rules before downstream manuscript sections.",
         }
-    if (project_path / "research_plan" / "research_capability_contract.json").exists() and result_discipline_review.get("decision") in {"repair_required", "revise_required"}:
+    if (
+        (project_path / "research_plan" / "research_capability_contract.json").exists()
+        and results_stage_current
+        and review_matches_results
+        and result_discipline_review.get("decision") in {"repair_required", "revise_required"}
+    ):
         action = result_discipline_review.get("recommended_next_action") or {}
         command = str(action.get("command") or "prepare-result-rescue")
         return {
@@ -462,11 +501,17 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "cli": _cli_for(project_path, "assess-core-evidence"),
             "reason": "Core evidence has not passed; refresh the evidence report before manuscript writing continues.",
         }
+    project_stages = load_project(project_path).metadata.get("stages") or {}
+    latex_stage = project_stages.get("latex") or {}
+    quality_stage = project_stages.get("quality_checks") or {}
+    latex_stage_current = latex_stage.get("status") in COMPLETE_STATUSES and not latex_stage.get("stale")
+    quality_stage_current = quality_stage.get("status") in COMPLETE_STATUSES and not quality_stage.get("stale")
+    quality_stage_failed = quality_stage.get("status") == "failed" and not quality_stage.get("stale")
     integrity = _read_report(project_path, "integrity/integrity_report.json")
-    if integrity and integrity.get("status") not in {"passed", "pass"}:
+    if latex_stage_current and integrity and integrity.get("status") not in {"passed", "pass"}:
         return _review_sequence_action(project_path, "The integrity gate failed")
     quality = _read_report(project_path, "quality_checks/quality_report.json")
-    if quality and quality.get("status") not in {"passed", "pass"}:
+    if (quality_stage_current or quality_stage_failed) and quality and quality.get("status") not in {"passed", "pass"}:
         return _review_sequence_action(project_path, "The final quality gate failed")
     return None
 
@@ -629,7 +674,12 @@ def _methods_writing_stage_command(project_path: Path) -> str:
 
 
 def _method_feasibility_stage_command(project_path: Path) -> str:
-    if not (project_path / "methods" / "method_blueprint.json").exists():
+    method_plan_manifest = _read_report(project_path, "method_plan/stage_manifest.json")
+    declared_outputs = {str(item).replace("\\", "/") for item in method_plan_manifest.get("output_files") or []}
+    if (
+        "methods/method_blueprint.json" not in declared_outputs
+        or not (project_path / "methods" / "method_blueprint.json").exists()
+    ):
         return "prepare-method-blueprint"
     return "assess-method-feasibility"
 
@@ -691,6 +741,27 @@ def _stage_command(project_path: Path, stage: str) -> str | None:
 
 def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
     stage = _next_stage(project_path, metadata)
+    promoted_snapshot = project_path / "results" / "promoted_evidence_snapshot.json"
+    evidence_changing_stages = {
+        "research_plan",
+        "research_plan_feasibility",
+        "data",
+        "method_plan",
+        "method_feasibility",
+        "figure_plan",
+        "figure_contracts",
+        "code",
+        "methods",
+        "result_validity",
+        "result_support",
+    }
+    if promoted_snapshot.exists() and stage in evidence_changing_stages:
+        return {
+            "stage": "core_evidence",
+            "command": "reopen-core-evidence",
+            "cli": _cli_for(project_path, "reopen-core-evidence") + ' --reason "Upstream scientific evidence requires regeneration."',
+            "reason": f"Stage {stage} requires scientific regeneration, so the previously promoted core-evidence snapshot must be explicitly reopened first.",
+        }
     failure_action = _gate_failure_action(project_path)
     if failure_action:
         return failure_action
@@ -873,6 +944,7 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
             core_report["human_confirmation_status"] = "approved"
             core_report["human_confirmation_checkpoint_hash"] = checkpoint_hash
             core_report_path.write_text(json.dumps(core_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        refresh_project_passport(state.path, event="core_evidence_resume")
     status = status_project(state.path)
     return {
         "status": "resumed",

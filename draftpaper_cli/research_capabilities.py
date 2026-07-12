@@ -14,6 +14,7 @@ evidence that a main figure can actually be generated.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
@@ -101,15 +102,28 @@ def _profile_roles(profile: dict[str, Any]) -> dict[str, str]:
 
 def _extract_requirements(project_path: Path, profile: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     claims = _as_list(_read_json(project_path / "research_plan" / "claim_contract.json").get("claims"))
-    storyboard_payload = _read_json(project_path / "results" / "figure_storyboard.json")
+    storyboard_payload = _read_json(project_path / "research_plan" / "figure_storyboard.json")
+    if not storyboard_payload:
+        storyboard_payload = _read_json(project_path / "results" / "figure_storyboard.json")
     figures = _as_list(storyboard_payload.get("figures") or storyboard_payload.get("storyboard"))
+    current_figure_ids = {
+        str(item.get("figure_id") or item.get("id") or "")
+        for item in figures
+        if item.get("figure_id") or item.get("id")
+    }
     figure_contracts = _read_json(project_path / "results" / "figure_contracts.json")
     planned_contracts = _as_list(
         figure_contracts.get("main_contracts")
         or figure_contracts.get("contracts")
         or figure_contracts.get("figures")
     )
-    if planned_contracts:
+    planned_contracts = [
+        contract
+        for contract in planned_contracts
+        if str(contract.get("storyboard_id") or contract.get("figure_id") or contract.get("id") or "")
+        in current_figure_ids
+    ]
+    if planned_contracts and len(planned_contracts) == len(current_figure_ids):
         storyboard_by_id = {
             str(item.get("figure_id") or item.get("id") or ""): item
             for item in figures
@@ -442,6 +456,7 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
+        "research_capability_contract_sha256": hashlib.sha256((state.path / CAPABILITY_CONTRACT).read_bytes()).hexdigest(),
         "decision": decision,
         "core_figure_decision": decision,
         "requirement_assessments": assessments,

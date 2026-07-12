@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_repository import ArtifactRepository
+from .project_state import load_project
 
 
 SECTION_STAGE_MAP = {
@@ -35,7 +36,10 @@ def _text_hash(path: Path) -> str:
 def section_lifecycle_action(project_path: Path, section: str) -> dict[str, Any] | None:
     repo = ArtifactRepository(project_path)
     precondition = SECTION_PRECONDITIONS.get(section)
-    if precondition and not repo.resolve(precondition[0]).is_file():
+    stage_name = next((stage for stage, mapped in SECTION_STAGE_MAP.items() if mapped == section), section)
+    stage_meta = ((load_project(project_path).metadata.get("stages") or {}).get(stage_name) or {})
+    stage_precondition_current = stage_meta.get("status") in {"draft", "approved", "completed"} and not stage_meta.get("stale")
+    if precondition and (not repo.resolve(precondition[0]).is_file() or not stage_precondition_current):
         return {"stage": next(stage for stage, mapped in SECTION_STAGE_MAP.items() if mapped == section), "command": precondition[1], "cli": _cli(project_path, precondition[1]), "reason": f"Build the scientific {section} context before preparing its free-writing packet.", "section": section, "writing_state": "scientific_context_required"}
     packet_path = repo.resolve(f"writing/section_packets/{section}.json")
     packet = repo.read_mapping(f"writing/section_packets/{section}.json")

@@ -14,6 +14,7 @@ from typing import Any
 from .project_scaffold import utc_now
 from .project_state import load_project
 from .schema_adapters import normalize_citation_audit
+from .evidence_snapshot import EvidenceSnapshotMismatch, validate_citation_audit_snapshot
 
 
 REPORT = "quality_checks/paper_quality_parity_report.json"
@@ -149,10 +150,18 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     functional_score = min(automated_functional_score, blind_evaluation["aggregate_quality_ratio"])
 
     citation_contract = normalize_citation_audit(citation_quality, minimum_coverage=MINIMUM_SCORE)
-    citation_time = _timestamp(citation_quality.get("generated_at"))
-    section_times = [_timestamp(report.get("generated_at")) for report in section_reports.values()]
-    known_section_times = [item for item in section_times if item is not None]
-    citation_after_final_draft = citation_time is not None and bool(known_section_times) and citation_time >= max(known_section_times)
+    citation_binding = citation_quality.get("manuscript_snapshot") if isinstance(citation_quality.get("manuscript_snapshot"), dict) else {}
+    if citation_binding:
+        try:
+            validate_citation_audit_snapshot(state.path, citation_binding)
+            citation_after_final_draft = True
+        except EvidenceSnapshotMismatch:
+            citation_after_final_draft = False
+    else:
+        citation_time = _timestamp(citation_quality.get("generated_at"))
+        section_times = [_timestamp(report.get("generated_at")) for report in section_reports.values()]
+        known_section_times = [item for item in section_times if item is not None]
+        citation_after_final_draft = citation_time is not None and bool(known_section_times) and citation_time >= max(known_section_times)
     registry = _read_json(state.path / "writing" / "scientific_evidence_registry.json")
     conflicts = registry.get("blocking_conflicts") or registry.get("conflicts") or []
     hard_checks = {

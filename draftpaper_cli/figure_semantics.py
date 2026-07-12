@@ -23,7 +23,9 @@ def normalize_semantic_role(value: Any) -> str:
         return "performance_metric"
     if any(token in text for token in ["time", "date", "mjd", "cadence", "light_curve"]):
         return "temporal_feature"
-    if any(token in text for token in ["lat", "lon", "region", "coordinate", "spatial", "ra", "dec"]):
+    if any(token in text for token in ["latitude", "longitude", "region", "coordinate", "spatial"]):
+        return "spatial_feature"
+    if text in {"lat", "lon", "ra", "dec", "right_ascension", "declination"}:
         return "spatial_feature"
     if any(token in text for token in ["ndvi", "evi", "flux", "hardness", "spectral", "feature", "predictor", "embedding"]):
         return "features"
@@ -48,7 +50,7 @@ def build_semantic_figure_contract(figure: dict[str, Any]) -> dict[str, Any]:
     kind = str(figure.get("figure_type") or figure.get("visualization_type") or "").lower()
     blob = " ".join(
         str(figure.get(key) or "")
-        for key in ["title", "figure_group", "scientific_question", "expected_finding"]
+        for key in ["title", "figure_group"]
     ).lower()
     if kind == "data_overview":
         grammar = "workflow_schematic" if "workflow" in blob else "coverage_summary"
@@ -73,14 +75,33 @@ def build_semantic_figure_contract(figure: dict[str, Any]) -> dict[str, Any]:
         grammar = kind or "scientific_figure"
 
     roles: list[str] = []
-    for field in ["x", "y", "group"]:
-        value = figure.get(field)
-        role = normalize_semantic_role(value) if value else ""
-        if role and role not in roles:
-            roles.append(role)
+    if grammar == "workflow_schematic":
+        roles.append("data_flow")
+    elif grammar == "class_distribution":
+        roles.append("label_or_response")
+    elif grammar in {"model_comparison", "ablation"}:
+        roles.extend(["model_variant", "performance_metric"])
+    elif grammar == "uncertainty_summary":
+        roles.extend(["label_or_response", "performance_metric"])
+    else:
+        planned_roles = _items(
+            figure.get("required_data_roles")
+            or figure.get("required_data")
+            or figure.get("data_roles")
+        )
+        for value in planned_roles:
+            role = normalize_semantic_role(value)
+            if role and role != "identifier" and role not in roles:
+                roles.append(role)
+        if not roles:
+            for field in ["x", "y", "group"]:
+                value = figure.get(field)
+                role = normalize_semantic_role(value) if value else ""
+                if role and role not in roles:
+                    roles.append(role)
     validation_metric = str(figure.get("validation_metric") or "")
     metric_dimension = _metric_dimension(validation_metric)
-    if grammar == "model_comparison":
+    if grammar in {"model_comparison", "ablation"}:
         for role in ["model_variant", "performance_metric"]:
             if role not in roles:
                 roles.append(role)

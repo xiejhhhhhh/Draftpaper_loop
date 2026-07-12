@@ -134,7 +134,10 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
         if not expected_methods and not method_ids:
             issues.append({"kind": "missing_method_plugin_binding", "detail": "No covered method plugin is bound to this main figure."})
         method_events = [item for item in events if item.get("figure_id") == figure_id and item.get("plugin_id") in method_ids]
-        real_event = next((item for item in method_events if item.get("status") == "project_executed" and item.get("scientific_evidence_status") == "project_result"), None)
+        real_event = next((
+            item for item in reversed(method_events)
+            if item.get("status") == "project_executed" and item.get("scientific_evidence_status") == "project_result"
+        ), None)
         run_success = str(run_manifest.get("status") or "").lower() == "success"
         if not issues and not (real_event and run_success):
             decision = "ready_for_codegen"

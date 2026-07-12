@@ -93,6 +93,32 @@ class ArtifactDriftTests(unittest.TestCase):
             self.assertEqual(sync_payload["status"], "synced")
             self.assertIn("references", sync_payload["stale_stages"])
 
+    def test_successful_mutating_cli_command_refreshes_its_own_passport(self) -> None:
+        from draftpaper_cli.orchestrator import status_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="CLI transaction", field="workflow engineering")
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "update-stage-status",
+                    "--project",
+                    str(project.path),
+                    "--stage",
+                    "references",
+                    "--status",
+                    "draft",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(status_project(project.path)["pipeline_state"], "drift_detected")
+
 
 if __name__ == "__main__":
     unittest.main()

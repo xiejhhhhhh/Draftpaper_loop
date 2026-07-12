@@ -539,9 +539,10 @@ def _validate_generated_figure_outputs(project_path: Path, output_files: list[st
             issues.append(f"{relative} metadata must declare file_format=png.")
         if item.get("is_placeholder"):
             issues.append(f"{relative} metadata marks the figure as placeholder.")
-        if not item.get("has_axes"):
+        is_workflow_schematic = str(item.get("plot_grammar") or "").lower() == "workflow_schematic"
+        if not item.get("has_axes") and not is_workflow_schematic:
             issues.append(f"{relative} metadata must confirm axes or scale.")
-        if not item.get("axis_labels"):
+        if not item.get("axis_labels") and not is_workflow_schematic:
             issues.append(f"{relative} metadata must include axis labels.")
         if not item.get("text_elements"):
             issues.append(f"{relative} metadata must include title, label, legend, or annotation text elements.")
@@ -1225,6 +1226,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     context_path = state.path / "methods" / "method_writing_context.json"
     _write_json(context_path, context)
     write_html_report(state.path / "methods" / "method_writing_context.html", _render_method_context_md(context), title="Method Writing Context")
+    update_stage_status(state.path, "methods_writing", "draft")
     _set_methods_writing_manifest(state.path)
     return context
 

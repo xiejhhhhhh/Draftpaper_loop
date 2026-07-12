@@ -38,6 +38,43 @@ def prepare_passing_result_validity(project_path: Path) -> None:
 
 
 class ResultsManifestWriterTests(unittest.TestCase):
+    def test_inventory_excludes_historical_artifacts_when_current_run_declares_outputs(self) -> None:
+        from draftpaper_cli.results import inventory_results
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Current run inventory", field="astronomy")
+            figures = project.path / "results" / "figures"
+            tables = project.path / "results" / "tables"
+            methods = project.path / "methods"
+            figures.mkdir(parents=True, exist_ok=True)
+            tables.mkdir(parents=True, exist_ok=True)
+            methods.mkdir(parents=True, exist_ok=True)
+            (figures / "current.png").write_bytes(b"current")
+            (figures / "historical.png").write_bytes(b"historical")
+            (tables / "current.csv").write_text("metric,value\nf1,0.8\n", encoding="utf-8")
+            (tables / "historical.csv").write_text("metric,value\nf1,0.5\n", encoding="utf-8")
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({"figures": [{"path": "results/figures/current.png"}]}),
+                encoding="utf-8",
+            )
+            (methods / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "figures_generated": ["results/figures/current.png"],
+                    "tables_generated": ["results/tables/current.csv"],
+                }),
+                encoding="utf-8",
+            )
+
+            result = inventory_results(project.path)
+            manifest = json.loads((project.path / "results" / "result_manifest.yaml").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["figure_count"], 1)
+            self.assertEqual(result["table_count"], 1)
+            self.assertEqual(manifest["inventory_scope"], "current_successful_run")
+            self.assertEqual([item["path"] for item in manifest["figures"]], ["results/figures/current.png"])
+            self.assertEqual([item["path"] for item in manifest["tables"]], ["results/tables/current.csv"])
+
     def test_inventory_results_writes_manifest_for_existing_figures_and_tables(self) -> None:
         from draftpaper_cli.results import inventory_results
 
