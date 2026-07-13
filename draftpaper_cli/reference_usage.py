@@ -20,6 +20,15 @@ CITATION_PATTERN = re.compile(
 )
 
 SECTION_PRIORITY = ["data", "methods", "discussion", "introduction"]
+CITATION_ROLES = {
+    "dataset_provenance",
+    "instrument_or_product_definition",
+    "processing_method_support",
+    "method_or_tool_background",
+    "prior_result_comparison",
+    "mechanism_or_interpretation",
+    "general_background",
+}
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -65,7 +74,11 @@ def _target_section(rows: list[dict[str, str]]) -> str:
     return "introduction"
 
 
-def _citation_intent(section: str, rows: list[dict[str, str]], item: dict[str, Any]) -> str:
+def _citation_role(section: str, rows: list[dict[str, str]], item: dict[str, Any]) -> tuple[str, str]:
+    for row in rows:
+        declared = str(row.get("citation_role") or row.get("citation_intent") or "").strip().lower()
+        if declared in CITATION_ROLES:
+            return declared, "citation_evidence_contract"
     blob = " ".join(
         [
             section,
@@ -75,16 +88,18 @@ def _citation_intent(section: str, rows: list[dict[str, str]], item: dict[str, A
         ]
     ).lower()
     if section == "data":
-        return "data_source_or_dataset_context"
+        if any(term in blob for term in ["instrument", "telescope", "detector", "product definition", "response matrix"]):
+            return "instrument_or_product_definition", "registry_section_assignment"
+        if any(term in blob for term in ["processing", "calibration", "normalization", "pipeline", "preprocessing"]):
+            return "processing_method_support", "registry_section_assignment"
+        return "dataset_provenance", "registry_section_assignment"
     if section == "methods":
-        if any(term in blob for term in ["software", "tool", "package", "application", "library", "modeling", "fitting"]):
-            return "method_tool_background"
-        return "method_or_model_background"
+        return "method_or_tool_background", "registry_section_assignment"
     if section == "discussion":
-        return "comparison_or_limitation_context"
-    if "gap" in blob:
-        return "gap_or_problem_context"
-    return "background_context"
+        if any(term in blob for term in ["mechanism", "interpret", "explain", "physical", "biological"]):
+            return "mechanism_or_interpretation", "registry_section_assignment"
+        return "prior_result_comparison", "registry_section_assignment"
+    return "general_background", "registry_section_assignment"
 
 
 def _best_evidence(rows: list[dict[str, str]], item: dict[str, Any]) -> str:
@@ -129,12 +144,15 @@ def build_reference_usage_plan(project: str | Path) -> dict[str, Any]:
         rows = evidence_by_key.get(key) or []
         target = _target_section(rows)
         row = _best_row(rows)
+        citation_role, role_source = _citation_role(target, rows, item)
         entries.append(
             {
                 "citation_key": key,
                 "required": True,
                 "target_section": target,
-                "citation_intent": _citation_intent(target, rows, item),
+                "citation_role": citation_role,
+                "citation_intent": citation_role,
+                "role_assignment_source": role_source,
                 "claim_scope": _clean_text(row.get("claim") or item.get("title") or "background evidence"),
                 "evidence_summary": _best_evidence(rows, item),
                 "source": row.get("source") or item.get("source") or "",
@@ -148,6 +166,7 @@ def build_reference_usage_plan(project: str | Path) -> dict[str, Any]:
         "status": "written",
         "generated_at": utc_now(),
         "policy": "Every retained reference in references/literature_summaries must be cited at least once outside Results.",
+        "citation_role_contract_version": "dpl.citation_role.v2",
         "source_literature_keys": sorted(seen),
         "source_bibtex_keys": sorted(bib_keys),
         "total_required_references": len(entries),

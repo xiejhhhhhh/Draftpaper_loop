@@ -427,6 +427,30 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.24.1-v0.25.0 (2026-07-13) -- Secure Scientific Runtime, Runnable Plugins, and Thin MCP
+
+- Packaged the canonical `draftpaper-workflow` skill inside the wheel and added `install-skill` / `skill-doctor`. Agent instructions now defer stage order to `status`, `verify-next-action`, and `continue`, so an old user-level skill cannot silently drive a new CLI through an obsolete workflow.
+- Upgraded all 186 public commands to CommandSpec v2 metadata: risk class, read/write globs, forbidden paths, resource class, timeout, idempotency, confirmation policy, and typed input/output schemas. Mutating project commands are checked against their actual post-run write set; parent traversal, UNC/device paths, symlink/reparse escapes, protected actions, arbitrary shell/raw writes, SQL, Git push, and credential disclosure are excluded from the MCP surface.
+- Added Plugin Execution Contract v2 and deterministic `plugin_catalog_snapshot.json`. All 209 plugin manifests receive a valid explicit or compatibility-adapted execution contract, while `catalog_hash` and per-plugin contract hashes flow through sufficiency, binding, execution, figure trace, and discipline review. Contract/fixture-only or mock API/GPU/server plugins still cannot support a scientific result.
+- Promoted 22 high-frequency local data/method capabilities and 10 review rules through an explicit runnable-profile registry. Each promoted capability executes a deterministic scientific algorithm with minimal, failure, and boundary fixtures; review rules include an applicability boundary and threshold source. Remaining foundation rules stay advisory and external contracts stay mock-only until real validation.
+- Made research-plan figure story roles explicit, removed the formal-writing first-eight evidence fallback, and added claim/run/cohort/model/figure/citation-role retrieval. Paragraph evidence is content-addressed, cached, and delta-aware; the held-out repeated-evidence regression reduces actual paragraph input by at least 35% while preserving every evidence ID.
+- Added Citation Role Contract v2 (`dataset_provenance`, instrument/product definition, processing support, method/tool background, prior-result comparison, mechanism/interpretation, and general background). Roles are assigned before writing; citation audit validates their use afterward and retains the established rewrite-before-delete policy.
+- Integrity now prefers promoted, run-aware Scientific Evidence Registry counts and reports legacy unbound `sample_composition.csv` as a compatibility source. Main-figure narratives explicitly reserve direct scientific signal, comparison, mechanism/ablation, and uncertainty/boundary roles instead of allowing diagnostics to occupy every main slot.
+- Added `workflow_trace.jsonl` and `audit-workflow-runtime` with run/command IDs, attempts, duration, input hashes, process/command/scientific/transaction outcomes, loop detection, duplicate-run detection, and packet metering. Added SQLite-backed `submit-job`, `job-status`, `job-cancel`, `job-notifications`, and `recover-jobs`; workers survive the initiating terminal and lost workers become `orphaned` rather than silently retried.
+- Added a ten-tool local stdio Draftpaper MCP (`python -m draftpaper_cli.mcp.server`) with portable `mcp-install` and deterministic `mcp-doctor`. It is a thin projection over CommandSpec and CLI handlers, provides bounded artifact selectors, and cannot directly execute human checkpoints or destructive administration.
+- Expanded wheel-shipped held-out release regressions to astronomy+ML, Euclid-context geography+ML, bioinformatics+medicine, and previously unused physics+quantum capability chains, plus adversarial scope, figure, plugin-runtime, and citation checks. The machine-readable closure ledger is [`docs/audits/v025_issue_ledger.json`](docs/audits/v025_issue_ledger.json); the 41 AcademicForge collection-level placeholders remain explicitly `requires_source_inspection` and do not enter sufficiency.
+- Final source verification: all `554` tests pass in two non-overlapping partitions (`278 + 276`) because the combined Windows run exceeds the desktop command's 12-minute output limit. Package compilation, isolated v0.25.0 wheel installation, canonical skill hash, 209-plugin catalog, 32 runnable profiles, ten-tool MCP stdio handshake, four held-out domains, and all adversarial release checks pass.
+
+Key setup and diagnostics:
+
+```powershell
+python -m pip install -e .[mcp]
+draftpaper install-skill --force
+draftpaper skill-doctor
+draftpaper mcp-doctor
+draftpaper mcp-install --output .mcp.json
+```
+
 ### v0.23.1-v0.24.0 (2026-07-13) -- Project Isolation, Native Recovery, and Independent Manuscript Review
 
 - Added clean `_vN` project versioning. The parent stays read-only; only allowlisted reusable assets are imported with hashes and lineage receipts. Passports, stage manifests, sufficiency reports, figure metadata, audits, snapshots, and other derived state are rebuilt in the child instead of being copied as active evidence.

@@ -139,6 +139,51 @@ def _sample_composition_totals(project_path: Path) -> dict[str, int]:
     return {key: value for key, value in totals.items() if value > 0}
 
 
+def _run_aware_sample_totals(project_path: Path) -> dict[str, Any]:
+    snapshot = _read_json(project_path / "results" / "promoted_evidence_snapshot.json")
+    registry = _read_json(project_path / "writing" / "scientific_evidence_registry.json")
+    resolved = _read_json(project_path / "results" / "resolved_result_evidence.json")
+    if not snapshot or not registry:
+        return {"status": "unavailable", "totals": {}, "records": [], "conflicts": []}
+    active_run = str(resolved.get("run_id") or "")
+    promoted_artifacts = set((snapshot.get("artifacts") or {}).keys())
+    selected: dict[str, list[dict[str, Any]]] = {"event_count": [], "source_count": []}
+    for record in registry.get("records") or []:
+        if not isinstance(record, dict):
+            continue
+        role = str(record.get("entity_role") or "")
+        if role not in selected or not record.get("binding_complete", True):
+            continue
+        run_id = str(record.get("run_id") or "")
+        cohort = str(record.get("cohort_id") or record.get("cohort") or "main").lower()
+        source = str(record.get("source_artifact") or "")
+        if active_run and run_id not in {active_run, "not_applicable"}:
+            continue
+        if cohort not in {"main", "primary", "main_modeling_sample"}:
+            continue
+        if source and source not in promoted_artifacts:
+            continue
+        numeric = _as_float(record.get("value"))
+        if numeric is not None and numeric > 0:
+            selected[role].append(record)
+    totals: dict[str, int] = {}
+    conflicts = []
+    for role, records in selected.items():
+        values = {int(round(float(item["value"]))) for item in records}
+        if len(values) == 1:
+            totals[role] = next(iter(values))
+        elif len(values) > 1:
+            conflicts.append({"entity_role": role, "values": sorted(values), "evidence_ids": [item.get("evidence_id") for item in records]})
+    return {
+        "status": "conflict" if conflicts else "resolved" if totals else "unavailable",
+        "active_run_id": active_run or None,
+        "snapshot_id": snapshot.get("snapshot_id"),
+        "totals": totals,
+        "records": [item for records in selected.values() for item in records],
+        "conflicts": conflicts,
+    }
+
+
 def _sentences(text: str) -> list[str]:
     return [piece.strip() for piece in re.split(r"(?<=[.!?])\s+|\n+", text) if piece.strip()]
 
@@ -305,9 +350,22 @@ def _check_writing_brief_coverage(project_path: Path, issues: list[IntegrityIssu
 
 
 def _check_evidence_number_consistency(project_path: Path, issues: list[IntegrityIssue]) -> dict[str, Any]:
-    totals = _sample_composition_totals(project_path)
+    run_aware = _run_aware_sample_totals(project_path)
+    if run_aware.get("conflicts"):
+        issues.append(IntegrityIssue(
+            "error",
+            "run_aware_cohort_conflict",
+            "The promoted evidence registry contains conflicting top-level cohort counts for the same active run.",
+            "writing/scientific_evidence_registry.json",
+        ))
+        return {"sample_composition": None, "source": "promoted_evidence_registry", "checked": False, "mismatches": [], "observed_counts": [], "run_aware": run_aware}
+    totals = dict(run_aware.get("totals") or {})
+    source = "promoted_evidence_registry"
     if not totals:
-        return {"sample_composition": None, "checked": False, "mismatches": [], "observed_counts": []}
+        totals = _sample_composition_totals(project_path)
+        source = "legacy_sample_composition_compatibility"
+    if not totals:
+        return {"sample_composition": None, "source": source, "checked": False, "mismatches": [], "observed_counts": [], "run_aware": run_aware}
     data_text = "\n".join(_read_text(project_path / relative) for relative in ["data/data.tex", "latex/sections/data.tex"] if (project_path / relative).exists())
     result_text = "\n".join(_read_text(project_path / relative) for relative in RESULT_FILES if (project_path / relative).exists())
     combined = {"data": data_text, "results": result_text}
@@ -337,11 +395,11 @@ def _check_evidence_number_consistency(project_path: Path, issues: list[Integrit
                     issues.append(IntegrityIssue(
                         "error",
                         "evidence_number_mismatch",
-                        f"{section.title()} declares {value} {label}, but results/tables/sample_composition.csv totals {expected}.",
+                        f"{section.title()} declares {value} {label}, but the active {source} evidence records {expected}.",
                         f"{section}/{section}.tex" if section != "results" else "results/results.tex",
                         section,
                     ))
-    return {"sample_composition": totals, "checked": True, "mismatches": mismatches, "observed_counts": observed_counts}
+    return {"sample_composition": totals, "source": source, "checked": True, "mismatches": mismatches, "observed_counts": observed_counts, "run_aware": run_aware}
 
 
 def _project_relative_path(project_path: Path, relative: str, issues: list[IntegrityIssue], *, code: str) -> Path | None:

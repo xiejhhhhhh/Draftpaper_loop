@@ -5,11 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .scientific_plugin_runtime import runnable_profile
+
 
 RUNTIME_LEVELS = {"contract_only", "code_generator", "fixture_executed", "project_validated", "live_validated"}
 
 
 def inspect_static_runtime_level(plugin_dir: Path, kind: str, manifest: dict[str, Any]) -> str:
+    plugin_id = str(manifest.get("template_id") or manifest.get("connector_id") or manifest.get("rule_id") or manifest.get("rule_group_id") or plugin_dir.name)
+    if runnable_profile(plugin_id):
+        return "fixture_executed" if kind == "review" else "code_generator"
     template = plugin_dir / "template.py"
     if not template.is_file() or kind == "review":
         return "contract_only"

@@ -326,9 +326,12 @@ class DisciplineModuleSpec:
         return [item.as_dict() if hasattr(item, "as_dict") else dict(item) for item in self.method_templates]
 
     def review_rule_dicts(self) -> list[dict[str, Any]]:
+        from ..scientific_plugin_runtime import apply_runnable_profile
+
         rules = []
         for item in self.review_rule_groups:
             rule = item.as_dict() if hasattr(item, "as_dict") else dict(item)
+            rule = apply_runnable_profile(rule)
             rule_id = str(rule.get("rule_id") or rule.get("rule_group_id") or "")
             if rule_id:
                 rule.setdefault("rule_id", rule_id)

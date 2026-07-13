@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.24.0"
+version = "0.25.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = { file = "LICENSE" }
@@ -22,6 +22,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = [
+  "mcp>=1.10",
+  "pydantic>=2.7",
+]
 plotting = [
   "numpy",
   "pandas",
@@ -71,7 +75,7 @@ exclude = ["codex_skills*", "third_party*", "tests*"]
 
 [tool.setuptools.package-data]
 "draftpaper_cli.discipline_modules" = ["**/*.json", "**/*.csv", "**/*.md"]
-"draftpaper_cli" = ["capability_packs/**/*.json", "capability_packs/**/*.jsonl"]
+"draftpaper_cli" = ["capability_packs/**/*.json", "capability_packs/**/*.jsonl", "resources/**/*.md", "resources/**/*.json"]
 "draftpaper_cli.release_fixtures" = ["*.json"]
 "draftpaper_cli._vendor.paper_fetch_skill" = ["LICENSE"]
 "draftpaper_cli._vendor.paper_fetch_skill.paper_fetch.resources.arxiv" = ["*.json"]

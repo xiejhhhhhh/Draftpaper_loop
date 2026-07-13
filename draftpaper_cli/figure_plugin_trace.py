@@ -13,6 +13,7 @@ from typing import Any
 from .html_utils import write_html_report
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .plugin_catalog import build_plugin_catalog_snapshot
 
 
 TRACE_JSON = "results/figure_plugin_trace_report.json"
@@ -80,7 +81,9 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     capabilities = _read_json(state.path / "research_plan" / "research_capability_contract.json")
     contracts = _read_json(state.path / "results" / "figure_contracts.json")
-    bindings = _read_json(state.path / "research_plan" / "plugin_binding_plan.json").get("bindings") or []
+    binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json")
+    bindings = binding_plan.get("bindings") or []
+    catalog_snapshot = build_plugin_catalog_snapshot()
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml")
     events = _read_jsonl(state.path / "data" / "plugin_execution_ledger.jsonl") + _read_jsonl(state.path / "methods" / "plugin_execution_ledger.jsonl")
     figure_requirements = {
@@ -169,7 +172,10 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
             "warnings": warnings,
         })
     decision = "capability_rescue_required" if any(item["decision"] == "capability_rescue_required" for item in checks) else ("pass" if checks and all(item["decision"] == "pass" for item in checks) else "ready_for_codegen")
-    report = {"status": "written", "generated_at": utc_now(), "project_id": state.metadata.get("project_id"), "decision": decision, "figure_checks": checks, "policy": "Data and method plugins gate code generation. Claim provenance and applicable review rules are repaired or assessed after Results; fixture events never count as scientific run output."}
+    if binding_plan.get("plugin_catalog_hash") and binding_plan.get("plugin_catalog_hash") != catalog_snapshot.get("catalog_hash"):
+        decision = "capability_rescue_required"
+        checks.append({"figure_id": "catalog", "decision": "capability_rescue_required", "issues": [{"kind": "plugin_catalog_drift", "detail": "The plugin catalog changed after capability binding."}]})
+    report = {"status": "written", "generated_at": utc_now(), "project_id": state.metadata.get("project_id"), "decision": decision, "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"), "binding_catalog_hash": binding_plan.get("plugin_catalog_hash"), "figure_checks": checks, "policy": "Data and method plugins gate code generation. Claim provenance and applicable review rules are repaired or assessed after Results; fixture events never count as scientific run output."}
     _write_json(state.path / TRACE_JSON, report)
     write_html_report(state.path / TRACE_HTML, _render(report), title="Figure Plugin Trace Report")
     return report

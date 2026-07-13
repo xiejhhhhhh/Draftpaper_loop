@@ -1,7 +1,7 @@
 {
   "fixture_id": "geography_ml",
-  "idea": "Held-out regional vegetation prediction from harmonized spatial observations",
-  "field": "geography machine learning spatial analysis",
+  "idea": "Held-out galaxy morphology analysis from harmonized Euclid imaging and spectroscopic catalog observations",
+  "field": "astronomical geography machine learning morphology analysis",
   "primary_discipline": "geography",
   "secondary_disciplines": ["machine_learning"],
   "data_plugin_id": "geopandas_vector_local",

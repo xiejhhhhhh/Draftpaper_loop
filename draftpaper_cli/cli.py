@@ -30,6 +30,8 @@ from .code_ownership import (
 from .claim_contract import ClaimContractError, apply_result_downgrade
 from .capability_packs import discover_capability_packs, evaluate_capability_routing
 from .command_transaction import record_command_transaction
+from .write_set_guard import BoundaryViolation, WriteSetGuard
+from .workflow_trace import begin_workflow_trace, finish_workflow_trace
 from .core_evidence import CoreEvidenceError, assess_core_evidence
 from .evidence_snapshot import EvidenceSnapshotMismatch, reopen_evidence_snapshot
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
@@ -927,6 +929,38 @@ def build_parser() -> argparse.ArgumentParser:
     accept_compat = subparsers.add_parser("accept-revision", help="Accept a prepared revision after hash verification.")
     accept_compat.add_argument("--project", required=True)
     accept_compat.add_argument("--revision", required=True)
+
+    install_skill = subparsers.add_parser("install-skill", help="Install the wheel-packaged canonical Draftpaper workflow skill into CODEX_HOME.")
+    install_skill.add_argument("--destination")
+    install_skill.add_argument("--force", action="store_true")
+    skill_doctor = subparsers.add_parser("skill-doctor", help="Compare the installed Draftpaper workflow skill with the canonical package resource.")
+    skill_doctor.add_argument("--destination")
+    plugin_snapshot = subparsers.add_parser("snapshot-plugin-catalog", help="Freeze the current plugin manifests, templates, execution contracts, and catalog hash for a project run.")
+    plugin_snapshot.add_argument("--project", required=True)
+    plugin_diff = subparsers.add_parser("validate-plugin-contract-diff", help="Compare the active plugin catalog with the project planning snapshot.")
+    plugin_diff.add_argument("--project", required=True)
+    runtime_audit = subparsers.add_parser("audit-workflow-runtime", help="Detect command loops, repeated expensive inputs, stale churn, and oversized writing packets.")
+    runtime_audit.add_argument("--project", required=True)
+    submit_job_parser = subparsers.add_parser("submit-job", help="Submit an allowlisted Draftpaper command to the durable local scientific job controller.")
+    submit_job_parser.add_argument("--project", required=True)
+    submit_job_parser.add_argument("--command", dest="job_command", required=True)
+    submit_job_parser.add_argument("--arguments-json")
+    submit_job_parser.add_argument("--idempotency-key")
+    submit_job_parser.add_argument("--timeout-seconds", type=int)
+    job_status_parser = subparsers.add_parser("job-status", help="Read one persistent scientific job without changing its state.")
+    job_status_parser.add_argument("--project", required=True)
+    job_status_parser.add_argument("--job-id", required=True)
+    job_cancel_parser = subparsers.add_parser("job-cancel", help="Cancel one persistent scientific job and its process tree.")
+    job_cancel_parser.add_argument("--project", required=True)
+    job_cancel_parser.add_argument("--job-id", required=True)
+    notifications_parser = subparsers.add_parser("job-notifications", help="Read persistent job completion and failure notifications.")
+    notifications_parser.add_argument("--project", required=True)
+    notifications_parser.add_argument("--job-id")
+    recover_jobs_parser = subparsers.add_parser("recover-jobs", help="Classify running persistent jobs after a terminal or MCP restart.")
+    recover_jobs_parser.add_argument("--project", required=True)
+    mcp_install_parser = subparsers.add_parser("mcp-install", help="Write a portable local stdio MCP configuration without an absolute working directory.")
+    mcp_install_parser.add_argument("--output", required=True)
+    subparsers.add_parser("mcp-doctor", help="Validate MCP dependencies, tool schemas, workflow skill hash, and security exposure policy.")
 
     parser_commands = set(subparsers.choices)
     missing_specs = sorted(parser_commands - set(COMMAND_SPECS))
@@ -2409,8 +2443,36 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 3
 
+    write_guard = None
+    workflow_trace = None
+    if mutates_project and spec is not None:
+        try:
+            write_guard = WriteSetGuard(project, spec)
+        except (BoundaryViolation, OSError) as exc:
+            print(json.dumps({"status": "boundary_violation", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 4
+        workflow_trace = begin_workflow_trace(project, command, vars(args))
+
     exit_code = _main_without_passport_refresh(argv)
     if mutates_project:
+        if write_guard is not None:
+            assessment = write_guard.assess()
+            if assessment.get("status") != "passed":
+                try:
+                    record_command_transaction(
+                        project,
+                        command=command,
+                        scientific_exit_code=exit_code,
+                        transaction_status="boundary_violation",
+                        baseline_clean=not preexisting_drift,
+                        message=json.dumps(assessment, ensure_ascii=False),
+                    )
+                except (PassportError, ProjectStateError, OSError):
+                    pass
+                print(json.dumps(assessment, ensure_ascii=False), file=sys.stderr)
+                if workflow_trace is not None:
+                    finish_workflow_trace(project, workflow_trace, process_status="completed", command_exit_code=4, transaction_status="boundary_violation", scientific_decision="not_committed", failure_class="write_boundary_violation")
+                return 4
         post_command_drift = True
         try:
             post_command_drift = detect_artifact_drift(project).get("status") == "drift_detected"
@@ -2459,6 +2521,16 @@ def main(argv: list[str] | None = None) -> int:
         except (PassportError, ProjectStateError, OSError) as exc:
             print(json.dumps({"status": "error", "message": f"Command completed but transaction receipt failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
             return 1
+        if workflow_trace is not None:
+            finish_workflow_trace(
+                project,
+                workflow_trace,
+                process_status="completed",
+                command_exit_code=exit_code,
+                transaction_status="committed",
+                scientific_decision="pass" if exit_code == 0 else "non_passing",
+                failure_class=None if exit_code == 0 else "scientific_or_command_nonzero",
+            )
     return exit_code
 
 

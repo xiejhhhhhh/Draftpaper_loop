@@ -1,0 +1,39 @@
+{
+  "schema_version": "dpl.runnable_plugin_profiles.v1",
+  "profiles": {
+    "tabular_environment_dataset": {"kind": "data", "operation": "tabular_profile", "fixture_input": {"rows": [{"id": "a", "value": 1.0}, {"id": "b", "value": null}, {"id": "c", "value": 3.0}]}, "output_schema": "dpl.tabular_profile.v1"},
+    "geopandas_vector_local": {"kind": "data", "operation": "coordinate_profile", "fixture_input": {"coordinates": [[116.1, 39.9], [116.3, 40.0], [116.2, 39.8]], "crs": "EPSG:4326"}, "output_schema": "dpl.coordinate_profile.v1"},
+    "fits_table_local_reader": {"kind": "data", "operation": "tabular_profile", "fixture_input": {"rows": [{"source_id": "s1", "flux": 1.2}, {"source_id": "s2", "flux": 2.4}]}, "output_schema": "dpl.tabular_profile.v1"},
+    "bulk_rnaseq_count_matrix": {"kind": "data", "operation": "matrix_profile", "fixture_input": {"matrix": [[10, 20, 30], [5, 0, 15]], "row_ids": ["g1", "g2"], "column_ids": ["s1", "s2", "s3"]}, "output_schema": "dpl.matrix_profile.v1"},
+    "molecular_descriptor_table": {"kind": "data", "operation": "tabular_profile", "fixture_input": {"rows": [{"compound": "c1", "mw": 180.2, "logp": 1.2}, {"compound": "c2", "mw": 220.1, "logp": 2.0}]}, "output_schema": "dpl.tabular_profile.v1"},
+    "materials_structure_table": {"kind": "data", "operation": "tabular_profile", "fixture_input": {"rows": [{"material": "m1", "volume": 10.0}, {"material": "m2", "volume": 12.5}]}, "output_schema": "dpl.tabular_profile.v1"},
+    "survival_cohort_local_table": {"kind": "data", "operation": "tabular_profile", "fixture_input": {"rows": [{"subject": "p1", "time": 12, "event": 1}, {"subject": "p2", "time": 18, "event": 0}]}, "output_schema": "dpl.tabular_profile.v1"},
+    "local_measurement_counts": {"kind": "data", "operation": "count_profile", "fixture_input": {"counts": {"00": 512, "11": 488}}, "output_schema": "dpl.count_profile.v1"},
+
+    "exploratory_data_analysis": {"kind": "method", "operation": "numeric_summary", "fixture_input": {"values": [1, 2, 3, 4, 5, 6]}, "output_schema": "dpl.numeric_summary.v1"},
+    "statistical_analysis_workbench": {"kind": "method", "operation": "two_group_effect", "fixture_input": {"group_a": [1.0, 1.2, 1.4, 1.5], "group_b": [1.8, 2.0, 2.2, 2.3]}, "output_schema": "dpl.two_group_effect.v1"},
+    "statistical_power_analysis": {"kind": "method", "operation": "power_analysis", "fixture_input": {"effect_size": 0.5, "alpha": 0.05, "power": 0.8}, "output_schema": "dpl.power_analysis.v1"},
+    "experimental_design_planner": {"kind": "method", "operation": "split_audit", "fixture_input": {"train_ids": ["a", "b", "c"], "test_ids": ["d", "e"]}, "output_schema": "dpl.split_audit.v1"},
+    "scikit_learn_classical_model_selection": {"kind": "method", "operation": "classification_metrics", "fixture_input": {"y_true": [0, 0, 1, 1, 1, 0], "y_pred": [0, 1, 1, 1, 0, 0]}, "output_schema": "dpl.classification_metrics.v1"},
+    "machine_learning.method.baseline_model": {"kind": "method", "operation": "classification_metrics", "fixture_input": {"y_true": [0, 0, 1, 1], "y_pred": [0, 0, 1, 0]}, "output_schema": "dpl.classification_metrics.v1"},
+    "machine_learning.method.train_validation_test_split_check": {"kind": "method", "operation": "split_audit", "fixture_input": {"train_ids": ["s1", "s2"], "validation_ids": ["s3"], "test_ids": ["s4"]}, "output_schema": "dpl.split_audit.v1"},
+    "machine_learning.method.ablation_study": {"kind": "method", "operation": "ablation_effect", "fixture_input": {"full": [0.82, 0.84, 0.83], "ablated": [0.77, 0.78, 0.76]}, "output_schema": "dpl.ablation_effect.v1"},
+    "statsmodels_regression_diagnostics": {"kind": "method", "operation": "linear_regression", "fixture_input": {"x": [1, 2, 3, 4, 5], "y": [2.1, 3.9, 6.2, 8.0, 9.8]}, "output_schema": "dpl.linear_regression.v1"},
+    "coordinate_reference_harmonization": {"kind": "method", "operation": "coordinate_profile", "fixture_input": {"coordinates": [[-120.0, 35.0], [-119.5, 35.5]], "crs": "EPSG:4326"}, "output_schema": "dpl.coordinate_profile.v1"},
+    "astropy_time_units_coordinates": {"kind": "method", "operation": "unit_conversion", "fixture_input": {"values": [1, 2, 3], "factor": 1000, "source_unit": "km", "target_unit": "m"}, "output_schema": "dpl.unit_conversion.v1"},
+    "bulk_rnaseq_differential_expression": {"kind": "method", "operation": "differential_expression", "fixture_input": {"control": [[10, 12, 11], [30, 28, 29]], "treatment": [[20, 19, 22], [31, 30, 32]], "features": ["g1", "g2"]}, "output_schema": "dpl.differential_expression.v1"},
+    "descriptor_qsar_baseline": {"kind": "method", "operation": "linear_regression", "fixture_input": {"x": [1, 2, 3, 4], "y": [1.1, 1.9, 3.2, 4.1]}, "output_schema": "dpl.linear_regression.v1"},
+    "uncertainty_propagation": {"kind": "method", "operation": "uncertainty_propagation", "fixture_input": {"sensitivities": [1.0, 2.0], "uncertainties": [0.1, 0.05]}, "output_schema": "dpl.uncertainty_propagation.v1"},
+
+    "statistical_assumption_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["assumptions_checked"], "threshold_source": "reporting guideline and declared test assumptions"},
+    "statistical_power_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["effect_size", "power_or_precision"], "threshold_source": "prospective design or precision analysis"},
+    "baseline_ablation_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["baseline_metrics", "ablation_metrics"], "threshold_source": "model-comparison reporting contract"},
+    "visualization_readability_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["figure_metadata", "axis_units"], "threshold_source": "publication figure contract"},
+    "crs_consistency_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["crs", "coordinate_transform_provenance"], "threshold_source": "geospatial CRS consistency contract"},
+    "bioinformatics_replicate_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["biological_replicates", "sample_unit"], "threshold_source": "replicate-aware experimental design"},
+    "multiple_testing_fdr_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["multiple_testing_method", "adjusted_p_values"], "threshold_source": "declared FDR control procedure"},
+    "model_statistical_validity_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["held_out_metrics", "uncertainty"], "threshold_source": "held-out model evaluation contract"},
+    "clinical_data_leakage_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["subject_level_split", "leakage_check"], "threshold_source": "subject-independent clinical validation"},
+    "dimension_consistency_gate": {"kind": "review", "operation": "review_gate", "required_fields": ["variable_units", "dimension_check"], "threshold_source": "dimensional-analysis identity"}
+  }
+}

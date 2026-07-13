@@ -353,7 +353,7 @@ def _semantic_support_checks(claim: str, evidence_passage: str, intent: str, lex
     }
 
 
-def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> tuple[str, float, str, float, float, bool, str, str, str, str, str, dict[str, Any], str]:
+def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]], planned_role: str | None = None) -> tuple[str, float, str, float, float, bool, str, str, str, str, str, dict[str, Any], str]:
     if key not in bib:
         semantic = {"semantic_verdict": "unverifiable", "requires_paragraph_repair": True}
         return "unverifiable", 0.0, "unknown", 0.0, 0.0, True, "resolve_bibtex_key", "The citation key is absent from BibTeX, so the cited source cannot be resolved.", "", "", "", semantic, ""
@@ -390,11 +390,12 @@ def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, 
         _score_overlap(claim_tokens, relevance_tokens, denominator="right"),
         _score_overlap(relevance_tokens, claim_tokens, denominator="right"),
     )
-    intent = _infer_citation_intent(section, _clean_latex(passage), evidence_blob, fields)
+    intent = str(planned_role or "").strip() or _infer_citation_intent(section, _clean_latex(passage), evidence_blob, fields)
     if intent != "claim_support" and (claim_tokens & relevance_tokens):
         topic_relevance = max(topic_relevance, 0.55)
     claim_alignment = best_score
     semantic = _semantic_support_checks(_clean_latex(passage), supporting, intent, claim_alignment, topic_relevance)
+    semantic["citation_role_source"] = "prewriting_contract" if planned_role else "legacy_posthoc_compatibility"
     semantic_verdict = semantic["semantic_verdict"]
     locator = str(best_row.get("passage_id") or best_row.get("page") or best_row.get("section_locator") or best_row.get("source") or "")
     if semantic_verdict == "contradicted_or_unsupported":
@@ -414,6 +415,12 @@ def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, 
 
 def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence: dict[str, list[dict[str, str]]]) -> list[CitationUsage]:
     usages: list[CitationUsage] = []
+    usage_plan = _read_json(project_path / "references" / "reference_usage_plan.json")
+    planned_roles = {
+        (str(item.get("citation_key") or ""), str(item.get("target_section") or "").lower()): str(item.get("citation_role") or item.get("citation_intent") or "")
+        for item in usage_plan.get("entries") or []
+        if isinstance(item, dict)
+    }
     seen: set[tuple[str, str, str]] = set()
     for section, relatives in SECTION_FILES.items():
         canonical_exists = any((project_path / relative).exists() for relative in relatives if not relative.startswith("latex/sections/"))
@@ -434,7 +441,7 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
                     if dedupe in seen:
                         continue
                     seen.add(dedupe)
-                    verdict, score, intent, relevance, alignment, blocking, repair_hint, reasoning, supporting, doi, url, semantic, locator = _judge_usage(key, section, passage, bib, evidence)
+                    verdict, score, intent, relevance, alignment, blocking, repair_hint, reasoning, supporting, doi, url, semantic, locator = _judge_usage(key, section, passage, bib, evidence, planned_roles.get((key, section)))
                     usage_id = f"{section}_{len(usages) + 1:03d}_{re.sub(r'[^A-Za-z0-9_-]+', '_', key)}"
                     usages.append(CitationUsage(
                         usage_id=usage_id,

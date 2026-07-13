@@ -19,6 +19,7 @@ from typing import Any
 
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .plugin_catalog import build_plugin_catalog_snapshot, normalize_execution_contract, validate_execution_contract
 
 
 BINDING_PLAN = "research_plan/plugin_binding_plan.json"
@@ -83,6 +84,10 @@ def _load_template(path: Path):
 def _execute_bindings(project: str | Path, *, kind: str) -> dict[str, Any]:
     state = load_project(project)
     plan = _read_json(state.path / BINDING_PLAN)
+    current_catalog = build_plugin_catalog_snapshot(refresh=True)
+    planned_catalog_hash = plan.get("plugin_catalog_hash")
+    if planned_catalog_hash and planned_catalog_hash != current_catalog.get("catalog_hash"):
+        raise PluginExecutionError("Plugin catalog changed after capability planning; rerun assess-plugin-sufficiency before execution.")
     bindings = [item for item in plan.get("bindings") or [] if isinstance(item, dict) and item.get("kind") == kind]
     stage_dir = state.path / ("data" if kind == "data" else "methods")
     ledger_path = stage_dir / "plugin_execution_ledger.jsonl"
@@ -105,6 +110,8 @@ def _execute_bindings(project: str | Path, *, kind: str) -> dict[str, Any]:
             "parameters": {"execution_scope": "fixture_or_contract_validation"},
             "output_hashes": {},
             "scientific_evidence_status": "not_established",
+            "catalog_hash": current_catalog.get("catalog_hash"),
+            "plugin_contract_hash": binding.get("plugin_contract_hash"),
         }
         if binding.get("binding_scope") == "project_local":
             event.update({
@@ -117,6 +124,10 @@ def _execute_bindings(project: str | Path, *, kind: str) -> dict[str, Any]:
             continue
         try:
             manifest_path, manifest, template_path = _resolve_plugin(binding)
+            execution_contract = normalize_execution_contract(manifest, kind=kind)
+            contract_errors = validate_execution_contract(execution_contract)
+            if contract_errors:
+                raise PluginExecutionError("Invalid plugin execution contract: " + "; ".join(contract_errors))
             runtime = str(manifest.get("runtime_class") or binding.get("runtime_class") or "local_optional_dependency")
             validation = str(manifest.get("validation_level") or binding.get("validation_level") or "plan_only")
             event.update({
@@ -126,9 +137,10 @@ def _execute_bindings(project: str | Path, *, kind: str) -> dict[str, Any]:
                 "template_sha256": _sha256(template_path),
                 "runtime_class": runtime,
                 "validation_level": validation,
+                "execution_contract": execution_contract,
             })
             output_dir = stage_dir / "plugin_runs" / str(binding["plugin_id"])
-            if runtime not in {"local_pure_python", "local_optional_dependency"} or validation not in {"fixture_runnable", "live_validated"}:
+            if execution_contract.get("execution_mode") == "mock_only" or runtime not in {"local_pure_python", "local_optional_dependency"} or validation not in {"fixture_runnable", "live_validated"}:
                 event.update({"status": "prepared_for_project_execution", "reason": "The selected template has no standard runnable fixture contract."})
             else:
                 module = _load_template(template_path)
@@ -173,6 +185,7 @@ def record_project_method_run(project: str | Path, *, output_files: list[str]) -
     """
     state = load_project(project)
     plan = _read_json(state.path / BINDING_PLAN)
+    current_catalog = build_plugin_catalog_snapshot(refresh=True)
     bindings = [
         item for item in plan.get("bindings") or []
         if isinstance(item, dict) and item.get("kind") == "method" and item.get("state") in {"covered", "covered_project_local"}
@@ -199,6 +212,8 @@ def record_project_method_run(project: str | Path, *, output_files: list[str]) -
             "parameters": {"verification_output_count": len(hashes)},
             "input_hashes": {},
             "output_hashes": hashes,
+            "catalog_hash": current_catalog.get("catalog_hash"),
+            "plugin_contract_hash": binding.get("plugin_contract_hash"),
         }
         _append_jsonl(ledger_path, event)
         events.append(event)

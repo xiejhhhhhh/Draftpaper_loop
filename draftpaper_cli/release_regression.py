@@ -1,4 +1,4 @@
-"""Wheel-installable scientific release regressions for v0.23.0."""
+"""Wheel-installable held-out scientific release regressions for v0.25.0."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from .writing_coordinator import formal_writing_release_action
 
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "release_fixtures"
-FIXTURE_NAMES = ("geography_ml", "astronomy_ml", "bioinformatics_medicine")
+FIXTURE_NAMES = ("geography_ml", "astronomy_ml", "bioinformatics_medicine", "physics_quantum")
 
 
 class ReleaseRegressionError(RuntimeError):
@@ -265,7 +265,16 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     review = assess_review_rules(
         project,
         stage="post_results",
-        evidence_context={"active_plugin_ids": [spec["data_plugin_id"], spec["method_plugin_id"], spec["review_plugin_id"]]},
+        evidence_context={
+            "active_plugin_ids": [spec["data_plugin_id"], spec["method_plugin_id"], spec["review_plugin_id"]],
+            "available_evidence_roles": [
+                "baseline_metrics", "ablation_metrics", "assumptions_checked", "effect_size",
+                "power_or_precision", "axis_units", "sample_size", "held_out_metrics", "uncertainty",
+                "figure_metadata", "crs", "coordinate_transform_provenance", "biological_replicates",
+                "sample_unit", "multiple_testing_method", "adjusted_p_values", "subject_level_split",
+                "leakage_check", "variable_units", "dimension_check",
+            ],
+        },
         write_path=repo.resolve("review/release_review_rule_report.json"),
     )
     _assert(review["decision"] == "pass", f"{fixture_name}: review-rule engine did not pass the complete evidence bundle")
@@ -404,14 +413,14 @@ def run_release_regressions(output_root: str | Path) -> dict[str, Any]:
     domains = [run_domain_regression(root, name) for name in FIXTURE_NAMES]
     adversarial = run_adversarial_regressions(root, domains[0]["project_path"])
     report = {
-        "schema_version": "v0.23.0",
+        "schema_version": "v0.25.0",
         "generated_at": utc_now(),
         "status": "passed" if all(item["status"] == "passed" for item in domains) and adversarial["status"] == "passed" else "failed",
         "domain_regressions": domains,
         "adversarial_regressions": adversarial,
         "quality_claim_policy": "Synthetic regressions prove scientific contracts, not manuscript quality. A 95% claim remains blocked until the blind complete-manuscript and real-figure evaluation contract is supplied.",
     }
-    atomic_write_json(root / "v0230_release_regression_report.json", report)
+    atomic_write_json(root / "v0250_release_regression_report.json", report)
     return report
 
 

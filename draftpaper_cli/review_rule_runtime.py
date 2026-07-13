@@ -13,6 +13,7 @@ from typing import Any
 from .discipline import infer_discipline_profile
 from .discipline_modules import get_discipline_module
 from .project_scaffold import _write_json, utc_now
+from .plugin_catalog import build_plugin_catalog_snapshot
 
 
 REVIEW_RULE_RUNTIME_SCHEMA_VERSION = "v0.22.5"
@@ -637,6 +638,12 @@ def collect_review_rule_evidence_roles(project: str | Path, extra_context: dict[
         roles.update({"result_manifest", "figure_metadata"})
     if (project_path / "results" / "result_support_checkpoint.json").exists():
         roles.add("result_support")
+    if result_evidence:
+        evidence_records = [item for item in result_evidence.get("evidence_records") or [] if isinstance(item, dict)]
+        if any(any(token in str(item.get("split") or "").lower() for token in ("held", "holdout", "test", "validation")) for item in evidence_records):
+            roles.add("held_out_metrics")
+        if any("uncert" in str(item.get("entity_role") or item.get("metric_name") or "").lower() or "confidence_interval" in str(item.get("entity_role") or "").lower() for item in evidence_records):
+            roles.add("uncertainty")
     if (project_path / "citation_audit" / "final_citation_audit_report.html").exists() or (project_path / "citation_audit" / "reference_coverage_report.html").exists():
         roles.add("citation_evidence")
     if extra_context:
@@ -711,6 +718,8 @@ def assess_review_rules(
     available = set(collect_review_rule_evidence_roles(project_path, evidence_context))
     observed_conflicts = _collect_evidence_conflicts(project_path, evidence_context)
     evidence_bundle = build_review_evidence_bundle(project_path, evidence_context)
+    evidence_bundle["roles"] = sorted(available)
+    evidence_bundle["stage"] = stage
     assessments: list[dict[str, Any]] = []
     blocking_count = 0
     warn_count = 0
@@ -718,7 +727,11 @@ def assess_review_rules(
     for rule in rules:
         binding = rule.get("evidence_binding") if isinstance(rule.get("evidence_binding"), dict) else {}
         binding_required = _binding_required_evidence(rule)
-        required = list(dict.fromkeys(_infer_required_evidence(rule, stage) + binding_required))
+        profile_required = []
+        profile_stages = {str(item) for item in rule.get("runnable_profile_applicable_stages") or ["post_results"]}
+        if stage in profile_stages:
+            profile_required = [str(item) for item in rule.get("runnable_profile_required_fields") or []]
+        required = list(dict.fromkeys(_infer_required_evidence(rule, stage) + binding_required + profile_required))
         missing = [role for role in required if not _role_matches(role, available)]
         forbidden_conflicts = [_normalise(item) for item in binding.get("forbidden_conflicts") or [] if _normalise(item)]
         conflict_hits = [conflict for conflict in forbidden_conflicts if conflict in observed_conflicts]
@@ -727,7 +740,8 @@ def assess_review_rules(
         deployment_state = _normalise(rule.get("deployment_state") or "review_rule_candidate")
         blocking_level = _normalise(rule.get("blocking_level") or "warn_and_repair")
         evidence_bound = not missing
-        mature_enough = maturity in {"runnable", "mature", "paper_integrated", "runtime_integrated"}
+        profile_stage_limited = bool(rule.get("runnable_profile_applicable_stages")) and stage not in profile_stages
+        mature_enough = maturity in {"runnable", "mature", "paper_integrated", "runtime_integrated"} and not profile_stage_limited
         formally_deployed = deployment_state in {_normalise(item) for item in MATURE_RULE_STATES}
         may_block = mature_enough and formally_deployed and blocking_level in {_normalise(item) for item in BLOCKING_LEVELS}
         threshold_evaluation = _threshold_evaluation(rule, evidence_bundle, hard_threshold)
@@ -833,6 +847,7 @@ def assess_review_rules(
         "schema_version": REVIEW_RULE_RUNTIME_SCHEMA_VERSION,
         "generated_at": utc_now(),
         "stage": stage,
+        "plugin_catalog_hash": build_plugin_catalog_snapshot().get("catalog_hash"),
         "decision": decision,
         "discipline_profile": loaded.get("discipline_profile") or {},
         "discipline_module_id": (loaded.get("discipline_module") or {}).get("module_id"),

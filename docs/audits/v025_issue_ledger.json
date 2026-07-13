@@ -1,0 +1,25 @@
+{
+  "schema_version": "dpl.audit_issue_ledger.v1",
+  "release_target": "0.25.0",
+  "baseline": "0.24.0",
+  "issues": [
+    {"id": "ASTR-048", "title": "Integrity top-level cohort selection", "status": "implemented", "release": "0.24.5", "acceptance": "Counts resolve from promoted run-aware evidence rather than an unbound fixed CSV."},
+    {"id": "ASTR-053", "title": "Direct scientific signal in main-figure narrative", "status": "implemented", "release": "0.24.5", "acceptance": "Research plans declare story roles and diagnostics cannot replace direct signals."},
+    {"id": "ASTR-054", "title": "Section packet token cost", "status": "implemented", "release": "0.24.5", "acceptance": "Content-addressed held-out regression reduces repeated paragraph evidence input by at least 35 percent without evidence-ID loss."},
+    {"id": "ASTR-056", "title": "Data citation role precision", "status": "implemented", "release": "0.24.5", "acceptance": "Citation roles are assigned before writing and audited afterward."},
+    {"id": "R1", "title": "Canonical workflow skill sync", "status": "implemented", "release": "0.24.1"},
+    {"id": "R2", "title": "Runnable plugin depth", "status": "implemented", "release": "0.24.4"},
+    {"id": "R3", "title": "Plugin execution and side-effect contract", "status": "implemented", "release": "0.24.3"},
+    {"id": "R4", "title": "Immutable plugin catalog snapshot", "status": "implemented", "release": "0.24.3"},
+    {"id": "R5", "title": "First-eight paragraph evidence fallback", "status": "implemented", "release": "0.24.5"},
+    {"id": "R6", "title": "Main-figure story ordering", "status": "implemented", "release": "0.24.5"},
+    {"id": "R7", "title": "Writing token efficiency", "status": "implemented", "release": "0.24.5"},
+    {"id": "R8", "title": "Citation intent inference", "status": "implemented", "release": "0.24.5"},
+    {"id": "R9", "title": "End-to-end workflow runtime trace", "status": "implemented", "release": "0.24.6"},
+    {"id": "R10", "title": "Persistent scientific jobs", "status": "implemented", "release": "0.24.6"},
+    {"id": "R11", "title": "CommandSpec read/write boundaries", "status": "implemented", "release": "0.24.2"},
+    {"id": "R12", "title": "AcademicForge source-inspection placeholders", "status": "tracked", "release": "future-demand-driven"},
+    {"id": "R13", "title": "Run-aware integrity counts", "status": "implemented", "release": "0.24.5"}
+  ],
+  "closed_history_policy": "Historical issues already proven fixed by release regressions are not reopened without a new reproducible runtime issue."
+}

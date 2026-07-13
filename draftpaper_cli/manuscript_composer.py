@@ -15,7 +15,7 @@ from .project_state import load_project
 from .section_contracts import validate_section_writing
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .evidence_registry import ensure_registry_consistent
-from .paper_narrative import prepare_section_writing_context
+from .paper_narrative import build_section_outline, prepare_section_writing_context
 from .writing_architecture import (
     build_argument_matrices,
     build_panel_writing_contracts,
@@ -362,13 +362,21 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
     )
     resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json")
     result_manifest = _read_json(state.path / "results" / "result_manifest.yaml")
-    from .evidence_resolver import estimate_tokens, resolve_figure_evidence, resolve_paragraph_evidence
+    from .evidence_resolver import EvidenceResolutionError, estimate_tokens, resolve_figure_evidence, resolve_paragraph_evidence
 
-    paragraph_context = resolve_paragraph_evidence(
-        state.path,
-        normalized,
-        outline=writing_context.get("section_outline") or {},
-    )
+    try:
+        paragraph_context = resolve_paragraph_evidence(
+            state.path,
+            normalized,
+            outline=writing_context.get("section_outline") or {},
+        )
+    except EvidenceResolutionError as exc:
+        if not str(exc).startswith("outline_evidence_gap:"):
+            raise
+        # An outline can predate the latest evidence registry. Rebuild it once
+        # from current IDs; never fill the gap with arbitrary first-N records.
+        refreshed_outline = build_section_outline(state.path, normalized)
+        paragraph_context = resolve_paragraph_evidence(state.path, normalized, outline=refreshed_outline)
     figure_evidence = {}
     if normalized in {"results", "discussion"} and resolved_evidence:
         figure_evidence = resolve_figure_evidence(state.path)

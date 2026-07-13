@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from ..template_registry import discover_template_registry
+from ..plugin_catalog import normalize_execution_contract
+from ..scientific_plugin_runtime import apply_runnable_profile
 from .base import DisciplineModule, DisciplineModuleSpec
 
 
@@ -84,6 +86,8 @@ def _normalized_entry(entry: dict[str, Any]) -> dict[str, Any]:
     manifest.setdefault("runtime_class", entry.get("runtime_class") or "local_optional_dependency")
     manifest.setdefault("validation_level", entry.get("validation_level") or "plan_only")
     manifest.setdefault("runtime_level", entry.get("runtime_level") or "contract_only")
+    execution_kind = {"connector": "data", "method": "method", "review": "review"}.get(kind, "review")
+    manifest.setdefault("execution_contract", normalize_execution_contract(manifest, kind=execution_kind))
     if kind == "connector":
         manifest.setdefault("connector_id", entry.get("plugin_id"))
         manifest.setdefault("display_name", str(manifest.get("connector_id") or "").replace("_", " ").title())
@@ -137,7 +141,7 @@ def _normalized_entry(entry: dict[str, Any]) -> dict[str, Any]:
         manifest.setdefault("repair_priority", ["human_checkpoint"])
         manifest.setdefault("template_path", template_path)
         manifest.setdefault("fixture_paths", fixture_paths)
-    return manifest
+    return apply_runnable_profile(manifest)
 
 
 def discovered_plugin_specs(root: Path | None = None) -> dict[str, dict[str, list[dict[str, Any]]]]:

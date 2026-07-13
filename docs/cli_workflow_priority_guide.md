@@ -1,6 +1,6 @@
 # Draftpaper-loop Workflow Priority Guide
 
-This guide is the planning reference for turning the existing `D:\DraftAI_agent` MVP into a callable, local-first paper-writing workflow. The MVP already contains reusable literature search, Zotero, BibTeX, LaTeX, PDF, prompt, and quality-gate utilities. Before adding new logic in this CLI project, check whether `D:\DraftAI_agent` already has a reusable implementation.
+This guide describes the callable, local-first Draftpaper-loop workflow. The installed Python package and CLI are authoritative; Codex skills, MCP, desktop clients, and future services must project this contract rather than keep a second stage order.
 
 ## Product Direction
 
@@ -11,9 +11,33 @@ Recommended architecture:
 ```text
 Core Python package + CLI
 Codex skills wrapper
+Thin local stdio MCP projection
 Local Web UI wrapper
 Future SaaS/API wrapper
 ```
+
+## v0.25 Control Plane
+
+Install the canonical skill and optional MCP surface from the same wheel:
+
+```powershell
+python -m pip install -e .[mcp]
+draftpaper install-skill --force
+draftpaper skill-doctor
+draftpaper mcp-doctor
+draftpaper mcp-install --output .mcp.json
+```
+
+`CommandSpec` is the single command authority. It defines risk, read/write sets,
+resource class, timeout, idempotency, confirmation policy, and typed schemas.
+The MCP exposes ten high-level tools and never exposes arbitrary shell, raw file
+writes, SQL, Git push, or direct human-checkpoint acceptance.
+
+Long-running literature, plugin rescue, method, figure, regression, and review
+work can use `submit-job`, `job-status`, `job-notifications`, `job-cancel`, and
+`recover-jobs`. Persistent jobs record process, command, scientific, and
+transaction outcomes separately; scientific failure is not retried as an
+infrastructure failure.
 
 ## Priority A/B Foundation: Orchestrator and DraftPaper Passport
 

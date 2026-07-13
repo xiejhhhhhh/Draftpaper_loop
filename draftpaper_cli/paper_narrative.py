@@ -529,11 +529,27 @@ def _paragraph_blueprint(section: str, pack: dict[str, Any]) -> list[dict[str, A
     evidence = [item for item in pack.get("evidence_items") or [] if isinstance(item, dict)]
     paragraphs: list[dict[str, Any]] = []
     if section == "results":
+        if not stories:
+            paragraphs.append({
+                "paragraph_id": "results_finding_1",
+                "objective": "Interpret the approved empirical evidence as a bounded scientific finding.",
+                "required_evidence_ids": [item.get("evidence_id") for item in evidence if item.get("evidence_id")],
+                "figure_or_table_links": [],
+                "forbidden_content": ["literature citation", "filename or path", "claim beyond the stated boundary"],
+            })
         for index, story in enumerate(stories, start=1):
+            matched_ids = [item.get("evidence_id") for item in evidence if item.get("figure_links") and story.get("story_id") in set(item.get("figure_links") or [])]
+            if not matched_ids and evidence:
+                start = (index - 1) * len(evidence) // max(1, len(stories))
+                end = index * len(evidence) // max(1, len(stories))
+                matched_ids = [item.get("evidence_id") for item in evidence[start:end] if item.get("evidence_id")]
+                if not matched_ids:
+                    fallback_item = evidence[min(index - 1, len(evidence) - 1)]
+                    matched_ids = [fallback_item.get("evidence_id")] if fallback_item.get("evidence_id") else []
             paragraphs.append({
                 "paragraph_id": f"results_finding_{index}",
                 "objective": f"Resolve the scientific job '{story.get('narrative_job')}' using the approved empirical evidence.",
-                "required_evidence_ids": [item.get("evidence_id") for item in evidence if item.get("figure_links") and story.get("story_id") in set(item.get("figure_links") or [])],
+                "required_evidence_ids": matched_ids,
                 "figure_or_table_links": list(story.get("main_artifact_ids") or []) + list(story.get("supporting_artifact_ids") or []),
                 "required_claim": story.get("claim") or story.get("scientific_question"),
                 "transition_logic": "Explain how this finding changes the scientific interpretation before moving to the next finding.",
@@ -581,6 +597,7 @@ def build_section_outline(project: str | Path, section: str) -> dict[str, Any]:
         "generated_at": utc_now(),
         "section": normalized,
         "writing_mode": "outline_then_free_prose",
+        "evidence_resolution_mode": "strict",
         "paragraphs": _paragraph_blueprint(normalized, pack),
         "writer_instruction": "Write fluent scientific prose from this outline. Preserve evidence IDs, claim boundaries, and required links, but choose sentence order, terminology, and rhetorical emphasis freely. Do not turn outline labels into manuscript prose.",
     }

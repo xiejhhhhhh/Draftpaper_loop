@@ -343,6 +343,30 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.24.1-v0.25.0（2026-07-13）-- 安全科研运行时、真实可运行插件与薄型 MCP
+
+- 将 canonical `draftpaper-workflow` skill 打入 wheel，并新增 `install-skill` / `skill-doctor`。Agent 不再手写和记忆完整阶段顺序，而是服从 `status`、`verify-next-action` 和 `continue`，避免用户目录中的旧 skill 用过时流程驱动新版 CLI。
+- 将 186 条公开命令升级为 CommandSpec v2：声明风险等级、读写 glob、禁止路径、资源类型、超时、幂等性、确认策略和输入/输出 schema。项目修改命令会核对真实 write set；父目录逃逸、UNC/device path、symlink/reparse 越界、受保护人工动作、任意 shell/raw write、SQL、Git push 和凭证泄露均不会进入 MCP 公共接口。
+- 新增 Plugin Execution Contract v2 和确定性的 `plugin_catalog_snapshot.json`。209 个插件 manifest 均获得显式合同或兼容适配合同；全局 `catalog_hash` 与单插件 contract hash 贯穿充分性、绑定、执行、图表 trace 和学科审阅。contract/fixture-only 以及 mock API/GPU/server 插件仍不能支撑科研结果。
+- 通过显式 runnable profile registry 晋级 22 个高频本地 data/method 能力和 10 条 review rule。每个晋级能力都执行真实确定性算法，并包含 minimal、failure、boundary fixture；review rule 声明适用边界和阈值来源。其余 foundation rule 继续 advisory，外部合同在真实验证前继续 mock-only。
+- research plan 现在显式声明主图 story role；正式写作移除 first-eight evidence fallback，改用 claim/run/cohort/model/figure/citation role 检索。段落证据采用内容寻址缓存和 delta packet；held-out 重复证据回归在保留全部 evidence ID 的同时，将真实段落输入减少至少 35%。
+- 新增 Citation Role Contract v2：`dataset_provenance`、仪器/产品定义、处理方法支持、方法/工具背景、既有结果比较、机制/解释和一般背景。角色在写作前分配，citation audit 在写作后核验，继续坚持“先收紧或改写 claim，不以删参考文献换全绿”。
+- Integrity 优先读取 promoted、run-aware Scientific Evidence Registry 的 cohort 数字；未绑定当前 run 的旧 `sample_composition.csv` 仅作为兼容来源。主图叙事显式保留 direct signal、comparison、mechanism/ablation 和 uncertainty/boundary 位置，诊断图不能占满主图故事。
+- 新增 `workflow_trace.jsonl` 与 `audit-workflow-runtime`，记录 run/command ID、attempt、耗时、输入 hash，以及 process/command/scientific/transaction 四维结果，并诊断循环、重复高成本运行和超大 packet。新增 SQLite 持久任务 `submit-job`、`job-status`、`job-cancel`、`job-notifications`、`recover-jobs`；worker 可跨终端存活，丢失后标记 `orphaned`，不会静默重试科学失败。
+- 新增 10 工具的本地 stdio Draftpaper MCP（`python -m draftpaper_cli.mcp.server`），并提供可移植 `mcp-install` 和确定性 `mcp-doctor`。MCP 只是 CommandSpec 与 CLI handler 的薄投影，支持有上限的 artifact selector，不能直接执行人工 checkpoint 或破坏性管理动作。
+- wheel 内 held-out 发布回归扩展为 astronomy+ML、Euclid 语境 geography+ML、bioinformatics+medicine，以及此前未作为发布夹具的 physics+quantum，并保留 scope、图表、插件 runtime 和 citation 对抗检查。机器可读闭环账本见 [`docs/audits/v025_issue_ledger.json`](docs/audits/v025_issue_ledger.json)；41 条 AcademicForge 集合级 placeholder 继续标记 `requires_source_inspection`，不会进入插件充分性。
+- 最终源码验证为全部 `554` 项测试通过；由于 Windows 合并运行超过桌面命令 12 分钟输出上限，采用两个无重叠分片完成（`278 + 276`）。package compile、隔离安装 v0.25.0 wheel、canonical skill hash、209 插件 catalog、32 个 runnable profile、10 工具 MCP stdio 握手、4 类 held-out 学科回归及全部对抗发布检查均通过。
+
+关键安装与诊断命令：
+
+```powershell
+python -m pip install -e .[mcp]
+draftpaper install-skill --force
+draftpaper skill-doctor
+draftpaper mcp-doctor
+draftpaper mcp-install --output .mcp.json
+```
+
 ### v0.23.1-v0.24.0（2026-07-13）-- 项目隔离、原生恢复与独立单稿审查
 
 - 新增干净的 `_vN` 项目版本化。旧项目始终只读，只按白名单导入可复用资产并记录 hash 与 lineage receipt；passport、stage manifest、插件充分性报告、figure metadata、审计报告和 evidence snapshot 等派生状态不得作为 active evidence 复制到新项目。

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib import import_module
 from typing import Any
 
@@ -20,6 +20,87 @@ class CommandSpec:
     protected_action: bool = False
     manual_only: bool = False
     stale_effects: tuple[str, ...] = ()
+    risk_level: str = ""
+    allowed_read_globs: tuple[str, ...] = ()
+    allowed_write_globs: tuple[str, ...] = ()
+    forbidden_globs: tuple[str, ...] = (
+        "**/.git/**",
+        "**/.env",
+        "**/credentials.json",
+        "**/credentials.yaml",
+        "**/secrets.json",
+        "**/*.pem",
+        "**/*.key",
+        "../**",
+    )
+    resource_class: str = "local_cpu"
+    timeout_seconds: int = 300
+    idempotency: str = "supported"
+    parallel_safe: bool = False
+    confirmation_policy: str = "none"
+    input_schema: dict[str, Any] = field(default_factory=dict)
+    output_schema: dict[str, Any] = field(default_factory=dict)
+    mcp_exposed: bool | None = None
+
+    def __post_init__(self) -> None:
+        risk = self.risk_level or _infer_risk_level(self.name, self.mutates_project, self.protected_action)
+        object.__setattr__(self, "risk_level", risk)
+        if not self.allowed_read_globs:
+            object.__setattr__(self, "allowed_read_globs", ("**/*",))
+        if not self.allowed_write_globs:
+            object.__setattr__(self, "allowed_write_globs", _stage_write_globs(self.formal_stage) if self.mutates_project else ())
+        if self.protected_action and self.confirmation_policy == "none":
+            object.__setattr__(self, "confirmation_policy", "human_only")
+        if not self.input_schema:
+            properties = {attribute: {"type": ["string", "number", "boolean", "array", "null"]} for _, attribute in self.argument_bindings}
+            object.__setattr__(self, "input_schema", {"type": "object", "properties": properties, "additionalProperties": False})
+        if not self.output_schema:
+            object.__setattr__(self, "output_schema", {"type": "object", "required": ["status"], "additionalProperties": True})
+        if self.mcp_exposed is None:
+            object.__setattr__(self, "mcp_exposed", not self.manual_only and risk not in {"human_checkpoint", "destructive_admin"})
+
+
+_COMMON_MANAGED_WRITES = (
+    "project.json",
+    "project.yaml",
+    "project_passport.yaml",
+    "artifact_ledger.jsonl",
+    "checkpoint_ledger.jsonl",
+    "integrity_ledger.jsonl",
+    "transaction_ledger.jsonl",
+    "workflow_trace.jsonl",
+    "token_ledger.jsonl",
+    "*/stage_manifest.json",
+    "stage_manifests/**",
+    "project_system_of_record.json",
+)
+
+
+def _stage_write_globs(stage: str) -> tuple[str, ...]:
+    stage_globs = {
+        "state": ("project.json", "project_lineage.json", "project_version_*.json", "migration/**", "recovery/**", "lineage/**", "observations/**", "data/**", "methods/**"),
+        "references": ("references/**", "research_plan/**", "citation_audit/**", "writing/**"),
+        "data": ("data/**", "writing/**", "research_plan/**", "review/**"),
+        "methods": ("methods/**", "data/**", "code/**", "results/**", "research_plan/**", "review/**", "writing/**", "latex/**", "references/**"),
+        "results": ("results/**", "methods/**", "data/**", "code/**", "review/**", "writing/**", "latex/sections/results.tex"),
+        "writing": ("writing/**", "latex/**", "introduction/**", "discussion/**", "results/**", "data/**", "methods/**", "references/**", "review/**"),
+        "capabilities": ("research_plan/**", "journal_profile/**", "latex/**", "plugins/**", "data/**", "methods/**", "code/**", "results/**", "review/**"),
+        "quality_checks": ("review/**", "quality_checks/**", "integrity/**", "citation_audit/**", "latex/**", "writing/**", "references/**", "methods/**", "results/**", "data/**"),
+        "release": ("review/**", "quality/**", "quality_checks/**", "integrity/**", "citation_audit/**", "latex/**", "references/**", "writing/**"),
+    }
+    return tuple(dict.fromkeys((*stage_globs.get(stage, (f"{stage}/**",)), *_COMMON_MANAGED_WRITES)))
+
+
+def _infer_risk_level(name: str, mutates: bool, protected: bool) -> str:
+    if protected:
+        return "human_checkpoint"
+    if not mutates:
+        return "read"
+    if any(token in name for token in ("search-literature", "zotero", "discover-research-repos", "plugin-rescue")):
+        return "network_external"
+    if any(token in name for token in ("execute-", "generate-analysis-code", "verify-methods", "repair-figure", "compile-latex")):
+        return "execute_science"
+    return "write_project"
 
 
 COMMAND_SPECS = {
@@ -190,6 +271,10 @@ prepare-independent-manuscript-review record-independent-manuscript-review asses
 build-manuscript-source-map preview-manuscript-revision apply-manuscript-revision rollback-manuscript-revision
 set-manuscript-metadata add-custom-reference import-review-findings list-revision-tasks prepare-revision
 preview-revision accept-revision eval
+install-skill skill-doctor
+snapshot-plugin-catalog validate-plugin-contract-diff
+audit-workflow-runtime submit-job job-status job-cancel job-notifications recover-jobs
+mcp-install mcp-doctor
 """.split()
 )
 
@@ -215,12 +300,24 @@ READ_ONLY_COMMANDS = {
     "verify-next-action",
     "rebuild-derived",
     "continue",
+    "skill-doctor",
+    "validate-plugin-contract-diff",
+    "audit-workflow-runtime",
+    "job-status",
+    "job-notifications",
     "review",
     "recover",
+    "mcp-doctor",
 }
 
 
 def _default_coordinator(name: str) -> tuple[str, str]:
+    if any(token in name for token in ("assemble-latex", "compile-latex", "quality-check")):
+        return "release_coordinator", "release"
+    if any(token in name for token in ("diagnose-gate", "revision", "re-review", "review-draft", "readiness")):
+        return "release_coordinator", "quality_checks"
+    if any(token in name for token in ("generate-plan", "journal-template", "research-plan")):
+        return "capability_coordinator", "capabilities"
     if any(token in name for token in ("citation", "reference", "bibliography", "literature", "zotero")):
         return "reference_coordinator", "references"
     if any(token in name for token in ("figure", "result")):
@@ -262,6 +359,18 @@ for _name in sorted(DECLARED_COMMAND_NAMES):
     )
 
 COMMAND_SPECS.update({
+    "install-skill": CommandSpec("install-skill", "state_kernel", False, "state", "skill_sync", "install_skill", (("destination", "destination"), ("force", "force")), risk_level="write_project", allowed_write_globs=(), resource_class="local_cpu", mcp_exposed=False),
+    "skill-doctor": CommandSpec("skill-doctor", "state_kernel", False, "state", "skill_sync", "skill_doctor", (("destination", "destination"),)),
+    "snapshot-plugin-catalog": CommandSpec("snapshot-plugin-catalog", "capability_coordinator", True, "capabilities", "plugin_catalog", "write_plugin_catalog_snapshot", (("project", "project"),)),
+    "validate-plugin-contract-diff": CommandSpec("validate-plugin-contract-diff", "capability_coordinator", False, "capabilities", "plugin_catalog", "validate_plugin_contract_diff", (("project", "project"),), "status_passed"),
+    "audit-workflow-runtime": CommandSpec("audit-workflow-runtime", "state_kernel", False, "state", "workflow_trace", "audit_workflow_runtime", (("project", "project"),)),
+    "submit-job": CommandSpec("submit-job", "state_kernel", True, "state", "jobs", "submit_job", (("project", "project"), ("job_command", "job_command"), ("arguments_json", "arguments_json"), ("idempotency_key", "idempotency_key"), ("timeout_seconds", "timeout_seconds")), risk_level="execute_science", allowed_write_globs=(".draftpaper/**", "transaction_ledger.jsonl", "workflow_trace.jsonl", "project_passport.yaml", "artifact_ledger.jsonl")),
+    "job-status": CommandSpec("job-status", "state_kernel", False, "state", "jobs", "job_status", (("project", "project"), ("job_id", "job_id"))),
+    "job-cancel": CommandSpec("job-cancel", "state_kernel", True, "state", "jobs", "job_cancel", (("project", "project"), ("job_id", "job_id")), risk_level="human_checkpoint", allowed_write_globs=(".draftpaper/**", "transaction_ledger.jsonl", "workflow_trace.jsonl", "project_passport.yaml", "artifact_ledger.jsonl"), protected_action=True, manual_only=True),
+    "job-notifications": CommandSpec("job-notifications", "state_kernel", False, "state", "jobs", "job_notifications", (("project", "project"), ("job_id", "job_id"))),
+    "recover-jobs": CommandSpec("recover-jobs", "state_kernel", True, "state", "jobs", "recover_jobs", (("project", "project"),), allowed_write_globs=(".draftpaper/**", "transaction_ledger.jsonl", "workflow_trace.jsonl", "project_passport.yaml", "artifact_ledger.jsonl")),
+    "mcp-install": CommandSpec("mcp-install", "state_kernel", False, "state", "mcp_install", "mcp_install", (("output", "output"),), risk_level="write_project", mcp_exposed=False),
+    "mcp-doctor": CommandSpec("mcp-doctor", "state_kernel", False, "state", "mcp_install", "mcp_doctor"),
     "doctor": CommandSpec("doctor", "state_kernel", False, "state", "doctor", "doctor_project", (("project", "project"),)),
     "verify-next-action": CommandSpec("verify-next-action", "state_kernel", False, "state", "doctor", "verify_next_action", (("project", "project"),), "status_passed"),
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),

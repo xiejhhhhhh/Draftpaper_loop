@@ -187,6 +187,40 @@ def _record_excerpt(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _retrieval_terms(paragraph: dict[str, Any]) -> set[str]:
+    values: list[Any] = [
+        paragraph.get("objective"),
+        paragraph.get("claim"),
+        paragraph.get("claim_id"),
+        paragraph.get("citation_role"),
+        *(paragraph.get("claim_ids") or []),
+        *(paragraph.get("evidence_roles") or []),
+        *(paragraph.get("figure_or_table_links") or paragraph.get("figure_or_formula_links") or []),
+        *(paragraph.get("model_ids") or []),
+        *(paragraph.get("cohort_ids") or []),
+    ]
+    return {token.lower() for token in re.findall(r"[A-Za-z0-9_]{3,}", " ".join(str(value or "") for value in values))}
+
+
+def _retrieve_records(paragraph: dict[str, Any], records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    terms = _retrieval_terms(paragraph)
+    if not terms:
+        return []
+    scored = []
+    for record in records:
+        fields = " ".join(str(record.get(key) or "") for key in (
+            "evidence_id", "entity_role", "claim_boundary", "allowed_interpretation", "run_id",
+            "cohort_id", "sample_unit", "split", "model_id", "citation_role", "citation_key",
+        ))
+        fields += " " + " ".join(str(item) for key in ("figure_ids", "formula_ids", "target_sections") for item in record.get(key) or [])
+        record_terms = {token.lower() for token in re.findall(r"[A-Za-z0-9_]{3,}", fields)}
+        overlap = len(terms & record_terms)
+        if overlap:
+            scored.append((overlap, str(record.get("evidence_id") or ""), record))
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return [item[2] for item in scored[:8]]
+
+
 def resolve_paragraph_evidence(
     project: str | Path,
     section: str,
@@ -205,6 +239,7 @@ def resolve_paragraph_evidence(
         if not item.get("target_sections") or normalized in {str(value).lower() for value in item.get("target_sections") or []}
     ]
     outline_payload = outline or _read(state.path / "writing" / "section_outlines" / f"{normalized}.json")
+    strict_resolution = bool(outline_payload.get("formal_evidence_required") or outline_payload.get("evidence_resolution_mode") == "strict")
     paragraphs = [item for item in outline_payload.get("paragraphs") or [] if isinstance(item, dict)]
     if not paragraphs:
         paragraphs = [{"paragraph_id": f"{normalized}_1", "objective": f"Compose the {normalized} section."}]
@@ -212,18 +247,41 @@ def resolve_paragraph_evidence(
     section_budget = SECTION_TOKEN_BUDGETS[normalized]
     base_slice_budget = max(1000, section_budget // len(paragraphs))
     slices = []
+    shared_records: dict[str, dict[str, Any]] = {}
+    previous_index = _read(state.path / SECTION_CONTEXT_INDEX)
+    previous_slices = {
+        str(item.get("paragraph_id")): item
+        for item in ((previous_index.get("sections") or {}).get(normalized) or {}).get("slices") or []
+    }
     for paragraph in paragraphs:
         requested = [str(item) for item in paragraph.get("required_evidence_ids") or [] if str(item)]
         selected = [record_index[item] for item in requested if item in record_index]
         if not selected:
-            selected = section_records[: min(8, len(section_records))]
+            selected = _retrieve_records(paragraph, section_records)
+        if not selected and section_records and strict_resolution:
+            raise EvidenceResolutionError(
+                f"outline_evidence_gap:{paragraph.get('paragraph_id') or normalized}. "
+                "Declare required_evidence_ids or a claim/run/cohort/figure/citation-role retrieval query; formal writing does not use first-N fallback evidence."
+            )
+        if not selected and section_records:
+            selected = list(section_records)
         compact = [_record_excerpt(item) for item in selected]
+        new_compact = []
+        shared_refs = []
+        for item in compact:
+            evidence_id = str(item.get("evidence_id") or "")
+            digest = hashlib.sha256(json.dumps(item, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+            shared_refs.append({"evidence_id": evidence_id, "content_hash": digest})
+            if digest not in shared_records:
+                shared_records[digest] = item
+                new_compact.append(item)
         slice_payload = {
             "schema_version": "dpl.paragraph_evidence_slice.v1",
             "section": normalized,
             "paragraph_id": paragraph.get("paragraph_id"),
             "objective": paragraph.get("objective"),
-            "selected_evidence": compact,
+            "selected_evidence": new_compact,
+            "selected_evidence_refs": shared_refs,
             "bound_numbers": [
                 {key: item.get(key) for key in ("evidence_id", "value", "unit")}
                 for item in compact
@@ -255,6 +313,10 @@ def resolve_paragraph_evidence(
             "token_budget": base_slice_budget,
         }
         slice_payload["estimated_tokens"] = estimate_tokens(slice_payload)
+        naive_payload = dict(slice_payload)
+        naive_payload["selected_evidence"] = compact
+        naive_payload.pop("selected_evidence_refs", None)
+        slice_payload["naive_estimated_tokens"] = estimate_tokens(naive_payload)
         if slice_payload["estimated_tokens"] > base_slice_budget:
             slice_payload["omitted_candidates"] = []
             slice_payload["estimated_tokens"] = estimate_tokens(slice_payload)
@@ -264,10 +326,15 @@ def resolve_paragraph_evidence(
                 "Split the scientific finding into narrower claim-bound paragraph jobs instead of dropping bound evidence."
             )
         slice_payload["token_budget"] = max(base_slice_budget, slice_payload["estimated_tokens"])
+        content_hash = hashlib.sha256(json.dumps(slice_payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+        slice_payload["content_hash"] = content_hash
+        old = previous_slices.get(str(slice_payload["paragraph_id"])) or {}
+        slice_payload["delta_status"] = "unchanged" if old.get("content_hash") == content_hash else "changed"
         relative = f"{PARAGRAPH_SLICE_ROOT}/{normalized}/{slice_payload['paragraph_id']}.json"
         _write(state.path / relative, slice_payload)
-        slices.append({"paragraph_id": slice_payload["paragraph_id"], "path": relative, "estimated_tokens": slice_payload["estimated_tokens"], "evidence_ids": [item.get("evidence_id") for item in compact]})
+        slices.append({"paragraph_id": slice_payload["paragraph_id"], "path": relative, "estimated_tokens": slice_payload["estimated_tokens"], "naive_estimated_tokens": slice_payload["naive_estimated_tokens"], "content_hash": content_hash, "delta_status": slice_payload["delta_status"], "evidence_ids": [item.get("evidence_id") for item in compact]})
     total = sum(int(item["estimated_tokens"]) for item in slices)
+    naive_total = sum(int(item["naive_estimated_tokens"]) for item in slices)
     if total > section_budget:
         raise EvidenceResolutionError(
             f"Required evidence for {normalized} needs {total} estimated tokens, above the hard section budget "
@@ -279,11 +346,20 @@ def resolve_paragraph_evidence(
     sections[normalized] = {
         "budget": section_budget,
         "estimated_tokens": total,
+        "naive_estimated_tokens": naive_total,
+        "token_reduction_fraction": round((naive_total - total) / naive_total, 4) if naive_total else 0.0,
+        "delta_paragraph_ids": [item["paragraph_id"] for item in slices if item.get("delta_status") == "changed"],
         "within_budget": total <= section_budget,
         "allowed_evidence_ids": sorted(record_index),
         "slices": slices,
         "source_registry_hash": hashlib.sha256((state.path / "writing" / "scientific_evidence_registry.json").read_bytes()).hexdigest() if (state.path / "writing" / "scientific_evidence_registry.json").is_file() else None,
+        "shared_evidence_store": f"writing/evidence_content_store/{normalized}.json",
     }
+    _write(state.path / "writing" / "evidence_content_store" / f"{normalized}.json", {
+        "schema_version": "dpl.evidence_content_store.v1",
+        "section": normalized,
+        "records": shared_records,
+    })
     index = {
         "schema_version": "dpl.section_context_index.v1",
         "generated_at": utc_now(),

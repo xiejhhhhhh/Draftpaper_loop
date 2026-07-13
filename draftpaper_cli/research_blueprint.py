@@ -324,11 +324,20 @@ def _storyboard_figures(
             ["evidence_synthesis"],
         ]
     figures = []
+    story_roles = [
+        "study_boundary",
+        "direct_scientific_signal",
+        "direct_scientific_signal",
+        "primary_comparison",
+        "mechanism_or_ablation",
+        "uncertainty_or_claim_boundary",
+    ]
     for index, title in enumerate(titles, start=1):
         claim = claims[min(index - 1, len(claims) - 1)]
         figures.append({
             "figure_id": f"fig_{index}_{re.sub(r'[^a-z0-9]+', '_', title.lower()).strip('_')[:28]}",
             "proposed_title": title,
+            "story_role": story_roles[index - 1],
             "research_question": claim["research_question"],
             "expected_finding": claim["expected_finding"],
             "scientific_claim_boundary": "Interpret this figure only within the verified data, method, and validation limits declared in the research blueprint.",

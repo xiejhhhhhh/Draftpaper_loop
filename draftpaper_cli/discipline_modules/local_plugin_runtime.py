@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..scientific_plugin_runtime import execute_runnable_fixture, evaluate_runnable_review, runnable_profile
+
 
 def dependency_report(packages: list[str], package_modules: list[str]) -> dict[str, Any]:
     modules = list(package_modules) or list(packages)
@@ -52,6 +54,9 @@ def run_local_plugin_fixture(
     fixture_path: str | Path | None = None,
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    plugin_id = str(manifest.get("template_id") or manifest.get("connector_id") or manifest.get("rule_id") or "")
+    if runnable_profile(plugin_id):
+        return execute_runnable_fixture(plugin_id, output_dir, fixture_path=fixture_path)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     plan = build_local_plugin_plan(manifest, context)
@@ -68,6 +73,9 @@ def run_local_plugin_fixture(
 
 def evaluate_local_review_rule(manifest: dict[str, Any], evidence: dict[str, Any] | None = None) -> dict[str, Any]:
     evidence = evidence or {}
+    plugin_id = str(manifest.get("rule_id") or manifest.get("rule_group_id") or "")
+    if runnable_profile(plugin_id):
+        return evaluate_runnable_review(plugin_id, evidence)
     required = list(manifest.get("minimum_evidence_required") or manifest.get("evidence_roles") or [])
     present = {str(item) for item in evidence.get("roles") or evidence.get("evidence_roles") or []}
     missing = [role for role in required if role not in present]

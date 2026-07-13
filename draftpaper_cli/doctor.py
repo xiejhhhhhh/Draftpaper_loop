@@ -17,6 +17,7 @@ from .orchestrator import status_project
 from .passport import read_jsonl
 from .project_state import load_project
 from .project_system_of_record import inspect_project_system_of_record
+from .skill_sync import skill_doctor
 
 
 MANUSCRIPT_TOKEN_BUDGET = 73_343
@@ -194,6 +195,7 @@ def _runtime_source_diagnostics(
 
 def doctor_project(project: str | Path | None = None) -> dict[str, Any]:
     environment = _environment()
+    environment["workflow_skill"] = skill_doctor()
     findings: list[dict[str, Any]] = []
     runtime_source = environment["runtime_source"]
     if runtime_source.get("source_checkout_mismatch"):
@@ -208,6 +210,15 @@ def doctor_project(project: str | Path | None = None) -> dict[str, Any]:
         ))
     if environment["optional_modules"].get("bibtexparser") is False:
         findings.append(_finding("environment", "error", "bibtexparser is unavailable", "Structured bibliography validation cannot run.", next_command="python -m pip install bibtexparser>=1.4"))
+    if project is None and environment["workflow_skill"].get("status") != "passed":
+        findings.append(_finding(
+            "workflow_skill_mismatch",
+            "warning",
+            "The installed Draftpaper workflow skill does not match the canonical package resource.",
+            "Codex may recommend a stale stage order even when the current CLI is correct.",
+            artifacts=[str(environment["workflow_skill"].get("installed_path") or "")],
+            next_command=str(environment["workflow_skill"].get("next_command") or "draftpaper install-skill --force"),
+        ))
     if project is None:
         return {
             "schema_version": "dpl.doctor.v1",

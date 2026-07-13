@@ -25,6 +25,7 @@ from .capability_packs import discover_capability_packs, route_capability_requir
 from .html_utils import write_html_report
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .plugin_catalog import build_plugin_catalog_snapshot
 from .passport import read_jsonl
 from .plugin_runtime import RUNTIME_LEVELS, resolve_effective_runtime_level
 
@@ -505,6 +506,12 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "discipline_modules": discipline_contract.get("discipline_modules") or [],
     }
     catalog = _catalog(profile)
+    catalog_snapshot = build_plugin_catalog_snapshot()
+    catalog_by_plugin = {
+        str(item.get("plugin_id")): item
+        for item in catalog_snapshot.get("entries") or []
+        if item.get("plugin_id")
+    }
     assessments = [_assess_requirement(state.path, item, catalog, profile) for item in _as_list(contract.get("requirements"))]
     core = [item for item in assessments if item.get("core") and item.get("kind") in {"data", "method"}]
     execution_pending = [item for item in core if item.get("state") == "execution_required"]
@@ -549,6 +556,8 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "validation_level": item.get("validation_level"),
         "runtime_level": item.get("runtime_level"),
         "capability_pack_id": item.get("capability_pack_id"),
+        "plugin_contract_hash": (catalog_by_plugin.get(str(item.get("matched_plugin_id"))) or {}).get("plugin_contract_hash"),
+        "catalog_hash": catalog_snapshot.get("catalog_hash"),
     } for item in assessments if item.get("state") in {"covered", "execution_required"} and item.get("matched_plugin_id")]
     decision = (
         "rescue_required"
@@ -564,6 +573,7 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "research_capability_contract_sha256": hashlib.sha256((state.path / CAPABILITY_CONTRACT).read_bytes()).hexdigest(),
+        "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"),
         "decision": decision,
         "core_figure_decision": decision,
         "requirement_assessments": assessments,
@@ -575,9 +585,10 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "rescue_tasks": rescue_tasks,
         "policy": "Contract-only, mock, plan, and fixture-only plugins cannot satisfy core figures. Missing methods first enter auditable project-local implementation; only exhausted project-local, registry, AcademicForge, and GitHub rescue may produce a scientific block.",
     }
-    binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "bindings": bindings}
+    binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"), "bindings": bindings}
     gap_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "gaps": rescue_tasks, "requires_human_confirmation": bool(rescue_tasks)}
     _write_json(state.path / SUFFICIENCY_REPORT, report)
+    _write_json(state.path / "research_plan" / "plugin_catalog_snapshot.json", catalog_snapshot)
     _write_json(state.path / BINDING_PLAN, binding_plan)
     _write_json(state.path / GAP_PLAN, gap_plan)
     write_html_report(state.path / SUFFICIENCY_HTML, _render_sufficiency(report), title="Plugin Sufficiency Report")
