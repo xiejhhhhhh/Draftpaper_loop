@@ -9,6 +9,7 @@ from draftpaper_cli.discipline_modules import get_discipline_module
 from draftpaper_cli.discipline_modules.registry import list_discipline_modules
 from draftpaper_cli.plugin_catalog import build_plugin_catalog_snapshot, normalize_execution_contract, validate_execution_contract
 from draftpaper_cli.scientific_plugin_runtime import execute_runnable_fixture, runnable_profiles
+from tools.verify_wheel_install import EXPECTED_RELEASE_FIXTURE_IDS, _release_regressions_passed
 
 
 def test_all_plugins_have_deterministic_valid_execution_contracts() -> None:
@@ -62,3 +63,21 @@ def test_runnable_review_profiles_enter_composite_runtime_with_threshold_sources
         if rule.get("maturity") == "runnable"
     }
     assert 8 <= len(runnable_rules) <= 12
+
+
+def test_wheel_verifier_requires_exact_v025_release_fixture_contract() -> None:
+    report = {
+        "release_regressions": {
+            "status": "passed",
+            "domain_fixture_ids": list(EXPECTED_RELEASE_FIXTURE_IDS),
+            "adversarial_checks": {"wrong_run_rejected": True},
+        }
+    }
+    assert _release_regressions_passed(report)
+
+    report["release_regressions"]["domain_fixture_ids"] = list(EXPECTED_RELEASE_FIXTURE_IDS[:-1])
+    assert not _release_regressions_passed(report)
+
+    report["release_regressions"]["domain_fixture_ids"] = list(EXPECTED_RELEASE_FIXTURE_IDS)
+    report["release_regressions"]["adversarial_checks"] = {}
+    assert not _release_regressions_passed(report)

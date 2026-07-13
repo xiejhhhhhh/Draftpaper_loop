@@ -17,6 +17,12 @@ SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
 SOURCE_CAPABILITY_PACK_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "capability_packs"
 EXPECTED_ENTRY_COUNT = 209
 EXPECTED_FIXTURE_COUNT = 545
+EXPECTED_RELEASE_FIXTURE_IDS = (
+    "geography_ml",
+    "astronomy_ml",
+    "bioinformatics_medicine",
+    "physics_quantum",
+)
 
 
 def _resource_counts(root: Path) -> dict[str, int]:
@@ -47,6 +53,18 @@ def _source_registry_summary() -> dict[str, object]:
         "third_party_provenance_status": "passed",
         "third_party_source_count": len(json.loads((REPOSITORY_ROOT / "third_party" / "registry.json").read_text(encoding="utf-8"))["sources"]),
     }
+
+
+def _release_regressions_passed(report: dict[str, object]) -> bool:
+    release = report.get("release_regressions") or {}
+    fixture_ids = tuple(release.get("domain_fixture_ids") or ())
+    adversarial_checks = release.get("adversarial_checks") or {}
+    return (
+        release.get("status") == "passed"
+        and fixture_ids == EXPECTED_RELEASE_FIXTURE_IDS
+        and bool(adversarial_checks)
+        and all(adversarial_checks.values())
+    )
 
 
 def main() -> int:
@@ -136,11 +154,7 @@ print(json.dumps({
         },
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    release_passed = (
-        report["release_regressions"]["status"] == "passed"
-        and len(report["release_regressions"]["domain_fixture_ids"]) == 3
-        and all(report["release_regressions"]["adversarial_checks"].values())
-    )
+    release_passed = _release_regressions_passed(report)
     return 0 if report["matched"] and release_passed else 1
 
 

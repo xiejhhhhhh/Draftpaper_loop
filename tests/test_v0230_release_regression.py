@@ -3,7 +3,7 @@ from __future__ import annotations
 from draftpaper_cli.release_regression import FIXTURE_NAMES, run_release_regressions
 
 
-def test_v0230_three_domain_and_adversarial_release_regressions(tmp_path) -> None:
+def test_v025_four_domain_and_adversarial_release_regressions(tmp_path) -> None:
     report = run_release_regressions(tmp_path)
 
     assert report["status"] == "passed"

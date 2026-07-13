@@ -355,7 +355,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 `workflow_trace.jsonl` 与 `audit-workflow-runtime`，记录 run/command ID、attempt、耗时、输入 hash，以及 process/command/scientific/transaction 四维结果，并诊断循环、重复高成本运行和超大 packet。新增 SQLite 持久任务 `submit-job`、`job-status`、`job-cancel`、`job-notifications`、`recover-jobs`；worker 可跨终端存活，丢失后标记 `orphaned`，不会静默重试科学失败。
 - 新增 10 工具的本地 stdio Draftpaper MCP（`python -m draftpaper_cli.mcp.server`），并提供可移植 `mcp-install` 和确定性 `mcp-doctor`。MCP 只是 CommandSpec 与 CLI handler 的薄投影，支持有上限的 artifact selector，不能直接执行人工 checkpoint 或破坏性管理动作。
 - wheel 内 held-out 发布回归扩展为 astronomy+ML、Euclid 语境 geography+ML、bioinformatics+medicine，以及此前未作为发布夹具的 physics+quantum，并保留 scope、图表、插件 runtime 和 citation 对抗检查。机器可读闭环账本见 [`docs/audits/v025_issue_ledger.json`](docs/audits/v025_issue_ledger.json)；41 条 AcademicForge 集合级 placeholder 继续标记 `requires_source_inspection`，不会进入插件充分性。
-- 最终源码验证为全部 `554` 项测试通过；由于 Windows 合并运行超过桌面命令 12 分钟输出上限，采用两个无重叠分片完成（`278 + 276`）。package compile、隔离安装 v0.25.0 wheel、canonical skill hash、209 插件 catalog、32 个 runnable profile、10 工具 MCP stdio 握手、4 类 held-out 学科回归及全部对抗发布检查均通过。
+- 最终源码验证为全部 `555` 项测试通过，其中包含明确的四领域 wheel 验证器合同回归。package compile、隔离安装 v0.25.0 wheel、canonical skill hash、209 插件 catalog、32 个 runnable profile、10 工具 MCP stdio 握手、4 类 held-out 学科回归及全部对抗发布检查均通过。
 
 关键安装与诊断命令：
 
