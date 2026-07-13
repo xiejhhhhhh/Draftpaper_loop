@@ -159,6 +159,21 @@ COMMAND_SPECS = {
             "inspect_project_system_of_record",
             (("project", "project"),),
         ),
+        CommandSpec("path-budget-check", "state_kernel", False, "state", "workspace_policy", "assess_path_budget", (("project_path", "project"),), "status_passed"),
+        CommandSpec("doctor-project-layout", "state_kernel", False, "state", "workspace_policy", "doctor_project_layout", (("project", "project"),)),
+        CommandSpec("adopt-orphan-artifacts", "state_kernel", False, "state", "workspace_policy", "adopt_orphan_artifacts", (("project", "project"),)),
+        CommandSpec("apply-orphan-adoption", "state_kernel", True, "state", "workspace_policy", "apply_orphan_adoption", (("project", "project"),), protected_action=True, manual_only=True, allowed_write_globs=("citation_audit/**", "discussion/**", "quality_checks/**", "review/**", ".draftpaper/**")),
+        CommandSpec("build-statistical-validation-contract", "capability_coordinator", True, "capabilities", "statistical_validation", "build_statistical_validation_contract", (("project", "project"),)),
+        CommandSpec("assess-review-rule-coverage", "capability_coordinator", True, "capabilities", "statistical_validation", "assess_review_rule_coverage", (("project", "project"),)),
+        CommandSpec("assess-pre-execution-support", "capability_coordinator", True, "capabilities", "pre_execution_support", "assess_pre_execution_support", (("project", "project"),)),
+        CommandSpec("prepare-pre-execution-rescue", "capability_coordinator", True, "capabilities", "pre_execution_support", "prepare_pre_execution_rescue", (("project", "project"),)),
+        CommandSpec("review-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "review_research_plan", (("project", "project"),)),
+        CommandSpec("confirm-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "confirm_research_plan", (("project", "project"), ("plan_hash", "plan_hash"), ("accept_limitations", "accept_limitations")), protected_action=True, manual_only=True),
+        CommandSpec("reopen-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "reopen_research_plan", (("project", "project"), ("reason", "reason")), protected_action=True, manual_only=True),
+        CommandSpec("validate-confirmed-figure-alignment", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_confirmed_figure_alignment", (("project", "project"),), "decision_pass"),
+        CommandSpec("validate-figure-captions", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_figure_captions", (("project", "project"),), "decision_pass"),
+        CommandSpec("review-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "review_final_manuscript", (("project", "project"),)),
+        CommandSpec("confirm-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "confirm_final_manuscript", (("project", "project"), ("release_hash", "release_hash")), protected_action=True, manual_only=True),
         CommandSpec(
             "prepare-project-method-implementation",
             "capability_coordinator",
@@ -242,6 +257,12 @@ build-data-context build-method-context build-panel-contracts build-paper-narrat
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
 compile-skill-source create-project create-project-version detect-artifact-drift diagnose-figure-execution
+path-budget-check doctor-project-layout adopt-orphan-artifacts
+apply-orphan-adoption
+build-statistical-validation-contract assess-review-rule-coverage assess-pre-execution-support prepare-pre-execution-rescue
+review-research-plan confirm-research-plan reopen-research-plan
+validate-confirmed-figure-alignment validate-figure-captions
+review-final-manuscript confirm-final-manuscript
 diagnose-gate-failures discover-research-repos discover-review-workflow-gaps evaluate-capability-routing
 execute-data-plugins execute-method-plugins extract-method-formulas extract-plugin-candidates
 extract-review-rule-signals extract-skill-capabilities generalize-plugin-candidate generate-analysis-code
@@ -281,6 +302,9 @@ mcp-install mcp-doctor
 
 READ_ONLY_COMMANDS = {
     "detect-artifact-drift",
+    "path-budget-check",
+    "doctor-project-layout",
+    "adopt-orphan-artifacts",
     "doctor",
     "evaluate-capability-routing",
     "inspect-project-migration",

@@ -38,6 +38,11 @@ RESEARCH_PLAN_OUTPUTS = [
     "research_plan/method_plan.json",
     "research_plan/discipline_contract.json",
     "research_plan/research_capability_contract.json",
+    "research_plan/statistical_validation_contract.json",
+    "research_plan/statistical_validation_contract.md",
+    "research_plan/review_rule_coverage_report.json",
+    "research_plan/review_rule_coverage_report.html",
+    "research_plan/research_plan_confirmation_required.json",
     "research_plan/target_journal_anchor_papers.json",
     "research_plan/novelty_overlap_report.json",
     "research_plan/novelty_overlap_report.md",
@@ -729,6 +734,13 @@ def _set_research_plan_manifest(project_path: Path) -> None:
 def generate_research_plan(project: str | Path, *, allow_high_similarity: bool = False) -> dict[str, Any]:
     """Generate a formal research plan from retrieved literature and citation evidence."""
     state = load_project(project)
+    from .research_plan_confirmation import confirmation_state
+
+    confirmation = confirmation_state(state.path)
+    if confirmation.get("required") and confirmation.get("current"):
+        raise ResearchPlanQualityError(
+            "The research blueprint is already human-confirmed. Run reopen-research-plan before changing its scientific contract."
+        )
     try:
         validate_journal_profile_for_writing(state.path)
     except JournalProfileError as exc:
@@ -762,6 +774,11 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     _write_json(research_plan_dir / "claim_contract.json", claim_contract)
     _write_json(research_plan_dir / "figure_storyboard.json", blueprint["figure_storyboard"])
     _write_json(research_plan_dir / "method_plan.json", blueprint["method_plan"])
+    from .statistical_validation import bind_statistical_validations_to_storyboard, build_statistical_validation_contract, statistical_plan_summary
+
+    build_statistical_validation_contract(state.path, blueprint=blueprint)
+    bind_statistical_validations_to_storyboard(state.path)
+    blueprint = json.loads((research_plan_dir / "research_blueprint.json").read_text(encoding="utf-8"))
     for obsolete_name in ["research_plan.html", "research_questions.md", "research_questions.html"]:
         obsolete_path = research_plan_dir / obsolete_name
         if obsolete_path.exists():
@@ -777,6 +794,8 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     )
     plan_text_cn = _render_research_plan_cn(state.metadata, blueprint)
     _assert_cn_plan_quality(plan_text_cn)
+    plan_text = plan_text.rstrip() + "\n\n" + statistical_plan_summary(state.path, language="en")
+    plan_text_cn = plan_text_cn.rstrip() + "\n\n" + statistical_plan_summary(state.path, language="zh-CN")
     (research_plan_dir / "research_plan.md").write_text(plan_text, encoding="utf-8")
     (research_plan_dir / "research_plan.zh-CN.md").write_text(plan_text_cn, encoding="utf-8")
 
@@ -786,6 +805,11 @@ def generate_research_plan(project: str | Path, *, allow_high_similarity: bool =
     from .research_capabilities import resolve_research_capabilities
 
     capability_contract = resolve_research_capabilities(state.path)
+    from .statistical_validation import assess_review_rule_coverage
+    from .research_plan_confirmation import mark_research_plan_confirmation_required
+
+    assess_review_rule_coverage(state.path)
+    mark_research_plan_confirmation_required(state.path)
 
     update_stage_status(state.path, "research_plan", "draft")
     _set_research_plan_manifest(state.path)

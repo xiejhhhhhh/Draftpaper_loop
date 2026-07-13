@@ -228,10 +228,13 @@ def _snapshot_id(project_path: Path) -> str | None:
     return None
 
 
-def _next_version_target(source: Path, version: str, destination_root: Path) -> Path:
+def _next_version_target(source: Path, version: str, destination_root: Path, *, idea: str = "", field: str = "") -> Path:
     if not VERSION_PATTERN.fullmatch(version):
         raise ProjectVersioningError("Version label must use v<number>, for example v1.")
-    return destination_root / f"{source.name}_{version}"
+    from .workspace_policy import short_project_slug
+
+    base = short_project_slug(idea or source.name, field or "interdisciplinary research")
+    return destination_root / f"{base}_{version}"
 
 
 def plan_project_version(
@@ -246,7 +249,13 @@ def plan_project_version(
     state = load_project(project)
     source = state.path
     destination = Path(destination_root).expanduser().resolve() if destination_root else source.parent
-    target = _next_version_target(source, version, destination)
+    target = _next_version_target(
+        source,
+        version,
+        destination,
+        idea=str(state.metadata.get("idea") or state.metadata.get("title") or source.name),
+        field=str(state.metadata.get("field") or "interdisciplinary research"),
+    )
     source_json = source / "project.json"
 
     assets: list[dict[str, Any]] = []

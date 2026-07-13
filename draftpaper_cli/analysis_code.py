@@ -884,6 +884,18 @@ def generate_analysis_code(
 ) -> dict[str, Any]:
     """Generate project-local analysis code from the current project-specific figure plan."""
     state = load_project(project)
+    from .workspace_policy import WorkspacePolicyError, require_path_budget
+
+    try:
+        path_budget = require_path_budget(state.path)
+    except WorkspacePolicyError as exc:
+        raise AnalysisCodeGenerationError(str(exc)) from exc
+    from .research_plan_confirmation import ResearchPlanConfirmationError, require_confirmed_research_blueprint
+
+    try:
+        confirmed_blueprint = require_confirmed_research_blueprint(state.path)
+    except ResearchPlanConfirmationError as exc:
+        raise AnalysisCodeGenerationError(str(exc)) from exc
     if (state.path / "results" / "promoted_evidence_snapshot.json").exists():
         raise AnalysisCodeGenerationError(
             "Analysis code cannot overwrite promoted core evidence. Reopen the core-evidence checkpoint "
@@ -903,6 +915,15 @@ def generate_analysis_code(
         figure_plan = validate_figure_plan_for_codegen(state.path)
 
     figure_contract_gate = _validate_figure_contract_gate(state.path)
+    from .figure_contracts_v026 import ConfirmedFigureContractError, validate_confirmed_figure_alignment, validate_figure_captions
+
+    try:
+        confirmed_alignment = validate_confirmed_figure_alignment(state.path)
+    except ConfirmedFigureContractError as exc:
+        raise AnalysisCodeGenerationError(str(exc)) from exc
+    caption_validation = validate_figure_captions(state.path)
+    if confirmed_blueprint and caption_validation.get("decision") != "pass":
+        raise AnalysisCodeGenerationError("Figure caption contracts require repair before key-figure code generation.")
     figure_plugin_trace = _validate_plugin_trace_for_codegen(state.path)
 
     inventory = _read_json(state.path / "data" / "data_inventory.json", {})
@@ -974,7 +995,11 @@ def generate_analysis_code(
         "method_code_plan": method_blueprint.get("method_code_plan") if isinstance(method_blueprint, dict) else {},
         "method_formula_plan": method_blueprint.get("method_formula_plan") if isinstance(method_blueprint, dict) else {},
         "figure_plan": figure_plan,
+        "path_budget": path_budget,
         "figure_contract_gate": figure_contract_gate,
+        "confirmed_plan_hash": confirmed_blueprint.get("confirmed_plan_hash") if confirmed_blueprint else None,
+        "confirmed_figure_alignment": confirmed_alignment,
+        "figure_caption_validation": caption_validation,
         "figure_plugin_trace": figure_plugin_trace,
         "plotting_requirements": plotting_requirements,
         "review_task_coverage": review_task_coverage,

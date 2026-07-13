@@ -25,7 +25,8 @@ class ProjectStateTests(unittest.TestCase):
             state = load_project(created.path)
 
             self.assertEqual(state.path, created.path)
-            self.assertEqual(state.metadata["project_id"], "reusable-stage-model")
+            self.assertEqual(state.metadata["project_id"], created.project_id)
+            self.assertRegex(state.metadata["project_id"], r"^[0-9a-f]{8}$")
             self.assertEqual(state.stage_names[0], "idea")
             self.assertIn("results", state.stage_names)
 

@@ -706,6 +706,12 @@ def _ensure_local_bibstyle_fallback(latex_dir: Path, tex_file: Path) -> dict[str
 def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dict[str, Any]:
     """Compile latex/main.tex into latex/main.pdf when a local LaTeX engine is available."""
     state = load_project(project)
+    from .workspace_policy import WorkspacePolicyError, require_path_budget
+
+    try:
+        require_path_budget(state.path)
+    except WorkspacePolicyError as exc:
+        raise LatexAssemblyError(str(exc)) from exc
     tex_file = state.path / "latex" / "main.tex"
     bib_file = state.path / "latex" / "library.bib"
     log_file = state.path / "latex" / "main.compile.log"
@@ -864,6 +870,12 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
 def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[str, Any]:
     """Assemble staged manuscript sections into latex/main.tex and latex/library.bib."""
     state = load_project(project)
+    from .workspace_policy import WorkspacePolicyError, require_path_budget
+
+    try:
+        require_path_budget(state.path)
+    except WorkspacePolicyError as exc:
+        raise LatexAssemblyError(str(exc)) from exc
     try:
         promoted_snapshot = validate_promoted_snapshot_for_writing(state.path)
     except EvidenceSnapshotMismatch as exc:

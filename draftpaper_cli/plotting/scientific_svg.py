@@ -637,6 +637,11 @@ def render_scientific_figure(
         "backend": payload.get("backend") or PLOT_BACKEND,
         "is_placeholder": False,
         "caption_draft": figure.get("caption_draft") or figure.get("title") or "",
+        "caption_contract": figure.get("caption_contract") or {},
+        "confirmed_plan_hash": figure.get("confirmed_plan_hash"),
+        "claim_id": figure.get("claim_id"),
+        "panel_contract": figure.get("panel_contract") or [],
+        "statistical_validation_ids": figure.get("statistical_validation_ids") or [],
         "result_claim_template": figure.get("result_claim_template") or "",
         **rendered_semantic_metadata(figure, payload),
     })

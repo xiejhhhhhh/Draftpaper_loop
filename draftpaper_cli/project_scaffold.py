@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -29,6 +30,8 @@ class ProjectScaffold:
 
 
 PROJECT_DIRECTORIES = [
+    ".draftpaper/tmp",
+    ".draftpaper/logs",
     "idea",
     "research_plan",
     "research_feasibility",
@@ -103,7 +106,7 @@ STAGE_ORDER = [
 ]
 
 
-def slugify(value: str, max_length: int = 80) -> str:
+def slugify(value: str, max_length: int = 48) -> str:
     """Convert a research idea into a stable, filesystem-friendly slug."""
     normalized = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower())
     normalized = re.sub(r"-+", "-", normalized).strip("-")
@@ -214,9 +217,18 @@ def _write_idea_note(project_path: Path, metadata: dict[str, Any]) -> None:
     (project_path / "idea" / "idea.md").write_text(content, encoding="utf-8")
 
 
+def _write_project_gitignore(project_path: Path) -> None:
+    content = (
+        "data/external_data_locators.private.json\n"
+        ".draftpaper/tmp/\n"
+        ".draftpaper/logs/\n"
+    )
+    (project_path / ".gitignore").write_text(content, encoding="utf-8")
+
+
 def create_project(
     *,
-    root: str | Path,
+    root: str | Path | None = None,
     idea: str,
     field: str,
     target_journal: str | None = None,
@@ -231,8 +243,10 @@ def create_project(
     if not field.strip():
         raise ValueError("field is required")
 
-    root_path = Path(root).expanduser().resolve()
-    project_slug = str(project_slug_override or slugify(idea)).strip()
+    from .workspace_policy import resolve_projects_root, short_project_slug
+
+    root_path = resolve_projects_root(root)
+    project_slug = str(project_slug_override or short_project_slug(idea, field)).strip()
     if not project_slug or project_slug in {".", ".."} or any(char in project_slug for char in '<>:"/\\|?*'):
         raise ValueError("project_slug_override must be a safe single directory name")
     project_path = root_path / project_slug
@@ -258,7 +272,7 @@ def create_project(
             loop_event_schema=DPL_SCHEMAS["loop_event"],
         ),
         "generated_by": generated_by_block(schema_version=DPL_SCHEMAS["project"]),
-        "project_id": str(project_id_override or project_slug),
+        "project_id": str(project_id_override or hashlib.sha256(f"{idea.strip()}\n{field.strip()}".encode("utf-8")).hexdigest()[:8]),
         "project_slug": project_slug,
         "title": idea.strip(),
         "idea": idea.strip(),
@@ -278,12 +292,20 @@ def create_project(
     _write_simple_yaml(project_path / "project.yaml", metadata)
     _write_stage_manifests(project_path, metadata)
     _write_idea_note(project_path, metadata)
+    _write_project_gitignore(project_path)
     from .project_system_of_record import initialize_project_system_of_record
 
     initialize_project_system_of_record(project_path, str(metadata["project_id"]))
     from .passport import initialize_project_passport
 
     initialize_project_passport(project_path)
+    from .workspace_policy import assess_path_budget, write_workspace_contract
+
+    write_workspace_contract(project_path, root_path)
+    # Creation remains possible in long temporary/cluster roots so the user can
+    # inspect and relocate the project. The CLI and doctor expose the violation
+    # explicitly; default central projects are expected to pass the budget.
+    assess_path_budget(project_path)
 
     return ProjectScaffold(
         project_id=str(metadata["project_id"]),

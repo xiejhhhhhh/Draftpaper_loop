@@ -279,7 +279,9 @@ def _recommended_next_action(
 
 def _render_markdown(report: dict[str, Any]) -> str:
     lines = [
-        "# Core Evidence Report",
+        "# 关键结果与论断支撑确认",
+        "",
+        "本页面用于确认当前主图、指标、样本边界和统计验证是否真实回答已确认的研究问题，并确定它们最多能够支撑多强的论文论断。它不是对 PNG 文件存在或视觉外观的简单确认。",
         "",
         f"Decision: {report.get('decision')}",
         "",
@@ -358,6 +360,27 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     figures = _figure_items(figure_plan if isinstance(figure_plan, dict) else {}, figure_metadata if isinstance(figure_metadata, dict) else {})
     issues = _dependency_state_issues(state.metadata, "core_evidence")
+    confirmed_alignment: dict[str, Any] = {}
+    caption_validation: dict[str, Any] = {}
+    if (state.path / "research_plan" / "research_plan_confirmation_required.json").exists():
+        from .figure_contracts_v026 import (
+            ConfirmedFigureContractError,
+            validate_confirmed_figure_alignment,
+            validate_figure_captions,
+        )
+        from .research_plan_confirmation import confirmation_state
+
+        plan_confirmation = confirmation_state(state.path)
+        if not plan_confirmation.get("current"):
+            issues.append("The research blueprint is not currently human-confirmed.")
+        try:
+            confirmed_alignment = validate_confirmed_figure_alignment(state.path)
+        except ConfirmedFigureContractError as exc:
+            confirmed_alignment = _read_json(state.path / "results" / "confirmed_figure_alignment_report.json", {})
+            issues.append(str(exc))
+        caption_validation = validate_figure_captions(state.path)
+        if caption_validation.get("decision") != "pass":
+            issues.append("One or more main-figure caption contracts require repair.")
     issues.extend(_reviewable_figure_issues(state.path, figures))
     coverage = _workflow_coverage(state.path, run_manifest if isinstance(run_manifest, dict) else {}, validity if isinstance(validity, dict) else {})
     contract_coverage = _figure_contract_coverage(
@@ -430,13 +453,20 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         "figure_contract_coverage": contract_coverage,
         "figure_semantic_validation": semantic_report,
         "scientific_figure_quality": scientific_figure_quality,
+        "confirmed_figure_alignment": confirmed_alignment,
+        "figure_caption_validation": caption_validation,
+        "human_confirmation_semantics": {
+            "user_facing_name": "关键结果与论断支撑确认",
+            "confirms": ["research-question alignment", "cohort and sample-unit boundary", "method and run provenance", "statistical validation and uncertainty", "maximum supported claim strength"],
+            "does_not_confirm": ["file existence alone", "image aesthetics alone"],
+        },
         "input_artifact_hashes": input_artifact_hashes,
         "issues": issues,
         "recommended_next_action": _recommended_next_action(decision, issues, coverage, contract_coverage),
     }
     output_path = state.path / CORE_EVIDENCE_JSON
     _write_json(output_path, report)
-    write_html_report(state.path / CORE_EVIDENCE_HTML, _render_markdown(report), title="Core Evidence Report")
+    write_html_report(state.path / CORE_EVIDENCE_HTML, _render_markdown(report), title="关键结果与论断支撑确认")
     update_stage_status(state.path, "core_evidence", "draft" if decision == "pass" else "failed")
     _set_manifest(state.path)
     return report

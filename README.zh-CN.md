@@ -148,7 +148,7 @@ powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhh
 底层 CLI 示例：
 
 ```powershell
-.\.venv\Scripts\draftpaper create-project --root .\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 .\.venv\Scripts\draftpaper status --project .\projects\your_project
 .\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
@@ -343,6 +343,30 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.25.1-v0.26.0（2026-07-14）-- 人工确认研究蓝图、任务感知统计验证与项目工作区隔离
+
+- 新论文默认统一创建在配置的中央 `projects` 根目录，不再跟随 idea 或数据集所在位置。可通过 `DRAFTPAPER_PROJECTS_ROOT`、用户配置或 `--projects-root` 设置根目录；自动 slug 最长 48 个字符，并附带稳定的 8 位 project ID。干净的 `_vN` 子项目也采用同一短路径规则。
+- 新增 `ProjectWorkspacePolicy`、`ArtifactOwnershipGuard`、`path-budget-check`、`doctor-project-layout` 和带 hash 校验的 `adopt-orphan-artifacts`。除显式 export 外，流程产物、日志和临时文件都必须留在对应论文项目内部。
+- 大型数据集默认保持原位只读。公开数据源合同与指纹只保存逻辑 ID 和相对 locator；本机绝对路径进入默认忽略的 `external_data_locators.private.json`，复制策略默认为 `manifest_only`。
+- 新增任务感知的 `StatisticalValidationContract` 和 `review_rule_coverage_report`。分类、回归/拟合、分组或时间验证、空间分析、表征混杂、异常稳定性、生存分析和仿真收敛分别获得不同的证据要求。除非来源是用户/期刊要求、有引用的领域规范或已验证学科插件，否则禁止使用跨项目通用的 F1、R2、p 值或拟合精度阈值。
+- 中文优先的研究方案包成为真正的人工确认点。`review-research-plan` 集中展示研究方案、claims、图表故事板、panel 结构、数据/方法需求、统计合同、插件预检和可行性限制；`confirm-research-plan` 冻结其精确 hash。任何科学合同变化都必须先执行 `reopen-research-plan`。
+- 关键图表代码只能读取当前已确认的研究蓝图。每张主图和 panel 都携带 confirmed plan hash、claim、数据与方法 requirement ID 和统计验证 ID；`validate-confirmed-figure-alignment` 会拒绝缺失、替代、额外或语义已经变化的主图。
+- 显式 research storyboard 不再追加学科通用 fallback 图。主图数量不能再由普通直方图、相关图或 metric summary 凑足；科学故事角色不足时必须返回 research plan 修订。
+- 新增结构化图组 caption 合同。第一完整句概括整组图且不能由逗号短句串联；后续逐一解释所有 panel、cohort、估计量、不确定性和 claim boundary。图像路径采用 `fig_01.png` 等短名称，完整科学标题保存在 metadata 中。
+- 新增关键图表执行前的 support loop。能力缺口先生成 project-local、学科插件、AcademicForge、GitHub 和 connector 救援任务；仍不足时，由用户在补数据/方法与研究范围降维之间选择。结果生成后的 claim 降维仍是独立路线，并冻结已有图表和指标。
+- 面向用户的 core evidence 页面改为“关键结果与论断支撑确认”，明确展示被确认的研究问题、cohort、方法运行、统计证据、不确定性和最大 claim 强度。最终发布另设同一 hash 绑定的确认包，包含 `main.pdf`、最终 citation audit、两位独立盲评报告和质量报告。
+- wheel 回归扩展为 scientific-image astronomy+ML、geography+ML、time-domain astronomy+ML、bioinformatics/medicine 和 physics/quantum 五类场景，并验证任务感知统计合同和规则缺口显式报告。当前源码验证为 `565 passed`；完整的 15 项验收证据见 [`docs/audits/2026-07-14-v0260-acceptance-report.md`](docs/audits/2026-07-14-v0260-acceptance-report.md)。
+
+新增关键命令：
+
+```powershell
+draftpaper create-project --idea "Your research idea" --field "astronomy machine learning"
+draftpaper review-research-plan --project <project>
+draftpaper confirm-research-plan --project <project> --plan-hash <hash>
+draftpaper path-budget-check --project <project>
+draftpaper doctor-project-layout --project <project>
+```
+
 ### v0.24.1-v0.25.0（2026-07-13）-- 安全科研运行时、真实可运行插件与薄型 MCP
 
 - 将 canonical `draftpaper-workflow` skill 打入 wheel，并新增 `install-skill` / `skill-doctor`。Agent 不再手写和记忆完整阶段顺序，而是服从 `status`、`verify-next-action` 和 `continue`，避免用户目录中的旧 skill 用过时流程驱动新版 CLI。

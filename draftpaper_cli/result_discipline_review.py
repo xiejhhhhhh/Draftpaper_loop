@@ -175,6 +175,15 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "reviewed_figure_ids": reviewed_figure_ids,
         "results_semantic_issues": results_semantic_audit["issues"],
     }
+    statistical_contract = _read_json(state.path / "research_plan" / "statistical_validation_contract.json")
+    rule_coverage = _read_json(state.path / "research_plan" / "review_rule_coverage_report.json")
+    evidence_context["statistical_validation_ids"] = [
+        str(item.get("validation_id"))
+        for item in statistical_contract.get("validations") or []
+        if isinstance(item, dict) and item.get("validation_id")
+    ]
+    evidence_context["statistical_rule_families"] = list(statistical_contract.get("task_families") or [])
+    evidence_context["review_rule_coverage_decision"] = rule_coverage.get("decision")
     if reviewable:
         rule_gate = assess_review_rules(
             state.path,
@@ -222,6 +231,9 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "skipped_figure_ids": skipped_figure_ids,
         "active_plugin_ids": active_plugin_ids,
         "figure_plugin_trace": "results/figure_plugin_trace_report.json",
+        "statistical_validation_contract": "research_plan/statistical_validation_contract.json" if statistical_contract else None,
+        "statistical_validation_contract_sha256": _sha256_or_empty(state.path / "research_plan" / "statistical_validation_contract.json"),
+        "review_rule_coverage": rule_coverage,
         "review_rule_gate": rule_gate,
         "results_semantic_audit": results_semantic_audit,
         "manuscript_quality": manuscript_quality,

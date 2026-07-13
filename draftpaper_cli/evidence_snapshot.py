@@ -15,12 +15,15 @@ from .project_state import load_project, mark_stages_stale
 
 PROMOTED_EVIDENCE_SNAPSHOT_JSON = "results/promoted_evidence_snapshot.json"
 SNAPSHOT_ARTIFACTS = [
+    "research_plan/confirmed_research_blueprint_snapshot.json",
     "methods/run_manifest.yaml",
     "results/resolved_result_evidence.json",
     "results/figure_plan.json",
     "results/figure_contracts.json",
     "results/figure_metadata.json",
     "results/figure_semantic_validation_report.json",
+    "results/confirmed_figure_alignment_report.json",
+    "results/figure_caption_validation_report.json",
     "results/result_validity_report.json",
 ]
 CORE_EVIDENCE_REPORT = "core_evidence/core_evidence_report.json"

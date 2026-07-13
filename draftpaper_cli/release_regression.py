@@ -1,4 +1,4 @@
-"""Wheel-installable held-out scientific release regressions for v0.25.0."""
+"""Wheel-installable held-out scientific release regressions for v0.26.0."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from .writing_coordinator import formal_writing_release_action
 
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "release_fixtures"
-FIXTURE_NAMES = ("geography_ml", "astronomy_ml", "bioinformatics_medicine", "physics_quantum")
+FIXTURE_NAMES = ("scientific_image_ml", "geography_ml", "astronomy_ml", "bioinformatics_medicine", "physics_quantum")
 
 
 class ReleaseRegressionError(RuntimeError):
@@ -262,6 +262,17 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
             repo.write_text(relative, "# Release regression research plan\n")
         else:
             repo.write_json(relative, {"status": "verified"})
+    blueprint = {
+        "status": "written",
+        "research_claims": [{"claim_id": "claim_main", "research_question": str(spec["idea"]), "expected_finding": "The held-out result should remain bounded by uncertainty."}],
+        "figure_storyboard": {"status": "written", "figures": [{"figure_id": "fig_main", "proposed_title": str(spec["metric_label"]), "research_question": str(spec["idea"]), "expected_finding": "The held-out result should remain bounded by uncertainty.", "required_data": [spec["data_role"]], "required_method": [spec["method_plugin_id"]], "supporting_literature_keys": [spec["citation_key"]], "validation_metric": spec["metric_name"]}]},
+        "method_plan": {"status": "written", "method_tasks": []},
+    }
+    repo.write_json("research_plan/research_blueprint.json", blueprint)
+    from .statistical_validation import assess_review_rule_coverage, build_statistical_validation_contract
+
+    statistical = build_statistical_validation_contract(project, blueprint=blueprint)
+    coverage = assess_review_rule_coverage(project)
     review = assess_review_rules(
         project,
         stage="post_results",
@@ -322,6 +333,8 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
             "formal_free_prose_required": True,
             "status_read_only": True,
             "synthetic_95_percent_claim_rejected": True,
+            "task_aware_statistical_contract": statistical["validation_count"] >= 3,
+            "review_rule_gaps_explicit": coverage["decision"] in {"pass", "advisory_and_rescue_required"},
         },
     }
 
@@ -413,13 +426,14 @@ def run_release_regressions(output_root: str | Path) -> dict[str, Any]:
     domains = [run_domain_regression(root, name) for name in FIXTURE_NAMES]
     adversarial = run_adversarial_regressions(root, domains[0]["project_path"])
     report = {
-        "schema_version": "v0.25.0",
+        "schema_version": "v0.26.0",
         "generated_at": utc_now(),
         "status": "passed" if all(item["status"] == "passed" for item in domains) and adversarial["status"] == "passed" else "failed",
         "domain_regressions": domains,
         "adversarial_regressions": adversarial,
         "quality_claim_policy": "Synthetic regressions prove scientific contracts, not manuscript quality. A 95% claim remains blocked until the blind complete-manuscript and real-figure evaluation contract is supplied.",
     }
+    atomic_write_json(root / "v0260_release_regression_report.json", report)
     atomic_write_json(root / "v0250_release_regression_report.json", report)
     return report
 

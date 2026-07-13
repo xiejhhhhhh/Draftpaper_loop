@@ -48,14 +48,15 @@ def test_project_version_plan_is_read_only_and_creates_clean_child(tmp_path: Pat
 
     plan = plan_project_version(parent, output=plan_path)
 
-    assert plan["target_directory_name"] == f"{parent.name}_v1"
+    assert plan["target_directory_name"].endswith("_v1")
+    assert len(plan["target_directory_name"]) <= 51
     assert plan["old_project_mutated"] is False
     assert plan_path.is_file()
     assert _hash_tree(parent) == before
 
     created = create_project_version_from_plan(plan_path)
     child = Path(created["project_path"])
-    assert child.name == f"{parent.name}_v1"
+    assert child.name == plan["target_directory_name"]
     assert created["project_id"] != load_project(parent).metadata["project_id"]
     assert _hash_tree(parent) == before
 

@@ -106,7 +106,8 @@ class FigureContractTests(unittest.TestCase):
 
             self.assertEqual([item["storyboard_id"] for item in main_figures], ["fig_1_workflow", "fig_2_transformer_performance"])
             self.assertEqual(plan["main_figure_count"], 2)
-            self.assertGreaterEqual(len(supporting_figures), 1)
+            self.assertEqual(len(supporting_figures), 0)
+            self.assertTrue(plan["figure_policy"]["missing_discipline_groups_not_auto_generated"])
             self.assertTrue(all(item.get("contract_locked") for item in main_figures))
             self.assertTrue(all(not item.get("counts_toward_main_figures", True) for item in supporting_figures))
             self.assertEqual([item["storyboard_id"] for item in contracts["contracts"]], ["fig_1_workflow", "fig_2_transformer_performance"])

@@ -202,7 +202,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     create = subparsers.add_parser("create-project", help="Create a single-paper project directory model.")
-    create.add_argument("--root", required=True, help="Directory that will contain paper projects.")
+    create.add_argument("--root", "--projects-root", dest="root", default=None, help="Directory that will contain paper projects; defaults to configured projects root.")
+    create.add_argument("--allow-external-project-root", action="store_true", help="Explicitly allow a project root different from the configured central projects root.")
     create.add_argument("--idea", required=True, help="Research idea or working title.")
     create.add_argument("--field", required=True, help="Research field or aim.")
     create.add_argument("--target-journal", default="General Academic Journal", help="Target journal or template family.")
@@ -213,6 +214,42 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate-project", help="Validate project metadata and stage manifests.")
     validate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    path_budget = subparsers.add_parser("path-budget-check", help="Validate Windows-safe project and artifact path budgets.")
+    path_budget.add_argument("--project", required=True)
+    layout_doctor = subparsers.add_parser("doctor-project-layout", help="Find path-budget issues and adjacent orphan artifacts without mutating them.")
+    layout_doctor.add_argument("--project", required=True)
+    adopt_orphans = subparsers.add_parser("adopt-orphan-artifacts", help="Read-only plan for verified adjacent artifacts and stage-owned destinations.")
+    adopt_orphans.add_argument("--project", required=True)
+    apply_orphans = subparsers.add_parser("apply-orphan-adoption", help="Human-approved copy of identity-verified adjacent artifacts into the project.")
+    apply_orphans.add_argument("--project", required=True)
+
+    statistical_contract = subparsers.add_parser("build-statistical-validation-contract", help="Build task-aware statistical validation requirements for the research blueprint.")
+    statistical_contract.add_argument("--project", required=True)
+    rule_coverage = subparsers.add_parser("assess-review-rule-coverage", help="Report missing task- and discipline-specific statistical review-rule families.")
+    rule_coverage.add_argument("--project", required=True)
+    pre_execution = subparsers.add_parser("assess-pre-execution-support", help="Assess data, method, plugin, and statistical support before key-figure code generation.")
+    pre_execution.add_argument("--project", required=True)
+    pre_execution_rescue = subparsers.add_parser("prepare-pre-execution-rescue", help="Prepare scoped data, method, plugin, and review-rule rescue tasks.")
+    pre_execution_rescue.add_argument("--project", required=True)
+    review_plan = subparsers.add_parser("review-research-plan", help="Render the Chinese-first research blueprint and feasibility packet for human confirmation.")
+    review_plan.add_argument("--project", required=True)
+    confirm_plan = subparsers.add_parser("confirm-research-plan", help="Human-confirm the exact research blueprint hash used by key-figure execution.")
+    confirm_plan.add_argument("--project", required=True)
+    confirm_plan.add_argument("--plan-hash", required=True)
+    confirm_plan.add_argument("--accept-limitations", action="store_true")
+    reopen_plan = subparsers.add_parser("reopen-research-plan", help="Explicitly reopen a confirmed scientific contract before changing claims, data, methods, statistics, or figures.")
+    reopen_plan.add_argument("--project", required=True)
+    reopen_plan.add_argument("--reason", required=True)
+    confirmed_alignment = subparsers.add_parser("validate-confirmed-figure-alignment", help="Reject any executable main figure that diverges from the human-confirmed blueprint.")
+    confirmed_alignment.add_argument("--project", required=True)
+    caption_validation = subparsers.add_parser("validate-figure-captions", help="Validate group-level headline, ordered panel descriptions, statistics, and claim boundaries.")
+    caption_validation.add_argument("--project", required=True)
+    final_review = subparsers.add_parser("review-final-manuscript", help="Render one release packet containing the final PDF, citation audit, and two independent reviews.")
+    final_review.add_argument("--project", required=True)
+    final_confirm = subparsers.add_parser("confirm-final-manuscript", help="Human-confirm the exact final manuscript release hash.")
+    final_confirm.add_argument("--project", required=True)
+    final_confirm.add_argument("--release-hash", required=True)
 
     inspect_migration = subparsers.add_parser("inspect-project-migration", help="Read-only report of schema updates required by an older project.")
     inspect_migration.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -838,7 +875,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--project", default=None)
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
     start = subparsers.add_parser("start", help="Create a project and report the first executable workflow action.")
-    start.add_argument("--root", required=True)
+    start.add_argument("--root", "--projects-root", dest="root", default=None)
     start.add_argument("--idea", required=True)
     start.add_argument("--field", required=True)
     start.add_argument("--target-journal", default="General Academic Journal")
@@ -1012,8 +1049,17 @@ def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
 
     if args.command == "create-project":
         try:
+            if args.root and not args.allow_external_project_root:
+                from .workspace_policy import resolve_projects_root
+
+                configured = resolve_projects_root()
+                requested = Path(args.root).expanduser().resolve()
+                if requested != configured:
+                    raise ValueError(
+                        f"External project root requires --allow-external-project-root; configured root is {configured}"
+                    )
             project = create_project(
-                root=Path(args.root),
+                root=Path(args.root) if args.root else None,
                 idea=args.idea,
                 field=args.field,
                 target_journal=args.target_journal,

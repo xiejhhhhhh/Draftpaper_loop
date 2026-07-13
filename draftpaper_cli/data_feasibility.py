@@ -122,7 +122,9 @@ def inventory_data(project: str | Path) -> dict[str, Any]:
                 "size_bytes": path.stat().st_size,
                 **profile,
             })
-    external_locator_path = state.path / "data" / "external_data_locators.json"
+    external_locator_path = state.path / "data" / "external_data_locators.private.json"
+    if not external_locator_path.is_file():
+        external_locator_path = state.path / "data" / "external_data_locators.json"
     external_files = []
     if external_locator_path.is_file():
         locator = json.loads(external_locator_path.read_text(encoding="utf-8-sig"))
@@ -150,7 +152,7 @@ def inventory_data(project: str | Path) -> dict[str, Any]:
                 "suffix": path.suffix.lower(),
                 "size_bytes": int(entry.get("size_bytes") or path.stat().st_size),
                 "sha256": entry.get("sha256"),
-                "source_locator": "data/external_data_locators.json",
+                "source_locator": external_locator_path.relative_to(state.path).as_posix(),
                 **profile,
             })
     files.extend(external_files)

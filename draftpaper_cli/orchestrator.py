@@ -299,6 +299,84 @@ def _result_support_action(project_path: Path, result_support: dict[str, Any]) -
 
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     research_plan = project_path / "research_plan" / "research_plan.md"
+    confirmation_marker = project_path / "research_plan" / "research_plan_confirmation_required.json"
+    if research_plan.exists() and confirmation_marker.exists():
+        from .research_plan_confirmation import (
+            REVIEW_PACKET_JSON,
+            confirmation_state,
+            current_plan_hash,
+        )
+
+        statistical_contract = project_path / "research_plan" / "statistical_validation_contract.json"
+        if not statistical_contract.exists():
+            return {
+                "stage": "research_plan",
+                "command": "build-statistical-validation-contract",
+                "cli": _cli_for(project_path, "build-statistical-validation-contract"),
+                "reason": "The human research-blueprint packet requires a task-aware statistical validation contract before confirmation.",
+            }
+        coverage = _read_report(project_path, "research_plan/review_rule_coverage_report.json")
+        if not coverage:
+            return {
+                "stage": "research_plan",
+                "command": "assess-review-rule-coverage",
+                "cli": _cli_for(project_path, "assess-review-rule-coverage"),
+                "reason": "Missing task- or discipline-specific review rules must be explicit before the user confirms the research blueprint.",
+            }
+        pre_execution = _read_report(project_path, "research_plan/pre_execution_support_report.json")
+        if not pre_execution:
+            return {
+                "stage": "research_plan",
+                "command": "assess-pre-execution-support",
+                "cli": _cli_for(project_path, "assess-pre-execution-support"),
+                "reason": "Data, method, plugin, and statistical support must be assessed before key-figure execution is authorized.",
+            }
+        pre_decision = str(pre_execution.get("decision") or "")
+        if pre_decision == "automatic_rescue_required":
+            return {
+                "stage": "research_plan",
+                "command": "prepare-pre-execution-rescue",
+                "cli": _cli_for(project_path, "prepare-pre-execution-rescue"),
+                "reason": "Prepare scoped capability rescue tasks before presenting unresolved limitations for human confirmation.",
+            }
+        if pre_decision == "blocked_requires_user_route":
+            return {
+                "stage": "research_plan",
+                "command": "choose-pre-execution-route",
+                "cli": None,
+                "reason": "The confirmed-strength research design remains unsupported after rescue; choose data/method supplementation or research-scope revision.",
+                "requires_user_decision": True,
+                "route_options": pre_execution.get("route_options") or [],
+            }
+        state = confirmation_state(project_path)
+        if state.get("status") == "scientific_contract_drift":
+            return {
+                "stage": "research_plan",
+                "command": "reopen-research-plan",
+                "cli": _cli_for(project_path, "reopen-research-plan") + ' --reason "Confirmed scientific contract changed."',
+                "reason": "A confirmed claim, data role, method, statistic, figure, or panel changed. Reopen the plan and return it to human correction instead of continuing with mixed contracts.",
+                "requires_user_decision": True,
+            }
+        review_packet = _read_report(project_path, REVIEW_PACKET_JSON)
+        plan_hash = current_plan_hash(project_path)
+        if not review_packet or review_packet.get("plan_hash") != plan_hash:
+            return {
+                "stage": "research_plan",
+                "command": "review-research-plan",
+                "cli": _cli_for(project_path, "review-research-plan"),
+                "reason": "Render the Chinese-first research blueprint, feasibility, figure, and statistical packet before human confirmation.",
+            }
+        if not state.get("current"):
+            accept_flag = " --accept-limitations" if review_packet.get("confirmation_requires_accept_limitations") else ""
+            return {
+                "stage": "research_plan",
+                "command": "confirm-research-plan",
+                "cli": _cli_for(project_path, "confirm-research-plan") + f" --plan-hash {plan_hash}{accept_flag}",
+                "reason": "Key-figure code cannot run until the user confirms the exact research blueprint hash and corrects any scientific design errors.",
+                "requires_user_decision": True,
+                "plan_hash": plan_hash,
+                "review_packet": "research_plan/research_plan_review_packet.html",
+            }
     discipline_contract = project_path / "research_plan" / "discipline_contract.json"
     sufficiency_report = _read_report(project_path, "research_plan/plugin_sufficiency_report.json")
     capability_contract_path = project_path / "research_plan" / "research_capability_contract.json"
@@ -829,6 +907,40 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
     if failure_action:
         return failure_action
     if stage is None:
+        formal_plan = project_path / "research_plan" / "research_plan_confirmation_required.json"
+        final_inputs = [
+            project_path / "latex" / "main.pdf",
+            project_path / "citation_audit" / "final_citation_audit_report.json",
+            project_path / "quality_checks" / "blind_reviews" / "aggregate.json",
+            project_path / "quality_checks" / "quality_report.json",
+        ]
+        if formal_plan.exists() and all(path.exists() for path in final_inputs):
+            from .final_manuscript_confirmation import (
+                PACKET_JSON,
+                current_release_hash,
+                final_confirmation_state,
+            )
+
+            release_hash = current_release_hash(project_path)
+            packet = _read_report(project_path, PACKET_JSON)
+            if not packet or packet.get("release_hash") != release_hash:
+                return {
+                    "stage": "quality_checks",
+                    "command": "review-final-manuscript",
+                    "cli": _cli_for(project_path, "review-final-manuscript"),
+                    "reason": "Present the final PDF, final citation audit, both independent blind reviews, and quality report as one release packet.",
+                }
+            final_state = final_confirmation_state(project_path)
+            if not final_state.get("current"):
+                return {
+                    "stage": "quality_checks",
+                    "command": "confirm-final-manuscript",
+                    "cli": _cli_for(project_path, "confirm-final-manuscript") + f" --release-hash {release_hash}",
+                    "reason": "The user must confirm the exact final manuscript release hash before the project is complete.",
+                    "requires_user_decision": True,
+                    "review_packet": "review/final_manuscript_confirmation_packet.html",
+                    "release_hash": release_hash,
+                }
         return {
             "stage": None,
             "command": None,
@@ -973,6 +1085,16 @@ def status_project(project: str | Path) -> dict[str, Any]:
     next_action = _next_action(state.path, state.metadata)
     command = str(next_action.get("command") or "")
     pipeline_state = {
+        "build-statistical-validation-contract": "research_blueprint_preflight",
+        "assess-review-rule-coverage": "research_blueprint_preflight",
+        "assess-pre-execution-support": "research_blueprint_preflight",
+        "prepare-pre-execution-rescue": "pre_execution_rescue_required",
+        "choose-pre-execution-route": "awaiting_pre_execution_route",
+        "review-research-plan": "research_plan_review_required",
+        "confirm-research-plan": "awaiting_research_plan_confirmation",
+        "reopen-research-plan": "research_plan_reopen_required",
+        "review-final-manuscript": "final_manuscript_review_required",
+        "confirm-final-manuscript": "awaiting_final_manuscript_confirmation",
         "choose-result-route": "awaiting_result_route",
         "resolve-research-capabilities": "plugin_sufficiency_required",
         "assess-plugin-sufficiency": "plugin_sufficiency_required",

@@ -830,7 +830,7 @@ quality_checks
 ## Target CLI Shape
 
 ```powershell
-python -m draftpaper_cli.cli create-project --root <repo>\projects --idea "..." --field "..."
+python -m draftpaper_cli.cli create-project --idea "..." --field "..."
 python -m draftpaper_cli.cli status --project <repo>\projects\my_project
 python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\my_project
 python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\my_project

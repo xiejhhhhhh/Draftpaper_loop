@@ -31,6 +31,9 @@ DATA_ACQUISITION_TASKS_JSON = "data/data_acquisition_tasks.json"
 DATA_ACQUISITION_TASKS_HTML = "data/data_acquisition_tasks.html"
 DATA_CODE_MANIFEST_JSON = "data/data_code_manifest.json"
 EXTERNAL_DATA_LOCATORS_JSON = "data/external_data_locators.json"
+EXTERNAL_DATA_LOCATORS_PRIVATE_JSON = "data/external_data_locators.private.json"
+DATA_SOURCE_CONTRACT_JSON = "data/data_source_contract.json"
+DATA_FINGERPRINT_MANIFEST_JSON = "data/data_fingerprint_manifest.json"
 
 DATA_ACQUISITION_OUTPUTS = [
     DATA_ACCESS_PROFILE_JSON,
@@ -44,6 +47,9 @@ DATA_ACQUISITION_OUTPUTS = [
     DATA_ACQUISITION_TASKS_HTML,
     DATA_CODE_MANIFEST_JSON,
     EXTERNAL_DATA_LOCATORS_JSON,
+    EXTERNAL_DATA_LOCATORS_PRIVATE_JSON,
+    DATA_SOURCE_CONTRACT_JSON,
+    DATA_FINGERPRINT_MANIFEST_JSON,
 ]
 
 DATA_EXTENSIONS = {
@@ -747,16 +753,60 @@ def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | N
     _write_json(state.path / DATA_ACQUISITION_PLAN_JSON, plan)
     source_root_value = str(profile.get("source_root") or "")
     locator_entries = list(((profile.get("source_scan") or {}).get("files") or []))
+    public_entries = [
+        {
+            "path_id": f"asset_{index:04d}",
+            "path": item.get("path"),
+            "relative_path": item.get("path"),
+            "size_bytes": item.get("size_bytes"),
+            "sha256": item.get("sha256"),
+            "kind": item.get("kind"),
+        }
+        for index, item in enumerate(locator_entries, start=1)
+    ]
     _write_json(state.path / EXTERNAL_DATA_LOCATORS_JSON, {
         "schema_version": "dpl.external_data_locators.v1",
         "status": "ready" if source_root_value and locator_entries else "empty",
+        "generated_at": utc_now(),
+        "source_id": "external_read_only_source_1",
+        "source_root": "private_locator:data/external_data_locators.private.json" if source_root_value else "",
+        "read_only": True,
+        "private_locator": True,
+        "entries": public_entries,
+        "policy": "External assets are inventoried in place. Only explicitly selected derived assets may be copied into the project; source data remain read-only.",
+    })
+    _write_json(state.path / EXTERNAL_DATA_LOCATORS_PRIVATE_JSON, {
+        "schema_version": "dpl.external_data_locators.private.v1",
+        "status": "ready" if source_root_value else "empty",
         "generated_at": utc_now(),
         "source_id": "external_read_only_source_1",
         "source_root": source_root_value,
         "read_only": True,
         "private_locator": True,
         "entries": locator_entries,
-        "policy": "External assets are inventoried in place. Only explicitly selected derived assets may be copied into the project; source data remain read-only.",
+        "tracking_policy": "machine_local_private_locator_do_not_publish",
+    })
+    _write_json(state.path / DATA_SOURCE_CONTRACT_JSON, {
+        "schema_version": "dpl.data_source_contract.v1",
+        "status": "ready" if source_root_value else "empty",
+        "generated_at": utc_now(),
+        "sources": [{
+            "source_id": "external_read_only_source_1",
+            "access_mode": "read_only_in_place",
+            "copy_policy": "manifest_only",
+            "data_roles": sorted({str(item.get("kind") or "external_asset") for item in public_entries}),
+            "locator": EXTERNAL_DATA_LOCATORS_PRIVATE_JSON,
+            "public_inventory": EXTERNAL_DATA_LOCATORS_JSON,
+        }] if source_root_value else [],
+        "policy": "Large source datasets remain in place; only selected derived evidence enters the paper project.",
+    })
+    _write_json(state.path / DATA_FINGERPRINT_MANIFEST_JSON, {
+        "schema_version": "dpl.data_fingerprint_manifest.v1",
+        "status": "ready" if public_entries else "empty",
+        "generated_at": utc_now(),
+        "source_id": "external_read_only_source_1",
+        "fingerprint_mode": "full_sha256_for_files_up_to_50mb_else_size_and_relative_locator",
+        "entries": public_entries,
     })
     write_html_report(state.path / DATA_ACQUISITION_PLAN_HTML, _render_plan_markdown(plan), title="Data Acquisition Plan")
     rows = _manifest_rows(profile)

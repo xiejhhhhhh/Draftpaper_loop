@@ -186,7 +186,7 @@ Optional full-text fetch runtime:
 After setup, the installed `draftpaper` command can be used from the repository root:
 
 ```powershell
-.\.venv\Scripts\draftpaper create-project --root .\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 .\.venv\Scripts\draftpaper status --project .\projects\your_project
 .\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
 .\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
@@ -196,7 +196,7 @@ After setup, the installed `draftpaper` command can be used from the repository 
 For a quick local smoke test without live literature search, create and validate a project:
 
 ```powershell
-.\.venv\Scripts\draftpaper create-project --root .\projects --idea "X-ray flaring source classification" --field "machine learning astronomy" --target-journal APJS
+.\.venv\Scripts\draftpaper create-project --idea "X-ray flaring source classification" --field "machine learning astronomy" --target-journal APJS
 .\.venv\Scripts\draftpaper validate-project --project .\projects\x-ray-flaring-source-classification
 ```
 
@@ -204,7 +204,7 @@ For a quick local smoke test without live literature search, create and validate
 
 ```powershell
 python -m pip install -e .[plotting]
-python -m draftpaper_cli.cli create-project --root <repo>\projects --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
+python -m draftpaper_cli.cli create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
 python -m draftpaper_cli.cli status --project <repo>\projects\your_project
 python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
 python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --query "topic keywords"
@@ -427,6 +427,30 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.25.1-v0.26.0 (2026-07-14) -- Confirmed Research Blueprints, Task-aware Statistics, and Project Workspace Isolation
+
+- New papers now default to the configured central `projects` root instead of following the idea or dataset location. `DRAFTPAPER_PROJECTS_ROOT`, user config, and `--projects-root` control the root; generated slugs are capped at 48 characters and use an eight-character stable project ID. Clean `_vN` children use the same short-name policy.
+- Added `ProjectWorkspacePolicy`, `ArtifactOwnershipGuard`, `path-budget-check`, `doctor-project-layout`, and hash-aware `adopt-orphan-artifacts`. Managed outputs, logs, and temporary files stay inside the paper project unless an explicit export is requested.
+- Large datasets remain read-only in place. Public source contracts and fingerprints use logical IDs and relative locators, while machine-local absolute paths move to ignored `external_data_locators.private.json`; the default copy policy is `manifest_only`.
+- Added task-aware `StatisticalValidationContract` and `review_rule_coverage_report`. Classification, regression/fitting, grouped or temporal validation, spatial analysis, representation confounding, anomaly stability, survival, and simulation convergence receive different evidence requirements. Universal F1, R2, p-value, or fit thresholds are forbidden unless a user/journal, cited domain source, or validated discipline plugin supplies them.
+- The Chinese-first research-plan packet is now a real human checkpoint. `review-research-plan` presents the plan, claims, storyboard, panel structure, method/data requirements, statistical contract, plugin preview, and feasibility limits; `confirm-research-plan` freezes their exact hash. `reopen-research-plan` is mandatory before any scientific contract change.
+- Key-figure code can consume only the active confirmed blueprint. Every main figure and panel carries the confirmed plan hash, claim, data and method requirement IDs, and statistical validation IDs. `validate-confirmed-figure-alignment` rejects missing, substituted, extra, or semantically changed main figures.
+- Removed discipline fallback figures from explicit research storyboards. Main-figure count can no longer be satisfied with generic histograms, correlations, or metric summaries; missing scientific story roles return to research-plan revision instead of producing filler.
+- Added structured figure-caption contracts. The first sentence summarizes the complete figure group without comma-linked fragments; later sentences explain every panel, cohort, estimand, uncertainty definition, and claim boundary. Short `fig_01.png`-style paths keep scientific titles in metadata rather than filenames.
+- Added the pre-execution support loop. Capability gaps first produce project-local, discipline-plugin, AcademicForge, GitHub, and connector rescue tasks. If rescue remains insufficient, the user chooses data/method supplementation or research-scope downgrade before key-figure code is generated. Post-result claim downgrade remains separate and freezes existing figures and metrics.
+- The user-facing core-evidence page is now “Key Results and Claim Support Confirmation” and explains the research question, cohort, method run, statistical evidence, uncertainty, and maximum claim strength being approved. Final release adds a separate hash-bound packet containing `main.pdf`, final citation audit, both independent blind-review reports, and the quality report.
+- The wheel regression now covers scientific-image astronomy+ML, geography+ML, time-domain astronomy+ML, bioinformatics/medicine, and physics/quantum, with task-aware statistical contracts and explicit rule-gap checks. Current source verification is `565 passed`; the complete 15-item evidence matrix is in [`docs/audits/2026-07-14-v0260-acceptance-report.md`](docs/audits/2026-07-14-v0260-acceptance-report.md).
+
+Key workflow additions:
+
+```powershell
+draftpaper create-project --idea "Your research idea" --field "astronomy machine learning"
+draftpaper review-research-plan --project <project>
+draftpaper confirm-research-plan --project <project> --plan-hash <hash>
+draftpaper path-budget-check --project <project>
+draftpaper doctor-project-layout --project <project>
+```
+
 ### v0.24.1-v0.25.0 (2026-07-13) -- Secure Scientific Runtime, Runnable Plugins, and Thin MCP
 
 - Packaged the canonical `draftpaper-workflow` skill inside the wheel and added `install-skill` / `skill-doctor`. Agent instructions now defer stage order to `status`, `verify-next-action`, and `continue`, so an old user-level skill cannot silently drive a new CLI through an obsolete workflow.

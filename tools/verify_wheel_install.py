@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -17,7 +19,17 @@ SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
 SOURCE_CAPABILITY_PACK_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "capability_packs"
 EXPECTED_ENTRY_COUNT = 209
 EXPECTED_FIXTURE_COUNT = 545
+EXPECTED_PACKAGE_VERSION = "0.26.0"
+EXPECTED_CLI_COMMANDS = (
+    "review-research-plan",
+    "confirm-research-plan",
+    "reopen-research-plan",
+    "path-budget-check",
+    "validate-confirmed-figure-alignment",
+    "review-final-manuscript",
+)
 EXPECTED_RELEASE_FIXTURE_IDS = (
+    "scientific_image_ml",
     "geography_ml",
     "astronomy_ml",
     "bioinformatics_medicine",
@@ -44,7 +56,20 @@ def _source_registry_summary() -> dict[str, object]:
         for path in manifest.parent.iterdir()
         if path.is_file() and path.name.startswith("fixture_")
     )
+    pyproject = (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    version_match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, flags=re.MULTILINE)
+    skill = REPOSITORY_ROOT / "draftpaper_cli" / "resources" / "draftpaper_workflow" / "SKILL.md"
+    skill_contract = skill.with_name("contract.json")
+    skill_text = skill.read_text(encoding="utf-8")
+    skill_version = re.search(r"^version:\s*(\S+)", skill_text, flags=re.MULTILINE)
+    contract_payload = json.loads(skill_contract.read_text(encoding="utf-8"))
     return {
+        "package_version": version_match.group(1) if version_match else None,
+        "workflow_skill_version": skill_version.group(1) if skill_version else None,
+        "workflow_skill_sha256": hashlib.sha256(skill.read_bytes()).hexdigest(),
+        "workflow_contract_version": contract_payload.get("skill_version"),
+        "workflow_contract_sha256": hashlib.sha256(skill_contract.read_bytes()).hexdigest(),
+        "cli_help_commands": list(EXPECTED_CLI_COMMANDS),
         "entry_count": len(manifests),
         "fixture_count": fixture_count,
         "resource_counts": _resource_counts(SOURCE_MODULE_ROOT),
@@ -100,6 +125,9 @@ import json
 import sys
 from unittest.mock import patch
 from pathlib import Path
+from hashlib import sha256
+from importlib.metadata import version
+from importlib.resources import files
 from draftpaper_cli.capability_packs import discover_capability_packs
 from draftpaper_cli.paper_fetch_adapter import resolve_paper_fetch_command
 from draftpaper_cli.template_registry import discover_template_registry
@@ -109,7 +137,19 @@ root = Path(r['root'])
 with patch('draftpaper_cli.paper_fetch_adapter.shutil.which', return_value=None):
     command, env, runtime_source = resolve_paper_fetch_command()
 provenance = validate_third_party_provenance()
+skill = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/SKILL.md')
+skill_contract = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/contract.json')
+skill_bytes = skill.read_bytes()
+contract_bytes = skill_contract.read_bytes()
+contract_payload = json.loads(contract_bytes.decode('utf-8'))
+skill_text = skill_bytes.decode('utf-8')
+skill_version = next((line.split(':', 1)[1].strip() for line in skill_text.splitlines() if line.startswith('version:')), None)
 print(json.dumps({
+    'package_version': version('draftpaper-cli'),
+    'workflow_skill_version': skill_version,
+    'workflow_skill_sha256': sha256(skill_bytes).hexdigest(),
+    'workflow_contract_version': contract_payload.get('skill_version'),
+    'workflow_contract_sha256': sha256(contract_bytes).hexdigest(),
     'entry_count': r['entry_count'],
     'fixture_count': sum(len(e.get('fixtures') or []) for e in r['entries']),
     'resource_counts': {p: len(list(root.rglob(p))) for p in ('*.json', '*.csv', '*.md')},
@@ -132,6 +172,16 @@ print(json.dumps({
             text=True,
         )
         installed_summary = json.loads(completed.stdout.strip().splitlines()[-1])
+        cli_help = subprocess.run(
+            [str(python), "-m", "draftpaper_cli.cli", "--help"],
+            check=True,
+            cwd=temp_root,
+            capture_output=True,
+            text=True,
+        ).stdout
+        installed_summary["cli_help_commands"] = [
+            command for command in EXPECTED_CLI_COMMANDS if command in cli_help
+        ]
         regression_root = temp_root / "release-regressions"
         release_completed = subprocess.run(
             [str(python), "-m", "draftpaper_cli.release_regression", "--output", str(regression_root)],
@@ -155,7 +205,8 @@ print(json.dumps({
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
     release_passed = _release_regressions_passed(report)
-    return 0 if report["matched"] and release_passed else 1
+    version_passed = installed_summary.get("package_version") == EXPECTED_PACKAGE_VERSION
+    return 0 if report["matched"] and release_passed and version_passed else 1
 
 
 if __name__ == "__main__":

@@ -25,7 +25,8 @@ class ProjectScaffoldTests(unittest.TestCase):
                 target_journal="General Academic Journal",
             )
 
-            self.assertEqual(project.project_slug, "long-term-agn-outburst-prediction-using-multimodal-survey-data")
+            self.assertRegex(project.project_slug, r"^long-term-agn-outburst-prediction-using_[0-9a-f]{8}$")
+            self.assertLessEqual(len(project.project_slug), 48)
             self.assertTrue(project.path.exists())
             expected_dirs = [
                 "idea",
@@ -131,6 +132,7 @@ class ProjectScaffoldTests(unittest.TestCase):
                 "create-project",
                 "--root",
                 tmp,
+                "--allow-external-project-root",
                 "--idea",
                 "Multimodal crop disease early warning",
                 "--field",

@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.25.0
+version: 0.26.0
 description: Use when Codex operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -29,15 +29,24 @@ python -m draftpaper_cli.cli continue --project <project>
 ```
 
 When `status` reports an explicit human checkpoint, show the evidence or
-decision request to the user and stop. Never accept core evidence, promote a
-plugin, downgrade a claim, or accept a manuscript revision on the user's
-behalf.
+decision request to the user and stop. Never confirm a research plan, accept
+core evidence, promote a plugin, downgrade a claim, confirm the final
+manuscript, or accept a manuscript revision on the user's behalf.
 
 ## Scientific boundaries
 
 - Preserve the evidence-first order: literature and research plan, data and
   methods, executable figures, human core-evidence confirmation, manuscript,
   final citation audit, then independent reviews.
+- New paper projects use the configured central projects root. Large source
+  datasets remain read-only in place through private locators and public data
+  contracts; do not create the paper project next to a large dataset merely
+  because the data live there.
+- The Chinese-first research-plan and feasibility packet is a human scientific
+  checkpoint. Key-figure code may execute only against the current confirmed
+  plan hash. Implementation repair may not change claims, data roles, methods,
+  statistics, main figures, or panels; reopen the plan for human correction if
+  any scientific contract must change.
 - A project-local method may satisfy a research capability only after the
   capability audit records its inputs, outputs, hashes, and execution scope.
 - A scientific failure is not a command failure. Follow the structured rescue
@@ -60,12 +69,15 @@ the verified next action.
 ## Stage order
 
 The CLI owns the exact next action. Its scientific order is `create-project`,
-`search-literature`, `resolve-journal-template`, `generate-plan`, data and
-`collect-method-plan`, figure planning and `verify-methods`,
-`assess-result-validity`, core-evidence confirmation, `inventory-results`,
-`write-results`, `write-introduction`, Data and `write-methods`,
-`write-discussion`, `assemble-latex`, integrity, citation audit, independent
-reviews, and `quality-check`.
+`search-literature`, `resolve-journal-template`, `generate-plan`, task-aware
+statistics and pre-execution support, human research-plan confirmation, data
+and `collect-method-plan`, confirmed-storyboard figure planning and method
+execution, `verify-methods`, `assess-result-validity`, result support,
+key-results/core-evidence
+confirmation, `inventory-results`, `write-results`, post-Results discipline
+review and semantic repair, `write-introduction`, Data and `write-methods`,
+`write-discussion`, `assemble-latex`, integrity, final citation audit, two
+independent reviews, `quality-check`, and final manuscript confirmation.
 
 ## Rerun rules
 

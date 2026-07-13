@@ -14,7 +14,7 @@ from .project_scaffold import create_project
 from .project_state import load_project
 
 
-def start_workflow(root: str | Path, idea: str, field: str, target_journal: str = "General Academic Journal") -> dict[str, Any]:
+def start_workflow(idea: str, field: str, target_journal: str = "General Academic Journal", root: str | Path | None = None) -> dict[str, Any]:
     created = create_project(root=root, idea=idea, field=field, target_journal=target_journal)
     return {"status": "started", "project_path": str(created.path), "project_id": created.project_id, "next_action": status_project(created.path)["next_action"]}
 

@@ -415,6 +415,16 @@ def build_research_blueprint(
     keys = _top_literature_keys(literature_items)
     claims = _claim_templates(project_meta, flags)
     figures = _storyboard_figures(project_meta=project_meta, claims=claims, literature_keys=keys, flags=flags)
+    from .figure_contracts_v026 import enrich_storyboard_figure
+
+    figures = [
+        enrich_storyboard_figure(
+            item,
+            index=index,
+            claim_id=(claims[min(index - 1, len(claims) - 1)] or {}).get("claim_id") if claims else "",
+        )
+        for index, item in enumerate(figures, start=1)
+    ]
     tables = _storyboard_tables(keys)
     quality = _quality_gate(figures)
     if quality["status"] != "passed":
@@ -485,7 +495,7 @@ def storyboard_to_figure_plan_items(
             "id": str(item.get("figure_id") or f"storyboard_figure_{index}"),
             "storyboard_id": str(item.get("figure_id") or f"storyboard_figure_{index}"),
             "title": str(item.get("proposed_title") or f"Storyboard figure {index}"),
-            "path": f"results/figures/{str(item.get('figure_id') or f'storyboard_figure_{index}')}.png",
+            "path": f"results/figures/fig_{index:02d}.png",
             "generation_mode": "generated_code",
             "source": "research_storyboard",
             "figure_role": "main_result",
@@ -502,6 +512,13 @@ def storyboard_to_figure_plan_items(
             "expected_finding": item.get("expected_finding"),
             "validation_metric": item.get("validation_metric"),
             "supporting_literature_keys": list(item.get("supporting_literature_keys") or []),
+            "claim_id": item.get("claim_id"),
+            "unique_evidence_contribution": item.get("unique_evidence_contribution"),
+            "why_not_table": item.get("why_not_table"),
+            "panels": item.get("panels") or [],
+            "panel_contract": item.get("panel_contract") or item.get("panels") or [],
+            "statistical_validation_ids": item.get("statistical_validation_ids") or [],
+            "caption_contract": item.get("caption_contract") or {},
             "x": x,
             "y": y,
             "group": group,
@@ -509,7 +526,7 @@ def storyboard_to_figure_plan_items(
             "backend_preference": ["matplotlib_scienceplots", "matplotlib", "png_stdlib_fallback"],
             "no_flowchart_fallback": True,
             "scientific_question": item.get("research_question"),
-            "caption_draft": f"{item.get('proposed_title')}.",
+            "caption_draft": ((item.get("caption_contract") or {}).get("headline") or f"{item.get('proposed_title')}."),
             "result_claim_template": item.get("scientific_claim_boundary") or item.get("expected_finding"),
             "storyboard_trace": item,
         })

@@ -555,7 +555,7 @@ def _apply_discipline_figure_policy(
     target = int(module_spec.get("target_main_figures") or max(minimum, 6))
     groups = _generated_group_set(figures)
     added_groups: list[str] = []
-    for group in required_groups:
+    for group in ([] if storyboard_locked else required_groups):
         if group in groups:
             continue
         item = _generic_figure_for_group(
@@ -566,9 +566,7 @@ def _apply_discipline_figure_policy(
             lookup=lookup,
             index=len(figures) + 1,
         )
-        if storyboard_locked:
-            item = _mark_supporting_figure(item, reason="discipline_required_group_supports_storyboard_but_cannot_replace_main_result")
-        elif len(_main_figure_groups(figures)) >= target:
+        if len(_main_figure_groups(figures)) >= target:
             item = _mark_supporting_figure(item, reason="discipline_required_group_kept_as_appendix_beyond_main_figure_group_target")
         _add_unique(figures, item)
         groups.add(group)
@@ -607,6 +605,8 @@ def _apply_discipline_figure_policy(
         "target_main_figures": target,
         "required_figure_groups": required_groups,
         "added_figure_groups": added_groups,
+        "missing_discipline_groups_not_auto_generated": [group for group in required_groups if group not in groups] if storyboard_locked else [],
+        "storyboard_lock_policy": "Confirmed or explicit research-storyboard figures are never supplemented with generic quota figures." if storyboard_locked else "Legacy data-driven planning may use discipline defaults before a formal storyboard exists.",
     }
 
 
@@ -800,6 +800,12 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         discipline_profile=discipline_profile,
         storyboard_locked=used_research_storyboard,
     )
+    from .figure_contracts_v026 import attach_confirmed_contract_to_plan
+
+    try:
+        figures, confirmed_plan_hash = attach_confirmed_contract_to_plan(state.path, figures)
+    except Exception as exc:
+        raise FigurePlanError(str(exc)) from exc
     generated_count = sum(1 for item in figures if item.get("generation_mode") == "generated_code")
     main_groups = _main_figure_groups(figures)
     main_figure_count = sum(1 for item in figures if item.get("figure_role") == "main_result" and item.get("counts_toward_main_figures") is not False)
@@ -824,6 +830,7 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
         "review_task_context": review_task_context,
         "used_review_tasks": bool(use_review_tasks and review_task_context),
         "used_research_storyboard": used_research_storyboard,
+        "confirmed_plan_hash": confirmed_plan_hash,
         "research_storyboard": _read_json(state.path / "research_plan" / "figure_storyboard.json", {}),
         "discipline_profile": discipline_profile,
         "figure_policy": figure_policy,
