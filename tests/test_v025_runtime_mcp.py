@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-import time
 from pathlib import Path
 
 from draftpaper_cli.command_registry import COMMAND_SPECS
-from draftpaper_cli.jobs import job_status, submit_job
+from draftpaper_cli.jobs import submit_job, wait_for_job
 from draftpaper_cli.mcp import service
 from draftpaper_cli.mcp_install import mcp_doctor
 from draftpaper_cli.project_scaffold import create_project
@@ -50,15 +49,10 @@ def test_runtime_trace_separates_process_science_and_transaction(tmp_path: Path)
 
 def test_persistent_job_survives_submitter_and_records_scientific_result(tmp_path: Path) -> None:
     project = create_project(root=tmp_path, idea="Durable job", field="engineering").path
-    submitted = submit_job(project, "doctor", json.dumps({}), "doctor-once", timeout_seconds=30)
+    submitted = submit_job(project, "validate-project", json.dumps({}), "validate-project-once", timeout_seconds=30)
     assert submitted["status"] == "submitted"
-    final = None
-    for _ in range(80):
-        final = job_status(project, submitted["job_id"])
-        if (final.get("job") or {}).get("status") in {"completed", "failed", "timed_out", "orphaned"}:
-            break
-        time.sleep(0.1)
-    assert final is not None
+    final = wait_for_job(project, submitted["job_id"], timeout_seconds=45)
+    assert final["wait_status"] == "terminal"
     job = final["job"]
     assert job["status"] == "completed"
     assert job["process_status"] == "completed"

@@ -20,6 +20,7 @@ from .project_state import load_project
 
 JOB_DB = ".draftpaper/jobs.sqlite3"
 MAX_CAPTURE_BYTES = 64 * 1024
+TERMINAL_JOB_STATUSES = frozenset({"completed", "failed", "cancelled", "timed_out", "orphaned"})
 
 
 def _db(project: str | Path, *, create: bool = True) -> tuple[Path, Path]:
@@ -127,6 +128,32 @@ def job_status(project: str | Path, job_id: str) -> dict[str, Any]:
     return {"status": "found", "job": _job_row(row)}
 
 
+def wait_for_job(
+    project: str | Path,
+    job_id: str,
+    *,
+    timeout_seconds: float = 60.0,
+    poll_interval: float = 0.1,
+) -> dict[str, Any]:
+    """Wait for one job without confusing a polling deadline with job failure."""
+    if timeout_seconds < 0:
+        raise ValueError("Wait timeout must be non-negative.")
+    if poll_interval <= 0:
+        raise ValueError("Poll interval must be positive.")
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        result = job_status(project, job_id)
+        job = result.get("job") or {}
+        if result.get("status") == "not_found":
+            return {**result, "wait_status": "not_found"}
+        if job.get("status") in TERMINAL_JOB_STATUSES:
+            return {**result, "wait_status": "terminal"}
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return {**result, "wait_status": "deadline_exceeded"}
+        time.sleep(min(poll_interval, remaining))
+
+
 def _pid_alive(pid: int | None) -> bool:
     if not pid:
         return False
@@ -144,7 +171,7 @@ def job_cancel(project: str | Path, job_id: str) -> dict[str, Any]:
         if row is None:
             return {"status": "not_found", "job_id": job_id}
         pid = row["worker_pid"]
-        if row["status"] in {"completed", "failed", "cancelled", "timed_out"}:
+        if row["status"] in TERMINAL_JOB_STATUSES:
             return {"status": "already_terminal", "job": _job_row(row)}
         if _pid_alive(pid):
             if os.name == "nt":
