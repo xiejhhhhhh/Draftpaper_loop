@@ -43,6 +43,7 @@ The public framework implementation, cross-discipline software regressions, sour
 - The final citation audit retained all 17 references across 30 usages with no unsupported or unverifiable usage.
 - The anonymous bundle contains locator-safe data/model provenance, safe stage-owned scripts/tests and dependency-free frozen-output replay. Private paths, credentials and identity-bearing files are excluded.
 - Two independent reviewers assessed the same frozen anonymous bundle. Scientific-correctness scores were 0.95 and 0.91; open critical and major counts were zero; no adjudication was required. Their minor recommendations remain in the revision queue.
+- GitHub publication verification: `main` resolves to the released tree; Pages passed; wheel-install and the complete Linux/Windows Python 3.10, 3.11 and 3.12 test matrix passed.
 
 ## Completion Evidence
 
@@ -53,4 +54,4 @@ The public framework implementation, cross-discipline software regressions, sour
 5. Two distinct fresh sessions submitted schema-valid reports for that exact bundle without an original manuscript or cross-review leakage.
 6. Both reports contained no critical or major finding, so the release gate passed without adjudication. Open minor recommendations are preserved for later author revision.
 7. The final public code passed the full suite, compile check, provenance validation, privacy scan, clean wheel comparison, three domain regressions and adversarial checks.
-8. The remaining release action is repository publication: commit and push `main`, then verify the remote commit and GitHub checks.
+8. Repository publication is complete: `main` contains the released tree, the local branch is aligned with the remote, and all required GitHub checks passed.

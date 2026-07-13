@@ -358,7 +358,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 章节证据包新增模型比较语义。只有预处理与模型嵌套关系经过验证时，正文才允许写“增量”或“条件贡献”；否则必须写成精确的 pipeline 性能差异，并区分 fold mean、pooled 和 resampling estimand。
 - 完成 astronomy+ML、geography+ML、bioinformatics+medicine 的通用能力链回归，并用只读本地数据完成一个陌生 scientific-image 课题的 core evidence 人工确认、最终正文、PDF、完整性、参考文献格式与引用核查。最终 citation audit 保留全部 17 篇参考文献和 30 处引用，`unsupported=0`、`unverifiable=0`。
 - 两个全新独立会话在不知道原稿和历史报告的前提下审查同一份冻结匿名最终稿。两位 reviewer 都只给出 minor revision，科学正确性分别为 0.95 和 0.91，未解决 critical/major 均为 0，无需仲裁，发布门通过；minor 建议继续保留在 revision queue，不会被静默标记为已解决。
-- 最终本地验证为 `537 passed`，package/tests compile 通过；隔离安装的 v0.24.0 wheel 与源码一致，包含 209 个插件、545 个 fixture、6 个 capability pack 和 6 条第三方来源链；三类领域回归及全部对抗检查通过。Eval capture/replay 只验证脱敏的软件结构，不把已有论文当作质量基线。
+- 最终验证为 `537 passed`，package/tests compile 通过；隔离安装的 v0.24.0 wheel 与源码一致，包含 209 个插件、545 个 fixture、6 个 capability pack 和 6 条第三方来源链；三类领域回归及全部对抗检查通过。GitHub Actions 的 wheel 安装以及 Linux/Windows Python 3.10-3.12 完整矩阵全部通过。Eval capture/replay 只验证脱敏的软件结构，不把已有论文当作质量基线。
 
 ### v0.23.0（2026-07-12）-- Wheel 发布回归与可验证质量声明
 
