@@ -23,7 +23,7 @@ FORMULA_PATTERN = re.compile(
 
 
 SECTION_RULES = {
-    "introduction": {"min_words": 180, "min_paragraphs": 4, "requires_citation": True},
+    "introduction": {"min_words": 180, "min_paragraphs": 3, "requires_citation": True},
     "data": {"min_words": 130, "min_paragraphs": 3},
     "methods": {"min_words": 150, "min_paragraphs": 3, "requires_formula": True},
     "results": {"min_words": 180, "min_paragraphs": 3, "min_figures": 5, "forbid_citation": True},

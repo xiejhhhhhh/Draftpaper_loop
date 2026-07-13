@@ -89,7 +89,7 @@ def test_resolve_contract_prefers_current_main_figure_contracts_over_stale_story
     assert {item.get("figure_id") for item in capabilities["requirements"]} == {"fig_actual"}
 
 
-def test_sufficiency_requires_rescue_before_declaring_capability_unavailable(tmp_path: Path) -> None:
+def test_sufficiency_prepares_project_implementation_before_declaring_capability_unavailable(tmp_path: Path) -> None:
     from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 
     project = _project_with_contract_inputs(
@@ -110,10 +110,89 @@ def test_sufficiency_requires_rescue_before_declaring_capability_unavailable(tmp
     report = assess_plugin_sufficiency(project)
 
     saved = json.loads((project / "research_plan" / "plugin_sufficiency_report.json").read_text(encoding="utf-8"))
-    assert report["decision"] == "rescue_required"
-    assert saved["core_figure_decision"] == "rescue_required"
+    assert report["decision"] == "project_implementation_required"
+    assert saved["core_figure_decision"] == "project_implementation_required"
     assert (project / "research_plan" / "plugin_gap_plan.json").exists()
-    assert any(item["state"] in {"missing", "blocked_external", "incompatible"} for item in saved["requirement_assessments"])
+    assert any(
+        item["state"] in {"project_method_implementation_required", "project_data_implementation_required"}
+        for item in saved["requirement_assessments"]
+    )
+
+
+def test_sufficiency_defers_derived_predictions_to_the_bound_method_run(tmp_path: Path) -> None:
+    from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
+
+    project = _project_with_contract_inputs(
+        tmp_path,
+        idea="Scientific-image classification with uncertainty and anomaly candidates.",
+        field="astronomy machine learning",
+        figure={
+            "figure_id": "fig_predictions",
+            "research_question": "Where does the validated classifier remain uncertain?",
+            "claim_ids": ["claim_main"],
+            "required_data_roles": ["image_embedding", "predicted_label", "prediction_score", "candidate_score"],
+            "method_families": ["group_aware_validation"],
+            "manuscript_role": "main",
+        },
+    )
+
+    resolve_research_capabilities(project)
+    assess_plugin_sufficiency(project)
+
+    contract = json.loads(
+        (project / "research_plan" / "research_capability_contract.json").read_text(encoding="utf-8")
+    )
+    report = json.loads(
+        (project / "research_plan" / "plugin_sufficiency_report.json").read_text(encoding="utf-8")
+    )
+    derived_contracts = [
+        item for item in contract["requirements"] if item.get("data_role_class") == "derived_method_output"
+    ]
+    derived_assessments = [
+        item for item in report["requirement_assessments"] if item.get("data_role_class") == "derived_method_output"
+    ]
+    assert {item["role"] for item in derived_contracts} == {"predicted_label", "prediction_score", "candidate_score"}
+    assert {item["state"] for item in derived_assessments} == {"method_output_pending"}
+    assert not any(
+        task["requirement_id"] in {item["requirement_id"] for item in derived_contracts}
+        for task in report["rescue_tasks"]
+    )
+
+
+def test_capability_pack_routing_eval_and_project_method_task(tmp_path: Path) -> None:
+    from draftpaper_cli.capability_packs import evaluate_capability_routing
+    from draftpaper_cli.project_capability_audit import audit_project_capabilities
+    from draftpaper_cli.project_method_implementation import prepare_project_method_implementation
+    from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
+
+    routing = evaluate_capability_routing()
+    assert routing["status"] == "passed"
+    assert routing["accuracy"] == 1.0
+
+    project = _project_with_contract_inputs(
+        tmp_path,
+        idea="A spectroscopy study requires a new physically constrained inverse solver.",
+        field="physics machine learning",
+        figure={
+            "figure_id": "fig_inverse",
+            "research_question": "Does the constrained inverse solver recover the target parameters?",
+            "claim_ids": ["claim_main"],
+            "required_data_roles": [],
+            "method_families": ["physically_constrained_inverse_solver"],
+            "method_output_roles": ["parameter_estimates"],
+            "manuscript_role": "main",
+        },
+    )
+    resolve_research_capabilities(project)
+    assess_plugin_sufficiency(project)
+    audit = audit_project_capabilities(project)
+    assert audit["decision"] == "project_implementation_required"
+
+    prepared = prepare_project_method_implementation(project)
+    tasks = json.loads((project / "methods" / "project_method_implementation_tasks.json").read_text(encoding="utf-8"))
+    assert prepared["decision"] == "agent_action_required"
+    assert tasks["tasks"][0]["method_family"] == "physically_constrained_inverse_solver"
+    assert "substitute a different method" in " ".join(tasks["tasks"][0]["implementation_contract"]["must_not"])
 
 
 def test_sufficiency_rejects_template_presence_until_project_outputs_are_verified(tmp_path: Path) -> None:

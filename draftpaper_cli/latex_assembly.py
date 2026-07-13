@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -11,6 +12,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from .citation_utils import bibtex_keys_in_text, citation_keys_in_text
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
@@ -33,6 +36,7 @@ LATEX_INPUTS = [relative for _name, relative in SECTION_INPUTS] + [
     "references/library.bib",
     "journal_profile/journal_profile.json",
     "core_evidence/core_evidence_report.json",
+    "results/result_manifest.yaml",
     "latex/template/main.tex",
 ]
 
@@ -43,6 +47,7 @@ LATEX_OUTPUTS = [
     "latex/sections/data.tex",
     "latex/sections/methods.tex",
     "latex/sections/results.tex",
+    "latex/sections/result_artifacts.tex",
     "latex/sections/discussion.tex",
 ]
 
@@ -91,6 +96,153 @@ def _insert_acknowledgments(main_tex: str, acknowledgments: str) -> str:
     if "\\end{document}" in main_tex:
         return main_tex.replace("\\end{document}", acknowledgments + "\n\n\\end{document}", 1)
     return main_tex.rstrip() + "\n\n" + acknowledgments + "\n"
+
+
+def _read_manuscript_metadata(project_path: Path) -> dict[str, Any]:
+    path = project_path / "writing" / "manuscript_metadata.yaml"
+    if not path.is_file():
+        return {}
+    payload = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise LatexAssemblyError("writing/manuscript_metadata.yaml must contain a mapping.")
+    return payload
+
+
+def _metadata_affiliations(metadata: dict[str, Any]) -> tuple[dict[str, str], list[str]]:
+    lookup: dict[str, str] = {}
+    ordered: list[str] = []
+    for index, item in enumerate(metadata.get("affiliations") or [], start=1):
+        if isinstance(item, dict):
+            key = str(item.get("id") or index)
+            name = str(item.get("name") or item.get("affiliation") or "").strip()
+        else:
+            key, name = str(index), str(item).strip()
+        if name:
+            lookup[key] = name
+            ordered.append(name)
+    return lookup, ordered
+
+
+def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool) -> str:
+    authors = metadata.get("authors") or []
+    if not authors:
+        return ""
+    affiliation_lookup, ordered_affiliations = _metadata_affiliations(metadata)
+    if aastex:
+        lines: list[str] = []
+        for item in authors:
+            author = item if isinstance(item, dict) else {"name": str(item)}
+            name = _safe_latex_text(str(author.get("name") or "").strip())
+            if not name:
+                continue
+            lines.append(rf"\author{{{name}}}")
+            keys = author.get("affiliations") or author.get("affiliation_ids") or []
+            if isinstance(keys, (str, int)):
+                keys = [keys]
+            affiliations = [affiliation_lookup.get(str(key), str(key)) for key in keys]
+            if not affiliations and len(ordered_affiliations) == 1:
+                affiliations = ordered_affiliations
+            for affiliation in affiliations:
+                lines.append(rf"\affiliation{{{_safe_latex_text(str(affiliation))}}}")
+            email = author.get("email") or (metadata.get("email") if author.get("corresponding") else None)
+            if email:
+                lines.append(rf"\email{{{_safe_latex_text(str(email))}}}")
+            orcid = author.get("orcid")
+            if orcid:
+                lines.append(rf"\orcid{{{_safe_latex_text(str(orcid))}}}")
+        return "\n".join(lines)
+    names = []
+    for item in authors:
+        author = item if isinstance(item, dict) else {"name": str(item)}
+        name = str(author.get("name") or "").strip()
+        if name:
+            names.append(_safe_latex_text(name))
+    if not names:
+        return ""
+    lines = [rf"\author{{{' \and '.join(names)}"]
+    details = [_safe_latex_text(value) for value in ordered_affiliations]
+    corresponding = metadata.get("corresponding_author")
+    email = metadata.get("email")
+    if corresponding:
+        details.append("Correspondence: " + _safe_latex_text(str(corresponding)))
+    if email:
+        details.append(_safe_latex_text(str(email)))
+    if details:
+        lines[0] += r" \\ \small " + r"; ".join(details)
+    lines[0] += "}"
+    return "\n".join(lines)
+
+
+def _metadata_back_matter(metadata: dict[str, Any], *, aastex: bool) -> str:
+    fields = [
+        ("credit_contributions", "Author Contributions"),
+        ("funding", "Funding"),
+        ("data_availability", "Data Availability"),
+        ("code_availability", "Code Availability"),
+        ("competing_interests", "Competing Interests"),
+        ("ethics_consent", "Ethics and Consent"),
+        ("supplementary_material", "Supplementary Material"),
+    ]
+    parts: list[str] = []
+    acknowledgments = metadata.get("acknowledgments")
+    if acknowledgments:
+        content = _safe_latex_text(str(acknowledgments))
+        parts.append(
+            "\\begin{acknowledgments}\n" + content + "\n\\end{acknowledgments}"
+            if aastex else "\\section*{Acknowledgments}\n" + content
+        )
+    for key, title in fields:
+        value = metadata.get(key)
+        if value:
+            if isinstance(value, (list, dict)):
+                value = json.dumps(value, ensure_ascii=False)
+            parts.append(rf"\section*{{{title}}}" + "\n" + _safe_latex_text(str(value)))
+    links = []
+    for key in ("repository_links", "doi_links"):
+        value = metadata.get(key) or []
+        if isinstance(value, str):
+            value = [value]
+        links.extend(str(item) for item in value)
+    if links:
+        parts.append(r"\section*{Related Links}" + "\n" + r"; ".join(rf"\url{{{item}}}" for item in links))
+    return "\n\n".join(parts)
+
+
+def _apply_manuscript_metadata(main_tex: str, metadata: dict[str, Any], *, aastex: bool) -> str:
+    if not metadata:
+        return main_tex
+    title = metadata.get("title")
+    if title:
+        replacement = rf"\title{{{_safe_latex_text(str(title))}}}"
+        if re.search(r"\\title\{[^{}]*\}", main_tex):
+            main_tex = re.sub(r"\\title\{[^{}]*\}", lambda _match: replacement, main_tex, count=1)
+        else:
+            main_tex = main_tex.replace("\\begin{document}", replacement + "\n\\begin{document}", 1)
+    abstract = metadata.get("abstract")
+    if abstract:
+        abstract_block = "\\begin{abstract}\n" + str(abstract).strip() + "\n\\end{abstract}"
+        if re.search(r"\\begin\{abstract\}.*?\\end\{abstract\}", main_tex, flags=re.S):
+            main_tex = re.sub(
+                r"\\begin\{abstract\}.*?\\end\{abstract\}",
+                lambda _match: abstract_block,
+                main_tex,
+                count=1,
+                flags=re.S,
+            )
+        else:
+            main_tex = main_tex.replace("\\begin{document}", "\\begin{document}\n\n" + abstract_block, 1)
+    author_block = _metadata_author_block(metadata, aastex=aastex)
+    if author_block:
+        main_tex = re.sub(r"(?m)^\s*\\(?:author|affiliation|email|orcid)\{[^{}]*\}\s*\n?", "", main_tex)
+        title_match = re.search(r"\\title\{[^{}]*\}", main_tex)
+        if title_match:
+            main_tex = main_tex[:title_match.end()] + "\n" + author_block + main_tex[title_match.end():]
+    back_matter = _metadata_back_matter(metadata, aastex=aastex)
+    if back_matter:
+        main_tex = _insert_acknowledgments(main_tex, back_matter)
+    return main_tex
 
 
 def _ensure_aastex_author_block(main_tex: str) -> str:
@@ -187,6 +339,128 @@ def _copy_bibtex(project_path: Path) -> None:
     shutil.copyfile(project_path / "references" / "library.bib", project_path / "latex" / "library.bib")
 
 
+def _read_mapping(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+    except (OSError, yaml.YAMLError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _safe_result_label(value: Any) -> str:
+    return re.sub(r"[^A-Za-z0-9_:-]+", "-", str(value or "result")).strip("-") or "result"
+
+
+def _figure_caption(entry: dict[str, Any], metadata: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for value in (
+        entry.get("caption_draft"),
+        entry.get("result_claim"),
+        metadata.get("interpretation_summary"),
+    ):
+        text = str(value or "").strip().rstrip(".")
+        if text and text.lower() not in {item.lower() for item in parts}:
+            parts.append(text)
+    boundary = str(metadata.get("claim_boundary") or entry.get("claim_boundary") or "").strip().rstrip(".")
+    if boundary and not any(boundary.lower() in part.lower() for part in parts):
+        parts.append(boundary)
+    caption = ". ".join(parts).strip()
+    if caption and not caption.endswith("."):
+        caption += "."
+    return caption or "Result figure."
+
+
+def _result_figure_entries(project_path: Path) -> list[dict[str, Any]]:
+    manifest = _read_mapping(project_path / "results" / "result_manifest.yaml")
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for collection in (manifest.get("figures") or [], manifest.get("appendix_figures") or []):
+        for item in collection if isinstance(collection, list) else []:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("path") or item.get("id") or "")
+            if key and key not in seen:
+                seen.add(key)
+                entries.append(item)
+    figures_dir = project_path / "results" / "figures"
+    if figures_dir.is_dir():
+        for path in sorted(figures_dir.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".pdf", ".eps"}:
+                continue
+            relative = path.relative_to(project_path).as_posix()
+            if relative in seen:
+                continue
+            seen.add(relative)
+            entries.append(
+                {
+                    "id": path.stem,
+                    "path": relative,
+                    "manuscript_role": "appendix",
+                    "caption_draft": path.stem.replace("_", " "),
+                    "result_claim": "Supporting result artifact retained by the verified run.",
+                }
+            )
+    return entries
+
+
+def _render_result_artifacts(project_path: Path) -> tuple[str, list[str]]:
+    metadata_payload = _read_mapping(project_path / "results" / "figure_metadata.json")
+    metadata_entries = [item for item in metadata_payload.get("figures") or [] if isinstance(item, dict)]
+    by_path = {str(item.get("path") or ""): item for item in metadata_entries}
+    by_id = {
+        str(item.get("figure_id") or item.get("storyboard_id") or ""): item
+        for item in metadata_entries
+    }
+    manuscript_metadata = _read_manuscript_metadata(project_path)
+    caption_overrides = manuscript_metadata.get("figure_captions") if isinstance(manuscript_metadata.get("figure_captions"), dict) else {}
+    blocks: list[str] = []
+    labels: list[str] = []
+    for entry in _result_figure_entries(project_path):
+        relative = str(entry.get("path") or "").replace("\\", "/")
+        if not relative or not (project_path / relative).is_file():
+            raise LatexAssemblyError(f"Result figure declared by the manifest is missing: {relative or '<empty path>'}")
+        identifier = str(entry.get("id") or Path(relative).stem)
+        label = "fig:" + _safe_result_label(identifier)
+        metadata = by_path.get(relative) or by_id.get(str(entry.get("storyboard_id") or "")) or {}
+        override = next(
+            (
+                caption_overrides.get(key)
+                for key in (identifier, str(entry.get("storyboard_id") or ""), relative)
+                if key and caption_overrides.get(key)
+            ),
+            None,
+        )
+        caption = _safe_latex_text(str(override) if override else _figure_caption(entry, metadata))
+        environment = "figure" if str(entry.get("manuscript_role") or "main").lower() != "appendix" else "figure"
+        blocks.append(
+            "\n".join(
+                [
+                    rf"\begin{{{environment}}}[htbp]",
+                    r"\centering",
+                    rf"\includegraphics[width=0.98\linewidth]{{{relative}}}",
+                    rf"\caption{{{caption}}}",
+                    rf"\label{{{label}}}",
+                    rf"\end{{{environment}}}",
+                ]
+            )
+        )
+        labels.append(label)
+    return "\n\n".join(blocks).rstrip() + ("\n" if blocks else ""), labels
+
+
+def _validate_result_cross_references(sections: dict[str, str], artifact_tex: str) -> None:
+    source = "\n".join([*sections.values(), artifact_tex])
+    references = set(re.findall(r"\\ref\{([^{}]+)\}", source))
+    labels = set(re.findall(r"\\label\{([^{}]+)\}", source))
+    unresolved = sorted(reference for reference in references if reference.startswith(("fig:", "tab:")) and reference not in labels)
+    if unresolved:
+        raise LatexAssemblyError(
+            "Result figure/table references have no declared LaTeX artifact: " + ", ".join(unresolved)
+        )
+
+
 def _render_default_main(project_meta: dict[str, Any]) -> str:
     title = _safe_latex_text(project_meta.get("title") or project_meta.get("idea") or "Draft Paper")
     acknowledgments = _draftpaper_acknowledgments()
@@ -212,6 +486,8 @@ def _render_default_main(project_meta: dict[str, Any]) -> str:
         r"\input{sections/data}",
         r"\input{sections/methods}",
         r"\input{sections/results}",
+        r"\input{sections/result_artifacts}",
+        r"\clearpage",
         r"\input{sections/discussion}",
         "",
         acknowledgments,
@@ -224,16 +500,37 @@ def _render_default_main(project_meta: dict[str, Any]) -> str:
     ])
 
 
+def _ensure_math_support(tex: str) -> str:
+    """Ensure journal-supplied templates can compile generated scientific formulas."""
+    package_groups = re.findall(r"\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}", tex)
+    packages = {item.strip() for group in package_groups for item in group.split(",")}
+    missing = [package for package in ("amsmath", "amssymb") if package not in packages]
+    if not missing:
+        return tex
+    documentclass = re.search(r"\\documentclass(?:\[[^\]]*\])?\{[^}]+\}", tex)
+    if not documentclass:
+        return tex
+    insertion = "\n" + rf"\usepackage{{{','.join(missing)}}}"
+    return tex[:documentclass.end()] + insertion + tex[documentclass.end():]
+
+
 def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
+    manuscript_metadata = _read_manuscript_metadata(project_path)
     template_path = project_path / "latex" / "template" / "main.tex"
     if not template_path.exists():
-        return GENERATOR_TEX_COMMENT + _render_default_main(project_meta)
+        rendered = _render_default_main(project_meta)
+        if manuscript_metadata:
+            rendered = rendered.replace(_draftpaper_acknowledgments(), "")
+            rendered = _apply_manuscript_metadata(rendered, manuscript_metadata, aastex=False)
+        return GENERATOR_TEX_COMMENT + rendered
     template = template_path.read_text(encoding="utf-8")
     sections = "\n".join([
         r"\input{sections/introduction}",
         r"\input{sections/data}",
         r"\input{sections/methods}",
         r"\input{sections/results}",
+        r"\input{sections/result_artifacts}",
+        r"\clearpage",
         r"\input{sections/discussion}",
     ])
     journal_profile = _read_journal_profile(project_path)
@@ -252,14 +549,34 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         rendered = rendered.rstrip() + "\n\n" + sections + "\n"
     if "%%DRAFTPAPER_BIBLIOGRAPHY%%" not in template and "\\bibliography{" not in rendered:
         rendered = rendered.rstrip() + "\n\n" + bibliography + "\n"
+    rendered = _enforce_bibliography_style(rendered, bibliography_style)
+    rendered = _ensure_math_support(rendered)
     if "\\graphicspath" not in rendered:
         rendered = rendered.replace("\\begin{document}", "\\graphicspath{{../}}\n\\begin{document}", 1)
-    acknowledgments = _draftpaper_acknowledgments(aastex="aastex" in str(journal_profile.get("documentclass") or "").lower())
-    rendered = _insert_acknowledgments(rendered, acknowledgments)
+    aastex = "aastex" in str(journal_profile.get("documentclass") or "").lower() or bool(re.search(r"\\documentclass(?:\[[^\]]*\])?\{aastex", rendered, flags=re.I))
+    if manuscript_metadata:
+        rendered = _apply_manuscript_metadata(rendered, manuscript_metadata, aastex=aastex)
+    else:
+        acknowledgments = _draftpaper_acknowledgments(aastex=aastex)
+        rendered = _insert_acknowledgments(rendered, acknowledgments)
     rendered = _ensure_aastex_author_block(rendered)
     if "Generated with Draftpaper-loop" not in rendered:
         rendered = GENERATOR_TEX_COMMENT + rendered
     return rendered.rstrip() + "\n"
+
+
+def _enforce_bibliography_style(tex: str, style: str) -> str:
+    """Make the journal profile the sole bibliography-style source."""
+    without_styles = re.sub(r"(?m)^\s*\\bibliographystyle\{[^}]+\}\s*\n?", "", tex)
+    bibliography_match = re.search(r"(?m)^\s*\\bibliography\{[^}]+\}", without_styles)
+    style_line = rf"\bibliographystyle{{{style}}}"
+    if bibliography_match:
+        return without_styles[: bibliography_match.start()] + style_line + "\n" + without_styles[bibliography_match.start():]
+    end_document = without_styles.rfind(r"\end{document}")
+    insertion = style_line + "\n" + r"\bibliography{library}" + "\n"
+    if end_document >= 0:
+        return without_styles[:end_document] + insertion + without_styles[end_document:]
+    return without_styles.rstrip() + "\n" + insertion
 
 
 def _read_journal_profile(project_path: Path) -> dict[str, Any]:
@@ -301,6 +618,18 @@ def _find_latex_executable(names: list[str]) -> str | None:
 
 
 def _write_pdf_manifest(project_path: Path, payload: dict[str, Any]) -> None:
+    profile = _read_journal_profile(project_path)
+    requested_style = str(profile.get("bibliography_style") or "plainnat")
+    main_tex = (project_path / "latex" / "main.tex").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "latex" / "main.tex").is_file() else ""
+    aux_text = (project_path / "latex" / "main.aux").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "latex" / "main.aux").is_file() else ""
+    bbl = project_path / "latex" / "main.bbl"
+    payload["bibliography"] = {
+        "profile_style": requested_style,
+        "main_tex_styles": re.findall(r"\\bibliographystyle\{([^}]+)\}", main_tex),
+        "aux_styles": re.findall(r"\\bibstyle\{([^}]+)\}", aux_text),
+        "bbl_sha256": hashlib.sha256(bbl.read_bytes()).hexdigest() if bbl.is_file() else None,
+        "engine": "BibTeX",
+    }
     _write_json(project_path / "latex" / "pdf_compile_manifest.json", payload)
     _set_latex_manifest(project_path)
 
@@ -565,6 +894,9 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
     latex_dir.mkdir(parents=True, exist_ok=True)
     _copy_sections(state.path, sections)
     _copy_bibtex(state.path)
+    result_artifacts, result_labels = _render_result_artifacts(state.path)
+    _validate_result_cross_references(sections, result_artifacts)
+    (state.path / "latex" / "sections" / "result_artifacts.tex").write_text(result_artifacts, encoding="utf-8")
     main_tex = latex_dir / "main.tex"
     main_tex.write_text(_render_main(state.path, state.metadata), encoding="utf-8")
 
@@ -576,6 +908,7 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
         "main_tex": str(main_tex),
         "library_bib": str(latex_dir / "library.bib"),
         "section_count": len(sections),
+        "result_figure_count": len(result_labels),
         "citation_count": len(citation_keys),
         "bibtex_entry_count": len(bib_keys),
         "evidence_snapshot_id": snapshot_id,

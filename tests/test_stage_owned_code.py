@@ -123,7 +123,7 @@ class StageOwnedCodeTests(unittest.TestCase):
             self.assertEqual(formulas["status"], "written")
             formula_tex = (project.path / "methods" / "method_formulas.tex").read_text(encoding="utf-8")
             self.assertIn("cross_entropy", formula_tex)
-            self.assertIn("\\sum_i", formula_tex)
+            self.assertIn("\\sum_{i=1}", formula_tex)
 
             trace = trace_figures_to_code(project.path)
             self.assertEqual(trace["status"], "written")
@@ -131,8 +131,11 @@ class StageOwnedCodeTests(unittest.TestCase):
             self.assertEqual(trace["traces"][0]["code_files"][0], "methods/plotting/make_final_figures.py")
 
     def test_cli_stage_code_commands(self) -> None:
+        from draftpaper_cli.passport import refresh_project_passport
+
         with tempfile.TemporaryDirectory() as tmp:
             project = self._project_with_legacy_code(tmp)
+            refresh_project_passport(project.path)
             for command in [
                 "classify-code-ownership",
                 "route-stage-code",

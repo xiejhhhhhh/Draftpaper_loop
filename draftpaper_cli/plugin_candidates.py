@@ -3162,6 +3162,13 @@ def promote_plugin_candidate(
     if not require_human_confirmation:
         raise PluginCandidateError("Promotion requires --require-human-confirmation to prevent unreviewed discipline module writes.")
 
+    from .third_party_provenance import ThirdPartyProvenanceError, validate_candidate_promotion_provenance
+
+    try:
+        promotion_provenance = validate_candidate_promotion_provenance(manifest)
+    except ThirdPartyProvenanceError as exc:
+        raise PluginCandidateError(str(exc)) from exc
+
     if plugin_type == "review_rule":
         generalized_rule = _read_json(root / "generalized_template" / "review_rule.json", {})
         maturity = str(generalized_rule.get("maturity") or manifest.get("maturity") or "candidate")
@@ -3191,6 +3198,7 @@ def promote_plugin_candidate(
     overlap = detect_plugin_overlap(root)
     promotion_mode = "augment_existing" if overlap.get("decision") == "merge_with_existing" else "create_new"
     canonical_manifest = _canonical_promoted_manifest(manifest, _read_json(required_generalized, {}), plugin_type)
+    canonical_manifest.update(promotion_provenance)
     canonical_manifest["merge_strategy"] = promotion_mode
     canonical_manifest["promotion_mode"] = promotion_mode
     canonical_manifest["intended_merge_target"] = str(target_dir)
@@ -3210,6 +3218,7 @@ def promote_plugin_candidate(
         "overlap_report": overlap,
         "runtime_registration": "available_after_write_via_manifest.json",
         "canonical_manifest": canonical_manifest,
+        "provenance": promotion_provenance,
     }
     _write_json(root / "promotion_plan.json", plan)
     if dry_run:
@@ -3236,6 +3245,7 @@ def promote_plugin_candidate(
         "promotion_mode": promotion_mode,
         "overlap_report": overlap,
         "source_text_copied": False,
+        **promotion_provenance,
     })
     return plan
 

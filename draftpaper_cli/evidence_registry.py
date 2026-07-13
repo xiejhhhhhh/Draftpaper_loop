@@ -66,11 +66,20 @@ def _normalize_record(
         "model_id": model_id,
         "model": model_id,
         "metric_dimension": metric_dimension,
+        "aggregation": str(record.get("aggregation") or "not_applicable").strip(),
+        "analysis_variant": str(record.get("analysis_variant") or "primary").strip(),
         "source_artifact": source_artifact,
         "source_hash": source_hash,
         "confidence": str(record.get("confidence") or "verified").strip(),
         "target_sections": list(record.get("target_sections") or []),
         "claim_boundary": str(record.get("claim_boundary") or "").strip(),
+        "figure_ids": [
+            str(item) for item in record.get("figure_ids") or record.get("figure_groups") or [] if str(item)
+        ],
+        "formula_ids": [str(item) for item in record.get("formula_ids") or [] if str(item)],
+        "citation_key": str(record.get("citation_key") or "").strip(),
+        "citation_role": str(record.get("citation_role") or "").strip(),
+        "allowed_interpretation": str(record.get("allowed_interpretation") or "").strip(),
     }
     missing = [field for field in REQUIRED_BINDING_FIELDS if not str(normalized.get(field) or "").strip()]
     normalized["binding_complete"] = not missing
@@ -84,7 +93,7 @@ def _finalize_binding(record: dict[str, Any]) -> None:
     record["missing_binding_fields"] = missing
 
 
-def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, str]:
+def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, str, str, str]:
     return (
         str(record.get("entity_role") or ""),
         str(record.get("cohort_id") or record.get("cohort") or ""),
@@ -93,6 +102,8 @@ def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, s
         str(record.get("run_id") or ""),
         str(record.get("model_id") or record.get("model") or ""),
         str(record.get("metric_dimension") or ""),
+        str(record.get("aggregation") or ""),
+        str(record.get("analysis_variant") or ""),
     )
 
 
@@ -123,7 +134,7 @@ def _numeric(value: Any) -> float | None:
 
 def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     conflicts: list[dict[str, Any]] = []
-    grouped: dict[tuple[str, str, str, str, str, str, str], list[dict[str, Any]]] = {}
+    grouped: dict[tuple[str, str, str, str, str, str, str, str, str], list[dict[str, Any]]] = {}
     for record in records:
         grouped.setdefault(_record_key(record), []).append(record)
     for key, items in grouped.items():
@@ -140,18 +151,21 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "run_id": key[4],
                     "model": key[5],
                     "metric_dimension": key[6],
+                    "aggregation": key[7],
+                    "analysis_variant": key[8],
                 },
                 "values": [item.get("value") for item in items],
                 "evidence_ids": [item.get("evidence_id") for item in items],
             })
 
-    by_scope: dict[tuple[str, str, str, str], dict[str, list[dict[str, Any]]]] = {}
+    by_scope: dict[tuple[str, str, str, str, str], dict[str, list[dict[str, Any]]]] = {}
     for record in records:
         scope = (
             str(record.get("cohort_id") or record.get("cohort") or ""),
             str(record.get("sample_unit") or ""),
             str(record.get("split") or ""),
             str(record.get("run_id") or ""),
+            str(record.get("analysis_variant") or "primary"),
         )
         by_scope.setdefault(scope, {}).setdefault(str(record.get("entity_role") or ""), []).append(record)
     for scope, roles in by_scope.items():
@@ -170,6 +184,7 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                             "sample_unit": scope[1],
                             "split": scope[2],
                             "run_id": scope[3],
+                            "analysis_variant": scope[4],
                         },
                         "source_count": source_count,
                         "class_balance_total": balance_total,
@@ -227,12 +242,27 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
         if not isinstance(figure, dict) or not isinstance(figure.get("metrics"), dict):
             continue
         figure_id = str(figure.get("storyboard_id") or figure.get("id") or figure.get("path") or "figure")
+        figure_text = " ".join(
+            str(figure.get(key) or "")
+            for key in ("scientific_question", "caption_draft", "figure_group", "result_claim")
+        ).lower()
         for metric, numeric in _flatten_numeric_metrics(figure["metrics"]):
             metric_name = str(metric).strip().lower()
-            count_tokens = ["count", "number", "row", "_n", "event", "source", "prediction"]
+            count_tokens = (
+                "count", "number", "row", "sample", "cohort", "event", "source", "available",
+                "valid", "excluded", "support", "dimension", "fold", "group",
+            )
             unit = "count" if any(token in metric_name for token in count_tokens) or "_as_" in metric_name else "score"
-            data_count_tokens = ("sample", "cohort", "row", "event_count", "source_count", "source_support", "inventory", "token_model", "token_ready")
-            data_sections = ["results", "data", "discussion"] if unit == "count" and any(token in metric_name for token in data_count_tokens) else ["results", "discussion"]
+            cohort_figure = any(token in figure_text for token in ("sample", "cohort", "coverage", "missingness", "availability"))
+            data_count_tokens = (
+                "sample", "cohort", "row", "event", "source", "available", "valid", "excluded",
+                "support", "inventory", "dimension", "group",
+            )
+            data_sections = (
+                ["results", "data", "discussion"]
+                if unit == "count" and (cohort_figure or any(token in metric_name for token in data_count_tokens))
+                else ["results", "discussion"]
+            )
             record = _normalize_record(
                 {
                     "entity_role": f"result_metric_{metric_name}",
@@ -240,12 +270,14 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                     "unit": unit,
                     "cohort": "main",
                     "sample_unit": "figure_evidence",
-                    "run_id": current_run_id,
-                    "split": current_split,
-                    "model_id": figure_id,
+                    "run_id": str(figure.get("run_id") or current_run_id),
+                    "split": str(figure.get("split") or figure.get("split_unit") or current_split),
+                    "model_id": str(figure.get("model_id") or primary.get("model_id") or "not_applicable"),
                     "metric_dimension": unit,
                     "confidence": "figure_metadata_bound",
                     "target_sections": data_sections,
+                    "figure_ids": [figure_id],
+                    "allowed_interpretation": figure.get("result_claim") or figure.get("claim_boundary") or "",
                 },
                 source_artifact=relative,
                 source_hash=source_hash,

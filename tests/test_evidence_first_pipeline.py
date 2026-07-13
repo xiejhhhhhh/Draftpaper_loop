@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from draftpaper_cli.core_evidence import assess_core_evidence
 from draftpaper_cli.orchestrator import run_pipeline
@@ -163,6 +164,26 @@ class EvidenceFirstPipelineTests(unittest.TestCase):
 
             self.assertEqual(report["decision"], "revise_required")
             self.assertIn("Scientific dependency is not current: methods.", report["issues"])
+
+    def test_core_evidence_consumes_rendered_pixel_quality_when_semantic_report_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Blank rendered evidence", field="workflow engineering")
+            (project.path / "results" / "figure_semantic_validation_report.json").write_text(
+                json.dumps({"decision": "pass"}), encoding="utf-8"
+            )
+            with patch(
+                "draftpaper_cli.scientific_figure_quality.assess_scientific_figure_quality",
+                return_value={
+                    "decision": "repair_required",
+                    "issues": [{"kind": "invalid_missing_or_blank_png"}],
+                },
+            ):
+                report = assess_core_evidence(project.path)
+
+            self.assertEqual(report["decision"], "revise_required")
+            self.assertTrue(
+                any("invalid_missing_or_blank_png" in issue for issue in report["issues"])
+            )
 
 
 if __name__ == "__main__":

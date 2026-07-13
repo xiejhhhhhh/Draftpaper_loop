@@ -115,6 +115,14 @@ def _read_text(path: Path) -> str:
         return ""
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _read_bib(project_path: Path) -> dict[str, dict[str, str]]:
     entries: dict[str, dict[str, str]] = {}
     content = "\n".join(
@@ -155,6 +163,17 @@ def _score_overlap(left: set[str], right: set[str], *, denominator: str = "left"
     return len(left & right) / max(1, base)
 
 
+def _supporting_passage(row: dict[str, str], bib_fields: dict[str, str]) -> str:
+    parts: list[str] = []
+    for value in (bib_fields.get("title"), row.get("claim"), row.get("evidence_summary")):
+        normalized = str(value or "").strip()
+        if not normalized or normalized.lower() in {"current gap", "method background", "data background"}:
+            continue
+        if normalized.lower() not in {item.lower() for item in parts}:
+            parts.append(normalized)
+    return ". ".join(parts)
+
+
 def _clean_latex(text: str) -> str:
     text = CITATION_PATTERN.sub("", text)
     text = re.sub(r"\\[a-zA-Z]+\*?(?:\[[^\]]*\])?(?:\{([^{}]*)\})?", r"\1", text)
@@ -188,6 +207,37 @@ def _best_passage_for_citation(text: str, match_start: int) -> str:
     return lines[0] if lines else ""
 
 
+def _local_citation_passage(text: str, match_start: int, match_end: int) -> str:
+    """Return the clause immediately governed by one citation command."""
+    for start, end, _sentence in _sentence_spans(text):
+        if not (start <= match_start <= end):
+            continue
+        raw = text[start:end]
+        citation_end = min(len(raw), max(0, match_end - start))
+        prefix = raw[:citation_end]
+        boundaries = [0]
+        earlier_citation = CITATION_PATTERN.search(prefix, 0, max(0, match_start - start))
+        if earlier_citation:
+            boundaries.extend(match.end() for match in re.finditer(r";\s*", prefix))
+            boundaries.extend(
+                match.end()
+                for match in re.finditer(r"(?:,\s*|\s+)(?:whereas|while|but)\s+", prefix, flags=re.I)
+            )
+            boundaries.extend(
+                match.end()
+                for match in re.finditer(
+                    CITATION_PATTERN.pattern + r"\s*,\s*and\s+",
+                    prefix,
+                    flags=re.I,
+                )
+            )
+        local = prefix[max(boundaries):].strip(" ,;\n\t")
+        if not _tokens(_clean_latex(local)):
+            return _best_passage_for_citation(text, match_start)
+        return local or raw.strip()
+    return _best_passage_for_citation(text, match_start)
+
+
 def _infer_citation_intent(section: str, passage: str, evidence_text: str, bib_fields: dict[str, str]) -> str:
     blob = " ".join([passage, evidence_text, bib_fields.get("title", ""), bib_fields.get("journal", "")]).lower()
     if any(term in blob for term in ["software", "application", "tool", "package", "library", "modeling", "fitting application"]):
@@ -198,14 +248,28 @@ def _infer_citation_intent(section: str, passage: str, evidence_text: str, bib_f
         return "data_source_background"
     if section == "discussion" and any(term in blob for term in ["baseline", "alternative", "comparison", "prior work", "recent work"]):
         return "comparison_context"
+    if section == "discussion":
+        cleaned_passage = _clean_latex(passage)
+        has_causal_or_proof_claim = bool(re.search(
+            r"\b(?:causes?|leads? to|results? in|improves?|increases?|reduces?|decreases?|prove[sd]?)\b",
+            cleaned_passage,
+            flags=re.I,
+        ))
+        if not has_causal_or_proof_claim and not _numbers(cleaned_passage):
+            return "comparison_context"
     if section == "introduction":
         return "background_context"
     return "claim_support"
 
 
 def _numbers(text: str) -> list[float]:
+    text = re.sub(
+        r"\b(?=[A-Za-z0-9_./+-]*[A-Za-z])(?=[A-Za-z0-9_./+-]*\d{2})[A-Za-z][A-Za-z0-9_./+-]*\b",
+        " ",
+        text,
+    )
     values = []
-    for raw in re.findall(r"(?<![A-Za-z])[-+]?(?:\d+\.\d+|\d+)(?:[eE][-+]?\d+)?%?", text):
+    for raw in re.findall(r"(?<![A-Za-z0-9_])[-+]?(?:\d+\.\d+|\d+)(?:[eE][-+]?\d+)?%?(?![A-Za-z0-9_])", text):
         try:
             value = float(raw.rstrip("%"))
         except ValueError:
@@ -215,7 +279,7 @@ def _numbers(text: str) -> list[float]:
 
 
 def _negated(text: str) -> bool:
-    return bool(re.search(r"\b(?:no|not|never|neither|without|failed to|did not|does not|cannot)\b", text, flags=re.I))
+    return bool(re.search(r"\b(?:no evidence|not|never|failed to|did not|does not|cannot)\b", text, flags=re.I))
 
 
 def _causal_pair(text: str) -> tuple[set[str], set[str]] | None:
@@ -313,10 +377,10 @@ def _judge_usage(key: str, section: str, passage: str, bib: dict[str, dict[str, 
         if score >= best_score:
             best_score = score
             best_row = row
-    supporting = str(best_row.get("evidence_summary") or best_row.get("claim") or "")
+    fields = bib.get(key) or {}
+    supporting = _supporting_passage(best_row, fields)
     doi = str(best_row.get("doi") or (bib.get(key) or {}).get("doi") or "")
     url = str(best_row.get("url") or (bib.get(key) or {}).get("url") or "")
-    fields = bib.get(key) or {}
     evidence_blob = " ".join(str(best_row.get(name) or "") for name in ["claim", "evidence_summary", "source", "doi", "url"])
     evidence_tokens = _tokens(evidence_blob)
     bib_tokens = _tokens(" ".join(str(fields.get(name) or "") for name in ["title", "journal", "booktitle", "keywords"]))
@@ -361,7 +425,7 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
                 continue
             text = _read_text(path)
             for match in CITATION_PATTERN.finditer(text):
-                passage = _best_passage_for_citation(text, match.start())
+                passage = _local_citation_passage(text, match.start(), match.end())
                 for raw_key in match.group(1).split(","):
                     key = raw_key.strip()
                     if not key:
@@ -664,6 +728,8 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
     else:
         promoted_snapshot = {}
 
+    stale_marker_path = state.path / "citation_audit" / "stale_marker.json"
+    stale_marker = _read_json(stale_marker_path) if stale_marker_path.is_file() else {}
     bib = _read_bib(state.path)
     evidence = _read_evidence(state.path)
     usages = _collect_usages(state.path, bib, evidence)
@@ -719,6 +785,7 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
         "usages": [asdict(usage) for usage in usages],
         "manuscript_snapshot": manuscript_snapshot(state.path),
         "evidence_snapshot_id": str(promoted_snapshot.get("snapshot_id") or "legacy_unpromoted"),
+        "superseded_stale_marker": stale_marker if final else {},
     }
     audit_dir = state.path / "citation_audit"
     iteration_dir = audit_dir / "iterations"
@@ -734,4 +801,5 @@ def audit_citations(project: str | Path, *, final: bool = False) -> dict[str, An
     if final and status == "passed":
         (audit_dir / "final_citation_audit_report.html").write_text(html, encoding="utf-8")
         _write_json(audit_dir / "final_citation_audit_report.json", report)
+        stale_marker_path.unlink(missing_ok=True)
     return report

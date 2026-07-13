@@ -1,0 +1,1 @@
+{"case_id":"clinical-survival","primary_discipline":"medicine","secondary_disciplines":[],"requirement":{"kind":"method","method_family":"patient survival analysis with censoring"},"expected_pack_id":"clinical_survival_analysis"}

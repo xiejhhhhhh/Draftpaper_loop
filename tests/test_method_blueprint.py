@@ -13,6 +13,7 @@ from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
 from draftpaper_cli.method_plan import collect_method_plan
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -63,6 +64,7 @@ class MethodBlueprintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="NDVI wheat CLI blueprint", field="geography remote sensing")
             prepare_blueprint_project(project.path)
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
             completed = subprocess.run(
                 [
@@ -81,6 +83,98 @@ class MethodBlueprintTests(unittest.TestCase):
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "written")
             self.assertTrue(Path(payload["method_blueprint"]).exists())
+
+    def test_structured_scientific_image_contract_does_not_inherit_astronomy_time_series_templates(self) -> None:
+        from draftpaper_cli.method_blueprint import prepare_method_blueprint
+        from draftpaper_cli.project_state import update_stage_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Scientific-image representation analysis with group-aware validation",
+                field="astronomy machine learning",
+            )
+            (project.path / "data" / "data_inventory.json").write_text(
+                json.dumps({"files": [{"path": "external://source/embeddings.csv", "columns": ["TARGETID", "emb_0"]}]}),
+                encoding="utf-8",
+            )
+            (project.path / "data" / "data_role_coverage_report.json").write_text(
+                json.dumps(
+                    {
+                        "decision": "pass",
+                        "available_roles": [
+                            "source_catalog",
+                            "image_or_raster_data",
+                            "features",
+                            "label_or_response",
+                            "confounder_variables",
+                            "sample_group",
+                            "validation_design",
+                            "missingness_reason",
+                            "quality_flags",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project.path / "research_plan" / "method_plan.json").write_text(
+                json.dumps(
+                    {
+                        "method_tasks": [
+                            {
+                                "method_family": "representation_projection",
+                                "method_components": ["target_confounder_diagnostic"],
+                                "required_data": ["image_embedding", "independent_target", "confounder_variables"],
+                                "validation_metric": "target_and_confounder_association",
+                            },
+                            {
+                                "method_family": "group_aware_validation",
+                                "method_components": ["transparent_baseline_comparison"],
+                                "required_data": ["group_validation_split", "class_label", "prediction_score"],
+                                "validation_metric": "group_held_out_metric",
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project.path / "research_plan" / "figure_storyboard.json").write_text(
+                json.dumps({"figures": [{"figure_id": "fig_repr", "suggested_plot_type": "embedding_diagnostic"}]}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps(
+                    {
+                        "method_families": [
+                            "representation_projection",
+                            "target_confounder_diagnostic",
+                            "group_aware_validation",
+                            "transparent_baseline_comparison",
+                        ],
+                        "required_data_features": ["image_embedding", "independent_target"],
+                        "method_data_fit": "proceed",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_plan.md").write_text("Structured image method plan.\n", encoding="utf-8")
+            update_stage_status(project.path, "method_plan", "draft")
+
+            prepare_method_blueprint(project.path)
+
+            blueprint = json.loads(
+                (project.path / "methods" / "method_blueprint.json").read_text(encoding="utf-8")
+            )
+            code_plan = blueprint["method_code_plan"]
+            contract = blueprint["method_data_contract"]
+            self.assertEqual(code_plan["selected_method_templates"], [])
+            self.assertNotIn("time_series_deep_learning_input", code_plan["method_families"])
+            self.assertNotIn("event_level_transformer_input_builder", code_plan["method_families"])
+            self.assertNotIn("light_curve_or_time_series", contract["required_roles"])
+            self.assertNotIn("prediction_score", contract["required_roles"])
+            self.assertEqual(contract["missing_roles"], [])
+            self.assertIn("principal_component_projection", blueprint["method_formula_plan"]["formula_families"])
+            self.assertIn("macro_f1", blueprint["method_formula_plan"]["formula_families"])
 
 
 if __name__ == "__main__":

@@ -41,6 +41,9 @@ def test_audit_converts_traceable_local_data_and_transformer_code_to_project_loc
     assert updated["decision"] == "pass"
     assert {item["state"] for item in updated["requirement_assessments"]} == {"covered_project_local"}
     assert all(item["binding_scope"] == "project_local" for item in bindings["bindings"])
+    project_state = json.loads((project / "project.json").read_text(encoding="utf-8"))
+    assert project_state["stages"]["code"]["status"] == "draft"
+    assert (project / "methods" / "project_local_code_acceptance.json").is_file()
 
 
 def test_audit_recognizes_common_project_local_analysis_roles(tmp_path) -> None:
@@ -98,3 +101,80 @@ def test_audit_recognizes_common_project_local_analysis_roles(tmp_path) -> None:
 
     assert result["decision"] == "pass"
     assert result["covered_project_local"] == 4
+
+
+def test_audit_binds_verified_external_inventory_roles_without_copying_private_data(tmp_path) -> None:
+    from draftpaper_cli.project_capability_audit import audit_project_capabilities
+
+    project = create_project(
+        root=tmp_path,
+        idea="Scientific image representation analysis",
+        field="astronomy machine learning",
+        target_journal="Test",
+    ).path
+    inventory = project / "data" / "data_inventory.json"
+    inventory.write_text(json.dumps({"files": [{"path": "external://source/embeddings.csv"}]}), encoding="utf-8")
+    (project / "data" / "data_role_coverage_report.json").write_text(
+        json.dumps(
+            {
+                "decision": "pass",
+                "available_roles": [
+                    "source_catalog",
+                    "features",
+                    "label_or_response",
+                    "confounder_variables",
+                    "sample_group",
+                    "validation_design",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = {
+        "requirement_assessments": [
+            {
+                "requirement_id": "data:fig:image_embedding",
+                "kind": "data",
+                "figure_id": "fig",
+                "role": "image_embedding",
+                "data_role_class": "input_data",
+                "core": True,
+                "state": "project_data_implementation_required",
+            },
+            {
+                "requirement_id": "data:fig:group_validation_split",
+                "kind": "data",
+                "figure_id": "fig",
+                "role": "group_validation_split",
+                "data_role_class": "input_data",
+                "core": True,
+                "state": "project_data_implementation_required",
+            },
+            {
+                "requirement_id": "data:fig:prediction_score",
+                "kind": "data",
+                "figure_id": "fig",
+                "role": "prediction_score",
+                "data_role_class": "derived_method_output",
+                "core": True,
+                "state": "method_output_pending",
+            },
+        ],
+        "rescue_tasks": [],
+    }
+    (project / "research_plan" / "plugin_sufficiency_report.json").write_text(
+        json.dumps(report), encoding="utf-8"
+    )
+    (project / "research_plan" / "plugin_binding_plan.json").write_text(
+        json.dumps({"bindings": []}), encoding="utf-8"
+    )
+
+    result = audit_project_capabilities(project)
+    bindings = json.loads(
+        (project / "research_plan" / "plugin_binding_plan.json").read_text(encoding="utf-8")
+    )["bindings"]
+
+    assert result["decision"] == "pass"
+    assert result["covered_project_local"] == 2
+    assert {item["coverage_basis"] for item in bindings} == {"verified_data_role_coverage"}
+    assert all(item["evidence"]["path"] == "data/data_role_coverage_report.json" for item in bindings)

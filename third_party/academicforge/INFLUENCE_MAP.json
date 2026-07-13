@@ -1,0 +1,28 @@
+{
+  "schema_version": "dpl.influence_map.v1",
+  "source_id": "academicforge",
+  "influences": [
+    {
+      "kind": "taxonomy_inspiration",
+      "source_path": "registry/skills.json",
+      "affected_paths": ["draftpaper_cli/discipline_modules", "draftpaper_cli/capability_packs"],
+      "transformation": "Classify data connectors, method templates and review rules by discipline and runtime mode.",
+      "copied_code": false,
+      "copied_text": false
+    },
+    {
+      "kind": "derived_template",
+      "catalog_entry": "scientific-agent-skills",
+      "original_source_id": "scientific_agent_skills",
+      "source_skill_paths": [
+        "skills/astropy", "skills/aeon", "skills/anndata", "skills/biopython",
+        "skills/geopandas", "skills/pydeseq2", "skills/scanpy", "skills/scikit-learn",
+        "skills/statsmodels", "skills/umap-learn", "skills/vaex", "skills/zarr-python"
+      ],
+      "affected_paths": ["draftpaper_cli/discipline_modules"],
+      "transformation": "Use public API and task taxonomy signals to design new first-party parameterized templates and fixtures.",
+      "copied_code": false,
+      "copied_text": false
+    }
+  ]
+}

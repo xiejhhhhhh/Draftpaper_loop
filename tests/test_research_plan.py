@@ -14,6 +14,7 @@ from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.journal_profile import resolve_journal_template
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.references import write_reference_outputs
 
 
@@ -71,6 +72,7 @@ class ResearchPlanTests(unittest.TestCase):
             )
             write_reference_outputs(project.path, SAMPLE_ITEMS, query="AGN outburst prediction")
             write_generic_profile(project.path, tmp)
+            refresh_project_passport(project.path, event="test_fixture_ready")
 
             result = generate_research_plan(project.path)
 
@@ -214,6 +216,7 @@ class ResearchPlanTests(unittest.TestCase):
             project = create_project(root=tmp, idea="AGN outburst prediction", field="machine learning astronomy")
             write_reference_outputs(project.path, SAMPLE_ITEMS, query="AGN outburst prediction")
             write_generic_profile(project.path, tmp)
+            refresh_project_passport(project.path, event="test_fixture_ready")
 
             completed = subprocess.run(
                 [
@@ -254,6 +257,7 @@ class ResearchPlanTests(unittest.TestCase):
                 "citation_count": 5,
                 "source": "semantic_scholar",
             }], query="Einstein Probe X-ray transient classification")
+            refresh_project_passport(project.path, event="test_fixture_ready")
 
             completed = subprocess.run(
                 [

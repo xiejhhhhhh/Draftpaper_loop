@@ -1,0 +1,91 @@
+{
+  "schema_version": "dpl.third_party_registry.v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "sources": [
+    {
+      "source_id": "paper_fetch_skill",
+      "name": "paper-fetch-skill",
+      "repository": "https://github.com/Dictation354/paper-fetch-skill",
+      "commit": "10e30297df2cc7c354c1cb407a8514b22d2800d8",
+      "license_expression": "MIT",
+      "license_file": "third_party/paper-fetch-skill/LICENSE",
+      "use_mode": "vendored_code",
+      "local_paths": ["third_party/paper-fetch-skill", "draftpaper_cli/_vendor/paper_fetch_skill"],
+      "copied_code": true,
+      "copied_text": true,
+      "attribution_required": true,
+      "review_status": "verified"
+    },
+    {
+      "source_id": "academicforge",
+      "name": "AcademicForge",
+      "repository": "https://github.com/HughYau/AcademicForge",
+      "commit": "1e3ece9e82758e34ca442398bac6edcaf1c61ea6",
+      "license_expression": "MIT AND upstream-skill-license",
+      "license_file": "third_party/academicforge/LICENSE.snapshot",
+      "use_mode": "taxonomy_inspiration",
+      "local_paths": ["third_party/academicforge/INFLUENCE_MAP.json"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "transitive_source_ids": ["scientific_agent_skills", "ai_research_skills", "superpowers"],
+      "review_status": "verified_catalog_only_not_terminal_provenance"
+    },
+    {
+      "source_id": "scientific_agent_skills",
+      "name": "Scientific Agent Skills",
+      "repository": "https://github.com/K-Dense-AI/scientific-agent-skills",
+      "commit": "4d97e293dc6f604fb6b63dcd49b9028df413d65b",
+      "license_expression": "MIT AND per-skill-license",
+      "license_file": "third_party/upstream-skills/k-dense-ai__scientific-agent-skills/LICENSE.snapshot",
+      "use_mode": "derived_template",
+      "local_paths": ["draftpaper_cli/discipline_modules"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "review_status": "skill_path_license_required"
+    },
+    {
+      "source_id": "ai_research_skills",
+      "name": "AI Research SKILLs",
+      "repository": "https://github.com/Orchestra-Research/AI-Research-SKILLs",
+      "commit": "773a52944ba4747a18bd4ae9ade53fff041adcbc",
+      "license_expression": "MIT",
+      "license_file": "third_party/upstream-skills/orchestra-research__ai-research-skills/LICENSE.snapshot",
+      "use_mode": "documentation_reference",
+      "local_paths": ["draftpaper_cli/discipline_modules/default/review_rules"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "review_status": "verified"
+    },
+    {
+      "source_id": "gbrain",
+      "name": "gbrain",
+      "repository": "https://github.com/garrytan/gbrain",
+      "commit": "a25209bbb2bacf1b88e06fd5282b27f1bf4a3e7a",
+      "license_expression": "MIT",
+      "license_file": "third_party/gbrain/LICENSE.snapshot",
+      "use_mode": "taxonomy_inspiration",
+      "local_paths": ["third_party/gbrain/INFLUENCE_MAP.md"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "review_status": "verified_no_runtime_dependency"
+    },
+    {
+      "source_id": "superpowers",
+      "name": "superpowers",
+      "repository": "https://github.com/obra/superpowers",
+      "commit": "d884ae04edebef577e82ff7c4e143debd0bbec99",
+      "license_expression": "MIT",
+      "license_file": "third_party/upstream-skills/obra__superpowers/LICENSE.snapshot",
+      "use_mode": "documentation_reference",
+      "local_paths": ["docs/superpowers/plans"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "review_status": "verified"
+    }
+  ]
+}

@@ -276,6 +276,8 @@ def _set_introduction_manifest(project_path: Path) -> None:
 def write_introduction(project: str | Path) -> dict[str, Any]:
     """Write a traceable LaTeX Introduction from the research plan and citation evidence."""
     state = load_project(project)
+    from .manuscript_revision import assert_writer_may_replace_section
+    assert_writer_may_replace_section(state.path, "introduction")
     plan_text, citation_rows = _require_inputs(state.path)
     introduction_dir = state.path / "introduction"
     introduction_dir.mkdir(parents=True, exist_ok=True)

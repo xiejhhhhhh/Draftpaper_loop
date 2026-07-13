@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ DATA_COMPLETENESS_REPORT_HTML = "data/data_completeness_report.html"
 DATA_ACQUISITION_TASKS_JSON = "data/data_acquisition_tasks.json"
 DATA_ACQUISITION_TASKS_HTML = "data/data_acquisition_tasks.html"
 DATA_CODE_MANIFEST_JSON = "data/data_code_manifest.json"
+EXTERNAL_DATA_LOCATORS_JSON = "data/external_data_locators.json"
 
 DATA_ACQUISITION_OUTPUTS = [
     DATA_ACCESS_PROFILE_JSON,
@@ -41,6 +43,7 @@ DATA_ACQUISITION_OUTPUTS = [
     DATA_ACQUISITION_TASKS_JSON,
     DATA_ACQUISITION_TASKS_HTML,
     DATA_CODE_MANIFEST_JSON,
+    EXTERNAL_DATA_LOCATORS_JSON,
 ]
 
 DATA_EXTENSIONS = {
@@ -139,19 +142,31 @@ def _scan_source_root(source_root: str | Path | None) -> SourceScan:
     files: list[dict[str, Any]] = []
     text_chunks: list[str] = []
     skip_parts = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "node_modules"}
-    for path in sorted(root.rglob("*")):
-        if len(files) >= 800:
-            break
+    candidates = []
+    for path in root.rglob("*"):
         if not path.is_file() or any(part in skip_parts for part in path.parts):
             continue
         suffix = path.suffix.lower()
         if suffix not in DATA_EXTENSIONS and suffix not in {".py", ".md", ".html"}:
             continue
+        priority = 0 if suffix in {".csv", ".tsv", ".parquet", ".json", ".npy", ".npz", ".h5", ".hdf5"} else 1 if len(path.relative_to(root).parts) <= 2 else 2
+        candidates.append((priority, len(path.relative_to(root).parts), path.as_posix().lower(), path))
+    for _priority, _depth, _name, path in sorted(candidates)[:800]:
+        suffix = path.suffix.lower()
         relative = _safe_relative(root, path)
+        size = path.stat().st_size
+        digest = None
+        if size <= 50_000_000:
+            hasher = hashlib.sha256()
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    hasher.update(chunk)
+            digest = hasher.hexdigest()
         record = {
             "path": relative,
             "suffix": suffix,
-            "size_bytes": path.stat().st_size,
+            "size_bytes": size,
+            "sha256": digest,
             "kind": "candidate_data" if suffix in DATA_EXTENSIONS else "context_file",
         }
         files.append(record)
@@ -591,6 +606,7 @@ def classify_data_access(project: str | Path, *, source_root: str | Path | None 
             "file_count": len(source_scan.files),
             "candidate_data_file_count": sum(1 for item in source_scan.files if item.get("kind") == "candidate_data"),
             "context_file_count": sum(1 for item in source_scan.files if item.get("kind") == "context_file"),
+            "files": source_scan.files,
         },
         "shared_with_review_engines": True,
     }
@@ -729,6 +745,19 @@ def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | N
     _write_json(state.path / DATA_ACQUISITION_TASKS_JSON, acquisition_tasks)
     write_html_report(state.path / DATA_ACQUISITION_TASKS_HTML, _render_tasks_markdown(acquisition_tasks), title="Data Acquisition Tasks")
     _write_json(state.path / DATA_ACQUISITION_PLAN_JSON, plan)
+    source_root_value = str(profile.get("source_root") or "")
+    locator_entries = list(((profile.get("source_scan") or {}).get("files") or []))
+    _write_json(state.path / EXTERNAL_DATA_LOCATORS_JSON, {
+        "schema_version": "dpl.external_data_locators.v1",
+        "status": "ready" if source_root_value and locator_entries else "empty",
+        "generated_at": utc_now(),
+        "source_id": "external_read_only_source_1",
+        "source_root": source_root_value,
+        "read_only": True,
+        "private_locator": True,
+        "entries": locator_entries,
+        "policy": "External assets are inventoried in place. Only explicitly selected derived assets may be copied into the project; source data remain read-only.",
+    })
     write_html_report(state.path / DATA_ACQUISITION_PLAN_HTML, _render_plan_markdown(plan), title="Data Acquisition Plan")
     rows = _manifest_rows(profile)
     _write_csv(

@@ -203,6 +203,46 @@ class DataFeasibilityGateTests(unittest.TestCase):
             for token in forbidden:
                 self.assertNotIn(token, tex)
 
+    def test_data_context_describes_external_read_only_scientific_assets(self) -> None:
+        from draftpaper_cli.data_feasibility import build_data_writing_context
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Image representation study", field="astronomy machine learning")
+            inventory = {
+                "file_count": 3,
+                "external_file_count": 3,
+                "files": [{
+                    "path": "external://source/catalog.csv",
+                    "kind": "external_read_only",
+                    "suffix": ".csv",
+                    "readable": True,
+                    "row_count": 120,
+                    "columns": [
+                        "OBJECT_ID", "PROFILE_LABEL", "redshift", "redshift_error", "flux_band_a", "SELECTION_TARGET",
+                        "cutout_exists", "emb_0", "emb_1",
+                    ],
+                }],
+            }
+            (project.path / "data" / "data_inventory.json").write_text(json.dumps(inventory), encoding="utf-8")
+            (project.path / "data" / "data_feasibility_report.json").write_text(
+                json.dumps({"supported_claim_level": "exploratory associations"}), encoding="utf-8"
+            )
+            (project.path / "data" / "label_semantics.json").write_text(
+                json.dumps({"target_field": "PROFILE_LABEL", "claim_boundary": "Catalogue profile type, not expert morphology."}),
+                encoding="utf-8",
+            )
+
+            context = build_data_writing_context(project.path)
+
+            self.assertIn("externally managed, read-only", context["source_summary"])
+            self.assertIn("identifier-based integration", context["processing_summary"])
+            self.assertEqual(context["variable_groups"]["morphology_targets"], ["PROFILE_LABEL"])
+            self.assertIn("pretrained image-representation components", context["variable_groups"]["image_representations"])
+            self.assertIn("OBJECT_ID", context["variable_groups"]["identifiers_or_metadata"])
+            self.assertIn("SELECTION_TARGET", context["variable_groups"]["selection_and_targeting_flags"])
+            self.assertNotIn("OBJECT_ID", context["variable_groups"].get("response_variables", []))
+            self.assertEqual(context["label_semantics"]["target_field"], "PROFILE_LABEL")
+
     def test_cli_data_feasibility_flow(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI data gate", field="workflow engineering")

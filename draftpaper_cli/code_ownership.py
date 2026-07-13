@@ -349,55 +349,16 @@ def _extract_formula_entries_from_text(text: str, *, source_path: str) -> list[d
 
 
 def extract_method_formulas(project: str | Path) -> dict[str, Any]:
-    """Extract method formulas from stage-owned method code and figure metadata."""
+    """Build formulas from the active method contract and verified stage-owned code."""
     state = load_project(project)
     route_stage_code(state.path)
-    files = [
-        path for path in _scan_python_files(state.path)
-        if _project_relative(state.path, path).startswith(("methods/scripts/", "methods/src/", "methods/plotting/"))
-    ]
-    entries: list[dict[str, Any]] = []
-    for path in files:
-        entries.extend(_extract_formula_entries_from_text(_read_text(path), source_path=_project_relative(state.path, path)))
-    figure_metadata = _read_json(state.path / "results" / "figure_metadata.json", {})
-    for item in figure_metadata.get("figures") or [] if isinstance(figure_metadata, dict) else []:
-        statistics = item.get("statistics") or {}
-        figure_id = str(item.get("figure_id") or item.get("path") or "figure")
-        if "class_count" in statistics:
-            entries.append({
-                "id": f"{figure_id}_class_support_ratio",
-                "name": "Class support ratio",
-                "latex": r"\rho_{\mathrm{imbalance}}=\frac{\max_k n_k}{\min_k n_k}",
-                "variables": ["n_k"],
-                "source_path": "results/figure_metadata.json",
-                "source": figure_id,
-            })
-    unique: dict[str, dict[str, Any]] = {}
-    for entry in entries:
-        unique.setdefault(entry["id"], entry)
-    formulas = list(unique.values())
-    payload = {
-        "status": "written",
-        "generated_at": utc_now(),
-        "source": "stage_owned_method_code_static_scan",
-        "formula_count": len(formulas),
-        "formulas": formulas,
-    }
-    _write_json(state.path / "methods" / "method_formula_manifest.json", payload)
-    lines = ["% Auto-generated from stage-owned method code.", ""]
-    for entry in formulas:
-        lines.extend([
-            f"% {entry['id']}: {entry['name']} ({entry['source_path']})",
-            "\\begin{equation}",
-            str(entry["latex"]),
-            "\\end{equation}",
-            "",
-        ])
-        if entry.get("variables"):
-            lines.extend([f"% Variables: {', '.join(entry['variables'])}", ""])
-    if not formulas:
-        lines.append("% No formulas were inferred from stage-owned method code.")
-    (state.path / "methods" / "method_formulas.tex").write_text("\n".join(lines), encoding="utf-8")
+    from .methods import _read_manifest, _write_method_formulas
+
+    run_manifest_path = state.path / "methods" / "run_manifest.yaml"
+    run_manifest = _read_manifest(run_manifest_path) if run_manifest_path.exists() else {}
+    _write_method_formulas(state.path, run_manifest)
+    payload = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
+    formulas = payload.get("formulas") if isinstance(payload.get("formulas"), list) else []
     return {
         "status": "written",
         "project_path": str(state.path),

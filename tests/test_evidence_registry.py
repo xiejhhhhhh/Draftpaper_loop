@@ -161,6 +161,59 @@ class EvidenceRegistryTests(unittest.TestCase):
             self.assertEqual(registry["records"], [])
             self.assertEqual(registry["status"], "ready")
 
+    def test_registry_preserves_figure_formula_and_interpretation_bindings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Bound evidence", field="machine learning")
+            (project.path / "results" / "resolved_result_evidence.json").write_text(
+                json.dumps({
+                    "evidence_records": [{
+                        "evidence_id": "metric-bound",
+                        "entity_role": "result_metric_macro_f1",
+                        "value": 0.81,
+                        "unit": "score",
+                        "cohort_id": "held-out",
+                        "sample_unit": "source",
+                        "split": "group-held-out",
+                        "run_id": "run-1",
+                        "model_id": "model-1",
+                        "metric_dimension": "dimensionless_score",
+                        "figure_ids": ["figure-performance"],
+                        "formula_ids": ["formula-f1"],
+                        "allowed_interpretation": "A bounded held-out comparison.",
+                    }]
+                }),
+                encoding="utf-8",
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+            record = registry["records"][0]
+
+            self.assertEqual(record["figure_ids"], ["figure-performance"])
+            self.assertEqual(record["formula_ids"], ["formula-f1"])
+            self.assertEqual(record["allowed_interpretation"], "A bounded held-out comparison.")
+
+    def test_cohort_figure_counts_are_available_to_data_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Cohort study", field="astronomy")
+            (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({
+                "figures": [{
+                    "id": "cohort-figure",
+                    "storyboard_id": "cohort-figure",
+                    "scientific_question": "What sample coverage and missingness define the cohort?",
+                    "metrics": {"source_catalog": 5544, "image_available": 5275, "embedding_valid": 4800},
+                }]
+            }), encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            cohort_records = [item for item in registry["records"] if item["figure_ids"] == ["cohort-figure"]]
+            self.assertEqual(len(cohort_records), 3)
+            self.assertTrue(all("data" in item["target_sections"] for item in cohort_records))
+            self.assertTrue(all(item["metric_dimension"] == "count" for item in cohort_records))
+
 
 if __name__ == "__main__":
     unittest.main()

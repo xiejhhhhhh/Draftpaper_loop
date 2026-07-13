@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "clinical_survival_analysis",
+  "version": "1.0.0",
+  "owner_discipline": "medicine",
+  "secondary_disciplines": [],
+  "capability_family": "time_to_event_modeling",
+  "data_plugin_ids": ["survival_cohort_local_table"],
+  "method_plugin_ids": ["scikit_survival_time_to_event"],
+  "review_plugin_ids": ["survival_censoring_gate"],
+  "input_roles": ["follow_up_time", "event_indicator", "clinical_covariates"],
+  "output_roles": ["hazard_estimate", "survival_curve", "time_dependent_metrics"],
+  "scientific_unit": "participant",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["survival analysis", "time to event", "censoring", "hazard ratio"],
+  "forbidden_triggers": ["machine failure time without patients"],
+  "failure_modes": ["censoring_misdefinition", "immortal_time_bias", "participant_split_leakage"],
+  "bootstrap_runbook": "Define time origin, censoring, event and participant split before fitting.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

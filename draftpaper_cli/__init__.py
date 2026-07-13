@@ -10,17 +10,32 @@ Commercial use requires written authorization from the developer.
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
+from .capability_packs import (
+    capability_ownership_map,
+    discover_capability_packs,
+    evaluate_capability_routing,
+    route_capability_requirement,
+)
 from .citation_audit import CitationAuditError, audit_citations
+from .bibliography import (
+    build_reference_registry,
+    inspect_reference_duplicates,
+    render_reference_proof,
+    resolve_reference_version,
+    validate_bibliography,
+)
 from .change_impact import ChangeClassification, affected_stages, classify_change
 from .citation_repair import CitationRepairError, apply_citation_repair, generate_citation_repair_plan, re_audit_citations, run_citation_repair_loop
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .evidence_registry import EvidenceConflictError, build_scientific_evidence_registry, ensure_registry_consistent
+from .evidence_resolver import resolve_figure_evidence, resolve_paragraph_evidence
 from .evidence_snapshot import create_evidence_snapshot, reopen_evidence_snapshot, validate_evidence_snapshot
 from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
 from .figure_semantics import build_semantic_figure_contract, validate_figure_semantics
 from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
+from .third_party_provenance import validate_third_party_provenance
 from .integrity_gate import IntegrityGateError, latest_integrity_report, run_integrity_gate
 from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_latex, compile_latex_pdf
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
@@ -240,4 +255,32 @@ __all__ = [
     "apply_revision",
     "re_review",
     "learn_writing_style_from_draft",
+    "TRANSACTION_LEDGER_PATH",
+    "record_command_transaction",
+    "SYSTEM_OF_RECORD_PATH",
+    "inspect_project_system_of_record",
+    "plan_project_version",
+    "create_project_version_from_plan",
+    "import_version_assets",
+    "validate_project_version",
+    "discover_capability_packs",
+    "capability_ownership_map",
+    "route_capability_requirement",
+    "evaluate_capability_routing",
+    "resolve_figure_evidence",
+    "resolve_paragraph_evidence",
+    "build_reference_registry",
+    "inspect_reference_duplicates",
+    "resolve_reference_version",
+    "validate_bibliography",
+    "render_reference_proof",
+    "validate_third_party_provenance",
 ]
+from .command_transaction import TRANSACTION_LEDGER_PATH, record_command_transaction
+from .project_system_of_record import SYSTEM_OF_RECORD_PATH, inspect_project_system_of_record
+from .project_versioning import (
+    create_project_version_from_plan,
+    import_version_assets,
+    plan_project_version,
+    validate_project_version,
+)

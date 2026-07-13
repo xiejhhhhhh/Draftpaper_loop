@@ -53,7 +53,12 @@ FORBIDDEN_MANUSCRIPT_PATTERNS = [
     ("file_path_language", re.compile(r"\b(?:filename|pathname|storage path|local path)\b", re.IGNORECASE)),
     ("execution_smoke_language", re.compile(r"\b(?:training_)?smoke[_-]?test\b|\b(?:XRB|TDE|AGN)[_-]?verify\b", re.IGNORECASE)),
     ("generator_instruction_language", re.compile(r"\bcurrent draft should\b|\bmanuscript should\b", re.IGNORECASE)),
-    ("placeholder_author", re.compile(r"\bDraft Author\b|\bDraft affiliation\b|\bplaceholder abstract\b", re.IGNORECASE)),
+    ("placeholder_author", re.compile(
+        r"\bDraft Author\b|\bDraft affiliation\b|\bManuscript author to be supplied\b|"
+        r"\bAffiliation to be supplied\b|placeholder(?:\.invalid)?|"
+        r"\b(?:abstract\s+is\s+a\s+placeholder|placeholder abstract)\b",
+        re.IGNORECASE,
+    )),
 ]
 
 

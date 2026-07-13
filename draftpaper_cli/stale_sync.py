@@ -26,6 +26,13 @@ class ArtifactDriftError(RuntimeError):
     """Raised when artifact drift cannot be mapped to stage backtracking."""
 
 
+MANAGED_STATE_ARTIFACTS = {
+    "project.json",
+    "project.yaml",
+    "project_system_of_record.json",
+}
+
+
 def _stage_for_path(path: str) -> str:
     normalized = path.replace("\\", "/")
     if normalized in {"project.json", "project.yaml"}:
@@ -59,12 +66,20 @@ def _artifact_maps(project: str | Path) -> tuple[dict[str, dict[str, Any]], dict
     baseline = {
         str(item.get("path")): item
         for item in (passport.get("artifacts") or [])
-        if isinstance(item, dict) and item.get("path")
+        if (
+            isinstance(item, dict)
+            and item.get("path")
+            and str(item.get("path")).replace("\\", "/") not in MANAGED_STATE_ARTIFACTS
+        )
     }
     current = {
         str(item.get("path")): item
         for item in collect_artifacts(project_path)
-        if isinstance(item, dict) and item.get("path")
+        if (
+            isinstance(item, dict)
+            and item.get("path")
+            and str(item.get("path")).replace("\\", "/") not in MANAGED_STATE_ARTIFACTS
+        )
     }
     return baseline, current
 
@@ -87,6 +102,8 @@ def detect_artifact_drift(project: str | Path) -> dict[str, Any]:
                 "stage": _known_stage(_stage_for_path(path)),
                 "previous_sha256": old.get("sha256"),
                 "current_sha256": new.get("sha256"),
+                "previous_semantic_fingerprint": old.get("semantic_fingerprint"),
+                "current_semantic_fingerprint": new.get("semantic_fingerprint"),
             })
     for path, new in sorted(current.items()):
         if path not in baseline:
@@ -147,6 +164,10 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
             before=item.get("previous_sha256"),
             after=item.get("current_sha256"),
             source_stage=owner_stage,
+            declaration={
+                "before_semantic_fingerprint": item.get("previous_semantic_fingerprint"),
+                "after_semantic_fingerprint": item.get("current_semantic_fingerprint"),
+            },
         )
         impacted = affected_stages(change)
         classified_changes.append({

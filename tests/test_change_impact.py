@@ -10,6 +10,26 @@ from draftpaper_cli.change_impact import affected_stages, artifact_role_for_path
 
 
 class ChangeImpactTests(unittest.TestCase):
+    def test_code_and_result_control_manifests_have_narrow_scientific_roles(self) -> None:
+        from draftpaper_cli.change_impact import artifact_role_for_path
+
+        self.assertEqual(
+            artifact_role_for_path("methods/method_code_manifest.json"),
+            ("method_config", "methods"),
+        )
+        self.assertEqual(
+            artifact_role_for_path("data/external_data_locators.json"),
+            ("data_schema", "data"),
+        )
+        self.assertEqual(
+            artifact_role_for_path("data/scripts/audit_image_quality.py"),
+            ("data_code", "data"),
+        )
+        self.assertEqual(
+            artifact_role_for_path("results/figure_quality_report.json"),
+            ("result_manifest", "results"),
+        )
+
     def test_local_citation_repair_does_not_invalidate_empirical_pipeline(self) -> None:
         change = classify_change(
             artifact_role="citation_repair",
@@ -43,6 +63,27 @@ class ChangeImpactTests(unittest.TestCase):
             affected_stages(change),
             ["results", "latex", "quality_checks"],
         )
+
+    def test_reference_metadata_only_change_does_not_invalidate_research_evidence(self) -> None:
+        fingerprint = {
+            "citation_key_count": 2,
+            "work_count": 2,
+            "citation_keys_sha256": "same-keys",
+            "work_ids_sha256": "same-works",
+        }
+        change = classify_change(
+            artifact_role="reference_library",
+            before="old-bib-hash",
+            after="new-bib-hash",
+            source_stage="references",
+            declaration={
+                "before_semantic_fingerprint": fingerprint,
+                "after_semantic_fingerprint": dict(fingerprint),
+            },
+        )
+
+        self.assertEqual(change.change_class, "reference_metadata_only")
+        self.assertEqual(affected_stages(change), ["references", "citation_audit", "latex", "quality_checks"])
 
     def test_scientific_figure_change_invalidates_all_manuscript_consumers(self) -> None:
         change = classify_change(

@@ -15,6 +15,8 @@ from .project_state import load_project, update_stage_status
 
 METHOD_PLAN_INPUTS = [
     "research_plan/research_plan.md",
+    "research_plan/method_plan.json",
+    "research_plan/research_capability_contract.json",
     "references/literature_items.json",
     "data/data_feasibility_report.json",
 ]
@@ -91,6 +93,51 @@ def _infer_required_features(text: str) -> list[str]:
         if any(term in lowered for term in terms):
             features.append(label)
     return features
+
+
+def _structured_blueprint_requirements(project_path: Path) -> tuple[list[str], list[str]]:
+    """Prefer the research blueprint's explicit method/data contract over prose keywords."""
+    method_plan = _read_json(project_path / "research_plan" / "method_plan.json", {})
+    tasks = method_plan.get("method_tasks") if isinstance(method_plan, dict) else []
+    if not isinstance(tasks, list):
+        tasks = []
+
+    families: list[str] = []
+    features: list[str] = []
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        family = str(task.get("method_family") or "").strip()
+        if family:
+            families.append(family)
+        for component in task.get("method_components") or []:
+            value = str(component).strip()
+            if value:
+                families.append(value)
+        for feature in task.get("required_data") or []:
+            value = str(feature).strip()
+            if value:
+                features.append(value)
+
+    capability_contract = _read_json(
+        project_path / "research_plan" / "research_capability_contract.json", {}
+    )
+    requirements = capability_contract.get("requirements") if isinstance(capability_contract, dict) else []
+    if isinstance(requirements, list):
+        for requirement in requirements:
+            if not isinstance(requirement, dict):
+                continue
+            kind = str(requirement.get("kind") or "").strip().lower()
+            if kind == "method":
+                value = str(requirement.get("method_family") or requirement.get("role") or "").strip()
+                if value:
+                    families.append(value)
+            elif kind == "data":
+                value = str(requirement.get("role") or "").strip()
+                if value:
+                    features.append(value)
+
+    return list(dict.fromkeys(families)), list(dict.fromkeys(features))
 
 
 def _render_method_plan_md(
@@ -186,14 +233,16 @@ def collect_method_plan(
         user_method,
         " ".join(str((item.get("deep_summary") or {}).get("methods") or item.get("abstract") or "") for item in literature_items),
     ])
-    method_families = _infer_method_families(combined_text)
-    required_features = _infer_required_features(combined_text)
+    structured_families, structured_features = _structured_blueprint_requirements(state.path)
+    method_families = structured_families or _infer_method_families(combined_text)
+    required_features = structured_features or _infer_required_features(combined_text)
     literature_methods = _extract_literature_methods(literature_items)
     requirements = {
         "project_id": state.metadata.get("project_id"),
         "user_method": user_method,
         "method_families": method_families,
         "required_data_features": required_features,
+        "requirement_source": "research_blueprint" if structured_families or structured_features else "prose_inference",
         "primary_metric": re.sub(r"[^A-Za-z0-9_:-]+", "_", primary_metric.strip().lower()) or "f1",
         "minimum_primary_metric": minimum_primary_metric,
         "literature_method_count": len(literature_methods),

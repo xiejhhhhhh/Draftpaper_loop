@@ -16,6 +16,12 @@ python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --s
 python -m draftpaper_cli.cli resume --project <repo>\projects\my_project --checkpoint-hash abc123def456
 python -m draftpaper_cli.cli mark-stage-stale --project <repo>\projects\my_project --stage references
 python -m draftpaper_cli.cli update-stage-status --project <repo>\projects\my_project --stage data --status draft
+python -m draftpaper_cli.cli doctor --project <repo>\projects\my_project --json
+python -m draftpaper_cli.cli recover --project <repo>\projects\my_project
+python -m draftpaper_cli.cli plan-project-version --project <repo>\projects\my_project --version v1 --output <repo>\version_plans\my_project_v1.json
+python -m draftpaper_cli.cli create-project-version --plan <repo>\version_plans\my_project_v1.json
+python -m draftpaper_cli.cli import-version-assets --project <repo>\projects\my_project_v1 --plan <repo>\version_plans\my_project_v1.json
+python -m draftpaper_cli.cli validate-project-version --project <repo>\projects\my_project_v1
 ```
 
 `status` and `run-pipeline` are the orchestrator layer. They inspect `project.json`, stage manifests, `project_passport.yaml`, and append-only ledgers to report the next safe action. If `status` returns `pipeline_state=drift_detected`, run `sync-artifact-stale` before any downstream stage. If integrity or final quality reports failed at the final gate, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, `prepare-analysis-revision`, and `generate-revision-plan` as each artifact appears. `detect-artifact-drift` is read-only; `sync-artifact-stale` maps hash drift to downstream stale stages, writes an integrity ledger event, and refreshes the passport baseline. `checkpoint` records an explicit human confirmation boundary in `checkpoint_ledger.jsonl`; `resume` consumes it by appending a resume event, never by deleting or rewriting the checkpoint.
@@ -69,6 +75,8 @@ python -m draftpaper_cli.cli extract-method-formulas --project <repo>\projects\m
 python -m draftpaper_cli.cli trace-figures-to-code --project <repo>\projects\my_project
 python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project --command "python methods/scripts/run_analysis.py" --output results/tables/metrics.csv --output results/tables/analysis_summary.csv --output results/figure_metadata.json --output results/figure_quality_report.json --output <figure-path-from-results-figure_plan-json>
 python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
+python -m draftpaper_cli.cli resolve-figure-evidence --project <repo>\projects\my_project
+python -m draftpaper_cli.cli assess-result-support --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-core-evidence --project <repo>\projects\my_project
 python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage core_evidence --note "User approved core figures and evidence"
 python -m draftpaper_cli.cli inventory-results --project <repo>\projects\my_project
@@ -101,8 +109,17 @@ python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assemble-latex --project <repo>\projects\my_project --compile-pdf
 python -m draftpaper_cli.cli compile-latex-pdf --project <repo>\projects\my_project
 python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\my_project
-python -m draftpaper_cli.cli prepare-blind-quality-evaluation --project <repo>\projects\my_project
-python -m draftpaper_cli.cli record-blind-quality-evaluation --project <repo>\projects\my_project --input <completed-review.json>
+python -m draftpaper_cli.cli audit-citations --project <repo>\projects\my_project --final
+python -m draftpaper_cli.cli build-reference-registry --project <repo>\projects\my_project
+python -m draftpaper_cli.cli inspect-reference-duplicates --project <repo>\projects\my_project
+python -m draftpaper_cli.cli validate-bibliography --project <repo>\projects\my_project
+python -m draftpaper_cli.cli render-reference-proof --project <repo>\projects\my_project
+python -m draftpaper_cli.cli prepare-independent-manuscript-review --project <repo>\projects\my_project
+python -m draftpaper_cli.cli record-independent-manuscript-review --project <repo>\projects\my_project --reviewer reviewer_01 --input <reviewer-01.json>
+python -m draftpaper_cli.cli record-independent-manuscript-review --project <repo>\projects\my_project --reviewer reviewer_02 --input <reviewer-02.json>
+python -m draftpaper_cli.cli assess-manuscript-quality-release --project <repo>\projects\my_project
+python -m draftpaper_cli.cli import-review-findings --project <repo>\projects\my_project
+python -m draftpaper_cli.cli build-manuscript-source-map --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-paper-quality-parity --project <repo>\projects\my_project
 python -m draftpaper_cli.cli quality-check --project <repo>\projects\my_project
 python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\my_project
@@ -126,7 +143,7 @@ python -m draftpaper_cli.cli write-github-contribution-guide --project <repo>\pr
 
 `quality-check` returns exit code `0` for passed and `1` for failed. It still writes `quality_checks/quality_report.json` on failure.
 
-`prepare-blind-quality-evaluation` writes the two-reviewer rubric template. After independent reviewers compare the complete blinded manuscripts and real figures, `record-blind-quality-evaluation` validates their dimension scores and records `quality_checks/blind_manuscript_evaluation.json`. Automated scores cannot replace this artifact or authorize the 0.95 quality claim.
+`prepare-independent-manuscript-review` freezes one anonymous generated manuscript, its real figures and tables, and a hash-bound review manifest. Reviewer 1 and reviewer 2 inspect that same bundle in separate sessions and cannot see the other report, prior audits, or automated scores. No original manuscript, A/B mapping, unblinding step, or relative quality ratio is permitted. `record-independent-manuscript-review` validates each grounded report, and `assess-manuscript-quality-release` creates the revision queue; release requires zero unresolved critical and major findings.
 
 `diagnose-gate-failures` writes `review/gate_failure_diagnosis.json` and `.md`. `review-draft` writes `review/review_report.md` and `review/reviewer_issues.json`. `assess-publication-readiness` writes readiness, archive-review, journal-fit, and claim-evidence artifacts. `discover-review-workflow-gaps` infers geography, astronomy, machine_learning, or default. `propose-review-engineering-plan` writes review-engineering plans and user-confirmation requests. `recommend-statistical-revision` writes `review/statistical_rescue_plan.json` and `.html`. `prepare-analysis-revision` writes `review/actionable_analysis_tasks.json`, `review/analysis_revision_feasibility.json`, `.html`, `methods/analysis_revision_requirements.json`, and `results/revision_figure_plan_delta.json`; blocked tasks ask for missing data roles instead of generating fake code. After this, use `plan-figures --use-review-tasks`, `generate-analysis-code --use-review-tasks`, `verify-methods`, and `assess-result-validity` before `generate-revision-plan`. `apply-revision` marks affected stages stale only. `re-review` reruns diagnosis, review, readiness, statistical rescue, and planning.
 

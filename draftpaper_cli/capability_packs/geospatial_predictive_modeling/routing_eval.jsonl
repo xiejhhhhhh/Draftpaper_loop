@@ -1,0 +1,2 @@
+{"case_id":"geo-regression","primary_discipline":"geography","secondary_disciplines":["machine_learning"],"requirement":{"kind":"method","method_family":"spatial prediction with regional held out validation"},"expected_pack_id":"geospatial_predictive_modeling"}
+{"case_id":"geo-unseen-causal-panel","primary_discipline":"geography","secondary_disciplines":[],"requirement":{"kind":"method","method_family":"instrumental variable panel estimation"},"expected_pack_id":null}

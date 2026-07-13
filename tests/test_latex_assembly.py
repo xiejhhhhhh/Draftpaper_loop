@@ -21,6 +21,7 @@ from draftpaper_cli.journal_profile import resolve_journal_template
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import verify_methods, write_methods
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_state import update_stage_status
 from draftpaper_cli.references import write_reference_outputs
 from draftpaper_cli.research_plan import generate_research_plan
@@ -96,6 +97,7 @@ def prepared_project(tmp: str) -> Path:
     write_data(project.path)
     write_methods(project.path)
     write_discussion(project.path)
+    refresh_project_passport(project.path, event="test_prepared_project")
     return project.path
 
 
@@ -128,6 +130,19 @@ def _write_fake_tool(tool_dir: Path, name: str, *, writes_pdf: bool = False) -> 
 
 
 class LatexAssemblyTests(unittest.TestCase):
+    def test_aastex_metadata_without_authors_receives_review_placeholder_affiliation(self) -> None:
+        from draftpaper_cli.latex_assembly import _apply_manuscript_metadata, _ensure_aastex_author_block
+
+        rendered = _apply_manuscript_metadata(
+            "\\documentclass{aastex701}\n\\begin{document}\n\\title{Draft}\n\\author{}\n\\end{document}\n",
+            {"title": "Evidence-bound title", "abstract": "A complete abstract for review."},
+            aastex=True,
+        )
+        rendered = _ensure_aastex_author_block(rendered)
+
+        self.assertIn(r"\author{Manuscript author to be supplied}", rendered)
+        self.assertIn(r"\affiliation{Affiliation to be supplied by the authors}", rendered)
+
     def test_assemble_latex_requires_all_sections_and_bibtex(self) -> None:
         from draftpaper_cli.latex_assembly import LatexAssemblyError, assemble_latex
 
@@ -163,12 +178,23 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertTrue(library.exists())
             for name in ["introduction", "data", "methods", "results", "discussion"]:
                 self.assertTrue((project_path / "latex" / "sections" / f"{name}.tex").exists())
+            result_artifacts = project_path / "latex" / "sections" / "result_artifacts.tex"
+            self.assertTrue(result_artifacts.exists())
+            artifact_content = result_artifacts.read_text(encoding="utf-8")
+            self.assertIn("\\includegraphics", artifact_content)
+            self.assertIn("\\caption{", artifact_content)
+            self.assertIn("\\label{fig:", artifact_content)
+            self.assertNotIn("Analysis context (", artifact_content)
+            self.assertNotIn("Reported quantities:", artifact_content)
 
             content = main_tex.read_text(encoding="utf-8")
             self.assertIn("Generated with Draftpaper-loop", content)
             self.assertIn("\\documentclass", content)
+            self.assertIn("\\usepackage{amsmath,amssymb}", content)
             self.assertIn("\\graphicspath{{../}}", content)
             self.assertIn("\\input{sections/introduction}", content)
+            self.assertIn("\\input{sections/result_artifacts}", content)
+            self.assertIn("\\input{sections/result_artifacts}\n\\clearpage\n\\input{sections/discussion}", content)
             self.assertIn("Draftpaper-loop", content)
             self.assertNotIn("Draft Author", content)
             self.assertNotIn("Draft affiliation", content)
@@ -195,6 +221,22 @@ class LatexAssemblyTests(unittest.TestCase):
             project_json = json.loads((project_path / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project_json["stages"]["latex"]["status"], "draft")
             self.assertEqual(project_json["stages"]["quality_checks"]["status"], "stale")
+
+    def test_assemble_latex_applies_manuscript_caption_override_without_changing_figure_metadata(self) -> None:
+        from draftpaper_cli.latex_assembly import assemble_latex
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_project(tmp)
+            metadata = project_path / "writing" / "manuscript_metadata.yaml"
+            metadata.write_text(
+                "figure_captions:\n  risk_curve: Conditional fixed-fold result; no pipeline refitting is claimed.\n",
+                encoding="utf-8",
+            )
+
+            assemble_latex(project_path)
+
+            artifacts = (project_path / "latex" / "sections" / "result_artifacts.tex").read_text(encoding="utf-8")
+            self.assertIn("Conditional fixed-fold result; no pipeline refitting is claimed.", artifacts)
 
     def test_assemble_latex_rejects_citation_missing_from_bibtex(self) -> None:
         from draftpaper_cli.latex_assembly import LatexCitationError, assemble_latex

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
@@ -101,53 +102,49 @@ def _split_semicolon_terms(text: str, limit: int = 5) -> list[str]:
 def _idea_phrases(text: str, *, limit: int = 6) -> list[str]:
     raw = re.sub(r"[_/]+", " ", text or "")
     candidates: list[str] = []
-    known_patterns = [
-        r"time-aware transformer",
-        r"ep\s+wxt",
-        r"einstein probe",
-        r"x-ray transient(?:s)?",
-        r"x-ray flaring source(?:s)?",
-        r"flaring source(?:s)?",
-        r"long-term light curve(?:s)?",
-        r"current observation token(?:s)?",
-        r"spectral feature(?:s)?",
-        r"irregular light curve(?:s)?",
-        r"source classification",
-        r"transient classification",
-        r"multimodal classification",
-    ]
-    lowered = raw.lower()
-    for pattern in known_patterns:
-        match = re.search(pattern, lowered)
-        if match:
-            candidates.append(match.group(0))
-    for part in re.split(r",|;|:|\band\b|\busing\b|\bwith\b|\bfor\b|\bof\b", raw, flags=re.IGNORECASE):
+    stopwords = {
+        "the", "and", "for", "with", "using", "based", "study", "research", "framework",
+        "test", "whether", "evaluate", "analysis", "approach", "method", "methods", "data",
+    }
+    for part in re.split(r",|;|:|\band\b|\busing\b|\bwith\b|\bfor\b|\bof\b|\bvia\b", raw, flags=re.IGNORECASE):
         words = [
             word
             for word in re.findall(r"[A-Za-z][A-Za-z0-9-]{1,}", part)
-            if word.lower() not in {"the", "and", "for", "with", "using", "based", "study", "research", "framework"}
+            if word.lower() not in stopwords
         ]
         if 2 <= len(words) <= 5:
             candidates.append(" ".join(words))
         elif len(words) > 5:
-            candidates.append(" ".join(words[:4]))
+            candidates.append(" ".join(words[:5]))
+            candidates.append(" ".join(words[-4:]))
+    keyword_tokens = _keywords_from_text(raw, limit=10).split()
+    if len(keyword_tokens) >= 2:
+        candidates.extend(
+            " ".join(keyword_tokens[index:index + width])
+            for width in (3, 2)
+            for index in range(0, len(keyword_tokens) - width + 1, width)
+        )
     return _unique_terms(candidates, limit=limit)
 
 
 def _discipline_anchor(project_text: str, field: str) -> str:
     blob = f"{project_text} {field}".lower()
-    if any(term in blob for term in ["x-ray", "astronomy", "transient", "wxt", "flare", "light curve"]):
-        return "high-energy time-domain astronomy X-ray transient"
-    if any(term in blob for term in ["ndvi", "remote sensing", "geography", "climate", "crop", "yield"]):
-        return "geography remote sensing environmental analysis"
-    if any(term in blob for term in ["medical", "clinical", "patient", "cohort"]):
-        return "medicine clinical research"
-    if any(term in blob for term in ["biology", "genomic", "rna", "protein"]):
-        return "biology bioinformatics"
-    if any(term in blob for term in ["finance", "market", "stock", "return"]):
-        return "finance empirical asset pricing"
-    if "machine learning" in blob:
-        return "machine learning applied research"
+    declared = _keywords_from_text(field, limit=6)
+    if declared:
+        return declared
+    broad_disciplines = [
+        (("astronomy", "astrophysics", "galaxy", "stellar", "x-ray"), "astronomy astrophysics"),
+        (("geography", "geospatial", "remote sensing", "climate", "crop"), "geography environmental science"),
+        (("medical", "medicine", "clinical", "patient"), "medicine clinical research"),
+        (("biology", "genomic", "transcriptomic", "protein"), "biology bioinformatics"),
+        (("chemistry", "molecule", "compound"), "chemistry chemical informatics"),
+        (("materials", "crystal", "alloy"), "materials science"),
+        (("finance", "market", "asset pricing"), "finance empirical research"),
+        (("machine learning", "deep learning", "neural network"), "machine learning applied research"),
+    ]
+    for markers, anchor in broad_disciplines:
+        if any(marker in blob for marker in markers):
+            return anchor
     return _domain_anchor(project_text, field, "")
 
 
@@ -209,14 +206,33 @@ def _method_phrases(method_text: str) -> list[str]:
         phrase = re.split(r"[:：]", line, maxsplit=1)[0].strip()
         if phrase:
             phrases.append(phrase)
-    fallback = [
-        "1D CNN ResNet",
-        "Transformer irregular time series",
-        "Temporal Convolutional Network",
-        "multimodal network",
-        "contrastive learning self-supervised pretraining",
+    return _unique_queries(phrases, limit=5)
+
+
+def _topic_method_terms(idea: str, discipline: str) -> list[str]:
+    blob = f"{idea} {discipline}".lower()
+    terms: list[str] = []
+    patterns = [
+        ("dinov2", "DINOv2 self-supervised visual representation"),
+        ("linear probe", "linear probing representation evaluation"),
+        ("group-aware", "group-aware cross-validation"),
+        ("spatial grouping", "spatial group held-out validation"),
+        ("class imbalance", "class-imbalanced classification balanced accuracy"),
+        ("confound", "confounder-controlled representation evaluation"),
+        ("anomaly", "embedding anomaly detection uncertainty"),
+        ("umap", "UMAP representation visualization"),
+        ("transformer", "Transformer representation learning"),
+        ("time-aware", "time-aware irregular time-series modeling"),
+        ("light curve", "astronomical light-curve classification"),
+        ("survival", "survival analysis validation"),
+        ("rna", "differential expression analysis"),
     ]
-    return _unique_queries(phrases + fallback, limit=5)
+    for marker, term in patterns:
+        if marker in blob:
+            terms.append(term)
+    if not terms:
+        terms.extend(["reproducible statistical analysis", "held-out validation and uncertainty"])
+    return _unique_terms(terms, limit=5)
 
 
 def _method_phrases_from_requirements(raw_json: str) -> list[str]:
@@ -255,16 +271,28 @@ def _method_phrases_from_requirements(raw_json: str) -> list[str]:
 
 def _data_terms(data_text: str) -> str:
     allowed = [
+        "image cutout",
+        "image classification label",
+        "image embedding",
+        "spectroscopy",
+        "photometry",
+        "redshift",
         "light curve",
         "spectral",
         "hardness ratio",
         "multi-band",
         "multiband",
         "catalog",
-        "WXT",
-        "FXT",
-        "Einstein Probe",
         "X-ray",
+        "raster",
+        "vector",
+        "geospatial",
+        "gene expression",
+        "RNA sequencing",
+        "clinical cohort",
+        "survival outcome",
+        "molecular descriptor",
+        "crystal structure",
     ]
     found = []
     lowered = data_text.lower()
@@ -272,6 +300,31 @@ def _data_terms(data_text: str) -> str:
         if term.lower() in lowered:
             found.append(term)
     return " ".join(found)
+
+
+def _topic_data_terms(idea: str, discipline: str, extracted: str) -> list[str]:
+    blob = f"{idea} {discipline} {extracted}".lower()
+    terms = _unique_terms([extracted] if extracted else [], limit=5)
+    candidates = [
+        ("morphology", "galaxy morphology catalog labels"),
+        ("image", "scientific image collection and quality metadata"),
+        ("embedding", "precomputed representation matrix"),
+        ("photometr", "multi-band photometry catalog"),
+        ("spectro", "spectroscopic measurement catalog"),
+        ("x-ray", "X-ray source catalog light curve spectral features"),
+        ("light curve", "irregular light curve dataset"),
+        ("rna", "gene expression count matrix and sample metadata"),
+        ("clinical", "clinical cohort outcome table"),
+        ("geograph", "geospatial raster vector observation dataset"),
+        ("molecule", "molecular structure descriptor dataset"),
+        ("material", "material composition structure property dataset"),
+    ]
+    for marker, term in candidates:
+        if marker in blob:
+            terms.append(term)
+    if not terms:
+        terms.append("dataset provenance sample construction missingness")
+    return _unique_terms(terms, limit=5)
 
 
 def _domain_anchor(project_text: str, field: str, target_journal: str) -> str:
@@ -301,15 +354,12 @@ def build_context_search_queries(project: str | Path, query: str | None = None) 
         method_requirements_text,
     ])
     data_terms = _data_terms(data_text)
-    data_term_list = _unique_terms([
-        data_terms,
-        "light curve dataset catalog",
-        "spectral features hardness ratio dataset",
-        "multi-band counterpart catalog source classification",
-        "WXT FXT observation data release",
-        "X-ray transient sample construction",
-    ], limit=5)
-    method_term_list = _method_phrases_from_requirements(method_requirements_text) or _method_phrases(method_text)
+    data_term_list = _topic_data_terms(str(state.metadata.get("idea", "")), discipline, data_terms)
+    method_term_list = (
+        _method_phrases_from_requirements(method_requirements_text)
+        or _method_phrases(method_text)
+        or _topic_method_terms(str(state.metadata.get("idea", "")), discipline)
+    )
     plan: list[dict[str, Any]] = []
     plan.append(_query_entry(
         query_id="all_idea_data_method_01",
@@ -504,7 +554,7 @@ def search_crossref(query: str, limit: int = 30) -> list[dict[str, Any]]:
             {
                 "query.bibliographic": query,
                 "rows": min(limit, 20),
-                "select": "DOI,title,author,container-title,published-print,published-online,issued,URL,is-referenced-by-count,abstract",
+                "select": "DOI,title,author,container-title,published-print,published-online,issued,URL,is-referenced-by-count,abstract,volume,issue,page,article-number,publisher",
             },
             headers={"User-Agent": "Draftpaper-loop local workflow (mailto:local@example.com)"},
         )
@@ -533,6 +583,10 @@ def search_crossref(query: str, limit: int = 30) -> list[dict[str, Any]]:
             "url": work.get("URL", ""),
             "abstract": " ".join(abstract.split()),
             "publication": " ".join((work.get("container-title") or [""])[0].split()),
+            "volume": str(work.get("volume") or ""),
+            "issue": str(work.get("issue") or ""),
+            "pages_or_article_number": str(work.get("page") or work.get("article-number") or ""),
+            "publisher": str(work.get("publisher") or ""),
             "citation_count": work.get("is-referenced-by-count") or 0,
             "source": "crossref",
         })
@@ -574,10 +628,58 @@ def dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def search_free_literature(query: str, limit: int = 30) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
+    provider_limit = min(30, max(6, limit * 3))
     for provider in (search_semantic_scholar, search_arxiv, search_crossref, search_serpapi):
-        results.extend(provider(query, limit=limit))
-        results = dedupe_items(results)
+        results.extend(provider(query, limit=provider_limit))
+    results = dedupe_items(results)
+    results.sort(
+        key=lambda item: (
+            _title_query_similarity(str(item.get("title") or ""), query),
+            bool(item.get("doi")),
+            bool(item.get("abstract")),
+            int(item.get("citation_count") or 0),
+        ),
+        reverse=True,
+    )
     return results[:limit]
+
+
+def _normalized_title(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", str(text or "").lower()))
+
+
+def _title_query_similarity(title: str, query: str) -> float:
+    left = _normalized_title(title)
+    right = _normalized_title(query)
+    if not left or not right:
+        return 0.0
+    sequence = difflib.SequenceMatcher(None, left, right).ratio()
+    left_tokens = set(left.split())
+    right_tokens = set(right.split())
+    coverage = len(left_tokens & right_tokens) / max(1, len(right_tokens))
+    return max(sequence, coverage)
+
+
+def _canonical_candidates(items: list[dict[str, Any]], identity: dict[str, Any]) -> list[dict[str, Any]]:
+    expected_title = str(identity.get("expected_title") or "").strip()
+    minimum = float(identity.get("minimum_title_similarity") or 0.86)
+    accepted = []
+    for item in items:
+        similarity = _title_query_similarity(str(item.get("title") or ""), expected_title)
+        if similarity < minimum:
+            continue
+        item["canonical_identity"] = {
+            "expected_title": expected_title,
+            "observed_title": str(item.get("title") or ""),
+            "title_similarity": round(similarity, 4),
+            "status": "verified",
+        }
+        accepted.append(item)
+    accepted.sort(
+        key=lambda item: float((item.get("canonical_identity") or {}).get("title_similarity") or 0),
+        reverse=True,
+    )
+    return accepted[:1]
 
 
 def _count_metadata_ready(items: list[dict[str, Any]]) -> int:
@@ -588,6 +690,8 @@ def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]
     plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
     discipline = ""
     idea = ""
+    data_terms: list[str] = []
+    method_terms: list[str] = []
     for entry in plan:
         if not isinstance(entry, dict):
             continue
@@ -596,16 +700,24 @@ def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]
         idea_terms = components.get("idea") if isinstance(components.get("idea"), list) else []
         if idea_terms and not idea:
             idea = str(idea_terms[0])
+        for value in components.get("data") or []:
+            if str(value) not in data_terms:
+                data_terms.append(str(value))
+        for value in components.get("methods") or []:
+            if str(value) not in method_terms:
+                method_terms.append(str(value))
     if not discipline:
         discipline = "scholarly research"
     candidates = [
         ("introduction_fallback_broad_01", "introduction", "single_fallback", f"{discipline} {idea}".strip()),
-        ("data_fallback_broad_01", "data", "single_fallback", f"{discipline} survey catalog dataset observation sample".strip()),
-        ("methods_fallback_broad_01", "methods", "single_fallback", f"{discipline} machine learning classification time series validation".strip()),
-        ("methods_fallback_broad_02", "methods", "single_fallback", f"{discipline} transformer irregular time series classification".strip()),
-        ("data_fallback_broad_02", "data", "single_fallback", f"{discipline} light curve spectral feature source catalog".strip()),
+        ("data_fallback_broad_01", "data", "single_fallback", f"{discipline} {(data_terms or ['dataset provenance sample construction'])[0]}".strip()),
+        ("methods_fallback_broad_01", "methods", "single_fallback", f"{discipline} {(method_terms or ['reproducible statistical analysis'])[0]}".strip()),
     ]
-    if "astronomy" in discipline.lower() or "x-ray" in discipline.lower():
+    if len(data_terms) > 1:
+        candidates.append(("data_fallback_broad_02", "data", "single_fallback", f"{discipline} {data_terms[1]}".strip()))
+    if len(method_terms) > 1:
+        candidates.append(("methods_fallback_broad_02", "methods", "single_fallback", f"{discipline} {method_terms[1]}".strip()))
+    if "high-energy" in discipline.lower() or "x-ray" in discipline.lower():
         candidates.extend([
             ("methods_fallback_astronomy_01", "methods", "single_fallback", "astronomical time series classification machine learning"),
             ("methods_fallback_astronomy_02", "methods", "single_fallback", "astronomical light curve transformer classification"),
@@ -709,12 +821,24 @@ def search_literature_for_project(
                     continue
                 for context_query in _as_query_list(context_query_value):
                     iterable_queries.append((context, context_query, {}))
+        canonical_resolution: list[dict[str, Any]] = []
         for context, context_query, plan_entry in iterable_queries:
                 combination_level = str(plan_entry.get("combination_level") or "")
                 per_query_limit = min(limit, 2) if context in {"data", "methods"} or combination_level == "all" else min(limit, 6)
+                if isinstance(plan_entry.get("canonical_identity"), dict):
+                    per_query_limit = min(limit, 8)
                 if context == "target_journal_anchor":
                     per_query_limit = min(limit, 2)
                 context_items = search_free_literature(context_query, limit=per_query_limit)
+                identity = plan_entry.get("canonical_identity") if isinstance(plan_entry.get("canonical_identity"), dict) else {}
+                if identity:
+                    context_items = _canonical_candidates(context_items, identity)
+                    canonical_resolution.append({
+                        "query_id": plan_entry.get("query_id"),
+                        "expected_title": identity.get("expected_title"),
+                        "status": "resolved" if context_items else "unresolved",
+                        "matched_title": context_items[0].get("title") if context_items else None,
+                    })
                 for item in context_items:
                     item["search_context"] = context
                     item["search_query"] = context_query
@@ -731,6 +855,8 @@ def search_literature_for_project(
                             "query_components": plan_entry.get("query_components"),
                         }]
                 items.extend(context_items)
+        if canonical_resolution:
+            search_queries["canonical_resolution"] = canonical_resolution
         if _count_metadata_ready(items) < min(12, limit):
             fallback_entries = _fallback_query_plan(search_queries)
             existing_queries = {str(entry[1]).strip().lower() for entry in iterable_queries}

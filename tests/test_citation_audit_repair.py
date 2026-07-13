@@ -160,6 +160,25 @@ def _write_citation_preservation_project(root: str) -> Path:
 
 
 class CitationAuditRepairTests(unittest.TestCase):
+    def test_citation_scope_uses_the_local_clause_and_ignores_model_identifier_numbers(self) -> None:
+        from draftpaper_cli.citation_audit import CITATION_PATTERN, _local_citation_passage, _numbers
+
+        text = (
+            r"Self-supervised astronomical features were introduced \citep{Hayat2020}, "
+            r"and Encoder-X used the Corpus-100M collection \citep{Method2024}."
+        )
+        matches = list(CITATION_PATTERN.finditer(text))
+
+        self.assertEqual(
+            _local_citation_passage(text, matches[0].start(), matches[0].end()),
+            r"Self-supervised astronomical features were introduced \citep{Hayat2020}",
+        )
+        self.assertEqual(
+            _local_citation_passage(text, matches[1].start(), matches[1].end()),
+            r"Encoder-X used the Corpus-100M collection \citep{Method2024}",
+        )
+        self.assertEqual(_numbers("Encoder-X ViT-S/16 used Corpus-100M; score 0.5."), [0.5])
+
     def test_promoted_review_rule_is_part_of_citation_audit_decision(self) -> None:
         from draftpaper_cli.citation_audit import audit_citations
 
@@ -221,7 +240,7 @@ class CitationAuditRepairTests(unittest.TestCase):
 
             plan = generate_citation_repair_plan(project_path)
             self.assertEqual(plan["status"], "repair_plan_written")
-            self.assertEqual(plan["issue_count"], 2)
+            self.assertEqual(plan["issue_count"], 1)
             self.assertTrue(all(issue["action"] == "agent_paragraph_rewrite" for issue in plan["issues"]))
             self.assertTrue(all(not issue["deletion_allowed"] for issue in plan["issues"]))
             self.assertTrue((project_path / "citation_audit" / "citation_repair_plan.html").exists())
@@ -229,7 +248,7 @@ class CitationAuditRepairTests(unittest.TestCase):
             applied = apply_citation_repair(project_path)
             self.assertEqual(applied["status"], "agent_repair_required")
             self.assertEqual(applied["applied_action_count"], 0)
-            self.assertEqual(len(applied["pending_agent_tasks"]), 2)
+            self.assertEqual(len(applied["pending_agent_tasks"]), 1)
 
             (project_path / "introduction" / "introduction.tex").write_text(
                 "\\section{Introduction}\nExternal validation remains necessary for compact models \\citep{Smith2024Model}. "

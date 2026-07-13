@@ -272,6 +272,34 @@ class DataAcquisitionTests(unittest.TestCase):
             self.assertEqual(figure_task["source_code"], "fig_main_1")
             self.assertTrue(figure_task["requires_user_confirmation"])
 
+    def test_external_source_root_prioritizes_structured_assets_and_inventory_reads_them_in_place(self) -> None:
+        from draftpaper_cli.data_acquisition import prepare_data_acquisition
+        from draftpaper_cli.data_feasibility import inventory_data
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            external = root / "external"
+            cutouts = external / "cutouts"
+            cutouts.mkdir(parents=True)
+            for index in range(805):
+                (cutouts / f"{index:04d}.fits").write_bytes(b"FITS")
+            analysis = external / "morphology_analysis"
+            analysis.mkdir()
+            (analysis / "catalog.csv").write_text("TARGETID,label,z\n1,early,0.1\n2,late,0.2\n", encoding="utf-8")
+            project = create_project(root=root / "projects", idea="Image morphology", field="astronomy machine learning")
+
+            prepare_data_acquisition(project.path, source_root=external)
+            locators = json.loads((project.path / "data" / "external_data_locators.json").read_text(encoding="utf-8"))
+            self.assertTrue(locators["read_only"])
+            self.assertTrue(any(item["path"].endswith("catalog.csv") for item in locators["entries"]))
+
+            inventory_data(project.path)
+            inventory = json.loads((project.path / "data" / "data_inventory.json").read_text(encoding="utf-8"))
+            catalog = next(item for item in inventory["files"] if item["path"].endswith("catalog.csv"))
+            self.assertEqual(catalog["kind"], "external_read_only")
+            self.assertEqual(catalog["row_count"], 2)
+            self.assertEqual(catalog["columns"], ["TARGETID", "label", "z"])
+
 
 if __name__ == "__main__":
     unittest.main()

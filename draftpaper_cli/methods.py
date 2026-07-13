@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import ast
 import csv
+import hashlib
 import json
 import re
 import shlex
@@ -21,7 +23,7 @@ from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .observations import load_observations
 from .project_scaffold import _write_json, utc_now
-from .project_state import load_project, update_stage_status
+from .project_state import load_project, mark_stage_stale, update_stage_status
 from .reference_usage import ensure_reference_usage_plan, missing_entries_for_section
 from .evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry, ensure_registry_consistent
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
@@ -363,6 +365,12 @@ def verify_methods(
         raise MethodsGateError(str(exc)) from exc
     methods_dir = state.path / "methods"
     methods_dir.mkdir(parents=True, exist_ok=True)
+    previous_run = _read_json(methods_dir / "run_manifest.yaml", {})
+    previous_output_hashes = (
+        previous_run.get("output_artifact_hashes")
+        if isinstance(previous_run, dict) and isinstance(previous_run.get("output_artifact_hashes"), dict)
+        else {}
+    )
     _ensure_method_plan(state.path)
     command_argv, command_display, command_source, declared_outputs, resolved_input_data, method_code_manifest = _resolve_verification_inputs(
         state.path,
@@ -392,6 +400,11 @@ def verify_methods(
         else "failed"
     )
     parsed_metrics = _read_metrics_from_outputs(state.path, declared_outputs)
+    output_artifact_hashes = {
+        str(relative).replace("\\", "/"): hashlib.sha256(_project_relative_path(state.path, relative).read_bytes()).hexdigest()
+        for relative in declared_outputs
+        if _project_relative_path(state.path, relative).is_file()
+    }
     manifest = {
         "status": status,
         "command": command_display,
@@ -401,6 +414,7 @@ def verify_methods(
         "returncode": completed.returncode,
         "input_data": resolved_input_data,
         "output_files": declared_outputs,
+        "output_artifact_hashes": output_artifact_hashes,
         "method_code_manifest": method_code_manifest,
         "metrics": parsed_metrics,
         "figures_generated": [item for item in declared_outputs if item.lower().endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg"))],
@@ -423,7 +437,14 @@ def verify_methods(
         from .plugin_execution import record_project_method_run
 
         record_project_method_run(state.path, output_files=declared_outputs)
+    if status == "success":
+        # A verified project-local implementation is a completed code stage;
+        # do not force a later generator to overwrite it merely because the
+        # implementation was supplied by an Agent rather than codegen.
+        update_stage_status(state.path, "code", "approved")
     update_stage_status(state.path, "methods", "approved" if status == "success" else "failed")
+    if status == "success" and output_artifact_hashes != previous_output_hashes:
+        mark_stage_stale(state.path, "methods")
     return {
         "status": status,
         "project_path": str(state.path),
@@ -587,12 +608,123 @@ def _formula_context_text(manifest: dict[str, Any], figure_metadata: dict[str, A
             continue
         payload = _read_json(Path(str(project_path)) / relative, {})
         if payload:
+            if relative == "methods/method_blueprint.json":
+                payload = {
+                    "method_requirements": payload.get("method_requirements") or {},
+                    "method_code_plan": {
+                        key: (payload.get("method_code_plan") or {}).get(key)
+                        for key in ("method_families", "validation_checks", "storyboard_method_tasks")
+                    },
+                    "method_formula_plan": payload.get("method_formula_plan") or {},
+                }
             parts.append(json.dumps(payload, ensure_ascii=False, default=str))
     return " ".join(parts).lower()
 
 
+def _planned_formula_entries(
+    formula_families: list[str],
+    figure_metadata: dict[str, Any],
+) -> list[dict[str, Any]]:
+    catalog: dict[str, dict[str, Any]] = {
+        "coverage_rate": {
+            "name": "Cohort coverage rate",
+            "latex": r"\begin{equation}r_{\mathrm{valid}}=\frac{N_{\mathrm{valid}}}{N_{\mathrm{source}}}.\end{equation}",
+            "explanation": r"Here $N_{\mathrm{source}}$ is the number of objects in the source cohort, $N_{\mathrm{valid}}$ is the number retained after the stated availability or validity check, and $r_{\mathrm{valid}}$ is the corresponding coverage fraction.",
+            "step": "cohort construction and missingness",
+            "tokens": ("cohort_coverage", "coverage_summary"),
+        },
+        "principal_component_projection": {
+            "name": "Principal-component projection",
+            "latex": r"\begin{equation}\mathbf{z}_i=\mathbf{W}_q^{\mathsf T}(\mathbf{x}_i-\boldsymbol{\mu}),\qquad \mathbf{W}_q^{\mathsf T}\mathbf{W}_q=\mathbf{I}_q.\end{equation}",
+            "explanation": r"The vector $\mathbf{x}_i$ is the image representation for object $i$, $\boldsymbol{\mu}$ is the sample mean, $\mathbf{W}_q$ contains the first $q$ orthonormal principal directions, and $\mathbf{z}_i$ is the resulting exploratory projection.",
+            "step": "representation projection",
+            "tokens": ("target_and_confounder_association", "embedding_diagnostic"),
+        },
+        "multinomial_logistic_regression": {
+            "name": "Multinomial logistic probe",
+            "latex": r"\begin{equation}P(y_i=c\mid\mathbf{x}_i)=\frac{\exp(\beta_{c0}+\boldsymbol{\beta}_c^{\mathsf T}\mathbf{x}_i)}{\sum_{k=1}^{C}\exp(\beta_{k0}+\boldsymbol{\beta}_k^{\mathsf T}\mathbf{x}_i)}.\end{equation}",
+            "explanation": r"The label $y_i$ is the catalogue morphology class for object $i$, $\mathbf{x}_i$ is the selected catalogue, embedding, or combined feature vector, $C$ is the number of retained classes, and $(\beta_{c0},\boldsymbol{\beta}_c)$ are the class-specific intercept and coefficients.",
+            "step": "transparent baseline and representation probes",
+            "tokens": ("group_held_out_metric", "model_comparison"),
+        },
+        "balanced_accuracy": {
+            "name": "Multiclass balanced accuracy",
+            "latex": r"\begin{equation}\mathrm{BA}=\frac{1}{C}\sum_{c=1}^{C}\frac{\mathrm{TP}_c}{\mathrm{TP}_c+\mathrm{FN}_c}.\end{equation}",
+            "explanation": r"The number of retained classes is $C$, while $\mathrm{TP}_c$ and $\mathrm{FN}_c$ are the true-positive and false-negative counts for class $c$. Equal averaging across classes reduces domination by the most frequent morphology category.",
+            "step": "group-held-out evaluation",
+            "tokens": ("group_held_out_metric", "classwise_uncertainty", "confusion_matrix"),
+        },
+        "macro_f1": {
+            "name": "Macro-averaged F1 score",
+            "latex": r"\begin{equation}F_{1,c}=\frac{2P_cR_c}{P_c+R_c},\qquad F_{1,\mathrm{macro}}=\frac{1}{C}\sum_{c=1}^{C}F_{1,c}.\end{equation}",
+            "explanation": r"For class $c$, $P_c$ and $R_c$ denote precision and recall, respectively; $F_{1,c}$ is their harmonic mean, and $F_{1,\mathrm{macro}}$ averages the class-wise scores over the $C$ retained classes.",
+            "step": "class-balanced predictive evaluation",
+            "tokens": ("group_held_out_metric", "classwise_uncertainty", "confusion_matrix"),
+        },
+        "fold_dispersion_or_confidence_interval": {
+            "name": "Across-fold dispersion",
+            "latex": r"\begin{equation}\bar{s}=\frac{1}{K}\sum_{k=1}^{K}s_k,\qquad \sigma_s=\sqrt{\frac{1}{K-1}\sum_{k=1}^{K}(s_k-\bar{s})^2}.\end{equation}",
+            "explanation": r"The score $s_k$ is the evaluation metric on held-out fold $k$, $K$ is the number of group-aware folds, $\bar{s}$ is the fold mean, and $\sigma_s$ summarizes between-fold dispersion.",
+            "step": "group-aware uncertainty estimation",
+            "tokens": ("group_held_out_metric", "classwise_uncertainty"),
+        },
+        "incremental_metric_delta": {
+            "name": "Incremental metric difference",
+            "latex": r"\begin{equation}\Delta s=s_{\mathrm{combined}}-s_{\mathrm{catalog}}.\end{equation}",
+            "explanation": r"The score $s_{\mathrm{combined}}$ is obtained from catalogue variables plus the image representation, $s_{\mathrm{catalog}}$ is obtained from the catalogue-only baseline under the same folds, and $\Delta s$ measures incremental predictive association rather than a causal effect.",
+            "step": "feature-group ablation",
+            "tokens": ("incremental_metric_delta", "ablation"),
+        },
+        "anomaly_score": {
+            "name": "Anomaly ranking score",
+            "latex": r"\begin{equation}a_i=-f(\mathbf{x}_i),\end{equation}",
+            "explanation": r"The fitted unsupervised detector assigns decision score $f(\mathbf{x}_i)$ to representation $\mathbf{x}_i$; the sign is reversed so that larger $a_i$ denotes a more unusual candidate. The score defines a ranking, not a physical anomaly probability.",
+            "step": "candidate anomaly ranking",
+            "tokens": ("candidate_stability", "image_gallery"),
+        },
+        "set_stability_jaccard": {
+            "name": "Candidate-set stability",
+            "latex": r"\begin{equation}J(A,B)=\frac{|A\cap B|}{|A\cup B|}.\end{equation}",
+            "explanation": r"The sets $A$ and $B$ contain the top-ranked anomaly candidates from two resampled fits, and $J(A,B)$ is their Jaccard overlap. Values near one indicate a stable candidate set under the tested perturbation.",
+            "step": "anomaly stability analysis",
+            "tokens": ("candidate_stability", "image_gallery"),
+        },
+    }
+    figures = [item for item in figure_metadata.get("figures") or [] if isinstance(item, dict)]
+    entries: list[dict[str, Any]] = []
+    for family in formula_families:
+        spec = catalog.get(str(family))
+        if not spec:
+            continue
+        used_by = []
+        for figure in figures:
+            blob = " ".join([
+                str(figure.get("plot_grammar") or ""),
+                " ".join(str(item) for item in figure.get("method_outputs") or []),
+                " ".join(str(key) for key in (figure.get("statistics") or {}).keys()),
+            ]).lower()
+            if any(token in blob for token in spec["tokens"]):
+                used_by.append(str(figure.get("figure_id") or figure.get("storyboard_id") or figure.get("path") or ""))
+        entries.append(_entry(
+            str(family),
+            str(spec["name"]),
+            str(spec["latex"]),
+            "current method formula plan and verified project-local method contract",
+            str(spec["explanation"]),
+            method_step=str(spec["step"]),
+            used_by_figures=[item for item in used_by if item],
+        ))
+    return entries
+
+
 def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any], method_context: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     method_context = method_context or {}
+    project_path = Path(str(method_context.get("project_path") or ""))
+    blueprint = _read_json(project_path / "methods" / "method_blueprint.json", {}) if str(project_path) else {}
+    formula_plan = blueprint.get("method_formula_plan") if isinstance(blueprint.get("method_formula_plan"), dict) else {}
+    planned_families = [str(item) for item in formula_plan.get("formula_families") or [] if str(item)]
+    if planned_families:
+        return _planned_formula_entries(planned_families, figure_metadata)
     entries: list[dict[str, Any]] = []
     metrics = {str(key).lower(): value for key, value in (manifest.get("metrics") or {}).items()}
     context_text = _formula_context_text(manifest, figure_metadata, method_context)
@@ -732,7 +864,7 @@ def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None
     lines = ["% Auto-generated from verified method metrics and figure metadata.", ""]
     for entry in entries:
         lines.extend([
-            f"% {entry['name']} ({entry['source']})",
+            f"% {entry['id']}: {entry['name']} ({entry['source']})",
             entry["latex"],
             _safe_latex_text(entry.get("variable_explanations", "")),
             "",
@@ -1099,7 +1231,11 @@ def _data_role_text(manifest: dict[str, Any], analysis_manifest: dict[str, Any])
 def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest: dict[str, Any], figure_code_trace: dict[str, Any]) -> str:
     files = analysis_manifest.get("files") if isinstance(analysis_manifest, dict) else []
     formula_count = int(formula_manifest.get("formula_count") or len(formula_manifest.get("formulas") or [])) if isinstance(formula_manifest, dict) else 0
-    trace_count = int(figure_code_trace.get("trace_count") or len(figure_code_trace.get("traces") or [])) if isinstance(figure_code_trace, dict) else 0
+    trace_count = int(
+        figure_code_trace.get("trace_count")
+        or len(figure_code_trace.get("traces") or [])
+        or len(figure_code_trace.get("figure_checks") or [])
+    ) if isinstance(figure_code_trace, dict) else 0
     pieces = []
     if isinstance(files, list) and files:
         roles = sorted({str(item.get("code_role") or "method_code") for item in files if isinstance(item, dict)})
@@ -1118,6 +1254,16 @@ def _method_code_trace_text(analysis_manifest: dict[str, Any], formula_manifest:
             )
         else:
             pieces.append("The implemented method package records stage-owned analysis outputs, so the method narrative remains tied to verified execution rather than unrun design notes.")
+    elif isinstance(analysis_manifest, dict) and analysis_manifest.get("method_families"):
+        families = [
+            _method_role_label(str(item))
+            for item in analysis_manifest.get("method_families") or [] if str(item)
+        ]
+        pieces.append(
+            "The verified project-local method implementation covers "
+            + ", ".join(families[:8])
+            + (", and related validation diagnostics." if len(families) > 8 else ".")
+        )
     else:
         pieces.append("No dedicated method-code summary was found, so the method narrative must remain conservative.")
     if formula_count:
@@ -1161,6 +1307,110 @@ def _render_method_context_md(context: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _ast_call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = _ast_call_name(node.value)
+        return f"{prefix}.{node.attr}" if prefix else node.attr
+    return ""
+
+
+def _safe_ast_literal(node: ast.AST) -> Any:
+    try:
+        value = ast.literal_eval(node)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return None
+    if isinstance(value, str) and (re.search(r"[A-Za-z]:[\\/]", value) or value.startswith(("/", "\\\\"))):
+        return None
+    if isinstance(value, (list, tuple, dict, set)) and len(value) > 40:
+        return None
+    return value if isinstance(value, (str, int, float, bool, list, tuple, dict, set, type(None))) else None
+
+
+def _method_reproducibility_contract(project_path: Path) -> dict[str, Any]:
+    code_files = sorted({
+        *project_path.glob("methods/scripts/**/*.py"),
+        *project_path.glob("methods/analysis/**/*.py"),
+        *project_path.glob("methods/code/**/*.py"),
+    })
+    imports: set[str] = set()
+    constants: dict[str, Any] = {}
+    feature_groups: dict[str, list[str]] = {}
+    calls: list[dict[str, Any]] = []
+    call_names_seen: set[str] = set()
+    for path in code_files:
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8-sig", errors="replace"))
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imports.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imports.add(node.module.split(".")[0])
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                value_node = node.value
+                value = _safe_ast_literal(value_node) if value_node is not None else None
+                for target in targets:
+                    if not isinstance(target, ast.Name) or value is None:
+                        continue
+                    name = target.id
+                    lowered = name.lower()
+                    if isinstance(value, (list, tuple)) and value and all(isinstance(item, str) for item in value):
+                        if any(token in lowered for token in ("feature", "column", "predictor", "covariate", "input")):
+                            feature_groups[name] = list(value)
+                    elif name.isupper() and name not in {"PROJECT", "RESULTS", "FIGURES", "TABLES"}:
+                        constants[name] = value
+            elif isinstance(node, ast.Call):
+                name = _ast_call_name(node.func).split(".")[-1]
+                if not name or name in call_names_seen:
+                    continue
+                if not (name[:1].isupper() or name.lower().endswith(("split", "score", "metric"))):
+                    continue
+                kwargs = {}
+                for keyword in node.keywords:
+                    if keyword.arg:
+                        value = _safe_ast_literal(keyword.value)
+                        if value is not None:
+                            kwargs[keyword.arg] = value
+                calls.append({"component": name, "parameters": kwargs})
+                call_names_seen.add(name)
+    provenance = _read_json(project_path / "methods" / "model_provenance.json", {})
+    environment = _read_json(project_path / "methods" / "environment_manifest.json", {})
+    splitters = [item for item in calls if any(token in item["component"].lower() for token in ("split", "fold", "kfold"))]
+    estimators = [item for item in calls if any(token in item["component"].lower() for token in ("regression", "classifier", "forest", "boost", "svm", "network", "model"))]
+    transforms = [item for item in calls if any(token in item["component"].lower() for token in ("imputer", "scaler", "pca", "encoder", "transform"))]
+    return {
+        "schema_version": "dpl.method_reproducibility_contract.v1",
+        "source_file_count": len(code_files),
+        "software_modules": sorted(imports),
+        "software_versions": environment.get("packages") or environment.get("software_versions") or {},
+        "model_provenance": provenance,
+        "declared_constants": constants,
+        "feature_groups": feature_groups,
+        "preprocessing_components": transforms,
+        "estimators": estimators,
+        "validation_splitters": splitters,
+        "all_implemented_components": calls,
+        "required_writer_topics": [
+            "input and target construction",
+            "preprocessing order and train-fold fitting boundary",
+            "model or checkpoint provenance",
+            "feature groups and exclusions",
+            "estimator hyperparameters and convergence",
+            "validation splitter, group unit, seeds, and tuning policy",
+            "metric aggregation and uncertainty interpretation",
+            "software environment or explicitly unavailable version metadata",
+            "preprocessing scope for every compared model or pipeline variant",
+            "whether the comparison is a nested feature addition or a non-nested pipeline contrast",
+        ],
+        "comparison_semantics_policy": "Describe a score difference as an incremental or conditional feature contribution only when one variant preserves the other variant's inputs and transformations. Otherwise call it a model- or pipeline-performance contrast and name the differing preprocessing.",
+        "policy": "Write only implemented or explicitly unavailable details; never infer missing checkpoint, preprocessing, tuning, software metadata, or nested-comparison semantics.",
+    }
+
+
 def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     """Build a manuscript-facing Methods context from method plan, code manifests, and observations."""
     state = load_project(project)
@@ -1174,6 +1424,8 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
     _write_method_formulas(state.path, manifest)
     formula_manifest = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
     figure_code_trace = _read_json(state.path / "results" / "figure_code_trace.json", {})
+    if not figure_code_trace:
+        figure_code_trace = _read_json(state.path / "results" / "figure_plugin_trace_report.json", {})
     method_blueprint = _read_json(state.path / "methods" / "method_blueprint.json", {})
     plugin_binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json", {})
     method_bindings = [
@@ -1214,6 +1466,7 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "method_code_manifest": analysis_manifest,
         "formula_manifest": formula_manifest if isinstance(formula_manifest, dict) else {},
         "figure_code_trace": figure_code_trace if isinstance(figure_code_trace, dict) else {},
+        "reproducibility_contract": _method_reproducibility_contract(state.path),
         "narrative_summary": narrative_summary,
         "forbidden_in_manuscript": ["local filesystem paths", "execution commands", "manifest field dumps", "raw output file lists"],
     }
@@ -1360,6 +1613,8 @@ def _set_methods_writing_manifest(project_path: Path) -> None:
 def write_methods(project: str | Path) -> dict[str, Any]:
     """Write methods.tex only if methods/run_manifest.yaml proves a successful run."""
     state = load_project(project)
+    from .manuscript_revision import assert_writer_may_replace_section
+    assert_writer_may_replace_section(state.path, "methods")
     ensure_registry_consistent(state.path)
     manifest = _validate_successful_manifest(state.path)
     context = build_method_writing_context(state.path)

@@ -14,6 +14,7 @@ from pathlib import Path
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
 from draftpaper_cli.method_plan import collect_method_plan
+from draftpaper_cli.passport import refresh_project_passport
 
 
 def prepare_passing_data_gate(project_path: Path) -> None:
@@ -82,6 +83,8 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertTrue(run_manifest["stdout_log"]["path"].replace("\\", "/").startswith("methods/run_logs/"))
             self.assertTrue(run_manifest["stderr_log"]["path"].replace("\\", "/").startswith("methods/run_logs/"))
             self.assertIn("excerpt", run_manifest["stdout_log"])
+            project_state = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project_state["stages"]["code"]["status"], "approved")
 
             write_result = write_methods(project.path)
             self.assertEqual(write_result["status"], "written")
@@ -155,6 +158,7 @@ class MethodsHardGateTests(unittest.TestCase):
             prepare_passing_data_gate(project.path)
             output = project.path / "results" / "tables" / "metrics.csv"
             command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
             verify_completed = subprocess.run(
                 [
@@ -218,6 +222,7 @@ class MethodsHardGateTests(unittest.TestCase):
                 f"Path(r'{figure}').parent.mkdir(parents=True, exist_ok=True); "
                 f"Path(r'{figure}').write_bytes(b'fake image')\""
             )
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
             completed = subprocess.run(
                 [
@@ -256,6 +261,7 @@ class MethodsHardGateTests(unittest.TestCase):
                 }),
                 encoding="utf-8",
             )
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
             completed = subprocess.run(
                 [
@@ -449,6 +455,73 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertNotIn("verification run", tex.lower())
             self.assertNotIn("data feasibility gate", tex.lower())
             self.assertNotIn("declared metrics", tex.lower())
+
+    def test_reproducibility_contract_extracts_implemented_configuration_without_paths(self) -> None:
+        from draftpaper_cli.methods import _method_reproducibility_contract
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Grouped classifier", field="machine learning")
+            script = project.path / "methods" / "scripts" / "run_model.py"
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text(
+                "from sklearn.linear_model import LogisticRegression\n"
+                "from sklearn.model_selection import StratifiedGroupKFold\n"
+                "FEATURE_COLUMNS = ['redshift', 'flux']\n"
+                "RANDOM_STATE = 42\n"
+                "splitter = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)\n"
+                "model = LogisticRegression(C=1.0, max_iter=600, class_weight='balanced')\n",
+                encoding="utf-8",
+            )
+
+            contract = _method_reproducibility_contract(project.path)
+
+            self.assertEqual(contract["feature_groups"]["FEATURE_COLUMNS"], ["redshift", "flux"])
+            self.assertEqual(contract["declared_constants"]["RANDOM_STATE"], 42)
+            self.assertEqual(contract["validation_splitters"][0]["component"], "StratifiedGroupKFold")
+            self.assertEqual(contract["estimators"][0]["parameters"]["max_iter"], 600)
+            self.assertNotIn(str(project.path), json.dumps(contract))
+
+    def test_structured_formula_plan_excludes_unrelated_transformer_formulas(self) -> None:
+        from draftpaper_cli.methods import _write_method_formulas
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Image representation validation", field="astronomy machine learning")
+            (project.path / "methods" / "method_blueprint.json").write_text(json.dumps({
+                "method_formula_plan": {
+                    "formula_families": [
+                        "coverage_rate",
+                        "principal_component_projection",
+                        "multinomial_logistic_regression",
+                        "balanced_accuracy",
+                        "macro_f1",
+                        "incremental_metric_delta",
+                        "set_stability_jaccard",
+                    ]
+                },
+                "discipline_module": {"keywords": ["transformer", "time2vec", "light curve"]},
+            }), encoding="utf-8")
+            (project.path / "results" / "figure_metadata.json").write_text(json.dumps({"figures": [
+                {"figure_id": "cohort", "plot_grammar": "coverage_summary", "method_outputs": ["cohort_coverage"]},
+                {"figure_id": "projection", "plot_grammar": "embedding_diagnostic", "method_outputs": ["target_and_confounder_association"]},
+                {"figure_id": "comparison", "plot_grammar": "model_comparison", "method_outputs": ["group_held_out_metric"]},
+                {"figure_id": "ablation", "plot_grammar": "ablation", "method_outputs": ["incremental_metric_delta"]},
+                {"figure_id": "candidates", "plot_grammar": "image_gallery", "method_outputs": ["candidate_stability"]},
+            ]}), encoding="utf-8")
+
+            _write_method_formulas(project.path, {"metrics": {"macro_f1": 0.49}})
+            payload = json.loads((project.path / "methods" / "method_formula_manifest.json").read_text(encoding="utf-8"))
+            ids = {item["id"] for item in payload["formulas"]}
+
+            self.assertIn("principal_component_projection", ids)
+            self.assertIn("multinomial_logistic_regression", ids)
+            self.assertIn("set_stability_jaccard", ids)
+            self.assertNotIn("time2vec_embedding", ids)
+            self.assertNotIn("masked_sequence_pooling", ids)
+            self.assertNotIn("roc_auc", ids)
+            self.assertEqual(
+                next(item for item in payload["formulas"] if item["id"] == "coverage_rate")["used_by_figures"],
+                ["cohort"],
+            )
 
     def test_verify_methods_fails_generated_png_without_metadata(self) -> None:
         from draftpaper_cli.methods import verify_methods

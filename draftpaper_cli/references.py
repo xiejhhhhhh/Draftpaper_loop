@@ -28,6 +28,9 @@ REFERENCE_OUTPUTS = [
     "references/literature_review_notes.md",
     "references/literature_review_notes.html",
     "references/literature_summaries/index.html",
+    "references/reference_registry.json",
+    "references/bibliography_contract.json",
+    "references/reference_duplicate_report.json",
 ]
 
 MAX_REFERENCE_ITEMS = 30
@@ -86,6 +89,10 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "abstract": " ".join(str(item.get("abstract") or "").split()),
         "venue": str(item.get("venue") or item.get("publication") or "").strip(),
         "publication": str(item.get("publication") or item.get("venue") or "").strip(),
+        "volume": str(item.get("volume") or "").strip(),
+        "issue": str(item.get("issue") or item.get("number") or "").strip(),
+        "pages_or_article_number": str(item.get("pages_or_article_number") or item.get("pages") or item.get("page") or item.get("article_number") or "").strip(),
+        "publisher": str(item.get("publisher") or "").strip(),
         "citation_count": int(item.get("citation_count") or item.get("citationCount") or 0),
         "source": str(item.get("source") or "unknown").strip(),
         "reference_origin": str(item.get("reference_origin") or "").strip(),
@@ -483,6 +490,10 @@ def generate_bibtex(items: list[dict[str, Any]]) -> str:
             "author": " and ".join(item.get("authors") or []) or "Unknown Author",
             "year": item.get("year", "n.d."),
             "journal": item.get("publication", ""),
+            "volume": item.get("volume", ""),
+            "number": item.get("issue", ""),
+            "pages": item.get("pages_or_article_number", ""),
+            "publisher": item.get("publisher", ""),
             "doi": item.get("doi", ""),
             "url": item.get("url", ""),
         }
@@ -627,6 +638,7 @@ def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
                 "data": "data",
                 "methods": "methods",
             }.get(context, "introduction")
+            citation_role = _citation_role(item, context)
             rows.append({
                 "citation_key": item["bibtex_key"],
                 "section": section,
@@ -635,8 +647,35 @@ def citation_evidence_rows(items: list[dict[str, Any]]) -> list[dict[str, str]]:
                 "source": str(item.get("source") or "unknown"),
                 "doi": str(item.get("doi") or ""),
                 "url": str(item.get("url") or ""),
+                "citation_role": citation_role,
+                "data_citation_requirement": (
+                    "precise_data_section_citation"
+                    if citation_role in {"dataset_provenance", "instrument_product_definition", "processing_method_support"}
+                    else "background_coverage_may_be_satisfied_in_introduction_or_discussion"
+                ),
             })
     return rows
+
+
+def _citation_role(item: dict[str, Any], context: str) -> str:
+    text = " ".join(
+        str(item.get(key) or "")
+        for key in ("title", "abstract", "evidence_notes", "publication")
+    ).lower()
+    normalized_context = str(context or "idea").lower()
+    if normalized_context == "data":
+        if any(token in text for token in ("dataset", "catalog", "survey data", "data release", "archive")):
+            return "dataset_provenance"
+        if any(token in text for token in ("instrument", "telescope", "mission", "detector", "data product")):
+            return "instrument_product_definition"
+        if any(token in text for token in ("calibration", "processing", "pipeline", "software", "reduction")):
+            return "processing_method_support"
+        return "data_context_background"
+    if normalized_context == "methods":
+        return "method_definition_or_precedent"
+    if normalized_context == "discussion":
+        return "result_comparison_or_interpretation"
+    return "problem_gap_or_background"
 
 
 def literature_review_notes(items: list[dict[str, Any]], query: str = "") -> str:
@@ -821,7 +860,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
 
 
 def _write_citation_evidence(path: Path, rows: list[dict[str, str]]) -> None:
-    fieldnames = ["citation_key", "section", "claim", "evidence_summary", "source", "doi", "url"]
+    fieldnames = ["citation_key", "section", "claim", "evidence_summary", "source", "doi", "url", "citation_role", "data_citation_requirement"]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -865,10 +904,14 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
     html_outputs = write_literature_html_summaries(references_dir, normalized)
 
     update_stage_status(state.path, "references", "draft")
+    from .bibliography import build_reference_registry
+
+    bibliography = build_reference_registry(state.path)
     _set_reference_manifest_outputs(state.path)
     return {
         "status": "written",
         "project_path": str(state.path),
         "item_count": len(normalized),
+        "bibliography": bibliography,
         "outputs": REFERENCE_OUTPUTS + [item for item in html_outputs if item not in REFERENCE_OUTPUTS],
     }

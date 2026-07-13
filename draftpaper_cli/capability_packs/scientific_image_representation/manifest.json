@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "scientific_image_representation",
+  "version": "1.0.0",
+  "owner_discipline": "machine_learning",
+  "secondary_disciplines": ["astronomy", "medicine", "biology"],
+  "capability_family": "scientific_image_representation",
+  "data_plugin_ids": ["vision_catalog_image"],
+  "method_plugin_ids": ["embedding_extraction_health_diagnostics", "umap_embedding_analysis"],
+  "review_plugin_ids": ["model_statistical_validity_gate"],
+  "input_roles": ["scientific_image", "sample_id", "optional_label", "group_id"],
+  "output_roles": ["embedding_matrix", "representation_diagnostics", "group_aware_metrics"],
+  "scientific_unit": "image_linked_scientific_object",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["image embedding", "visual representation", "morphology representation", "representation learning"],
+  "forbidden_triggers": ["text embedding only"],
+  "failure_modes": ["domain_shift", "label_leakage", "group_leakage", "missing_image_bias"],
+  "bootstrap_runbook": "Audit image cohort, preprocessing, group identifiers and confounders before representation claims.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

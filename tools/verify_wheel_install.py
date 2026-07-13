@@ -14,6 +14,7 @@ from pathlib import Path
 RESOURCE_PATTERNS = ("*.json", "*.csv", "*.md")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
+SOURCE_CAPABILITY_PACK_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "capability_packs"
 EXPECTED_ENTRY_COUNT = 209
 EXPECTED_FIXTURE_COUNT = 545
 
@@ -41,6 +42,10 @@ def _source_registry_summary() -> dict[str, object]:
         "entry_count": len(manifests),
         "fixture_count": fixture_count,
         "resource_counts": _resource_counts(SOURCE_MODULE_ROOT),
+        "capability_pack_count": len(list(SOURCE_CAPABILITY_PACK_ROOT.glob("*/manifest.json"))),
+        "vendored_paper_fetch_present": (REPOSITORY_ROOT / "draftpaper_cli" / "_vendor" / "paper_fetch_skill" / "paper_fetch").is_dir(),
+        "third_party_provenance_status": "passed",
+        "third_party_source_count": len(json.loads((REPOSITORY_ROOT / "third_party" / "registry.json").read_text(encoding="utf-8"))["sources"]),
     }
 
 
@@ -74,14 +79,31 @@ def main() -> int:
         )
         probe = """
 import json
+import sys
+from unittest.mock import patch
 from pathlib import Path
+from draftpaper_cli.capability_packs import discover_capability_packs
+from draftpaper_cli.paper_fetch_adapter import resolve_paper_fetch_command
 from draftpaper_cli.template_registry import discover_template_registry
+from draftpaper_cli.third_party_provenance import validate_third_party_provenance
 r = discover_template_registry()
 root = Path(r['root'])
+with patch('draftpaper_cli.paper_fetch_adapter.shutil.which', return_value=None):
+    command, env, runtime_source = resolve_paper_fetch_command()
+provenance = validate_third_party_provenance()
 print(json.dumps({
     'entry_count': r['entry_count'],
     'fixture_count': sum(len(e.get('fixtures') or []) for e in r['entries']),
     'resource_counts': {p: len(list(root.rglob(p))) for p in ('*.json', '*.csv', '*.md')},
+    'capability_pack_count': len(discover_capability_packs()),
+    'vendored_paper_fetch_present': (
+        runtime_source == 'vendored'
+        and bool(command)
+        and '_vendor' in env.get('PYTHONPATH', '')
+        and (Path(env['PYTHONPATH']) / 'paper_fetch' / 'cli.py').is_file()
+    ),
+    'third_party_provenance_status': provenance['status'],
+    'third_party_source_count': provenance['source_count'],
 }))
 """
         completed = subprocess.run(

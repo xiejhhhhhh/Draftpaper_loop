@@ -13,6 +13,7 @@ import unittest
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import write_methods
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -116,6 +117,7 @@ class ObservationDrivenWriterTests(unittest.TestCase):
     def test_cli_records_observation_and_writes_data_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = self.prepare_project(tmp)
+            refresh_project_passport(project.path, event="test_fixture_ready")
             recorded = subprocess.run(
                 [
                     sys.executable,

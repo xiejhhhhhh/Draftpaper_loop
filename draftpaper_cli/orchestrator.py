@@ -9,7 +9,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .evidence_snapshot import create_evidence_snapshot
+from .evidence_snapshot import (
+    EvidenceSnapshotMismatch,
+    create_evidence_snapshot,
+    evidence_confirmation_subject,
+)
 from .passport import (
     PASSPORT_FILES,
     PassportError,
@@ -303,6 +307,15 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         if sufficiency_report.get("research_capability_contract_sha256") != current_capability_hash:
             sufficiency_report = {}
     capability_inputs_present = (project_path / "research_plan" / "claim_contract.json").exists() or (project_path / "research_plan" / "figure_storyboard.json").exists()
+    stage_state = (load_project(project_path).metadata.get("stages") or {})
+    data_meta = stage_state.get("data") or {}
+    method_plan_meta = stage_state.get("method_plan") or {}
+    capability_assessment_ready = (
+        data_meta.get("status") in COMPLETE_STATUSES
+        and not data_meta.get("stale")
+        and method_plan_meta.get("status") in COMPLETE_STATUSES
+        and not method_plan_meta.get("stale")
+    )
     if research_plan.exists() and capability_inputs_present and not discipline_contract.exists():
         return {
             "stage": "research_plan",
@@ -310,13 +323,55 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "cli": _cli_for(project_path, "resolve-research-capabilities"),
             "reason": "The final research plan needs an explicit discipline and capability contract before data/method execution.",
         }
-    if discipline_contract.exists() and capability_inputs_present and not sufficiency_report:
+    if discipline_contract.exists() and capability_inputs_present and not sufficiency_report and capability_assessment_ready:
         return {
             "stage": "research_plan",
             "command": "assess-plugin-sufficiency",
             "cli": _cli_for(project_path, "assess-plugin-sufficiency"),
             "reason": "Planned core figures need structured data/method/runtime plugin sufficiency assessment before execution.",
         }
+    if sufficiency_report.get("decision") == "project_implementation_required":
+        audit_report = _read_report(project_path, "research_plan/project_capability_audit.json")
+        if not audit_report or (
+            audit_report.get("research_capability_contract_sha256")
+            != sufficiency_report.get("research_capability_contract_sha256")
+            or audit_report.get("source_sufficiency_generated_at") != sufficiency_report.get("generated_at")
+        ):
+            return {
+                "stage": "research_plan",
+                "command": "audit-project-capabilities",
+                "cli": _cli_for(project_path, "audit-project-capabilities"),
+                "reason": "Before generating new code, audit the apparent gap against current stage-owned project data and method assets.",
+            }
+        method_ids = list(audit_report.get("project_method_implementation_required") or [])
+        data_ids = list(audit_report.get("project_data_implementation_required") or [])
+        task_path = project_path / "methods" / "project_method_implementation_tasks.json"
+        if method_ids and not task_path.exists():
+            return {
+                "stage": "methods",
+                "command": "prepare-project-method-implementation",
+                "cli": _cli_for(project_path, "prepare-project-method-implementation"),
+                "reason": "Reusable plugins do not yet cover the planned method. Prepare a project-local Agent implementation contract instead of blocking code generation or substituting another method.",
+                "requirement_ids": method_ids,
+            }
+        if method_ids:
+            return {
+                "stage": "methods",
+                "command": "agent_action_required",
+                "cli": None,
+                "reason": "Implement the scoped project method tasks, preserve project-local ownership, then rerun audit-project-capabilities and verify-methods with real outputs.",
+                "task_artifact": "methods/project_method_implementation_tasks.json",
+                "resume_command": _cli_for(project_path, "audit-project-capabilities"),
+                "requirement_ids": method_ids,
+            }
+        if data_ids:
+            return {
+                "stage": "data",
+                "command": "prepare-data-acquisition",
+                "cli": _cli_for(project_path, "prepare-data-acquisition"),
+                "reason": "The planned evidence needs project data roles that are not yet bound. Prepare acquisition or local data integration before method execution.",
+                "requirement_ids": data_ids,
+            }
     if sufficiency_report.get("decision") == "execution_required":
         pending = [
             item for item in sufficiency_report.get("requirement_assessments") or []
@@ -410,6 +465,14 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             and result_discipline_review.get("result_manifest_sha256") == current_result_manifest_hash
             and result_discipline_review.get("figure_plugin_trace_sha256") == current_trace_hash
         )
+    if (
+        results_stage_current
+        and (project_path / "research_plan" / "research_capability_contract.json").exists()
+        and results_path.exists()
+    ):
+        lifecycle_action = coordinated_section_lifecycle_action(project_path, "results")
+        if lifecycle_action:
+            return lifecycle_action
     if (
         results_stage_current
         and (project_path / "research_plan" / "research_capability_contract.json").exists()
@@ -849,6 +912,64 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "reason": "A checkpoint is waiting for explicit resume confirmation.",
             },
         }
+    core_report = _read_report(state.path, "core_evidence/core_evidence_report.json")
+    core_stage = (state.metadata.get("stages") or {}).get("core_evidence") or {}
+    core_stage_current = bool(
+        core_stage.get("status") in COMPLETE_STATUSES
+        and not core_stage.get("stale")
+    )
+    if (
+        core_stage_current
+        and
+        str(core_report.get("decision") or "").lower() in {"pass", "passed"}
+        and bool(core_report.get("requires_user_confirmation"))
+    ):
+        confirmation_error = ""
+        try:
+            subject = evidence_confirmation_subject(state.path)
+        except EvidenceSnapshotMismatch as exc:
+            subject = {}
+            confirmation_error = str(exc)
+        if not subject:
+            return {
+                "status": "reported",
+                "project_path": str(state.path),
+                "pipeline_state": "core_evidence_refresh_required",
+                "current_stage": state.metadata.get("current_stage"),
+                "awaiting_checkpoint": None,
+                "passport": str(state.path / PASSPORT_FILES["passport"]),
+                "next_action": {
+                    "stage": "core_evidence",
+                    "command": "assess-core-evidence",
+                    "cli": f"python -m draftpaper_cli.cli assess-core-evidence --project {_quote(state.path)}",
+                    "reason": confirmation_error or "Core evidence must be reassessed before human confirmation.",
+                },
+            }
+        promoted = _read_report(state.path, "results/promoted_evidence_snapshot.json")
+        confirmation_current = bool(
+            subject
+            and core_report.get("human_confirmation_status") == "approved"
+            and core_report.get("human_confirmation_subject_id") == subject.get("confirmation_subject_id")
+            and core_report.get("promoted_evidence_snapshot_id") == subject.get("evidence_snapshot_id")
+            and promoted.get("snapshot_id") == subject.get("evidence_snapshot_id")
+        )
+        if not confirmation_current:
+            return {
+                "status": "reported",
+                "project_path": str(state.path),
+                "pipeline_state": "confirmation_required",
+                "current_stage": state.metadata.get("current_stage"),
+                "awaiting_checkpoint": None,
+                "passport": str(state.path / PASSPORT_FILES["passport"]),
+                "next_action": {
+                    "stage": "core_evidence",
+                    "command": "checkpoint",
+                    "cli": f"python -m draftpaper_cli.cli checkpoint --project {_quote(state.path)} --stage core_evidence",
+                    "reason": "The current core-evidence version has passed automated checks but has not been explicitly confirmed.",
+                    "confirmation_subject_id": subject.get("confirmation_subject_id"),
+                    "evidence_snapshot_id": subject.get("evidence_snapshot_id"),
+                },
+            }
     next_action = _next_action(state.path, state.metadata)
     command = str(next_action.get("command") or "")
     pipeline_state = {
@@ -905,6 +1026,12 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "project_id": state.metadata.get("project_id"),
         "next_action": _next_action(state.path, state.metadata),
     }
+    if stage == "core_evidence":
+        try:
+            subject = evidence_confirmation_subject(state.path)
+        except EvidenceSnapshotMismatch as exc:
+            raise OrchestratorError(str(exc)) from exc
+        base.update(subject)
     base["hash"] = _checkpoint_hash(base)
     append_checkpoint_event(state.path, base)
     return {
@@ -925,6 +1052,20 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         raise OrchestratorError(f"Checkpoint hash not found: {checkpoint_hash}")
     if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
         raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
+    checkpoint = checkpoints[-1]
+    if str(checkpoint.get("stage") or "") == "core_evidence":
+        try:
+            current_subject = evidence_confirmation_subject(state.path)
+        except EvidenceSnapshotMismatch as exc:
+            raise OrchestratorError(str(exc)) from exc
+        if not checkpoint.get("confirmation_subject_id"):
+            raise OrchestratorError(
+                "This legacy core-evidence checkpoint is not bound to a scientific evidence version; create a new checkpoint."
+            )
+        if checkpoint.get("confirmation_subject_id") != current_subject.get("confirmation_subject_id"):
+            raise OrchestratorError(
+                "Core evidence changed after the checkpoint was created; create and review a new checkpoint."
+            )
     resume_event = {
         "kind": "resume",
         "consumes_hash": checkpoint_hash,
@@ -937,12 +1078,15 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
     promoted_snapshot = None
     if str(resume_event.get("stage") or "") == "core_evidence":
         promoted_snapshot = create_evidence_snapshot(state.path)
+        if promoted_snapshot.get("snapshot_id") != checkpoint.get("evidence_snapshot_id"):
+            raise OrchestratorError("The promoted evidence snapshot does not match the confirmed checkpoint subject.")
         core_report_path = state.path / "core_evidence" / "core_evidence_report.json"
         if core_report_path.exists():
             core_report = json.loads(core_report_path.read_text(encoding="utf-8-sig"))
             core_report["promoted_evidence_snapshot_id"] = promoted_snapshot.get("snapshot_id")
             core_report["human_confirmation_status"] = "approved"
             core_report["human_confirmation_checkpoint_hash"] = checkpoint_hash
+            core_report["human_confirmation_subject_id"] = checkpoint.get("confirmation_subject_id")
             core_report_path.write_text(json.dumps(core_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         refresh_project_passport(state.path, event="core_evidence_resume")
     status = status_project(state.path)

@@ -68,7 +68,14 @@ Draftpaper-loop 的外层逻辑是：
 - Result validity gate，结果不支撑结论时回退 data/method/research plan。
 - Brief-guided Data/Methods 写作：保留数据、方法、公式和图表证据的硬约束，但不再把 context 字段机械拼接进论文正文，避免本地路径、脚本名和内部 workflow 语言进入论文。
 - Paper Narrative Engine：按研究发现组织主图与附录图，构建章节证据包、Introduction/Discussion 论证矩阵、Data/Methods 生命周期，并让 Codex 先按段落任务自由写作。
-- Scientific Editor 与校准发布合同：只修复受影响段落，确定性 fallback 不具备质量发布资格，最终 citation audit 必须晚于全部章节验证；科学正确性必须达到 100%，功能质量评分必须达到 0.95 以上。
+- Scientific Editor 与绝对质量发布合同：只修复受影响段落，确定性 fallback 不具备发布资格，最终 citation audit 必须晚于全部章节验证；两位独立 reviewer 只审查同一份冻结匿名生成稿，不再需要原稿对比。
+- 干净的项目版本化：旧项目保持只读，通过白名单、hash 和 lineage receipt 选择性导入资产；新 `_vN` 项目具有独立 passport，派生报告必须重建。
+- 科研能力包与路由评估：明确插件所有权、project-local 方法实现合同和 rescue 路线，让 Agent 可以先实现全新课题所需方法，再重新接受插件充分性审查。
+- 面向任务的 Figure/Paragraph Evidence Resolver：绑定当前 run、claim 和 evidence，同时限制重复写作上下文与 token 成本。
+- Draftpaper-loop 原生 `doctor`、`recover`、`start`、`continue`、`review` 和 `revise`，统一由声明式命令注册表管理；Gbrain 不构成运行时依赖或字段来源。
+- 规范化参考文献 registry、重复 work/version 决策、目标期刊格式验证和 References 渲染 proof，与 citation support 核查相互独立。
+- 递归第三方 provenance：记录 vendored code、分类借鉴、模板转化、上游 skill 仓库、commit、license 和影响路径。
+- 稳定段落 ID 与 LaTeX 行号定位：支持预览、接受、回滚作者修订，并可补充作者信息、致谢、数据/代码链接、自定义正文和新参考文献。
 - Results 禁止文献引用，且必须绑定真实图表或表格；结果正文会显式引用 `Figure~\ref{...}` 和 `Table~\ref{...}`。
 - LaTeX 组装和可选本地 PDF 编译。
 - 默认在致谢中说明本研究使用 Draftpaper-loop 辅助生成，并附项目仓库链接。
@@ -86,6 +93,7 @@ codex_skills/draftpaper-workflow # 可选 Codex skill wrapper
 docs/                           # workflow 设计和优先级指南
 tests/                          # 单元测试
 third_party/paper-fetch-skill/   # vendored MIT paper-fetch runtime
+third_party/registry.json         # 所有借鉴或内化第三方来源的递归 provenance
 ```
 
 生成的单篇论文项目采用阶段归属代码结构：`data/scripts/` 保存数据收集、API/服务器 manifest、预处理和清洗代码；`methods/scripts/` 与 `methods/src/` 保存模型、统计、空间分析、验证和科研绘图代码；`results/` 只保存已经生成的图表、表格和 metadata。旧版 `code/` 目录保留为兼容 launcher 和共享 runtime 过渡层。
@@ -335,11 +343,28 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.23.1-v0.24.0（2026-07-13）-- 项目隔离、原生恢复与独立单稿审查
+
+- 新增干净的 `_vN` 项目版本化。旧项目始终只读，只按白名单导入可复用资产并记录 hash 与 lineage receipt；passport、stage manifest、插件充分性报告、figure metadata、审计报告和 evidence snapshot 等派生状态不得作为 active evidence 复制到新项目。
+- 新增项目 system of record、命令事务、stage receipt、精确 stale 传播和派生产物重建计划。Results 发生变化时必须先重建当前 result manifest，再执行学科审阅，避免旧 review 套用到新正文或新证据。
+- 新增科研能力包、路由评估、所有权检查、project-local 数据/方法审计和项目方法实现合同。正式插件缺失不再形成“没有方法所以不能生成代码”的死循环；只有数据与方法 rescue 都已穷尽时才允许阻断科研图表生成。
+- 新增 run-aware Figure/Paragraph Evidence Resolver 和任务 token budget。Doctor 只用每个写作任务最新的 packet 判断当前上下文是否超限，同时单独保留 lifetime token 成本，历史重试不再造成永久误报。
+- 新增规范化 reference registry、同一 work 的版本去重决策、目标期刊 bibliography 合同和 References 渲染 proof。参考文献格式检查与 claim-level citation support 分离，citation repair 仍坚持保留已确认参考文献。
+- 新增递归第三方 provenance，覆盖 paper-fetch-skill、AcademicForge、上游科研 skills、Gbrain 设计影响和 Superpowers 计划影响，记录固定 commit、license、use mode 和影响路径；Gbrain 只作为可选设计参考。
+- 新增 Draftpaper-loop 原生 `doctor`、`recover`、`start`、`continue`、`review` 和 `revise`，所有 CLI parser 进入统一 `CommandSpec` 合同。Doctor 可重复、只读；Recovery 不会静默确认图表、下调 claim、删除参考文献或 promote 插件。
+- 用独立单稿审查替代 Manuscript A/B 和相对原稿质量比例。两位 reviewer 在独立会话中审查同一份冻结匿名生成稿及真实图表；只有未解决 critical/major 均为 0 才可发布，重大分歧进入仲裁而不是简单平均分数。
+- 新增审稿后 manuscript revision workspace，支持稳定段落 ID、LaTeX 行号、结构化 metadata、自定义参考文献、diff/PDF 预览、hash 校验接受、回滚和精确 stale。
+- 匿名审稿包新增定位安全的可复现补充材料：source/model provenance、经过隐私筛选的阶段代码与测试，以及无需额外依赖的冻结结果 replay；私有路径、凭证和身份信息不会进入审稿包。图注修正可通过结构化 metadata 完成，不会改写科研图表证据。
+- 章节证据包新增模型比较语义。只有预处理与模型嵌套关系经过验证时，正文才允许写“增量”或“条件贡献”；否则必须写成精确的 pipeline 性能差异，并区分 fold mean、pooled 和 resampling estimand。
+- 完成 astronomy+ML、geography+ML、bioinformatics+medicine 的通用能力链回归，并用只读本地数据完成一个陌生 scientific-image 课题的 core evidence 人工确认、最终正文、PDF、完整性、参考文献格式与引用核查。最终 citation audit 保留全部 17 篇参考文献和 30 处引用，`unsupported=0`、`unverifiable=0`。
+- 两个全新独立会话在不知道原稿和历史报告的前提下审查同一份冻结匿名最终稿。两位 reviewer 都只给出 minor revision，科学正确性分别为 0.95 和 0.91，未解决 critical/major 均为 0，无需仲裁，发布门通过；minor 建议继续保留在 revision queue，不会被静默标记为已解决。
+- 最终本地验证为 `537 passed`，package/tests compile 通过；隔离安装的 v0.24.0 wheel 与源码一致，包含 209 个插件、545 个 fixture、6 个 capability pack 和 6 条第三方来源链；三类领域回归及全部对抗检查通过。Eval capture/replay 只验证脱敏的软件结构，不把已有论文当作质量基线。
+
 ### v0.23.0（2026-07-12）-- Wheel 发布回归与可验证质量声明
 
 - 新增随 wheel 发布的 geography+machine learning、astronomy+machine learning、bioinformatics+medicine 三类脱敏回归合同。普通 `pip install` 后会实际运行插件充分性、项目级执行证据、图表追踪、像素与底层表格核验、Scientific Evidence Registry、Results 数字绑定、复合学科 review rules 和最终 citation audit。
 - 新增对抗回归，强制拒绝错误 run/cohort/unit/split/model、错误 metric/量纲、伪 metadata 空白图、仅有合同或 fixture 的插件，以及引用中的否定冲突、数值不符和因果反转。`status` 还必须保持项目文件哈希不变。
-- 95% 质量不再由自动关键词、metadata 或文件存在性分数授权。新增 `prepare-blind-quality-evaluation` 和 `record-blind-quality-evaluation`；正式 parity 还要求至少两位独立盲评者比较完整稿件与真实图表、科学正确性为 100%、平均质量比例不低于 0.95。
+- 自动关键词、metadata 和文件存在性评分不再有权单独声明论文质量。v0.23.0 的临时比较协议已被 v0.24.0 的独立单稿审查合同取代；当前项目不需要也不会向 reviewer 提供原稿。
 - wheel 隔离安装会核对源码与安装包都发现 209 个插件、545 个 fixture，并在安装环境中运行三领域与对抗回归。CI 同时覆盖 Python 3.10-3.12、Linux 和 Windows。
 - 完成一次 astronomy+machine learning 的 evidence-first 全流程实跑，覆盖研究合同、项目本地能力补齐、六组科研主图、五个章节的自由撰写与 Scientific Editor 生命周期、最终 PDF 组装和引用复核。最终快照保留全部 12 篇总结文献，共形成 25 处引用，`unsupported=0`、阻断项为 0。
 - PDF 技术对比确认自动稿保留了已验证的 cohort、baseline/Transformer 指标、消融方向、不确定性边界和六图叙事。Introduction 与 Discussion 的结构和文献整合已达到可比或更好水平；直接观测示例以及 Data/Methods/Results 的细节仍少于参考稿。自动功能评分为 0.9825，但在缺少两位独立盲评者之前不宣称正式达到 95%。

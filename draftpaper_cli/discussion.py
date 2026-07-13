@@ -412,6 +412,8 @@ def _set_discussion_manifest(project_path: Path) -> None:
 def write_discussion(project: str | Path) -> dict[str, Any]:
     """Write a traceable LaTeX Discussion from prior sections, results, and citation evidence."""
     state = load_project(project)
+    from .manuscript_revision import assert_writer_may_replace_section
+    assert_writer_may_replace_section(state.path, "discussion")
     ensure_registry_consistent(state.path)
     plan_text, introduction_text, results_text, citation_rows = _require_inputs(state.path)
     discussion_dir = state.path / "discussion"

@@ -205,9 +205,11 @@ def _write_v022_formal_release_fixture(project_path: Path) -> None:
     )
     (project_path / "quality_checks" / "blind_manuscript_evaluation.json").write_text(
         json.dumps({
-            "status": "completed", "manuscripts_blinded": True, "reviewer_count": 2,
-            "full_manuscript_compared": True, "real_figures_compared": True,
-            "scientific_correctness_score": 1.0, "aggregate_quality_ratio": 0.97,
+            "schema_version": "dpl.independent_review_aggregate.v1", "status": "passed", "reviewer_count": 2,
+            "frozen_submission_bundle_hash": "bundle-1", "release_review_status": "pass",
+            "critical_open_count": 0, "major_open_count": 0, "adjudication_required": False,
+            "score_means": {"scientific_correctness": 0.97}, "revision_queue": [],
+            "relative_quality_ratio_prohibited": True,
         }),
         encoding="utf-8",
     )
@@ -462,9 +464,27 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertIn("data_contains_filesystem_reference", codes)
             self.assertIn("methods_contains_execution_or_filesystem_reference", codes)
 
-    def test_cli_quality_check_writes_report_and_uses_exit_code_for_failure(self) -> None:
+    def test_quality_check_allows_scientific_identifiers_in_texttt(self) -> None:
+        from draftpaper_cli.quality_gate import run_quality_check
+
         with tempfile.TemporaryDirectory() as tmp:
             project_path = prepared_assembled_project(tmp)
+            (project_path / "methods" / "methods.tex").write_text(
+                "\\section{Methods}\nRecords were joined by \\texttt{OBJECT_ID}, and \\texttt{PROFILE_LABEL} defined the catalogue response.\n",
+                encoding="utf-8",
+            )
+
+            report = run_quality_check(project_path)
+
+            codes = {issue["code"] for issue in report["issues"]}
+            self.assertNotIn("methods_contains_execution_or_filesystem_reference", codes)
+
+    def test_cli_quality_check_writes_report_and_uses_exit_code_for_failure(self) -> None:
+        from draftpaper_cli.passport import refresh_project_passport
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_assembled_project(tmp)
+            refresh_project_passport(project_path, event="test_prepared_assembled_project")
             passed = subprocess.run(
                 [
                     sys.executable,
@@ -481,6 +501,7 @@ class QualityGateUpgradeTests(unittest.TestCase):
             self.assertEqual(json.loads(passed.stdout)["status"], "passed")
 
             (project_path / "latex" / "main.tex").write_text("\\documentclass{article}\n", encoding="utf-8")
+            refresh_project_passport(project_path, event="test_managed_invalid_latex")
             failed = subprocess.run(
                 [
                     sys.executable,

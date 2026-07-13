@@ -64,28 +64,31 @@ def _section_function_score(report: dict[str, Any]) -> float:
     return _bounded_score(coverage.get("score"))
 
 
-def _blind_evaluation_contract(payload: dict[str, Any]) -> dict[str, Any]:
+def _independent_review_contract(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         reviewer_count = int(payload.get("reviewer_count") or 0)
     except (TypeError, ValueError):
         reviewer_count = 0
-    quality_ratio = _bounded_score(payload.get("aggregate_quality_ratio"))
-    scientific_correctness = _bounded_score(payload.get("scientific_correctness_score"))
+    score_means = payload.get("score_means") if isinstance(payload.get("score_means"), dict) else {}
+    scientific_correctness = _bounded_score(score_means.get("scientific_correctness"))
     checks = {
-        "completed": str(payload.get("status") or "").lower() == "completed",
-        "manuscripts_blinded": payload.get("manuscripts_blinded") is True,
+        "single_frozen_manuscript": bool(payload.get("frozen_submission_bundle_hash")),
         "independent_reviewers": reviewer_count >= 2,
-        "full_manuscript_compared": payload.get("full_manuscript_compared") is True,
-        "real_figures_compared": payload.get("real_figures_compared") is True,
-        "scientific_correctness_100_percent": scientific_correctness == 1.0,
-        "quality_ratio_at_least_95_percent": quality_ratio >= MINIMUM_SCORE,
+        "absolute_review_passed": str(payload.get("status") or "").lower() == "passed",
+        "real_figures_and_full_manuscript_reviewed": payload.get("release_review_status") == "pass",
+        "no_open_critical_findings": int(payload.get("critical_open_count") or 0) == 0,
+        "no_open_major_findings": int(payload.get("major_open_count") or 0) == 0,
+        "no_adjudication_required": payload.get("adjudication_required") is False,
+        "scientific_correctness_meets_hard_gate": scientific_correctness >= 0.9,
+        "relative_quality_ratio_prohibited": payload.get("relative_quality_ratio_prohibited") is True,
     }
     return {
         "status": "verified" if all(checks.values()) else "missing_or_incomplete",
         "checks": checks,
         "reviewer_count": reviewer_count,
-        "aggregate_quality_ratio": quality_ratio,
-        "scientific_correctness_score": scientific_correctness,
+        "scientific_correctness_mean": scientific_correctness,
+        "revision_queue_size": len(payload.get("revision_queue") or []),
+        "frozen_submission_bundle_hash": str(payload.get("frozen_submission_bundle_hash") or ""),
         "verified": all(checks.values()),
     }
 
@@ -102,7 +105,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     lifecycles = _read_json(state.path / "writing" / "section_lifecycles.json")
     matrices = _read_json(state.path / "writing" / "argument_matrices.json")
     panel_contracts = _read_json(state.path / "results" / "panel_figure_contracts.json")
-    blind_evaluation = _blind_evaluation_contract(_read_json(state.path / BLIND_EVALUATION))
+    independent_review = _independent_review_contract(_read_json(state.path / BLIND_EVALUATION))
     section_reports = {section: _section_report(state.path, section) for section in CORE_SECTIONS}
 
     result_score = _bounded_score(result_quality.get("score"))
@@ -147,7 +150,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "prose_naturalness_and_cross_section_coherence": 0.05,
     }
     automated_functional_score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
-    functional_score = min(automated_functional_score, blind_evaluation["aggregate_quality_ratio"])
+    functional_score = automated_functional_score
 
     citation_contract = normalize_citation_audit(citation_quality, minimum_coverage=MINIMUM_SCORE)
     citation_binding = citation_quality.get("manuscript_snapshot") if isinstance(citation_quality.get("manuscript_snapshot"), dict) else {}
@@ -173,7 +176,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "citation_audit_passed": citation_contract["audit_passed"],
         "reference_coverage_preserved": citation_contract["coverage_preserved"],
         "citation_audit_after_final_draft": citation_after_final_draft,
-        "blind_full_manuscript_and_real_figure_evaluation": blind_evaluation["verified"],
+        "two_independent_single_manuscript_reviews_passed": independent_review["verified"],
     }
     hard_correctness_score = round(sum(float(value) for value in hard_checks.values()) / len(hard_checks), 4)
     hard_correctness_passed = all(hard_checks.values())
@@ -185,7 +188,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     decision = "pass" if functional_score >= MINIMUM_SCORE and hard_correctness_passed else "repair_required"
     report = {
         "status": "written",
-        "schema_version": "v0.22.0",
+        "schema_version": "v0.24.0",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": functional_score,
@@ -196,17 +199,19 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
         "hard_correctness_required": 1.0,
         "hard_correctness_passed": hard_correctness_passed,
         "hard_checks": hard_checks,
-        "blind_manuscript_evaluation": blind_evaluation,
+        "independent_manuscript_review": independent_review,
         "citation_audit_contract": citation_contract,
         "decision": decision,
         "dimensions": dimensions,
         "weights": weights,
         "repair_priorities": repair_priorities,
-        "recommended_next_commands": [] if blind_evaluation["verified"] else [
-            "prepare-blind-quality-evaluation",
-            "record-blind-quality-evaluation",
+        "recommended_next_commands": [] if independent_review["verified"] else [
+            "prepare-independent-manuscript-review",
+            "record-independent-manuscript-review --reviewer reviewer_01",
+            "record-independent-manuscript-review --reviewer reviewer_02",
+            "assess-manuscript-quality-release",
         ],
-        "policy": "Automated structure and evidence scores are diagnostic only. A 0.95 release claim additionally requires blinded comparison of the complete manuscript and real figures by at least two independent reviewers, with 100% scientific correctness.",
+        "policy": "Automated functional scores are diagnostic. Release additionally requires two independent reviewers to audit one frozen anonymous generated manuscript and its real figures. No original manuscript, A/B comparison, unblinding map, or relative quality ratio is permitted.",
     }
     _write_json(state.path / REPORT, report)
     return report

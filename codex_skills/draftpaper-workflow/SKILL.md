@@ -35,44 +35,16 @@ If `status` reports `pipeline_state=drift_detected`, run `sync-artifact-stale`. 
 
 Run stages in this order unless the user asks for a focused rerun:
 
-1. `create-project`
-2. `search-literature`
-3. `resolve-journal-template`
-4. `preflight-research-feasibility`
-5. `generate-plan`
-6. `assess-research-plan-feasibility`
-7. `revise-research-plan` if the plan feasibility report is blocked or needs scope repair
-8. `prepare-data-acquisition`
-9. `inventory-data`
-10. `assess-data-quality`
-11. `assess-data-feasibility`
-12. `record-observation --stage data` after Codex has visibly summarized data source/content/processing
-13. `collect-method-plan`
-14. `prepare-method-blueprint`
-15. `assess-method-feasibility`
-16. `plan-figures`
-17. `assess-figure-contracts`
-18. `generate-analysis-code`
-19. `classify-code-ownership`, `route-stage-code`, `build-code-provenance`, `extract-method-formulas`, and `trace-figures-to-code` when project-specific or legacy code exists under `code/`
-20. `verify-methods`
-21. `record-observation --stage methods` after Codex has visibly summarized method rationale/code intent
-22. `assess-result-validity`
-23. `assess-core-evidence`
-24. `checkpoint --stage core_evidence` for human figure/evidence confirmation
-25. `inventory-results`
-26. For Results: `prepare-section-writing`, compose `writing/drafts/results.tex` freely from the packet, `submit-section-draft`, `prepare-scientific-editor`, apply only requested local repairs, `accept-section-draft`, then `write-results`
-27. Repeat the same free-writing/editor/acceptance lifecycle for Introduction, then `write-introduction`
-28. `build-data-context`, then repeat the lifecycle for Data before `write-data`
-29. `build-method-context`, then repeat the lifecycle for Methods before `write-methods`
-30. `prepare-discussion-comparison`, then repeat the lifecycle for Discussion before `write-discussion`
-31. `assess-functional-quality-release`
-32. `assemble-latex`
-33. `run-integrity-gate`
-34. `audit-citations --final`
-35. `prepare-blind-quality-evaluation`, collect independent reviews, then `record-blind-quality-evaluation`
-36. `assess-paper-quality-parity`
-37. `quality-check`
-38. reviewer/rescue commands when gates fail
+1. `create-project` -> `search-literature` -> `resolve-journal-template` -> research feasibility -> `generate-plan`.
+2. Resolve capabilities and plan feasibility; repair scope when required.
+3. Acquire/inventory/assess data, record the data observation, then `collect-method-plan` and build the blueprint.
+4. Assess plugin/method sufficiency; audit project code or rescue missing capabilities before blocking.
+5. Plan/contract figures, generate stage-owned code, build traces, then `verify-methods`.
+6. Resolve figure evidence -> `assess-result-validity` -> result support -> core evidence -> human checkpoint/resume.
+7. `inventory-results`; complete accepted free writing and `write-results`, then discipline review.
+8. Complete accepted free writing for `write-introduction`, Data, `write-methods`, and `write-discussion`.
+9. Assess functional quality -> `assemble-latex` -> integrity -> final citation audit -> bibliography proof.
+10. Freeze one anonymous manuscript, record two independent reviews, resolve findings, then `quality-check`.
 
 Use `assemble-latex --compile-pdf` when the user wants a local review PDF. Use `compile-latex-pdf` after manual edits under `latex/`.
 
@@ -82,19 +54,19 @@ Rerun from the earliest affected stage. If references change, rerun plan, eviden
 
 ## Gates
 
-Never generate the research plan before `resolve-journal-template` and `preflight-research-feasibility`. Stop on `blocked_high_similarity` unless the user explicitly continues with `--allow-high-similarity`. Do not save hidden reasoning; after Codex visibly summarizes data or method reasoning, preserve that summary with `record-observation`.
+Never plan before journal and research feasibility. Stop on `blocked_high_similarity` unless the user explicitly continues. Record visible data/method observations; never save hidden reasoning.
 
-The main loop is evidence-first: literature and feasibility -> research plan/storyboard -> plan feasibility and repair -> data acquisition/integration -> method blueprint/feasibility -> figure contracts -> method/code -> figures/metadata/run manifest/result validity -> `assess-core-evidence` -> human confirmation -> Results -> Introduction/Data/Methods/Discussion. `plan-figures` must precede `assess-figure-contracts`, and `assess-figure-contracts` must pass or conditionally pass before `generate-analysis-code`. Generated code must follow the strict main-figure contracts and produce scientific PNGs, metadata, and quality reports. Failed main figures trigger data repair, method repair, or `revise-research-plan`; they must not be silently replaced with validation or workflow diagrams. Project-specific code must be stage-owned: data acquisition/processing belongs under `data/scripts`; modelling, statistics, validation, ablation, and plotting belong under `methods/scripts`, `methods/src`, or `methods/plotting`; `code/` is compatibility/shared workspace only.
+The loop is evidence-first. Figure contracts precede code generation; failed scientific figures route to data/method repair or plan revision, never substitute diagrams. Data code belongs under `data/scripts`; modelling, validation, and plotting belong under `methods/`; `code/` is compatibility-only.
 
-Data writing must use `build-data-context` then `write-data`; Methods must use `build-method-context` then `write-methods`, both after core evidence and Results. Before those writing stages, use code provenance, method formula extraction, and figure-code trace artifacts. Results require passed/conditional result validity, passed `assess-core-evidence`, and `inventory-results`; Results contain no citations. Discussion citations must come from BibTeX and citation evidence, and `prepare-discussion-comparison` should create the comparison matrix before `write-discussion`. Always run `run-integrity-gate` before final `quality-check`.
-
-Every formal manuscript section must follow the state machine exposed by `run-pipeline`: evidence-packet preparation -> Codex free composition -> candidate submission -> Scientific Editor -> paragraph-local repair when requested -> explicit section acceptance -> section writer. Deterministic fallback text is diagnostic-only and must never proceed to LaTeX assembly, citation audit, parity assessment, or formal release. Do not bypass an Agent action when `run-pipeline` returns `compose-section-with-agent` or `revise-section-with-agent`; write the requested draft path, then rerun `run-pipeline`.
+Results require valid, human-confirmed evidence and contain no citations. Data/Methods use their context builders and code/formula traces. Discussion uses the comparison matrix and BibTeX evidence. Each section follows packet -> Codex free prose -> submission -> Scientific Editor -> local repair -> explicit acceptance -> writer. Fallback prose cannot reach release. Run integrity before final citation audit and `quality-check`.
 
 For Zotero-backed references and append-only audit files, follow `references/commands.md`; do not edit CLI-owned ledgers or manifests manually.
 
+For a scientific redesign of an existing project, use `plan-project-version` and create a clean `_vN` child. Keep the parent read-only and import only allowlisted assets. Do not copy passports, stage manifests, old figure metadata, sufficiency reports, audits, evidence snapshots, or reviewer reports as active state. Use `migrate-project` only when scientific content is unchanged and only the project schema needs upgrading.
+
 ## Review and Revision Loop
 
-When a gate fails, follow `status` or `run-pipeline` through diagnosis, review, statistical or analysis repair, reviewer-task reruns, and `generate-revision-plan`. Inspect the generated review plan, feasibility report, and confirmation requests before rerunning data or methods. `apply-revision` only marks stages stale; use `re-review` after reruns.
+When a gate fails, follow `status`, `doctor`, or `run-pipeline` through diagnosis, recovery, statistical or analysis repair, reviewer-task reruns, and `generate-revision-plan`. Inspect the generated review plan, feasibility report, and confirmation requests before rerunning data or methods. `doctor` and `recover` are read-only and never confirm scientific evidence or modify claims. `apply-revision` only marks stages stale; use `re-review` after reruns.
 
 ## Skill Reuse
 

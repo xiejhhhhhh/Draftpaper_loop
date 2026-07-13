@@ -113,7 +113,11 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
         warnings = []
         if not claim_ids:
             warnings.append({"kind": "missing_research_plan_claim", "detail": "No main-figure claim is bound; repair provenance before final Results acceptance."})
-        expected_data = [item for item in expected_capabilities if item.get("kind") == "data"]
+        expected_data = [
+            item
+            for item in expected_capabilities
+            if item.get("kind") == "data" and item.get("data_role_class") != "derived_method_output"
+        ]
         expected_methods = [item for item in expected_capabilities if item.get("kind") == "method"]
         missing_data_requirements = [item for item in expected_data if str(item.get("requirement_id")) not in bound_requirement_ids]
         missing_method_requirements = [item for item in expected_methods if str(item.get("requirement_id")) not in bound_requirement_ids]
@@ -129,7 +133,14 @@ def validate_figure_plugin_trace(project: str | Path) -> dict[str, Any]:
                 "requirement_id": str(item.get("requirement_id")),
                 "detail": "A contracted method capability has no covered binding for this figure.",
             })
-        if not expected_data and not data_ids:
+        has_only_derived_data = bool(
+            [
+                item
+                for item in expected_capabilities
+                if item.get("kind") == "data" and item.get("data_role_class") == "derived_method_output"
+            ]
+        )
+        if not expected_data and not data_ids and not has_only_derived_data:
             issues.append({"kind": "missing_data_plugin_binding", "detail": "No covered data plugin is bound to this main figure."})
         if not expected_methods and not method_ids:
             issues.append({"kind": "missing_method_plugin_binding", "detail": "No covered method plugin is bound to this main figure."})

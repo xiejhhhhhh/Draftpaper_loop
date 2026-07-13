@@ -56,9 +56,13 @@ def _field_required_roles(meta: dict[str, Any], discipline: dict[str, Any]) -> l
     if any(term in text for term in ["geography", "remote sensing", "spatial", "gis", "agriculture", "environment"]):
         add("spatial_or_sky_coordinates")
         add("spectral_or_remote_sensing_features")
-    if any(term in text for term in ["astronomy", "x-ray", "wxt", "flares", "source"]):
+    if any(term in text for term in ["x-ray", "wxt", "flares", "transient", "light curve", "time-domain"]):
         add("time_series")
         add("spectral_or_remote_sensing_features")
+    elif any(term in text for term in ["astronomy", "astrophysics", "euclid", "galaxy"]):
+        add("spatial_or_sky_coordinates")
+        if any(term in text for term in ["image", "imaging", "vis", "cutout", "morphology"]):
+            add("image_or_raster_data")
     return roles
 
 
@@ -134,7 +138,20 @@ def assess_research_plan_feasibility(project: str | Path) -> dict[str, Any]:
     figure_assessments = _figure_assessments(storyboard, available_roles, method_roles)
     blocking_figures = [item for item in figure_assessments if item["feasibility"] == "blocked"]
     conditional_figures = [item for item in figure_assessments if item["feasibility"] == "conditional"]
-    if blocking_figures and not acquisition:
+    inventory_ready = bool(isinstance(inventory, dict) and inventory and (inventory.get("files") or inventory.get("datasets") or inventory.get("row_count") or inventory.get("summary")))
+    acquisition_exhausted = bool(
+        isinstance(acquisition, dict)
+        and str(
+            acquisition.get("decision")
+            or acquisition.get("status")
+            or acquisition.get("availability")
+            or ""
+        ).strip().lower() in {"blocked_unavailable", "unavailable_after_search", "exhausted"}
+    )
+    if blocking_figures and not acquisition_exhausted:
+        # Missing roles are repairable gaps until the acquisition/rescue route has
+        # been attempted and explicitly exhausted. Blocking here would recreate
+        # the "missing data prevents the step that can acquire data" deadlock.
         decision = "conditional"
     elif blocking_figures:
         decision = "blocked"
@@ -150,12 +167,19 @@ def assess_research_plan_feasibility(project: str | Path) -> dict[str, Any]:
         "suggestions": [item["degradation_option"] for item in figure_assessments if item.get("degradation_option")],
         "policy": "Revise the research plan at the research-scope level; do not silently replace failed main figures downstream.",
     }
+    acquisition_ready = bool(isinstance(acquisition, dict) and acquisition)
+    next_action = (
+        "inventory-data" if decision == "conditional" and acquisition_ready and not inventory_ready
+        else "prepare-data-acquisition" if blocking_figures and not acquisition_exhausted
+        else "prepare-data-acquisition" if decision != "blocked"
+        else "revise-research-plan"
+    )
     scope_decision = {
         "status": "written",
         "generated_at": utc_now(),
         "scope_level": _scope_level(decision, coverage, figure_assessments),
         "requires_user_confirmation": decision == "blocked",
-        "next_action": "prepare-data-acquisition" if decision != "blocked" else "revise-research-plan",
+        "next_action": next_action,
     }
     report = {
         "status": "written",

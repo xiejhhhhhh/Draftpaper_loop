@@ -230,8 +230,24 @@ def _figure_story_arc(project_path: Path, entries: list[dict[str, Any]]) -> list
     for index, item in enumerate(planned, start=1):
         by_key.setdefault(_story_key(item, index), item)
     groups: dict[str, list[dict[str, Any]]] = {}
-    for index, entry in enumerate(entries, start=1):
+    figure_entries = [item for item in entries if item.get("artifact_kind") == "figure"]
+    story_anchors = figure_entries or entries
+    for index, entry in enumerate(story_anchors, start=1):
         groups.setdefault(_story_key(entry, index), []).append(entry)
+    if figure_entries:
+        # Tables support a figure-led finding unless they explicitly declare a matching
+        # story group. Unlinked tables remain available in the result manifest and
+        # evidence registry, but do not become synthetic manuscript findings.
+        for index, entry in enumerate(entries, start=1):
+            if entry.get("artifact_kind") != "table":
+                continue
+            explicit_keys = [
+                str(entry.get(key) or "").strip()
+                for key in ("storyboard_id", "figure_group_id", "figure_group", "linked_main_figure")
+            ]
+            target = next((key for key in explicit_keys if key and key in groups), "")
+            if target:
+                groups[target].append(entry)
     if not groups:
         for index, item in enumerate(planned, start=1):
             groups.setdefault(_story_key(item, index), []).append(item)
@@ -459,6 +475,48 @@ def build_section_evidence_pack(project: str | Path, section: str) -> dict[str, 
             "citation_role_required": normalized in {"introduction", "discussion"},
         },
     }
+    if normalized == "data":
+        data_context = _read_json(state.path / "data" / "data_writing_context.json")
+        source_provenance = _read_json(state.path / "data" / "source_provenance.json")
+        pack["data_writing_contract"] = {
+            "source_summary": data_context.get("source_summary"),
+            "processing_summary": data_context.get("processing_summary"),
+            "variable_groups": data_context.get("variable_groups") or {},
+            "data_key_facts": data_context.get("data_key_facts") or {},
+            "label_semantics": data_context.get("label_semantics") or {},
+            "claim_boundary": data_context.get("claim_boundary"),
+            "source_provenance": source_provenance,
+            "required_writer_topics": [
+                "versioned source products or explicitly unavailable product identity",
+                "selection, matching, duplicate-resolution, and join rules",
+                "measurement, observation, image, or cutout construction when applicable",
+                "quality thresholds, missingness states, and cohort transitions",
+                "sample unit, split or grouping unit, and claim boundary",
+            ],
+            "provenance_policy": "Write all material provenance that is available and state unavailable fields explicitly; never infer missing product, query, transformation, or version metadata.",
+            "forbidden_in_manuscript": data_context.get("forbidden_in_manuscript") or [],
+        }
+    elif normalized == "methods":
+        method_context = _read_json(state.path / "methods" / "method_writing_context.json")
+        pack["method_writing_contract"] = {
+            "analysis_steps": method_context.get("analysis_steps"),
+            "data_role": method_context.get("data_role"),
+            "verification_summary": method_context.get("verification_summary"),
+            "claim_boundary": method_context.get("claim_boundary"),
+            "formula_manifest": method_context.get("formula_manifest") or {},
+            "reproducibility_contract": method_context.get("reproducibility_contract") or {},
+            "forbidden_in_manuscript": method_context.get("forbidden_in_manuscript") or [],
+        }
+    if normalized in {"results", "discussion"}:
+        method_context = _read_json(state.path / "methods" / "method_writing_context.json")
+        reproducibility = method_context.get("reproducibility_contract") if isinstance(method_context.get("reproducibility_contract"), dict) else {}
+        pack["model_comparison_contract"] = {
+            "preprocessing_components": reproducibility.get("preprocessing_components") or [],
+            "implemented_components": reproducibility.get("all_implemented_components") or [],
+            "comparison_semantics_policy": reproducibility.get("comparison_semantics_policy")
+            or "Use incremental or conditional contribution language only for verified nested comparisons; otherwise report an exact pipeline-performance contrast.",
+            "policy": "The writer must name material preprocessing differences between compared variants and may not infer nesting from model labels alone.",
+        }
     target = state.path / SECTION_PACK_DIR / f"{normalized}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     _write_json(target, pack)
@@ -488,14 +546,24 @@ def _paragraph_blueprint(section: str, pack: dict[str, Any]) -> list[dict[str, A
             "methods": ["describe sample and representation", "explain model or estimator and objective", "define validation, metrics, and ablations with formula links"],
             "discussion": ["interpret main findings", "compare with relevant literature", "state limitations, innovation, and next validation"],
         }
-        for index, objective in enumerate(role_goals.get(section, []), start=1):
-            supporting_claims = claims[max(0, index - 1)::3] or claims[:2]
+        goals = role_goals.get(section, [])
+        evidence_ids = {str(item.get("evidence_id")) for item in evidence if item.get("evidence_id")}
+        for index, objective in enumerate(goals, start=1):
+            supporting_claims = claims[max(0, index - 1)::max(1, len(goals))] or claims[:2]
+            required_evidence_ids = [
+                str(item.get("claim_id"))
+                for item in supporting_claims
+                if str(item.get("claim_id") or "") in evidence_ids
+            ]
+            story_start = (index - 1) * len(stories) // max(1, len(goals))
+            story_end = index * len(stories) // max(1, len(goals))
+            paragraph_stories = stories[story_start:story_end] or stories[:1]
             paragraphs.append({
                 "paragraph_id": f"{section}_{index}",
                 "objective": objective,
-                "required_evidence_ids": [item.get("evidence_id") for item in evidence[:5]],
+                "required_evidence_ids": required_evidence_ids or [item.get("evidence_id") for item in evidence[:5]],
                 "allocated_claim_ids": [item.get("claim_id") for item in supporting_claims],
-                "figure_or_formula_links": [item.get("story_id") for item in stories[:3]],
+                "figure_or_formula_links": [item.get("story_id") for item in paragraph_stories],
                 "citation_intent": "Use citations to support the paragraph's specific role, not as a coverage list." if section in {"introduction", "discussion"} else "No literature citation required unless it defines a method or data standard.",
                 "transition_logic": "End by making the next paragraph's question necessary.",
                 "forbidden_content": ["internal artifact names", "unsupported metric", "conclusion outside the approved evidence boundary"],

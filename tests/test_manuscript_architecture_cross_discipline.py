@@ -87,9 +87,11 @@ appendix_figures:
         "reference_coverage": {"coverage_status": "passed", "summarized_but_uncited_count": 0, "coverage_ratio": 1.0},
     })
     _json(project / "quality_checks" / "blind_manuscript_evaluation.json", {
-        "status": "completed", "manuscripts_blinded": True, "reviewer_count": 2,
-        "full_manuscript_compared": True, "real_figures_compared": True,
-        "scientific_correctness_score": 1.0, "aggregate_quality_ratio": 0.97,
+        "schema_version": "dpl.independent_review_aggregate.v1", "status": "passed", "reviewer_count": 2,
+        "frozen_submission_bundle_hash": "bundle-1", "release_review_status": "pass",
+        "critical_open_count": 0, "major_open_count": 0, "adjudication_required": False,
+        "score_means": {"scientific_correctness": 0.97}, "revision_queue": [],
+        "relative_quality_ratio_prohibited": True,
     })
 
     report = assess_paper_quality_parity(project)

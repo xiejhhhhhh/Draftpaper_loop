@@ -28,6 +28,8 @@ from .code_ownership import (
     trace_figures_to_code,
 )
 from .claim_contract import ClaimContractError, apply_result_downgrade
+from .capability_packs import discover_capability_packs, evaluate_capability_routing
+from .command_transaction import record_command_transaction
 from .core_evidence import CoreEvidenceError, assess_core_evidence
 from .evidence_snapshot import EvidenceSnapshotMismatch, reopen_evidence_snapshot
 from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
@@ -129,6 +131,7 @@ from .review_rule_runtime import assess_review_rules
 from .results import ResultsGateError, inventory_results, write_results
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .template_registry import validate_template_registry
+from .third_party_provenance import render_third_party_notices, validate_third_party_provenance
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
 
 
@@ -186,7 +189,7 @@ def _skill_source_url(args: argparse.Namespace) -> str | None:
         return f"https://github.com/{repo_text}"
     return None
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
-from .command_registry import COMMAND_SPECS, dispatch_registered_command
+from .command_registry import COMMAND_SPECS, command_spec, dispatch_registered_command
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -214,6 +217,69 @@ def build_parser() -> argparse.ArgumentParser:
 
     migrate = subparsers.add_parser("migrate-project", help="Explicitly apply current project directories, stages, dependencies, and manifests.")
     migrate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    plan_version = subparsers.add_parser("plan-project-version", help="Read-only plan for creating a clean _vN project and selectively importing parent assets.")
+    plan_version.add_argument("--project", required=True, help="Path to the read-only parent project.")
+    plan_version.add_argument("--version", default="v1", help="Version label such as v1 or v2.")
+    plan_version.add_argument("--destination-root", default=None, help="Optional parent directory for the new project.")
+    plan_version.add_argument("--change-request", default=None, help="Optional change-request file; only its filename and hash enter the plan.")
+    plan_version.add_argument("--output", default=None, help="Optional path outside the parent project where the JSON plan is saved.")
+
+    create_version = subparsers.add_parser("create-project-version", help="Create a clean child project from a saved project-version plan.")
+    create_version.add_argument("--plan", required=True, help="Path to asset_import_plan.json produced by plan-project-version.")
+
+    import_version = subparsers.add_parser("import-version-assets", help="Import allowlisted parent assets into lineage-owned child locations.")
+    import_version.add_argument("--project", required=True, help="Path to the newly created child project.")
+    import_version.add_argument("--plan", required=True, help="Path to the same project-version plan used to create the child.")
+
+    validate_version = subparsers.add_parser("validate-project-version", help="Validate child identity, lineage isolation, and imported asset hashes.")
+    validate_version.add_argument("--project", required=True, help="Path to the child project.")
+
+    inspect_sor = subparsers.add_parser("inspect-system-of-record", help="Read-only summary of project artifact categories and invariants.")
+    inspect_sor.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    prepare_project_method = subparsers.add_parser(
+        "prepare-project-method-implementation",
+        help="Prepare auditable Agent tasks when the research plan needs a method absent from reusable plugins.",
+    )
+    prepare_project_method.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+
+    list_packs = subparsers.add_parser("list-capability-packs", help="List validated research capability packs.")
+    routing_eval = subparsers.add_parser("evaluate-capability-routing", help="Run bundled held-out capability-pack routing cases.")
+
+    figure_evidence = subparsers.add_parser("resolve-figure-evidence", help="Resolve each semantic figure contract to run/model/cohort-qualified evidence.")
+    figure_evidence.add_argument("--project", required=True)
+
+    paragraph_evidence = subparsers.add_parser("resolve-paragraph-evidence", help="Build hard-budget paragraph evidence slices for one manuscript section.")
+    paragraph_evidence.add_argument("--project", required=True)
+    paragraph_evidence.add_argument("--section", required=True, choices=["results", "introduction", "data", "methods", "discussion"])
+
+    stage_receipt = subparsers.add_parser("record-stage-receipt", help="Append a stage execution and token receipt.")
+    stage_receipt.add_argument("--project", required=True)
+    stage_receipt.add_argument("--stage", required=True)
+    stage_receipt.add_argument("--task-id", required=True)
+    stage_receipt.add_argument("--input-artifact", action="append", default=[])
+    stage_receipt.add_argument("--estimated-input-tokens", type=int, default=0)
+    stage_receipt.add_argument("--actual-input-tokens", type=int, default=None)
+    stage_receipt.add_argument("--actual-output-tokens", type=int, default=None)
+    stage_receipt.add_argument("--model", default=None)
+    stage_receipt.add_argument("--receipt-status", default="recorded")
+
+    build_registry = subparsers.add_parser("build-reference-registry", help="Normalize library.bib into the canonical reference registry and journal bibliography contract.")
+    build_registry.add_argument("--project", required=True)
+    inspect_duplicates = subparsers.add_parser("inspect-reference-duplicates", help="Inspect duplicate works and related publication versions without deleting references.")
+    inspect_duplicates.add_argument("--project", required=True)
+    resolve_version = subparsers.add_parser("resolve-reference-version", help="Confirm the preferred citable version of one canonical work before manuscript writing.")
+    resolve_version.add_argument("--project", required=True)
+    resolve_version.add_argument("--work", required=True)
+    resolve_version.add_argument("--preferred-key", required=True)
+    validate_bib = subparsers.add_parser("validate-bibliography", help="Audit structured metadata, duplicate decisions, journal style and compiled bibliography artifacts.")
+    validate_bib.add_argument("--project", required=True)
+    proof = subparsers.add_parser("render-reference-proof", help="Render an HTML proof with DOI/URL hyperlinks and bibliography audit status.")
+    proof.add_argument("--project", required=True)
+
+    subparsers.add_parser("validate-third-party-provenance", help="Validate source commits, licenses, influence links and formal plugin upstream references.")
+    subparsers.add_parser("render-third-party-notices", help="Regenerate THIRD_PARTY_NOTICES.md from the machine-readable source registry.")
 
     template_registry = subparsers.add_parser("validate-template-registry", help="Validate discipline plugin manifests and template files.")
     template_registry.add_argument("--root", default=None, help="Optional discipline_modules root for testing or contribution review.")
@@ -542,13 +608,6 @@ def build_parser() -> argparse.ArgumentParser:
     quality = subparsers.add_parser("quality-check", help="Run final staged manuscript quality checks.")
     quality.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
-    blind_template = subparsers.add_parser("prepare-blind-quality-evaluation", help="Write the independent blind-review rubric template required for a 95 percent quality claim.")
-    blind_template.add_argument("--project", required=True, help="Path to a project directory or project.json.")
-
-    blind_record = subparsers.add_parser("record-blind-quality-evaluation", help="Validate and record completed independent blind-review evidence.")
-    blind_record.add_argument("--project", required=True, help="Path to a project directory or project.json.")
-    blind_record.add_argument("--input", required=True, help="Completed blind-review JSON based on the generated template.")
-
     integrity = subparsers.add_parser("run-integrity-gate", help="Run citation evidence and result artifact integrity checks.")
     integrity.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -772,9 +831,110 @@ def build_parser() -> argparse.ArgumentParser:
     style = subparsers.add_parser("learn-writing-style-from-draft", help="Extract non-verbatim writing style signals from an approved draft.")
     style.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     style.add_argument("--draft", required=True, help="Path to an approved .tex or text draft used only for style-signal extraction.")
-    missing_registered_commands = sorted(set(COMMAND_SPECS) - set(subparsers.choices))
-    if missing_registered_commands:
-        raise RuntimeError("Registered CLI commands are missing parser definitions: " + ", ".join(missing_registered_commands))
+
+    doctor = subparsers.add_parser("doctor", help="Run a deterministic, read-only Draftpaper-loop environment and project diagnosis.")
+    doctor.add_argument("--project", default=None)
+    doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
+    start = subparsers.add_parser("start", help="Create a project and report the first executable workflow action.")
+    start.add_argument("--root", required=True)
+    start.add_argument("--idea", required=True)
+    start.add_argument("--field", required=True)
+    start.add_argument("--target-journal", default="General Academic Journal")
+    for name, help_text in (
+        ("continue", "Report the next executable workflow action."),
+        ("review", "Report the current review and release action."),
+        ("recover", "Diagnose a failed or inconsistent project and return safe recovery commands."),
+    ):
+        macro = subparsers.add_parser(name, help=help_text)
+        macro.add_argument("--project", required=True)
+    revise_macro = subparsers.add_parser("revise", help="Prepare a precise author revision request by line range or stable paragraph ID.")
+    revise_macro.add_argument("--project", required=True)
+    revise_macro.add_argument("--at", default=None)
+    revise_macro.add_argument("--paragraph", default=None)
+    revise_macro.add_argument("--instruction", required=True)
+    revise_macro.add_argument("--content-file", default=None)
+    revise_macro.add_argument("--operation", choices=["insert_before", "insert_after", "replace", "delete"], default="replace")
+    revise_macro.add_argument("--mode", choices=["exact_text", "instruction_to_codex"], default="instruction_to_codex")
+    revise_macro.add_argument("--change-class", choices=["language_only", "citation_edit", "new_reference", "claim_narrowing", "result_interpretation", "scientific_evidence_change"], default=None)
+    verify_action = subparsers.add_parser("verify-next-action", help="Verify that status recommends a registered command with satisfiable CLI preconditions.")
+    verify_action.add_argument("--project", required=True)
+    rebuild = subparsers.add_parser("rebuild-derived", help="Plan rebuilds for current derived artifacts without touching canonical scientific sources.")
+    rebuild.add_argument("--project", required=True)
+    rebuild.add_argument("--dry-run", action="store_true", default=True)
+    rebase = subparsers.add_parser("rebase-project-passport", help="Protected legacy recovery for rebasing a copied project passport from its origin.")
+    rebase.add_argument("--project", required=True)
+    rebase.add_argument("--from", dest="origin", required=True)
+    rebase.add_argument("--confirm", action="store_true")
+
+    independent = subparsers.add_parser("prepare-independent-manuscript-review", help="Freeze one anonymized generated manuscript bundle for independent reviewers.")
+    independent.add_argument("--project", required=True)
+    record_independent = subparsers.add_parser("record-independent-manuscript-review", help="Record one independent review against the frozen single-manuscript bundle.")
+    record_independent.add_argument("--project", required=True)
+    record_independent.add_argument("--reviewer", required=True)
+    record_independent.add_argument("--input", required=True)
+    release_review = subparsers.add_parser("assess-manuscript-quality-release", help="Aggregate independent single-manuscript reviews into a release decision.")
+    release_review.add_argument("--project", required=True)
+
+    source_map = subparsers.add_parser("build-manuscript-source-map", help="Build stable paragraph and LaTeX line anchors for author revisions.")
+    source_map.add_argument("--project", required=True)
+    preview_revision = subparsers.add_parser("preview-manuscript-revision", help="Preview a line- or paragraph-anchored manuscript revision without applying it.")
+    preview_revision.add_argument("--project", required=True)
+    preview_revision.add_argument("--at", default=None)
+    preview_revision.add_argument("--paragraph", default=None)
+    preview_revision.add_argument("--instruction", required=True)
+    preview_revision.add_argument("--content-file", default=None)
+    preview_revision.add_argument("--operation", choices=["insert_before", "insert_after", "replace", "delete"], default="replace")
+    preview_revision.add_argument("--mode", choices=["exact_text", "instruction_to_codex"], default="instruction_to_codex")
+    preview_revision.add_argument("--change-class", choices=["language_only", "citation_edit", "new_reference", "claim_narrowing", "result_interpretation", "scientific_evidence_change"], default=None)
+    apply_manuscript = subparsers.add_parser("apply-manuscript-revision", help="Apply a previously previewed revision after hash and anchor verification.")
+    apply_manuscript.add_argument("--project", required=True)
+    apply_manuscript.add_argument("--request-id", required=True)
+    rollback_manuscript = subparsers.add_parser("rollback-manuscript-revision", help="Rollback one accepted manuscript revision from its ledger snapshot.")
+    rollback_manuscript.add_argument("--project", required=True)
+    rollback_manuscript.add_argument("--revision-id", required=True)
+    metadata = subparsers.add_parser("set-manuscript-metadata", help="Set structured author, affiliation, funding, acknowledgement, data and code metadata.")
+    metadata.add_argument("--project", required=True)
+    metadata.add_argument("--input", required=True)
+    custom_reference = subparsers.add_parser("add-custom-reference", help="Add a structured user reference through registry, summary and audit preparation.")
+    custom_reference.add_argument("--project", required=True)
+    custom_reference.add_argument("--input", required=True)
+
+    eval_command = subparsers.add_parser("eval", help="Capture, baseline, replay, or gate a privacy-preserving software regression case.")
+    eval_actions = eval_command.add_subparsers(dest="eval_action", required=True)
+    eval_capture = eval_actions.add_parser("capture", help="Capture project topology, schemas, state and invariants without scientific content.")
+    eval_capture.add_argument("--project", required=True)
+    eval_capture.add_argument("--case", required=True)
+    eval_baseline = eval_actions.add_parser("baseline", help="Create a locator-free software regression baseline from a capture.")
+    eval_baseline.add_argument("--capture", required=True)
+    eval_baseline.add_argument("--output", default=None)
+    eval_replay = eval_actions.add_parser("replay", help="Replay a software regression baseline against a project.")
+    eval_replay.add_argument("--project", required=True)
+    eval_replay.add_argument("--baseline", required=True)
+    eval_gate = eval_actions.add_parser("gate", help="Gate a replay report.")
+    eval_gate.add_argument("--report", required=True)
+
+    import_findings = subparsers.add_parser("import-review-findings", help="Import independent-review findings as candidate revision tasks without editing the manuscript.")
+    import_findings.add_argument("--project", required=True)
+    import_findings.add_argument("--review", default=None)
+    list_tasks = subparsers.add_parser("list-revision-tasks", help="List review-derived manuscript revision tasks.")
+    list_tasks.add_argument("--project", required=True)
+    prepare_revision = subparsers.add_parser("prepare-revision", help="Prepare a revision request from one review finding.")
+    prepare_revision.add_argument("--project", required=True)
+    prepare_revision.add_argument("--task", required=True)
+    preview_compat = subparsers.add_parser("preview-revision", help="Inspect a prepared revision request and its unified diff.")
+    preview_compat.add_argument("--project", required=True)
+    preview_compat.add_argument("--revision", required=True)
+    accept_compat = subparsers.add_parser("accept-revision", help="Accept a prepared revision after hash verification.")
+    accept_compat.add_argument("--project", required=True)
+    accept_compat.add_argument("--revision", required=True)
+
+    parser_commands = set(subparsers.choices)
+    missing_specs = sorted(parser_commands - set(COMMAND_SPECS))
+    missing_parsers = sorted(set(COMMAND_SPECS) - parser_commands)
+    if missing_specs:
+        raise RuntimeError("CLI commands are missing CommandSpec declarations: " + ", ".join(missing_specs))
+    if missing_parsers:
+        raise RuntimeError("Registered CLI commands are missing parser definitions: " + ", ".join(missing_parsers))
     return parser
 
 
@@ -796,6 +956,25 @@ def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
         result, exit_code = registered
         print(json.dumps(result, ensure_ascii=False))
         return exit_code
+
+    if args.command == "list-capability-packs":
+        packs = discover_capability_packs()
+        print(json.dumps({"status": "listed", "pack_count": len(packs), "packs": packs}, ensure_ascii=False))
+        return 0
+
+    if args.command == "evaluate-capability-routing":
+        result = evaluate_capability_routing()
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "validate-third-party-provenance":
+        result = validate_third_party_provenance()
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") == "passed" else 1
+
+    if args.command == "render-third-party-notices":
+        print(json.dumps(render_third_party_notices(), ensure_ascii=False))
+        return 0
 
     if args.command == "create-project":
         try:
@@ -2178,6 +2357,9 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "load-project",
     "validate-project",
     "inspect-project-migration",
+    "plan-project-version",
+    "validate-project-version",
+    "inspect-system-of-record",
     "status",
     "run-pipeline",
     "detect-artifact-drift",
@@ -2185,24 +2367,97 @@ _READ_ONLY_PROJECT_COMMANDS = {
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run one CLI command and commit successful managed writes to the passport."""
+    """Run one CLI command and commit managed writes independently of scientific outcome."""
     parser = build_parser()
     args = parser.parse_args(argv)
     project = getattr(args, "project", None)
     command = str(getattr(args, "command", "") or "")
+    spec = command_spec(command)
+    mutates_project = bool(project and (spec.mutates_project if spec else command not in _READ_ONLY_PROJECT_COMMANDS))
+    allows_preexisting_drift = command in {"sync-artifact-stale", "rebase-project-passport"}
     preexisting_drift = False
-    if project and command not in _READ_ONLY_PROJECT_COMMANDS and command != "sync-artifact-stale":
+    if mutates_project:
         try:
             preexisting_drift = detect_artifact_drift(project).get("status") == "drift_detected"
         except (ArtifactDriftError, PassportError, ProjectStateError, OSError):
             preexisting_drift = True
-    exit_code = _main_without_passport_refresh(argv)
-    if project and command not in _READ_ONLY_PROJECT_COMMANDS and command != "sync-artifact-stale" and not preexisting_drift:
+
+    if mutates_project and preexisting_drift and not allows_preexisting_drift:
+        message = "Project artifacts changed outside the managed command transaction. Synchronize stale state before retrying."
         try:
-            event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
+            record_command_transaction(
+                project,
+                command=command,
+                scientific_exit_code=3,
+                transaction_status="blocked_preexisting_drift",
+                baseline_clean=False,
+                message=message,
+            )
+        except (PassportError, ProjectStateError, OSError):
+            pass
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "reason": "preexisting_artifact_drift",
+                    "message": message,
+                    "next_command": f'python -m draftpaper_cli.cli sync-artifact-stale --project "{project}"',
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+        return 3
+
+    exit_code = _main_without_passport_refresh(argv)
+    if mutates_project:
+        post_command_drift = True
+        try:
+            post_command_drift = detect_artifact_drift(project).get("status") == "drift_detected"
+        except (ArtifactDriftError, PassportError, ProjectStateError, OSError):
+            post_command_drift = True
+        if exit_code != 0 and not post_command_drift:
+            try:
+                record_command_transaction(
+                    project,
+                    command=command,
+                    scientific_exit_code=exit_code,
+                    transaction_status="aborted_no_managed_writes",
+                    baseline_clean=not preexisting_drift,
+                    message="The command failed before changing any passport-managed artifact.",
+                )
+            except (PassportError, ProjectStateError, OSError):
+                pass
+            return exit_code
+        event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
+        try:
             refresh_project_passport(project, event=event)
         except (PassportError, ProjectStateError, OSError) as exc:
-            print(json.dumps({"status": "error", "message": f"Command succeeded but passport refresh failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            try:
+                record_command_transaction(
+                    project,
+                    command=command,
+                    scientific_exit_code=exit_code,
+                    transaction_status="passport_refresh_failed",
+                    baseline_clean=not preexisting_drift,
+                    passport_event=event,
+                    message=str(exc),
+                )
+            except (PassportError, ProjectStateError, OSError):
+                pass
+            print(json.dumps({"status": "error", "message": f"Command completed but passport refresh failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        try:
+            record_command_transaction(
+                project,
+                command=command,
+                scientific_exit_code=exit_code,
+                transaction_status="committed",
+                baseline_clean=not preexisting_drift,
+                passport_event=event,
+            )
+        except (PassportError, ProjectStateError, OSError) as exc:
+            print(json.dumps({"status": "error", "message": f"Command completed but transaction receipt failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
             return 1
     return exit_code
 

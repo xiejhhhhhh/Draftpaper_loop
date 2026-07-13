@@ -739,6 +739,17 @@ rescue routes before accepting predictive claims.
             validate_plugin_candidate(candidate)
             with self.assertRaises(PluginCandidateError):
                 promote_plugin_candidate(candidate, dry_run=True, target_root=root / "discipline_modules")
+            manifest_path = candidate / "candidate_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.update({
+                "catalog_ref": "academicforge",
+                "original_repository": "https://github.com/HughYau/AcademicForge",
+                "original_skill_path": "skills/ml.baseline/SKILL.md",
+                "upstream_commit": "0123456789abcdef0123456789abcdef01234567",
+                "license_spdx_or_expression": "MIT",
+                "derivation_kind": "generalized_from_skill_contract",
+            })
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             promotion = promote_plugin_candidate(candidate, require_human_confirmation=True, dry_run=True, target_root=root / "discipline_modules")
             self.assertEqual(promotion["status"], "planned")
             self.assertIn("discipline_modules", promotion["target_dir"])
@@ -768,6 +779,19 @@ rescue routes before accepting predictive claims.
             candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
             candidate_manifest["template_id"] = "local_preprocessing_example"
             candidate_manifest["method_family"] = "local_preprocessing_example"
+            candidate_manifest.update({
+                "upstream_refs": ["academicforge", "scientific_agent_skills"],
+                "catalog_ref": "academicforge:scientific-agent-skills/sa.scikit-learn",
+                "original_repository": "https://github.com/K-Dense-AI/scientific-agent-skills",
+                "original_skill_path": "skills/scikit-learn",
+                "upstream_commit": "4d97e293dc6f604fb6b63dcd49b9028df413d65b",
+                "license_spdx_or_expression": "MIT AND per-skill-license",
+                "license_file": "third_party/upstream-skills/k-dense-ai__scientific-agent-skills/LICENSE.snapshot",
+                "derivation_kind": "derived_template",
+                "copied_code": False,
+                "copied_text": False,
+                "transformed_fields": ["method_family", "input_roles", "validation_checks"],
+            })
             candidate_manifest_path.write_text(json.dumps(candidate_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
             generalize_plugin_candidate(candidate)
             self.assertEqual(validate_plugin_candidate(candidate)["status"], "passed")
@@ -809,6 +833,19 @@ rescue routes before accepting predictive claims.
             candidate_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             candidate_manifest["template_id"] = "baseline_model"
             candidate_manifest["method_family"] = "baseline_model"
+            candidate_manifest.update({
+                "upstream_refs": ["academicforge", "scientific_agent_skills"],
+                "catalog_ref": "academicforge:scientific-agent-skills/sa.scikit-learn",
+                "original_repository": "https://github.com/K-Dense-AI/scientific-agent-skills",
+                "original_skill_path": "skills/scikit-learn",
+                "upstream_commit": "4d97e293dc6f604fb6b63dcd49b9028df413d65b",
+                "license_spdx_or_expression": "MIT AND per-skill-license",
+                "license_file": "third_party/upstream-skills/k-dense-ai__scientific-agent-skills/LICENSE.snapshot",
+                "derivation_kind": "derived_template",
+                "copied_code": False,
+                "copied_text": False,
+                "transformed_fields": ["method_family", "validation_checks"],
+            })
             manifest_path.write_text(json.dumps(candidate_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
             generalize_plugin_candidate(candidate)
             self.assertEqual(validate_plugin_candidate(candidate)["overlap_report"]["decision"], "merge_with_existing")

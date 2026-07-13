@@ -13,6 +13,7 @@ from draftpaper_cli.figure_contract_gate import assess_figure_contracts
 from draftpaper_cli.figure_repair import repair_figure_data
 from draftpaper_cli.discipline_modules.default import MODULE as DEFAULT_MODULE
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.project_state import update_stage_status
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -145,6 +146,46 @@ class FigureContractGateTests(unittest.TestCase):
             self.assertEqual(report["validated_figure_count"], 0)
             self.assertEqual(report["required_main_figure_count"], 5)
             self.assertEqual(report["decision"], "blocked")
+
+    def test_post_run_semantic_validation_does_not_reopen_verified_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Post-run semantic validation", field="machine learning")
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": [{
+                "figure_id": "fig_main",
+                "path": "results/figures/fig_main.png",
+                "required_data": [],
+                "required_method": [],
+                "expected_finding": "Validated result",
+                "required_variable_roles": ["model_variant", "performance_metric"],
+                "required_method_outputs": ["f1"],
+                "plot_grammar": "model_comparison",
+                "metric_dimensions": ["dimensionless_score"],
+            }]})
+            _write_json(project.path / "results" / "figure_plan.json", {"figures": []})
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {
+                "status": "success", "output_files": ["results/figures/fig_main.png"]
+            })
+            _write_json(project.path / "results" / "figure_metadata.json", {"figures": [{
+                "figure_id": "fig_main",
+                "path": "results/figures/fig_main.png",
+                "variable_roles": ["model_variant", "performance_metric"],
+                "series": [{"role": "performance_metric", "unit_family": "dimensionless_score"}],
+                "method_outputs": ["f1"],
+                "plot_grammar": "model_comparison",
+            }]})
+            update_stage_status(project.path, "code", "approved")
+            update_stage_status(project.path, "methods", "approved")
+
+            result = assess_figure_contracts(project.path)
+            state = json.loads((project.path / "project.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "pass")
+            self.assertEqual(state["stages"]["code"]["status"], "approved")
+            self.assertFalse(state["stages"]["code"]["stale"])
+            self.assertEqual(state["stages"]["figure_contracts"]["status"], "approved")
 
     def test_semantically_invalid_rendered_figure_blocks_contract_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

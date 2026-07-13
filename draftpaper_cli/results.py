@@ -973,6 +973,8 @@ def _existing_text(path: Path) -> str | None:
 def write_results(project: str | Path) -> dict[str, Any]:
     """Write results.tex only from existing artifacts declared in result_manifest.yaml."""
     state = load_project(project)
+    from .manuscript_revision import assert_writer_may_replace_section
+    assert_writer_may_replace_section(state.path, "results")
     ensure_registry_consistent(state.path)
     snapshot_path = state.path / "results" / "promoted_evidence_snapshot.json"
     if snapshot_path.exists():

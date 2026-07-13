@@ -29,13 +29,17 @@ def _quality_architecture(project):
     _json(project / "results" / "panel_figure_contracts.json", {"figure_groups": [{"figure_group_id": "f1"}]})
     _json(project / "writing" / "scientific_evidence_registry.json", {"records": [], "blocking_conflicts": []})
     _json(project / "quality_checks" / "blind_manuscript_evaluation.json", {
-        "status": "completed",
-        "manuscripts_blinded": True,
+        "schema_version": "dpl.independent_review_aggregate.v1",
+        "status": "passed",
         "reviewer_count": 2,
-        "full_manuscript_compared": True,
-        "real_figures_compared": True,
-        "scientific_correctness_score": 1.0,
-        "aggregate_quality_ratio": 0.97,
+        "frozen_submission_bundle_hash": "bundle-1",
+        "release_review_status": "pass",
+        "critical_open_count": 0,
+        "major_open_count": 0,
+        "adjudication_required": False,
+        "score_means": {"scientific_correctness": 0.97},
+        "revision_queue": [],
+        "relative_quality_ratio_prohibited": True,
     })
     for section in ("introduction", "data", "methods", "results", "discussion"):
         _json(project / "writing" / "section_validation" / f"{section}.json", {
@@ -169,7 +173,7 @@ def test_quality_parity_accepts_current_citation_audit_snapshot_without_section_
     assert report["hard_checks"]["citation_audit_after_final_draft"] is True
 
 
-def test_quality_parity_does_not_claim_95_percent_without_blind_full_manuscript_evidence(tmp_path) -> None:
+def test_quality_parity_requires_two_independent_single_manuscript_reviews(tmp_path) -> None:
     from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
 
     project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
@@ -186,6 +190,6 @@ def test_quality_parity_does_not_claim_95_percent_without_blind_full_manuscript_
     report = assess_paper_quality_parity(project)
 
     assert report["decision"] == "repair_required"
-    assert report["functional_quality_score"] == 0.0
+    assert report["functional_quality_score"] >= 0.95
     assert report["automated_functional_quality_score"] >= 0.95
-    assert report["hard_checks"]["blind_full_manuscript_and_real_figure_evaluation"] is False
+    assert report["hard_checks"]["two_independent_single_manuscript_reviews_passed"] is False

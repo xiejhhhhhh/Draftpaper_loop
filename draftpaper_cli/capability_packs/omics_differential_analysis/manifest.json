@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "omics_differential_analysis",
+  "version": "1.0.0",
+  "owner_discipline": "bioinformatics",
+  "secondary_disciplines": ["biology"],
+  "capability_family": "differential_expression",
+  "data_plugin_ids": ["bulk_rnaseq_count_matrix"],
+  "method_plugin_ids": ["pydeseq2_differential_expression"],
+  "review_plugin_ids": ["bioinformatics_replicate_gate", "count_matrix_normalization_gate", "multiple_testing_fdr_gate"],
+  "input_roles": ["count_matrix", "sample_metadata", "biological_replicate"],
+  "output_roles": ["differential_features", "effect_sizes", "adjusted_p_values"],
+  "scientific_unit": "biological_sample",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["differential expression", "count matrix", "rna seq", "adjusted p value"],
+  "forbidden_triggers": ["single image classification"],
+  "failure_modes": ["pseudo_replication", "normalization_leakage", "uncontrolled_multiple_testing"],
+  "bootstrap_runbook": "Bind biological replicates and design matrix before differential testing.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

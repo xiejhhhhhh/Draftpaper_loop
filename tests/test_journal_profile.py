@@ -51,6 +51,7 @@ class JournalProfileTests(unittest.TestCase):
             self.assertTrue(profile["rules"]["requires_linenumbers"])
             template = (project.path / "latex" / "template" / "main.tex").read_text(encoding="utf-8")
             self.assertIn(r"\documentclass[linenumbers,trackchanges]{aastex701}", template)
+            self.assertIn(r"\usepackage{amsmath,amssymb}", template)
             self.assertIn("%%DRAFTPAPER_SECTIONS%%", template)
 
             manifest = json.loads((project.path / "journal_profile" / "stage_manifest.json").read_text(encoding="utf-8"))
@@ -85,6 +86,27 @@ class JournalProfileTests(unittest.TestCase):
             self.assertEqual(payload["status"], "written")
             self.assertEqual(payload["documentclass"], "aastex701")
             self.assertTrue(Path(payload["latex_template"]).exists())
+
+    def test_full_apjs_name_maps_to_aastex_and_topic_specific_keywords(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Self-supervised representations of survey galaxy morphology",
+                field="astronomy machine learning",
+                target_journal="The Astrophysical Journal Supplement Series",
+            )
+            html = Path(tmp) / "empty.html"
+            html.write_text("<html><body>AAS journal guidance</body></html>", encoding="utf-8")
+            result = resolve_journal_template(
+                project.path,
+                target_journal="The Astrophysical Journal Supplement Series",
+                from_html=html,
+            )
+            self.assertEqual(result["documentclass"], "aastex701")
+            template = (project.path / "latex" / "template" / "main.tex").read_text(encoding="utf-8")
+            self.assertIn(r"\submitjournal{ApJS}", template)
+            self.assertIn("Galaxy classification systems", template)
+            self.assertNotIn("High energy astrophysics", template)
 
 
 if __name__ == "__main__":

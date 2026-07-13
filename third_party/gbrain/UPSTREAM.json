@@ -1,0 +1,8 @@
+{
+  "source_id": "gbrain",
+  "repository": "https://github.com/garrytan/gbrain",
+  "branch": "master",
+  "commit": "a25209bbb2bacf1b88e06fd5282b27f1bf4a3e7a",
+  "license": "MIT",
+  "use_mode": "taxonomy_inspiration"
+}

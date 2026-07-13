@@ -47,6 +47,14 @@ class CodexSkillWrapperTests(unittest.TestCase):
         for pattern in forbidden_patterns:
             self.assertIsNone(re.search(pattern, content), pattern)
 
+    def test_every_documented_cli_command_is_registered(self) -> None:
+        from draftpaper_cli.command_registry import COMMAND_SPECS
+
+        commands = COMMANDS_MD.read_text(encoding="utf-8")
+        documented = set(re.findall(r"python -m draftpaper_cli\.cli\s+([a-z0-9-]+)", commands))
+        self.assertTrue(documented)
+        self.assertEqual(sorted(documented - set(COMMAND_SPECS)), [])
+
     def test_skill_documents_stage_order_and_rerun_rules(self) -> None:
         content = SKILL_MD.read_text(encoding="utf-8")
         for command in [

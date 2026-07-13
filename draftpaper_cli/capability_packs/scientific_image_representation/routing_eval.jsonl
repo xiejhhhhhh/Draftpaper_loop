@@ -1,0 +1,1 @@
+{"case_id":"scientific-images","primary_discipline":"astronomy","secondary_disciplines":["machine_learning"],"requirement":{"kind":"method","method_family":"scientific image morphology representation learning"},"expected_pack_id":"scientific_image_representation"}

@@ -69,6 +69,11 @@ PROJECT_DIRECTORIES = [
     "integrity",
     "review",
     "quality_checks",
+    "lineage/imported_sources",
+    "lineage/imported_code",
+    "lineage/baseline_assets",
+    "lineage/legacy_reports",
+    "lineage/locators",
 ]
 
 STAGE_ORDER = [
@@ -216,6 +221,9 @@ def create_project(
     field: str,
     target_journal: str | None = None,
     overwrite: bool = False,
+    project_slug_override: str | None = None,
+    project_id_override: str | None = None,
+    metadata_overrides: dict[str, Any] | None = None,
 ) -> ProjectScaffold:
     """Create a single-paper project directory for staged local manuscript work."""
     if not idea.strip():
@@ -224,7 +232,9 @@ def create_project(
         raise ValueError("field is required")
 
     root_path = Path(root).expanduser().resolve()
-    project_slug = slugify(idea)
+    project_slug = str(project_slug_override or slugify(idea)).strip()
+    if not project_slug or project_slug in {".", ".."} or any(char in project_slug for char in '<>:"/\\|?*'):
+        raise ValueError("project_slug_override must be a safe single directory name")
     project_path = root_path / project_slug
     if project_path.exists() and not overwrite:
         raise ProjectAlreadyExistsError(f"Project already exists: {project_path}")
@@ -248,7 +258,7 @@ def create_project(
             loop_event_schema=DPL_SCHEMAS["loop_event"],
         ),
         "generated_by": generated_by_block(schema_version=DPL_SCHEMAS["project"]),
-        "project_id": project_slug,
+        "project_id": str(project_id_override or project_slug),
         "project_slug": project_slug,
         "title": idea.strip(),
         "idea": idea.strip(),
@@ -260,17 +270,23 @@ def create_project(
         "legacy_mvp_reference": "legacy MVP design notes",
         "stages": _build_stage_metadata(),
     }
+    if metadata_overrides:
+        protected = {"project_id", "stages", "created_at", "updated_at", "project_slug"}
+        metadata.update({key: value for key, value in metadata_overrides.items() if key not in protected})
 
     _write_json(project_path / "project.json", metadata)
     _write_simple_yaml(project_path / "project.yaml", metadata)
     _write_stage_manifests(project_path, metadata)
     _write_idea_note(project_path, metadata)
+    from .project_system_of_record import initialize_project_system_of_record
+
+    initialize_project_system_of_record(project_path, str(metadata["project_id"]))
     from .passport import initialize_project_passport
 
     initialize_project_passport(project_path)
 
     return ProjectScaffold(
-        project_id=project_slug,
+        project_id=str(metadata["project_id"]),
         project_slug=project_slug,
         path=project_path,
         metadata=metadata,

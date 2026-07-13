@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "geospatial_predictive_modeling",
+  "version": "1.0.0",
+  "owner_discipline": "geography",
+  "secondary_disciplines": ["machine_learning"],
+  "capability_family": "spatial_prediction_and_validation",
+  "data_plugin_ids": ["geopandas_vector_local"],
+  "method_plugin_ids": ["geopandas_crs_geometry_validation", "random_forest_regression_gridsearch"],
+  "review_plugin_ids": ["crs_consistency_gate", "spatial_unit_alignment_gate", "model_statistical_validity_gate"],
+  "input_roles": ["geospatial_features", "spatial_target", "group_or_region_id"],
+  "output_roles": ["spatial_prediction", "held_out_metrics", "residual_map"],
+  "scientific_unit": "spatial_sampling_unit",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["spatial prediction", "geospatial regression", "regional held out", "residual map"],
+  "forbidden_triggers": ["non spatial tabular only"],
+  "failure_modes": ["crs_mismatch", "spatial_leakage", "mixed_spatial_units"],
+  "bootstrap_runbook": "Validate CRS and define spatial groups before model fitting.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

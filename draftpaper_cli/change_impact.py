@@ -61,6 +61,22 @@ def artifact_role_for_path(path: str) -> tuple[str, str]:
         return "section_prose", "methods_writing"
     if lowered.startswith("data/processed/") or lowered.startswith("data/raw/"):
         return "processed_data", "data"
+    if lowered in {
+        "data/data_code_manifest.json",
+        "data/external_data_locators.json",
+        "data/source_provenance.json",
+    }:
+        return "data_schema", "data"
+    if lowered.startswith("data/") and lowered.endswith((".py", ".r", ".jl", ".sh")):
+        return "data_code", "data"
+    if lowered in {
+        "methods/method_code_manifest.json",
+        "methods/analysis_code_manifest.json",
+        "methods/model_provenance.json",
+        "code/stage_code_manifest.json",
+        "code/code_ownership_manifest.json",
+    }:
+        return "method_config", "methods"
     if lowered.startswith("methods/") and lowered.endswith(".py"):
         return "method_code", "methods"
     if lowered.startswith("methods/") and "run_manifest" in lowered:
@@ -71,8 +87,16 @@ def artifact_role_for_path(path: str) -> tuple[str, str]:
         if "method_plan" in lowered:
             return "method_plan", "research_plan"
         return "research_plan", "research_plan"
+    if lowered in {
+        "results/figure_quality_report.json",
+        "results/figure_semantic_validation_report.json",
+        "results/figure_contract_gate_report.json",
+    }:
+        return "result_manifest", "results"
     if lowered in {"project.json", "project.yaml"}:
         return "idea", "idea"
+    if lowered == "references/library.bib":
+        return "reference_library", "references"
     if lowered.startswith("references/"):
         return "citation_repair", "references"
     return "unknown", normalized.split("/", 1)[0] or "idea"
@@ -127,6 +151,32 @@ def classify_change(
             "Citation placement or wording changed without changing the scientific claim.",
             declaration,
         )
+    if role == "reference_library":
+        before_fingerprint = declaration.get("before_semantic_fingerprint") or {}
+        after_fingerprint = declaration.get("after_semantic_fingerprint") or {}
+        same_reference_set = bool(before_fingerprint and after_fingerprint) and all(
+            before_fingerprint.get(field) == after_fingerprint.get(field)
+            for field in ("citation_key_count", "work_count", "citation_keys_sha256", "work_ids_sha256")
+        )
+        if same_reference_set:
+            return ChangeClassification(
+                "reference_metadata_only",
+                role,
+                source_stage,
+                False,
+                True,
+                "Reference keys and canonical works are unchanged; only publication metadata changed.",
+                declaration,
+            )
+        return ChangeClassification(
+            "research_design",
+            role,
+            source_stage,
+            True,
+            True,
+            "The retained reference set changed or could not be proven identical.",
+            declaration,
+        )
     if role == "citation_report":
         return ChangeClassification(
             "presentation_only",
@@ -177,7 +227,7 @@ def classify_change(
             "Method implementation or validation semantics changed.",
             declaration,
         )
-    if role in {"processed_data", "data_schema", "labels"}:
+    if role in {"processed_data", "data_schema", "data_code", "labels"}:
         return ChangeClassification(
             "data_semantic",
             role,
@@ -235,6 +285,8 @@ def affected_stages(change: ChangeClassification) -> list[str]:
         return []
     if change.change_class == "citation_local":
         return list(dict.fromkeys([change.source_stage, *FINAL_STAGES]))
+    if change.change_class == "reference_metadata_only":
+        return list(dict.fromkeys(["references", "citation_audit", "latex", "quality_checks"]))
     if change.change_class == "presentation_only":
         if change.artifact_role == "figure":
             return ["results", "latex", "quality_checks"]

@@ -249,8 +249,19 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
     _write_json(state.path / FIGURE_CONTRACT_GATE_JSON, report)
     write_html_report(state.path / FIGURE_CONTRACT_GATE_HTML, _render_report(report), title="Figure Contract Gate")
     _set_stage_manifest(state.path)
-    if propagate_stage_state:
-        update_stage_status(state.path, "figure_contracts", "draft" if decision != "blocked" else "failed")
+    # The same command is used for pre-code contract readiness and post-run
+    # semantic validation. A post-run read-only validation report must not
+    # reopen the already verified code/method chain.
+    figure_stage = (state.metadata.get("stages") or {}).get("figure_contracts") or {}
+    stage_requires_refresh = bool(figure_stage.get("stale")) or figure_stage.get("status") in {None, "pending", "stale", "failed"}
+    if propagate_stage_state and stage_requires_refresh:
+        if execution_complete and decision == "pass":
+            # Closing a post-run semantic validation is a downstream audit
+            # result. Mark the contract stage approved without reopening the
+            # already verified code/method chain.
+            update_stage_status(state.path, "figure_contracts", "approved")
+        elif not execution_complete:
+            update_stage_status(state.path, "figure_contracts", "draft" if decision != "blocked" else "failed")
     return {
         "status": "written",
         "project_path": str(state.path),

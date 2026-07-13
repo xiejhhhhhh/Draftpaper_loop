@@ -15,6 +15,7 @@ from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data
 from draftpaper_cli.discipline_modules.machine_learning import MODULE as MACHINE_LEARNING_MODULE
 from draftpaper_cli.method_blueprint import prepare_method_blueprint
 from draftpaper_cli.method_plan import collect_method_plan
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.result_validity import assess_result_validity
 from draftpaper_cli.review_rule_runtime import assess_review_rules
@@ -189,6 +190,7 @@ class ReviewRuleRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="ML CLI rule gate", field="machine learning")
             _write_validity_project_inputs(project.path)
+            refresh_project_passport(project.path, event="test_fixture_ready")
 
             completed = subprocess.run(
                 [

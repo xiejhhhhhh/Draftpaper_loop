@@ -1,0 +1,1 @@
+{"case_id":"tabular-baseline","primary_discipline":"machine_learning","secondary_disciplines":[],"requirement":{"kind":"method","method_family":"tabular supervised learning baseline model"},"expected_pack_id":"tabular_supervised_learning"}

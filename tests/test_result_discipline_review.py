@@ -100,6 +100,28 @@ def test_result_review_matches_metric_name_and_value_not_value_only(tmp_path) ->
     assert any(item["kind"] == "untraceable_metric_claim" for item in saved["results_semantic_audit"]["issues"])
 
 
+def test_result_review_preserves_balanced_accuracy_as_its_own_metric(tmp_path) -> None:
+    from draftpaper_cli.result_discipline_review import review_results_with_discipline_rules
+
+    project = create_project(root=tmp_path, idea="Model result", field="machine learning", target_journal="Test").path
+    (project / "results" / "results.tex").write_text(
+        "The model reached balanced accuracy of 0.6030 in Figure 1.\n", encoding="utf-8"
+    )
+    (project / "results" / "figure_plugin_trace_report.json").write_text(
+        json.dumps({"decision": "pass", "figure_checks": []}), encoding="utf-8"
+    )
+    (project / "methods" / "run_manifest.yaml").write_text(
+        json.dumps({"status": "success", "metrics": {"balanced_accuracy": 0.603034814226722}}),
+        encoding="utf-8",
+    )
+
+    result = review_results_with_discipline_rules(project)
+    saved = json.loads((project / "review" / "result_discipline_review_report.json").read_text(encoding="utf-8"))
+
+    assert result["decision"] == "pass"
+    assert saved["results_semantic_audit"]["issues"] == []
+
+
 def test_result_review_binds_current_evidence_snapshot_and_manifests(tmp_path) -> None:
     import hashlib
 
@@ -125,6 +147,8 @@ def test_result_review_binds_current_evidence_snapshot_and_manifests(tmp_path) -
 
 
 def test_orchestrator_ignores_results_review_from_previous_snapshot(tmp_path) -> None:
+    import hashlib
+
     from draftpaper_cli.orchestrator import _gate_failure_action
     from draftpaper_cli.project_state import update_stage_status
 
@@ -137,6 +161,33 @@ def test_orchestrator_ignores_results_review_from_previous_snapshot(tmp_path) ->
     (project / "core_evidence" / "core_evidence_report.json").write_text(
         json.dumps({"decision": "pass", "promoted_evidence_snapshot_id": "snapshot-new"}), encoding="utf-8"
     )
+    (project / "results" / "promoted_evidence_snapshot.json").write_text(
+        json.dumps({"snapshot_id": "snapshot-new"}), encoding="utf-8"
+    )
+    candidate = project / "writing" / "candidates" / "results.tex"
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    candidate.write_text("Old Results.\n", encoding="utf-8")
+    candidate_hash = hashlib.sha256(candidate.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    writing_artifacts = {
+        "writing/section_packets/results.json": {"promoted_evidence_snapshot": {"snapshot_id": "snapshot-new"}},
+        "writing/section_validation/results.json": {
+            "composition_mode": "codex_free_candidate", "decision": "pass",
+            "quality_parity_eligible": True, "candidate_hash": candidate_hash,
+            "evidence_snapshot_id": "snapshot-new",
+        },
+        "writing/claim_bindings/results.json": {
+            "status": "passed", "candidate_hash": candidate_hash, "evidence_snapshot_id": "snapshot-new",
+        },
+        "writing/scientific_editor/results.json": {"source_hash": candidate_hash, "decision": "pass"},
+        "writing/section_acceptance/results.json": {
+            "status": "accepted", "formal_release_eligible": True,
+            "candidate_hash": candidate_hash, "evidence_snapshot_id": "snapshot-new",
+        },
+    }
+    for relative, payload in writing_artifacts.items():
+        path = project / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload), encoding="utf-8")
     (project / "review").mkdir(parents=True, exist_ok=True)
     (project / "review" / "result_discipline_review_report.json").write_text(
         json.dumps({

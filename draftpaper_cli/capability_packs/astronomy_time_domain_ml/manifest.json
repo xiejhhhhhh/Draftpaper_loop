@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "astronomy_time_domain_ml",
+  "version": "1.0.0",
+  "owner_discipline": "astronomy",
+  "secondary_disciplines": ["machine_learning"],
+  "capability_family": "time_domain_source_modeling",
+  "data_plugin_ids": ["astropy_fits_wcs_local", "fits_table_local_reader"],
+  "method_plugin_ids": ["long_term_light_curve_feature_extraction", "event_level_transformer_input_builder", "aeon_time_series_classification"],
+  "review_plugin_ids": ["time_system_declaration_gate", "model_statistical_validity_gate"],
+  "input_roles": ["light_curve", "event_catalog", "source_label"],
+  "output_roles": ["time_series_features", "source_level_prediction", "held_out_metrics"],
+  "scientific_unit": "source_or_event_as_declared",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["light curve", "time series", "transient classification", "event transformer"],
+  "forbidden_triggers": ["financial time series"],
+  "failure_modes": ["source_event_unit_leakage", "time_system_mismatch", "random_split_source_leakage"],
+  "bootstrap_runbook": "Bind source/event identifiers before selecting a split and generating figures.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

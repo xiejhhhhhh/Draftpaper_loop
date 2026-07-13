@@ -6,7 +6,7 @@ import json
 import tempfile
 import unittest
 
-from draftpaper_cli.paper_narrative import build_paper_narrative, build_results_synthesis_plan
+from draftpaper_cli.paper_narrative import build_paper_narrative, build_results_synthesis_plan, build_section_outline
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.writing_architecture import (
     assess_functional_quality_release,
@@ -94,6 +94,32 @@ tables: []
             self.assertEqual(block["metric_evidence"][0]["value"], 0.81)
             self.assertIn("robustness-panel", block["supporting_evidence"])
 
+    def test_unlinked_result_tables_do_not_become_synthetic_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            manifest_path = project.path / "results" / "result_manifest.yaml"
+            manifest = manifest_path.read_text(encoding="utf-8")
+            manifest = manifest.replace(
+                "tables: []",
+                """tables:
+  - id: fold-metrics
+    path: results/tables/fold_metrics.csv
+    table_role: result_table
+    result_claim: Quantitative support for the main comparison.
+  - id: internal-metrics
+    path: results/tables/metrics.csv
+    table_role: internal
+""",
+            )
+            manifest_path.write_text(manifest, encoding="utf-8")
+
+            narrative = build_paper_narrative(project.path)
+            groups = narrative["figure_story_arc"]["figure_groups"]
+
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(groups[0]["story_id"], "performance-story")
+
+
     def test_reference_items_support_consolidated_literature_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = self._project(tmp)
@@ -108,6 +134,31 @@ tables: []
             )
             narrative = build_paper_narrative(project.path)
             self.assertEqual(narrative["paper_brief"]["reference_count"], 2)
+
+    def test_discussion_outline_distributes_allocated_evidence_instead_of_repeating_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            records = [
+                {
+                    "evidence_id": f"metric-{index}",
+                    "entity_role": "result_metric",
+                    "value": index / 10,
+                    "run_id": "run-main",
+                    "target_sections": ["discussion"],
+                }
+                for index in range(1, 10)
+            ]
+            (project.path / "writing" / "scientific_evidence_registry.json").write_text(
+                json.dumps({"records": records}),
+                encoding="utf-8",
+            )
+
+            outline = build_section_outline(project.path, "discussion")
+            paragraphs = outline["paragraphs"]
+            distributed = [set(item["required_evidence_ids"]) for item in paragraphs]
+
+            self.assertEqual(set().union(*distributed), {item["evidence_id"] for item in records})
+            self.assertEqual(len({tuple(sorted(item)) for item in distributed}), len(paragraphs))
 
     def test_reasoning_lifecycle_panel_style_and_editor_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

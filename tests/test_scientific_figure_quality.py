@@ -119,6 +119,52 @@ def test_publication_figure_quality_rejects_forged_metadata_on_blank_png(tmp_pat
     assert "invalid_missing_or_blank_png" in {item["kind"] for item in report["issues"]}
 
 
+def test_publication_figure_quality_rejects_gallery_with_only_panel_frames(tmp_path) -> None:
+    from PIL import Image, ImageDraw
+    from draftpaper_cli.scientific_figure_quality import assess_scientific_figure_quality
+
+    project = create_project(root=tmp_path, idea="Image gallery", field="astronomy", target_journal="Test").path
+    path = project / "results" / "figures" / "gallery.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image = Image.new("RGB", (1600, 1000), "white")
+    draw = ImageDraw.Draw(image)
+    for row in range(2):
+        for column in range(4):
+            left = 20 + column * 395
+            top = 70 + row * 460
+            draw.rectangle((left, top, left + 360, top + 380), outline="black", width=3)
+            draw.text((left + 10, top - 25), f"Candidate {row * 4 + column + 1}", fill="black")
+    image.save(path)
+    table = project / "results" / "tables" / "candidates.csv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text("candidate,score\n1,0.9\n", encoding="utf-8")
+    table_hash = hashlib.sha256(table.read_bytes()).hexdigest()
+    _json(project / "results" / "figure_contracts.json", {"main_contracts": [{
+        "figure_id": "gallery", "scientific_question": "Which candidates require review?",
+        "required_variable_roles": ["features"], "required_method_outputs": ["candidate_stability"],
+        "plot_grammar": "image_gallery",
+    }]})
+    _json(project / "results" / "figure_metadata.json", {"figures": [{
+        "figure_id": "gallery", "path": "results/figures/gallery.png",
+        "statistics": {"candidate_stability": 0.9}, "interpretation_summary": "Candidates require review.",
+        "variable_roles": ["features"], "method_outputs": ["candidate_stability"],
+        "plot_grammar": "image_gallery", "source_tables": ["results/tables/candidates.csv"],
+    }]})
+    _json(project / "results" / "figure_plugin_trace_report.json", {"figure_checks": [{
+        "figure_id": "gallery", "data_plugin_ids": ["image_loader"], "method_plugin_ids": ["anomaly_model"],
+        "run_output_event_id": "evt_gallery",
+    }]})
+    (project / "methods" / "plugin_execution_ledger.jsonl").write_text(json.dumps({
+        "event_id": "evt_gallery", "status": "project_executed",
+        "output_hashes": {"results/tables/candidates.csv": table_hash},
+    }) + "\n", encoding="utf-8")
+
+    report = assess_scientific_figure_quality(project)
+
+    assert report["decision"] == "repair_required"
+    assert "empty_image_gallery_panels" in {item["kind"] for item in report["issues"]}
+
+
 def test_generic_plotter_refuses_unknown_main_result_substitution(tmp_path) -> None:
     import pytest
 

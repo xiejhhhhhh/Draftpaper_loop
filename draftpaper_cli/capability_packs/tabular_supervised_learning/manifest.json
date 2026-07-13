@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.research_capability_pack.v1",
+  "pack_id": "tabular_supervised_learning",
+  "version": "1.0.0",
+  "owner_discipline": "machine_learning",
+  "secondary_disciplines": [],
+  "capability_family": "tabular_supervised_modeling",
+  "data_plugin_ids": ["tabular_environment_dataset"],
+  "method_plugin_ids": ["random_forest_regression_gridsearch"],
+  "review_plugin_ids": ["model_statistical_validity_gate"],
+  "input_roles": ["analysis_table", "target", "group_id"],
+  "output_roles": ["held_out_metrics", "predictions", "feature_effects"],
+  "scientific_unit": "declared_sample_unit",
+  "minimum_runtime_level": "code_generator",
+  "routing_triggers": ["tabular classification", "tabular regression", "supervised learning", "baseline model"],
+  "forbidden_triggers": ["image segmentation", "survival analysis"],
+  "failure_modes": ["target_leakage", "split_leakage", "metric_dimension_mismatch"],
+  "bootstrap_runbook": "Declare sample unit, target provenance, split unit, baseline and primary metric.",
+  "provenance": {"origin": "first_party_composition", "copied_code": false, "license": "repository_license"}
+}

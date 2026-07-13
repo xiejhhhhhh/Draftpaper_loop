@@ -608,7 +608,7 @@ codex_skills/draftpaper-workflow/agents/openai.yaml
 Local install target:
 
 ```text
-C:\Users\97549\.codex\skills\draftpaper-workflow
+<CODEX_HOME>\skills\draftpaper-workflow
 ```
 
 The skill instructs Codex to call the existing CLI:

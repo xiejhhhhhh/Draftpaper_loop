@@ -104,7 +104,11 @@ def _audit_results_semantics(project_path: Path, text: str) -> dict[str, Any]:
     if "\\cite" in prose:
         issues.append({"kind": "results_citation_present", "severity": "repair_required", "detail": "Results must not use literature citations as a substitute for result evidence."})
     metric_values = _numeric_metrics(project_path)
-    metric_pattern = re.compile(r"((?:macro\s+)?(?:f1|auc|accuracy|r2|r\^2|rmse|mae))\s*(?:of|=|was|is|reached)?\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
+    metric_pattern = re.compile(
+        r"(balanced[-\s]+accuracy|(?:macro[-\s]+)?(?:f1|auc)|accuracy|r2|r\^2|rmse|mae)"
+        r"\s*(?:of|=|was|is|reached)?\s*([0-9]+(?:\.[0-9]+)?)",
+        re.IGNORECASE,
+    )
     for match in metric_pattern.finditer(prose):
         metric_name = _canonical_metric_name(match.group(1))
         value = float(match.group(2))

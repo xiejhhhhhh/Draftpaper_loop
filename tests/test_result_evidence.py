@@ -10,10 +10,113 @@ import unittest
 import hashlib
 
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.evidence_registry import build_scientific_evidence_registry
 from draftpaper_cli.result_evidence import resolve_result_evidence
 
 
 class ResultEvidenceResolverTests(unittest.TestCase):
+    def test_quality_filtered_metrics_remain_distinct_sensitivity_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Primary and sensitivity metrics", field="machine learning")
+            tables = project.path / "results" / "tables"
+            (tables / "model_metrics_by_fold.csv").write_text(
+                "run_id,model_variant,fold,macro_f1\n"
+                "run-1,combined,0,0.48\n"
+                "run-1,combined,1,0.52\n",
+                encoding="utf-8",
+            )
+            (tables / "quality_filtered_model_metrics_by_fold.csv").write_text(
+                "run_id,model_variant,fold,macro_f1\n"
+                "run-1,combined,0,0.49\n"
+                "run-1,combined,1,0.53\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "macro_f1", "primary_model_id": "combined"}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps(
+                    {
+                        "status": "success",
+                        "run_id": "run-1",
+                        "output_files": [
+                            "results/tables/model_metrics_by_fold.csv",
+                            "results/tables/quality_filtered_model_metrics_by_fold.csv",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+
+            records = [item for item in report["evidence_records"] if item["entity_role"] == "result_metric_macro_f1"]
+            self.assertEqual(
+                {item["analysis_variant"] for item in records},
+                {"primary_fixed_partition", "quality_filtered_sensitivity"},
+            )
+            self.assertEqual(len({item["evidence_id"] for item in records}), 2)
+            self.assertEqual(report["primary_metric"]["analysis_variant"], "primary_fixed_partition")
+            self.assertEqual(report["primary_metric"]["value"], 0.5)
+
+    def test_fixed_pooled_and_repeated_partition_estimands_do_not_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Partition-aware evaluation", field="machine learning")
+            tables = project.path / "results" / "tables"
+            (tables / "model_metrics_by_fold.csv").write_text(
+                "run_id,model_variant,fold,macro_f1\n"
+                "run-1,combined,0,0.48\n"
+                "run-1,combined,1,0.50\n",
+                encoding="utf-8",
+            )
+            (tables / "pooled_out_of_fold_metrics.csv").write_text(
+                "run_id,model_variant,macro_f1\nrun-1,combined,0.496\n",
+                encoding="utf-8",
+            )
+            (tables / "repeated_group_partition_metrics.csv").write_text(
+                "run_id,model_variant,fold,macro_f1\n"
+                "run-1,combined,0,0.49\n"
+                "run-1,combined,1,0.51\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "macro_f1", "primary_model_id": "combined"}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps(
+                    {
+                        "status": "success",
+                        "run_id": "run-1",
+                        "output_files": [
+                            "results/tables/model_metrics_by_fold.csv",
+                            "results/tables/pooled_out_of_fold_metrics.csv",
+                            "results/tables/repeated_group_partition_metrics.csv",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+            scopes = {
+                (item["aggregation"], item["analysis_variant"])
+                for item in report["evidence_records"]
+                if item["entity_role"] == "result_metric_macro_f1"
+            }
+            self.assertEqual(
+                scopes,
+                {
+                    ("mean_across_primary_folds", "primary_fixed_partition"),
+                    ("pooled_out_of_fold", "primary_fixed_partition"),
+                    ("mean_across_repeated_group_partitions", "repeated_partition_sensitivity"),
+                },
+            )
+            registry = build_scientific_evidence_registry(project.path)
+            self.assertEqual(registry["blocking_conflict_count"], 0)
+            self.assertEqual(registry["conflicts"], [])
+
     def test_configured_primary_metric_uses_run_summary_without_hiding_stronger_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Primary model comparison", field="machine learning")
@@ -227,6 +330,66 @@ class ResultEvidenceResolverTests(unittest.TestCase):
             self.assertEqual(report["primary_metric"]["model"], "token_transformer_time2vec_full")
             self.assertEqual(report["primary_metric"]["value"], 0.8053)
             self.assertEqual(report["primary_metric_selection"], "inferred_full_or_proposed_model")
+
+    def test_resolver_rejects_identifiers_ranks_and_per_sample_scores_as_global_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Group-aware image model", field="astronomy machine learning")
+            tables = project.path / "results" / "tables"
+            (tables / "metrics.csv").write_text(
+                "metric,value\nmacro_f1,0.49\nbalanced_accuracy,0.60\n",
+                encoding="utf-8",
+            )
+            (tables / "out_of_fold_predictions.csv").write_text(
+                "TARGETID,group_id,true_label,predicted_label,prediction_score\n"
+                "39633477292786966,tile_1,SER,DEV,0.64\n",
+                encoding="utf-8",
+            )
+            (tables / "anomaly_candidates.csv").write_text(
+                "TARGETID,group_id,candidate_rank,candidate_score,is_candidate\n"
+                "39633477292786966,tile_1,1,0.55,true\n",
+                encoding="utf-8",
+            )
+            (tables / "model_comparison.csv").write_text(
+                "model_variant,metric,mean,std\n"
+                "catalog_only,macro_f1,0.42,0.02\n"
+                "combined,macro_f1,0.49,0.02\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "f1"}), encoding="utf-8"
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps(
+                    {
+                        "status": "success",
+                        "run_id": "image-run",
+                        "output_files": [
+                            "results/tables/metrics.csv",
+                            "results/tables/out_of_fold_predictions.csv",
+                            "results/tables/anomaly_candidates.csv",
+                            "results/tables/model_comparison.csv",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+
+            metric_names = {item["metric_name"] for item in report["metrics"]}
+            self.assertIn("macro_f1", metric_names)
+            self.assertIn("balanced_accuracy", metric_names)
+            self.assertNotIn("targetid", metric_names)
+            self.assertNotIn("group_id", metric_names)
+            self.assertNotIn("candidate_rank", metric_names)
+            self.assertNotIn("prediction_score", metric_names)
+            self.assertNotIn("candidate_score", metric_names)
+            by_model = {
+                item["model"]: item["value"]
+                for item in report["metrics"]
+                if item.get("model") and item["metric_name"] == "macro_f1"
+            }
+            self.assertEqual(by_model, {"catalog_only": 0.42, "combined": 0.49})
 
 
 if __name__ == "__main__":

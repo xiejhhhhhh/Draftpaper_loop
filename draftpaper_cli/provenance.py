@@ -31,6 +31,10 @@ DPL_SCHEMAS: dict[str, str] = {
     "loop_event": "dpl.loop_event.v1",
     "discipline_profile": "dpl.discipline_profile.v1",
     "manuscript_projection": "dpl.manuscript_projection.v1",
+    "project_lineage": "dpl.project_lineage.v1",
+    "asset_import_plan": "dpl.asset_import_plan.v1",
+    "system_of_record": "dpl.system_of_record.v1",
+    "command_transaction": "dpl.command_transaction.v1",
 }
 
 

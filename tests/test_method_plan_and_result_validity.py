@@ -13,6 +13,7 @@ from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
 from draftpaper_cli.method_plan import collect_method_plan
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.references import write_reference_outputs
 from draftpaper_cli.result_validity import assess_result_validity
@@ -67,6 +68,46 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             plan = (project.path / "methods" / "method_plan.md").read_text(encoding="utf-8")
             self.assertIn("Literature-Informed Method Synthesis", plan)
             self.assertIn("multimodal Transformer", plan)
+
+    def test_collect_method_plan_prefers_structured_blueprint_over_broad_literature_terms(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Test scientific-image representations with group-aware validation",
+                field="astronomy machine learning",
+            )
+            prepare_project(project.path)
+            (project.path / "research_plan" / "method_plan.json").write_text(
+                json.dumps(
+                    {
+                        "method_tasks": [
+                            {
+                                "method_family": "representation_projection",
+                                "method_components": ["target_confounder_diagnostic"],
+                                "required_data": ["image_embedding", "independent_target", "confounder_variables"],
+                            },
+                            {
+                                "method_family": "group_aware_validation",
+                                "method_components": ["transparent_baseline_comparison"],
+                                "required_data": ["group_validation_split", "class_label"],
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            collect_method_plan(project.path)
+
+            requirements = json.loads(
+                (project.path / "methods" / "method_requirements.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(requirements["requirement_source"], "research_blueprint")
+            self.assertIn("representation_projection", requirements["method_families"])
+            self.assertIn("group_aware_validation", requirements["method_families"])
+            self.assertIn("image_embedding", requirements["required_data_features"])
+            self.assertNotIn("time_series_deep_learning", requirements["method_families"])
+            self.assertNotIn("light_curve", requirements["required_data_features"])
 
     def test_result_validity_blocks_weak_results_and_identifies_backtracking_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -290,6 +331,7 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI validity", field="workflow engineering")
             prepare_project(project.path)
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
             collect_completed = subprocess.run(
                 [
                     sys.executable,

@@ -1,0 +1,1 @@
+{"case_id":"rnaseq-de","primary_discipline":"bioinformatics","secondary_disciplines":["biology"],"requirement":{"kind":"method","method_family":"RNA seq differential expression with FDR"},"expected_pack_id":"omics_differential_analysis"}

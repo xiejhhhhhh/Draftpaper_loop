@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .html_utils import write_html_report
+from .evidence_snapshot import confirmation_artifact_hash
 from .passport import utc_now
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -331,6 +332,7 @@ def _set_manifest(project_path: Path) -> None:
         FIGURE_EXECUTION_DIAGNOSIS_JSON,
         "results/figure_metadata.json",
         "results/figure_semantic_validation_report.json",
+        "results/scientific_figure_quality_report.json",
         "methods/run_manifest.yaml",
         "results/result_validity_report.json",
         "results/result_support_checkpoint.json",
@@ -347,6 +349,11 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
     contracts_payload = _read_json(state.path / FIGURE_CONTRACTS_JSON, {})
     diagnosis = _read_json(state.path / FIGURE_EXECUTION_DIAGNOSIS_JSON, {})
     semantic_report = _read_json(state.path / "results" / "figure_semantic_validation_report.json", {})
+    scientific_figure_quality: dict[str, Any] = {}
+    if semantic_report:
+        from .scientific_figure_quality import assess_scientific_figure_quality
+
+        scientific_figure_quality = assess_scientific_figure_quality(state.path)
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     validity = _read_json(state.path / "results" / "result_validity_report.json", {})
     figures = _figure_items(figure_plan if isinstance(figure_plan, dict) else {}, figure_metadata if isinstance(figure_metadata, dict) else {})
@@ -370,10 +377,46 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         )
     if str((semantic_report or {}).get("decision") or "").lower() == "blocked":
         issues.append("At least one rendered figure fails its semantic scientific contract.")
+    if scientific_figure_quality and scientific_figure_quality.get("decision") != "pass":
+        issue_kinds = sorted(
+            {
+                str(item.get("kind"))
+                for item in scientific_figure_quality.get("issues") or []
+                if isinstance(item, dict) and item.get("kind")
+            }
+        )
+        detail = ", ".join(issue_kinds) or "rendered figure quality failure"
+        issues.append(f"Scientific figure pixel/evidence quality requires repair: {detail}.")
     for label, covered in coverage.items():
         if not covered:
             issues.append(f"Workflow coverage missing: {label}.")
     decision = "pass" if not issues else "revise_required"
+    confirmation_inputs = [
+        "data/data_acquisition_plan.json",
+        "data/data_inventory.json",
+        "data/data_quality_report.json",
+        "data/data_feasibility_report.json",
+        "results/figure_plan.json",
+        FIGURE_CONTRACTS_JSON,
+        FIGURE_EXECUTION_DIAGNOSIS_JSON,
+        "results/figure_metadata.json",
+        "results/figure_semantic_validation_report.json",
+        "results/scientific_figure_quality_report.json",
+        "results/resolved_result_evidence.json",
+        "methods/run_manifest.yaml",
+        "results/result_validity_report.json",
+        "results/result_support_checkpoint.json",
+    ]
+    confirmation_inputs.extend(
+        path.relative_to(state.path).as_posix()
+        for path in sorted((state.path / "results" / "figures").glob("*"))
+        if path.is_file()
+    )
+    input_artifact_hashes = {
+        relative: confirmation_artifact_hash(state.path / relative)
+        for relative in confirmation_inputs
+        if (state.path / relative).is_file()
+    }
     report = {
         "status": "written",
         "project_id": state.metadata.get("project_id"),
@@ -386,6 +429,8 @@ def assess_core_evidence(project: str | Path) -> dict[str, Any]:
         "workflow_coverage": coverage,
         "figure_contract_coverage": contract_coverage,
         "figure_semantic_validation": semantic_report,
+        "scientific_figure_quality": scientific_figure_quality,
+        "input_artifact_hashes": input_artifact_hashes,
         "issues": issues,
         "recommended_next_action": _recommended_next_action(decision, issues, coverage, contract_coverage),
     }

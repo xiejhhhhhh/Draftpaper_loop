@@ -1,0 +1,2 @@
+{"case_id":"astronomy-lightcurve","primary_discipline":"astronomy","secondary_disciplines":["machine_learning"],"requirement":{"kind":"method","method_family":"time series classification of transient light curves"},"expected_pack_id":"astronomy_time_domain_ml"}
+{"case_id":"astronomy-unseen-spectral-fit","primary_discipline":"astronomy","secondary_disciplines":[],"requirement":{"kind":"method","method_family":"Bayesian plasma spectral fitting"},"expected_pack_id":null}

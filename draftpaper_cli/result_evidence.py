@@ -42,7 +42,37 @@ NON_METRIC_COLUMNS = {
     "cohort",
     "cohort_id",
     "sample_unit",
+    "targetid",
+    "target_id",
+    "source_id",
+    "object_id",
+    "group_id",
+    "candidate_rank",
+    "count",
+    "predicted_label",
+    "true_label",
+    "is_candidate",
 }
+
+METRIC_COLUMN_MARKERS = (
+    "f1",
+    "auc",
+    "accuracy",
+    "precision",
+    "recall",
+    "specificity",
+    "sensitivity",
+    "r2",
+    "rmse",
+    "mae",
+    "mse",
+    "loss",
+    "p_value",
+    "correlation",
+    "effect_size",
+    "balanced_accuracy",
+    "stability",
+)
 
 
 class ResultEvidenceError(RuntimeError):
@@ -79,6 +109,34 @@ def _source_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _analysis_variant(relative: str) -> str:
+    """Infer a conservative analysis layer from an auditable result filename."""
+    stem = Path(relative).stem.lower()
+    if "quality_filtered" in stem or "quality-filtered" in stem:
+        return "quality_filtered_sensitivity"
+    if "repeated_group_partition" in stem or "repeated-group-partition" in stem:
+        return "repeated_partition_sensitivity"
+    if any(token in stem for token in ("sensitivity", "robustness", "stress_test", "stress-test")):
+        return "sensitivity_analysis"
+    if "ablation" in stem:
+        return "ablation"
+    if "model_metrics_by_fold" in stem or "pooled_out_of_fold" in stem:
+        return "primary_fixed_partition"
+    return "primary"
+
+
+def _aggregation_scope(relative: str, *, value_count: int, fallback: str) -> str:
+    """Identify the estimand represented by a metric table, independent of its values."""
+    stem = Path(relative).stem.lower()
+    if "repeated_group_partition" in stem or "repeated-group-partition" in stem:
+        return "mean_across_repeated_group_partitions"
+    if "pooled_out_of_fold" in stem or "pooled-out-of-fold" in stem:
+        return "pooled_out_of_fold"
+    if "model_metrics_by_fold" in stem or "model-metrics-by-fold" in stem:
+        return "mean_across_primary_folds"
+    return "mean_across_folds" if value_count > 1 else fallback
+
+
 def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[str, Any]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -86,15 +144,20 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
         return []
     columns = [str(column or "").strip() for column in rows[0].keys()]
     source_hash = _source_hash(path)
-    model_column = next((item for item in ["model_id", "model", "model_name", "variant"] if item in columns), "")
+    analysis_variant = _analysis_variant(relative)
+    model_column = next((item for item in ["model_id", "model", "model_name", "model_variant", "variant"] if item in columns), "")
     split_column = next((item for item in ["split", "split_type"] if item in columns), "")
     fold_column = next((item for item in ["fold", "fold_id"] if item in columns), "")
     cohort_column = next((item for item in ["cohort_id", "cohort"] if item in columns), "")
     sample_unit_column = "sample_unit" if "sample_unit" in columns else ""
     records: list[dict[str, Any]] = []
-    if {"metric", "value"}.issubset(columns):
+    metric_value_column = next(
+        (item for item in ["value", "mean", "score", "metric_value"] if item in columns),
+        "",
+    )
+    if "metric" in columns and metric_value_column:
         for row in rows:
-            value = _numeric(row.get("value"))
+            value = _numeric(row.get(metric_value_column))
             metric_name = str(row.get("metric") or "").strip().lower()
             if metric_name and value is not None:
                 records.append({
@@ -104,6 +167,7 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                     "split": str(row.get(split_column) or "").strip() if split_column else "",
                     "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
                     "aggregation": "reported_scalar",
+                    "analysis_variant": analysis_variant,
                     "run_id": str(row.get("run_id") or run_id).strip(),
                     "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
                     "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
@@ -119,6 +183,8 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
             metric_name = column.strip().lower()
             if metric_name in NON_METRIC_COLUMNS:
                 continue
+            if not any(marker in metric_name for marker in METRIC_COLUMN_MARKERS):
+                continue
             value = _numeric(row.get(column))
             if value is None:
                 continue
@@ -129,6 +195,7 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                 "split": str(row.get(split_column) or "").strip() if split_column else "",
                 "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
                 "aggregation": "fold_value" if fold_column else "reported_value",
+                "analysis_variant": analysis_variant,
                 "run_id": run_id,
                 "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
                 "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
@@ -156,7 +223,11 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         values = [float(item["value"]) for item in items]
         item = dict(items[0])
         item["value"] = mean(values)
-        item["aggregation"] = "mean_across_folds" if len(values) > 1 else item.get("aggregation")
+        item["aggregation"] = _aggregation_scope(
+            source_artifact,
+            value_count=len(values),
+            fallback=str(item.get("aggregation") or "reported_value"),
+        )
         item["fold_count"] = len(values)
         item["metric_name"] = metric_name
         item["model"] = model
@@ -170,13 +241,16 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return aggregated
 
 
-def _metric_rank(record: dict[str, Any]) -> tuple[int, int, float]:
+def _metric_rank(record: dict[str, Any]) -> tuple[int, int, int, float]:
     name = str(record.get("metric_name") or "")
     try:
         preference = len(METRIC_PREFERENCE) - METRIC_PREFERENCE.index(name)
     except ValueError:
         preference = 0
-    return int(record.get("priority") or 0), preference, float(record.get("value") or 0.0)
+    primary_variant = 1 if str(record.get("analysis_variant") or "primary") in {
+        "primary", "primary_fixed_partition",
+    } else 0
+    return int(record.get("priority") or 0), primary_variant, preference, float(record.get("value") or 0.0)
 
 
 def _metric_family(value: Any) -> str:
@@ -322,12 +396,17 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
     for item in records:
         evidence_records.append({
             "evidence_id": hashlib.sha256(
-                f"{item.get('run_id')}|{item.get('model')}|{item.get('split')}|{item.get('metric_name')}".encode("utf-8")
+                (
+                    f"{item.get('run_id')}|{item.get('model')}|{item.get('split')}|{item.get('metric_name')}|"
+                    f"{item.get('aggregation')}|{item.get('analysis_variant')}|{item.get('source_artifact')}"
+                ).encode("utf-8")
             ).hexdigest()[:16],
             "entity_role": f"result_metric_{item.get('metric_name')}",
             "value": item.get("value"),
             "unit": "score",
             "metric_dimension": item.get("metric_dimension") or "score",
+            "aggregation": item.get("aggregation") or "reported_value",
+            "analysis_variant": item.get("analysis_variant") or "primary",
             "cohort_id": item.get("cohort_id") or run_manifest.get("cohort_id") or "main",
             "sample_unit": item.get("sample_unit") or run_manifest.get("sample_unit") or "model_evaluation",
             "split": item.get("split") or run_manifest.get("evaluation_split") or "run_summary",

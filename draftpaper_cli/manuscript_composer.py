@@ -61,28 +61,25 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _compact_registry(registry: dict[str, Any], section: str) -> dict[str, Any]:
-    records = []
+    evidence_ids = []
     for record in registry.get("records") or []:
         if not isinstance(record, dict):
             continue
         targets = [str(item).lower() for item in (record.get("target_sections") or [])]
         if targets and section not in targets:
             continue
-        records.append({
-            key: record.get(key)
-            for key in (
-                "evidence_id", "entity_role", "value", "unit", "metric_dimension",
-                "run_id", "cohort_id", "sample_unit", "split", "model_id",
-                "source_artifact", "confidence", "target_sections", "claim_boundary",
-                "binding_complete", "missing_binding_fields",
-            )
-            if record.get(key) not in (None, "", [], {})
-        })
+        if record.get("evidence_id"):
+            evidence_ids.append(str(record["evidence_id"]))
     return {
         key: registry.get(key)
         for key in ("status", "schema_version", "project_id", "preferred_run_id", "policy")
         if registry.get(key) not in (None, "", [], {})
-    } | {"record_count": len(records), "records": records}
+    } | {
+        "record_count": len(evidence_ids),
+        "evidence_ids": evidence_ids,
+        "records_omitted_from_packet": True,
+        "registry_reference": "writing/scientific_evidence_registry.json",
+    }
 
 
 def _narrative_claims(items: Any) -> list[dict[str, Any]]:
@@ -94,13 +91,83 @@ def _narrative_claims(items: Any) -> list[dict[str, Any]]:
 
 
 def _compact_result_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    figure_fields = (
+        "id", "path", "figure_role", "manuscript_role", "storyboard_id",
+        "figure_group", "scientific_question", "caption_draft", "result_claim",
+        "claim_boundary", "linked_main_figure",
+    )
+    table_fields = ("id", "path", "table_role", "caption_draft", "result_claim", "storyboard_id", "figure_group")
+    figures = [
+        {key: item.get(key) for key in figure_fields if item.get(key) not in (None, "", [], {})}
+        for item in manifest.get("figures") or [] if isinstance(item, dict)
+    ]
+    tables = [
+        {key: item.get(key) for key in table_fields if item.get(key) not in (None, "", [], {})}
+        for item in manifest.get("tables") or [] if isinstance(item, dict)
+    ]
     return {
-        key: manifest.get(key)
-        for key in (
-            "schema_version", "figures", "tables", "supporting_links",
-            "claim_boundaries", "inventory_scope",
-        )
-        if manifest.get(key) not in (None, [], {})
+        "schema_version": manifest.get("schema_version"),
+        "figures": figures,
+        "tables": tables,
+        "supporting_links": manifest.get("supporting_links") or [],
+        "inventory_scope": manifest.get("inventory_scope"),
+        "full_manifest_reference": "results/result_manifest.yaml",
+    }
+
+
+def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
+    groups = []
+    for item in contract.get("figure_groups") or []:
+        if not isinstance(item, dict):
+            continue
+        groups.append({
+            key: item.get(key)
+            for key in (
+                "figure_id", "narrative_role", "scientific_question", "expected_finding",
+                "claim_boundary", "required_reasoning",
+            )
+            if item.get(key) not in (None, "", [], {})
+        })
+    verified_metrics = [
+        {
+            key: item.get(key)
+            for key in ("metric_name", "value", "run_id", "model_id", "cohort_id", "split")
+            if item.get(key) not in (None, "", [], {})
+        }
+        for item in contract.get("verified_metrics") or [] if isinstance(item, dict)
+    ]
+    return {
+        key: contract.get(key)
+        for key in ("status", "schema_version", "project_id", "minimum_quality_score", "policy")
+        if contract.get(key) not in (None, "", [], {})
+    } | {
+        "figure_groups": groups,
+        "verified_metrics": verified_metrics,
+        "verified_metrics_reference": "writing/scientific_evidence_registry.json",
+    }
+
+
+def _compact_panel_contracts(payload: dict[str, Any]) -> dict[str, Any]:
+    groups = []
+    for group in payload.get("figure_groups") or []:
+        if not isinstance(group, dict):
+            continue
+        panels = []
+        for panel in group.get("panels") or []:
+            if not isinstance(panel, dict):
+                continue
+            panels.append({
+                "panel_id": panel.get("panel_id"),
+                "contract": panel.get("contract") or {},
+                "status": panel.get("status"),
+                "missing_contract_fields": panel.get("missing_contract_fields") or [],
+                "no_weaker_substitute": bool(panel.get("no_weaker_substitute", True)),
+            })
+        groups.append({"figure_group_id": group.get("figure_group_id"), "panels": panels})
+    return {
+        "schema_version": payload.get("schema_version"),
+        "figure_groups": groups,
+        "observed_metadata_reference": "results/figure_metadata.json",
     }
 
 
@@ -145,13 +212,22 @@ def _compact_writing_context(
     pack = writing_context.get("section_evidence_pack") or {}
     compact_pack = {
         "section": section,
-        "paper_brief": _compact_paper_brief(pack.get("paper_brief") or {}),
         "allocated_claims": _narrative_claims(pack.get("allocated_claims")),
-        "figure_story_links": pack.get("figure_story_links") or [],
         "reference_items": pack.get("reference_items") or [],
         "section_policy": pack.get("section_policy") or {},
         "evidence_registry_reference": "writing/scientific_evidence_registry.json",
+        "full_pack_reference": f"writing/section_evidence_packs/{section}.json",
     }
+    if section not in {"results", "discussion"}:
+        compact_pack["paper_brief"] = _compact_paper_brief(pack.get("paper_brief") or {})
+    if section != "results":
+        compact_pack["figure_story_links"] = pack.get("figure_story_links") or []
+    if section == "data":
+        compact_pack["data_writing_contract"] = pack.get("data_writing_contract") or {}
+    elif section == "methods":
+        compact_pack["method_writing_contract"] = pack.get("method_writing_contract") or {}
+    if section in {"results", "discussion"}:
+        compact_pack["model_comparison_contract"] = pack.get("model_comparison_contract") or {}
     compact_matrices: dict[str, Any] = {}
     if section == "introduction":
         compact_matrices["introduction_gap_matrix"] = argument_matrices.get("introduction_gap_matrix") or []
@@ -218,12 +294,19 @@ def _functional_job_coverage(section: str, text: str, packet: dict[str, Any]) ->
     paragraphs = [item.strip() for item in re.split(r"\n\s*\n", text) if item.strip() and not item.lstrip().startswith("\\section")]
     outline_jobs = [item for item in (packet.get("section_outline") or {}).get("paragraphs") or [] if isinstance(item, dict)]
     reasoning = packet.get("section_reasoning_inputs") or []
-    expected_jobs = max(len(outline_jobs), len(reasoning), 1)
+    # The outline has already consolidated claims into paragraph-sized jobs.
+    # Counting the underlying reasoning rows again penalizes deliberate synthesis
+    # and pushes free prose back toward one-claim-per-paragraph templates.
+    expected_jobs = len(outline_jobs) if outline_jobs else max(len(reasoning), 1)
     paragraph_coverage = min(1.0, len(paragraphs) / expected_jobs)
     plain = re.sub(r"\\[A-Za-z]+\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})?", " ", text)
     plain = re.sub(r"\s+", " ", plain).lower()
     role_patterns = {
-        "introduction": [r"\b(?:known|established|reported|observed|evidence)\b", r"\b(?:gap|unknown|unclear|unresolved|remains|however)\b", r"\b(?:we test|we investigate|this study|here we|our aim|research question)\b"],
+        "introduction": [
+            r"\b(?:known|established|reported|observed|shown|demonstrated|evidence)\b",
+            r"\b(?:gap|unknown|unclear|unresolved|remains|however|yet|insufficient|not by itself)\b",
+            r"\b(?:we test|we investigate|we (?:therefore )?ask|this study|here we|our aim|research question)\b",
+        ],
         "data": [r"\b(?:source|survey|database|registry|cohort|sample|observations?)\b", r"\b(?:processed|filtered|aligned|normalized|quality|excluded|transformed)\b", r"\b(?:coverage|missing|subset|boundary|eligible|held[- ]out|split)\b"],
         "methods": [r"\b(?:constructed|representation|features?|tokens?|estimator|model|fit)\b", r"\b(?:objective|loss|optimized|inference|algorithm|equation|deterministic)\b", r"\b(?:validation|cross[- ]validation|held[- ]out|metrics?|ablation|uncertainty|robustness)\b"],
         "results": [r"\b(?:showed|revealed|observed|increased|decreased|outperformed|difference|association|pattern)\b", r"\b(?:figure|table|panel|supplement|appendix)\b", r"\b(?:however|limited|within|boundary|uncertainty|robust|sensitivity)\b"],
@@ -279,6 +362,16 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
     )
     resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json")
     result_manifest = _read_json(state.path / "results" / "result_manifest.yaml")
+    from .evidence_resolver import estimate_tokens, resolve_figure_evidence, resolve_paragraph_evidence
+
+    paragraph_context = resolve_paragraph_evidence(
+        state.path,
+        normalized,
+        outline=writing_context.get("section_outline") or {},
+    )
+    figure_evidence = {}
+    if normalized in {"results", "discussion"} and resolved_evidence:
+        figure_evidence = resolve_figure_evidence(state.path)
     packet = {
         "schema_version": "v0.23.1",
         "generated_at": utc_now(),
@@ -287,7 +380,7 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "scientific_evidence_registry": _compact_registry(registry, normalized),
         "resolved_result_evidence": _compact_resolved_evidence(resolved_evidence),
         "result_manifest": _compact_result_manifest(result_manifest),
-        "results_narrative_contract": results_narrative_contract,
+        "results_narrative_contract": _compact_results_contract(results_narrative_contract) if results_narrative_contract else {},
         "promoted_evidence_snapshot": promoted_snapshot,
         "paper_narrative": compact_narrative,
         "section_evidence_pack": compact_pack,
@@ -299,11 +392,21 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
             else argument_matrices.get("discussion_finding_comparison_matrix", []) if normalized == "discussion"
             else (section_lifecycles.get("data_lifecycle", {}).get("stages", []) if normalized == "data"
                   else section_lifecycles.get("method_lifecycle", {}).get("stages", []) if normalized == "methods"
-                  else (writing_context.get("results_synthesis_plan") or {}).get("finding_blocks", []))
+                  else {
+                      "job_count": len((writing_context.get("results_synthesis_plan") or {}).get("finding_blocks", [])),
+                      "artifact": "writing/results_synthesis_plan.json",
+                  })
         ),
         "section_lifecycles": compact_lifecycles,
-        "panel_figure_contracts": panel_contracts,
+        "panel_figure_contracts": _compact_panel_contracts(panel_contracts) if panel_contracts else {},
         "venue_style_adapter": venue_style,
+        "section_context_index": paragraph_context,
+        "figure_evidence_resolution": {
+            "status": figure_evidence.get("status"),
+            "run_id": figure_evidence.get("run_id"),
+            "story_role_counts": figure_evidence.get("story_role_counts") or {},
+            "artifact": "results/figure_evidence_resolution.json" if figure_evidence else None,
+        },
         "audit_sources": {
             "scientific_evidence_registry": "writing/scientific_evidence_registry.json",
             "resolved_result_evidence": "results/resolved_result_evidence.json",
@@ -317,6 +420,8 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
             "unsupported_numeric_claims_forbidden": True,
             "formula_variables_must_be_explained": normalized == "methods",
             "outline_evidence_and_claim_boundaries_must_be_preserved": True,
+            "available_data_or_model_provenance_must_be_reported_or_explicitly_bounded": normalized in {"data", "methods"},
+            "incremental_or_conditional_model_claim_requires_verified_nested_preprocessing": normalized in {"results", "discussion"},
         },
         "fallback_policy": {
             "allowed_for_legacy_or_offline_diagnostics": True,
@@ -327,14 +432,41 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
             "First follow the paragraph-level section outline, then compose fluent scientific prose freely. The outline defines "
             "evidence, claim boundaries, transitions, and forbidden content; it does not prescribe sentence forms. For Results, "
             "turn each finding block into observed evidence, comparison where available, interpretation, and a calibrated limit. "
-            "The completed draft is accepted only after deterministic evidence and quality validation."
+            "For Data and Methods, treat the provenance and reproducibility contracts as manuscript evidence: report material "
+            "source products, selection and transformation rules, quality thresholds, model identifiers, execution semantics, "
+            "and explicitly unavailable reproducibility fields without inventing them. For Results and Discussion, inspect the "
+            "model-comparison contract before naming a difference: use incremental or conditional contribution language only "
+            "for verified nested variants, and otherwise describe the exact pipeline-performance contrast. The completed draft is accepted only "
+            "after deterministic evidence and quality validation."
         ),
         "agent_draft_path": f"writing/drafts/{normalized}.tex",
         "candidate_path": f"writing/candidates/{normalized}.tex",
     }
+    packet["estimated_input_tokens"] = estimate_tokens(packet)
+    packet["hard_token_budget"] = paragraph_context.get("budget")
+    packet["within_token_budget"] = packet["estimated_input_tokens"] <= int(packet["hard_token_budget"] or 0)
+    if not packet["within_token_budget"]:
+        raise SectionCompositionError(
+            f"{normalized.capitalize()} evidence packet requires {packet['estimated_input_tokens']} estimated tokens, "
+            f"above the hard budget {packet['hard_token_budget']}. Split or compact paragraph jobs before writing."
+        )
     output = state.path / "writing" / "section_packets" / f"{normalized}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_json(output, packet)
+    from .stage_receipts import record_stage_receipt
+
+    record_stage_receipt(
+        state.path,
+        stage=normalized,
+        task_id=f"prepare-section-writing:{normalized}",
+        input_artifacts=[
+            "writing/scientific_evidence_registry.json",
+            "results/resolved_result_evidence.json",
+            "results/result_manifest.yaml",
+        ],
+        estimated_input_tokens=packet["estimated_input_tokens"],
+        status="packet_prepared",
+    )
     return packet
 
 
@@ -353,7 +485,7 @@ def select_validated_section_draft(project: str | Path, section: str, fallback_t
     report = validate_section_writing(
         normalized,
         text,
-        packet.get("scientific_evidence_registry") or {},
+        _read_json(state.path / "writing" / "scientific_evidence_registry.json"),
     )
     report["composition_mode"] = mode
     if mode == "deterministic_offline_fallback":
@@ -426,7 +558,7 @@ def submit_section_draft(project: str | Path, section: str, input_path: str | Pa
     report = validate_section_writing(
         normalized,
         text,
-        packet.get("scientific_evidence_registry") or {},
+        _read_json(state.path / "writing" / "scientific_evidence_registry.json"),
     )
     report["functional_job_coverage"] = _functional_job_coverage(normalized, text, packet)
     evidence_snapshot_id = str(

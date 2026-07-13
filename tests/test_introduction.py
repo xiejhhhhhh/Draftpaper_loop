@@ -13,6 +13,7 @@ from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.journal_profile import resolve_journal_template
+from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.references import write_reference_outputs
 from draftpaper_cli.research_plan import generate_research_plan
 
@@ -102,6 +103,7 @@ class IntroductionTests(unittest.TestCase):
     def test_cli_write_introduction_outputs_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project_path = prepared_project(tmp)
+            refresh_project_passport(project_path, event="test_fixture_ready")
 
             completed = subprocess.run(
                 [

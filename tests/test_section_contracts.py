@@ -18,6 +18,29 @@ REGISTRY = {
 
 
 class SectionWritingContractTests(unittest.TestCase):
+    def test_model_and_dataset_identifiers_are_not_numeric_claims(self) -> None:
+        report = validate_section_writing(
+            "discussion",
+            "Encoder-X ViT-S/16 was trained on the Corpus-100M collection and used as a fixed representation.",
+            {"records": []},
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"], [])
+
+    def test_percent_claim_binds_to_the_closest_fraction_not_first_tolerance_match(self) -> None:
+        registry = {"records": [
+            {"evidence_id": "class-f1", "entity_role": "result_metric_class_f1", "value": 0.37125, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "current_run", "model_id": "not_applicable"},
+            {"evidence_id": "failure-fraction", "entity_role": "result_metric_image_failure_fraction", "value": 0.3664, "unit": "fraction", "metric_dimension": "fraction", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "current_run", "model_id": "not_applicable"},
+        ]}
+
+        report = validate_section_writing(
+            "results", "Among anomaly candidates, 36.64% failed the image-quality rule.", registry
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["evidence_id"], "failure-fraction")
+
     def test_repeated_template_sentence_is_rejected(self) -> None:
         sentence = "This evidence establishes the main empirical pattern for the current analysis."
         report = validate_section_writing("discussion", f"{sentence} {sentence}", REGISTRY)
@@ -112,6 +135,99 @@ class SectionWritingContractTests(unittest.TestCase):
         )
 
         self.assertIn("numeric_claim_metric_dimension_mismatch", {item["kind"] for item in report["issues"]})
+
+    def test_thousands_separators_are_parsed_as_one_bound_number(self) -> None:
+        registry = {"records": [{
+            "evidence_id": "catalog-count",
+            "entity_role": "result_metric_source_catalog",
+            "value": 12345,
+            "unit": "count",
+            "metric_dimension": "count",
+            "run_id": "run-1",
+            "cohort_id": "source_catalog",
+            "sample_unit": "source",
+            "split": "current_run",
+            "model_id": "not_applicable",
+        }]}
+
+        report = validate_section_writing("results", "The source catalogue contained 12,345 objects.", registry)
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual([item["value"] for item in report["numeric_claim_bindings"]], [12345.0])
+
+    def test_contrasted_models_bind_numbers_within_their_local_clause(self) -> None:
+        registry = {"records": [
+            {"evidence_id": "baseline-f1", "entity_role": "result_metric_macro_f1", "value": 0.62, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "group_held_out", "model_id": "baseline"},
+            {"evidence_id": "candidate-f1", "entity_role": "result_metric_macro_f1", "value": 0.71, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "group_held_out", "model_id": "candidate"},
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "The baseline model reached macro-F1=0.62, whereas the candidate model reached macro-F1=0.71.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(
+            [item["binding"]["model_id"] for item in report["numeric_claim_bindings"]],
+            ["baseline", "candidate"],
+        )
+
+    def test_count_and_score_can_share_a_sentence_without_dimension_cross_talk(self) -> None:
+        registry = {"records": [
+            {"evidence_id": "candidate-count", "entity_role": "result_metric_candidate_count", "value": 37, "unit": "count", "metric_dimension": "count", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "current_run", "model_id": "not_applicable"},
+            {"evidence_id": "candidate-stability", "entity_role": "result_metric_candidate_stability", "value": 0.73, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "source", "split": "current_run", "model_id": "not_applicable"},
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "The analysis retained 37 candidates with a candidate-stability score of 0.73.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+
+    def test_conjoined_metrics_bind_to_their_own_local_scope(self) -> None:
+        registry = {"records": [
+            {"evidence_id": "candidate-f1", "entity_role": "result_metric_macro_f1", "value": 0.73, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "model_evaluation", "split": "group_held_out", "model_id": "candidate"},
+            {"evidence_id": "pipeline-difference", "entity_role": "result_metric_pipeline_difference_macro_f1", "value": 0.11, "unit": "score", "metric_dimension": "score", "run_id": "run-1", "cohort_id": "main", "sample_unit": "model_evaluation", "split": "group_held_out", "model_id": "candidate_minus_baseline"},
+        ]}
+
+        report = validate_section_writing(
+            "discussion",
+            "The candidate macro-F1 remained 0.73 and the pipeline difference from the baseline was 0.11.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(
+            [item["binding"]["model_id"] for item in report["numeric_claim_bindings"]],
+            ["candidate", "candidate_minus_baseline"],
+        )
+
+    def test_duplicate_evidence_ids_for_the_same_scientific_scope_are_not_ambiguous(self) -> None:
+        base = {
+            "entity_role": "result_metric_embedding_dimension",
+            "value": 128,
+            "unit": "count",
+            "metric_dimension": "count",
+            "run_id": "run-1",
+            "cohort_id": "main",
+            "sample_unit": "source",
+            "split": "current_run",
+            "model_id": "not_applicable",
+        }
+        registry = {"records": [
+            {**base, "evidence_id": "figure-one"},
+            {**base, "evidence_id": "figure-two"},
+        ]}
+
+        report = validate_section_writing(
+            "data", "Each source has a 128-dimensional image representation.", registry
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["status"], "bound")
 
 
 if __name__ == "__main__":

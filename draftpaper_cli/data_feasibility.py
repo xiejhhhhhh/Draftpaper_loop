@@ -122,11 +122,44 @@ def inventory_data(project: str | Path) -> dict[str, Any]:
                 "size_bytes": path.stat().st_size,
                 **profile,
             })
+    external_locator_path = state.path / "data" / "external_data_locators.json"
+    external_files = []
+    if external_locator_path.is_file():
+        locator = json.loads(external_locator_path.read_text(encoding="utf-8-sig"))
+        source_root = Path(str(locator.get("source_root") or ""))
+        source_id = str(locator.get("source_id") or "external_read_only_source")
+        for entry in locator.get("entries") or []:
+            if not isinstance(entry, dict) or entry.get("kind") != "candidate_data":
+                continue
+            relative = str(entry.get("path") or "")
+            path = source_root / Path(relative)
+            if not path.is_file() or path.suffix.lower() not in DATA_EXTENSIONS:
+                continue
+            profile = _read_tabular_profile(path) if path.suffix.lower() in TABULAR_EXTENSIONS else {
+                "readable": True,
+                "columns": [],
+                "row_count": None,
+                "column_count": None,
+                "missing_cells": None,
+                "total_cells": None,
+                "missing_cell_ratio": None,
+            }
+            external_files.append({
+                "path": f"external://{source_id}/{relative.replace(chr(92), '/')}",
+                "kind": "external_read_only",
+                "suffix": path.suffix.lower(),
+                "size_bytes": int(entry.get("size_bytes") or path.stat().st_size),
+                "sha256": entry.get("sha256"),
+                "source_locator": "data/external_data_locators.json",
+                **profile,
+            })
+    files.extend(external_files)
     remote_sources = _load_remote_sources(state.path)
     result_artifacts = _inventory_existing_result_artifacts(state.path)
     payload = {
         "project_id": state.metadata.get("project_id"),
         "file_count": len(files),
+        "external_file_count": len(external_files),
         "files": files,
         "remote_source_count": len(remote_sources),
         "remote_sources": remote_sources,
@@ -392,7 +425,7 @@ def _astronomy_product_label(name: str) -> str | None:
         return "event products"
     if "exp" in lowered or "exposure" in lowered:
         return "exposure products"
-    if "flux" in lowered or "hardness" in lowered or "wxt" in lowered or "fxt" in lowered:
+    if "hardness" in lowered or "wxt" in lowered or "fxt" in lowered:
         return _manuscript_clean_text(name)
     return None
 
@@ -404,6 +437,12 @@ def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
         "nitrogen_related_proxies": [],
         "environmental_covariates": [],
         "identifiers_or_metadata": [],
+        "spectroscopic_measurements": [],
+        "photometric_measurements": [],
+        "morphology_targets": [],
+        "image_representations": [],
+        "image_coverage_and_quality": [],
+        "selection_and_targeting_flags": [],
     }
     for item in files:
         for column in item.get("columns") or []:
@@ -418,9 +457,27 @@ def _variable_groups(files: list[dict[str, Any]]) -> dict[str, list[str]]:
                 continue
             if _is_access_descriptor_column(name):
                 continue
-            if any(token in lowered for token in ["ndvi", "evi", "savi", "vegetation", "lai"]):
+            if lowered.startswith("emb_") or lowered in {"embedding", "embedding_dimension"}:
+                target = "image_representations"
+                label = "pretrained image-representation components"
+                if label not in groups[target]:
+                    groups[target].append(label)
+                continue
+            if any(token in lowered for token in ["morphtype", "morphology", "profile_label", "profile_type", "sersic", "shape", "ellipticity"]):
+                target = "morphology_targets"
+            elif lowered in {"z", "zerr", "zwarn", "spectype", "subtype", "deltachi2"} or any(token in lowered for token in ["redshift", "spectro"]):
+                target = "spectroscopic_measurements"
+            elif lowered.startswith(("flux_", "mag_", "color_")) or any(token in lowered for token in ["fiberflux", "photometr", "magnitude", "ebv"]):
+                target = "photometric_measurements"
+            elif any(token in lowered for token in ["cutout_exists", "image_available", "quality_flag", "mask", "exposure"]):
+                target = "image_coverage_and_quality"
+            elif lowered in {"targetid", "source_id", "object_id", "brickid"} or lowered.endswith("_id"):
+                target = "identifiers_or_metadata"
+            elif lowered == "target_state" or lowered.endswith("_target"):
+                target = "selection_and_targeting_flags"
+            elif any(token in lowered for token in ["ndvi", "evi", "savi", "vegetation", "lai"]):
                 target = "remote_sensing_indicators"
-            elif any(token in lowered for token in ["yield", "biomass", "production", "response", "target"]):
+            elif any(token in lowered for token in ["yield", "biomass", "production", "response"]):
                 target = "response_variables"
             elif any(token in lowered for token in ["nitrogen", "tnc", "no2", "n2o", "nitrate", "ammonium"]):
                 target = "nitrogen_related_proxies"
@@ -441,6 +498,18 @@ def _data_source_summary(inventory: dict[str, Any]) -> str:
     processed = [item for item in local_files if item.get("kind") == "processed"]
     raw = [item for item in local_files if item.get("kind") == "raw"]
     remote = inventory.get("remote_sources") or []
+    external_read_only = [item for item in local_files if item.get("kind") == "external_read_only"]
+    if external_read_only:
+        readable_tables = sum(
+            1 for item in external_read_only
+            if item.get("readable") is True and str(item.get("suffix") or "").lower() in {".csv", ".tsv", ".xlsx", ".parquet"}
+        )
+        return (
+            "The study uses an externally managed, read-only scientific data collection. "
+            f"Its inventory exposes {len(external_read_only)} hashed assets"
+            + (f", including {readable_tables} readable tabular products" if readable_tables else "")
+            + ", while the source collection remains outside the manuscript workspace."
+        )
     if remote:
         descriptions = [_manuscript_clean_text(item.get("description") or item.get("local_summary")) for item in remote]
         descriptions = [item for item in descriptions if item]
@@ -470,6 +539,18 @@ def _data_content_summary(inventory: dict[str, Any], groups: dict[str, list[str]
         parts.append("Nitrogen-related proxy variables include " + ", ".join(groups["nitrogen_related_proxies"][:5]) + ".")
     if groups.get("astronomical_observation_products"):
         parts.append("Astronomical observation products include " + ", ".join(groups["astronomical_observation_products"][:6]) + ".")
+    if groups.get("spectroscopic_measurements"):
+        parts.append("Spectroscopic measurements include " + ", ".join(groups["spectroscopic_measurements"][:6]) + ".")
+    if groups.get("photometric_measurements"):
+        parts.append("Photometric measurements include " + ", ".join(groups["photometric_measurements"][:6]) + ".")
+    if groups.get("morphology_targets"):
+        parts.append("Morphology-related targets include " + ", ".join(groups["morphology_targets"][:5]) + ".")
+    if groups.get("image_representations"):
+        parts.append("Image-derived inputs include " + ", ".join(groups["image_representations"][:4]) + ".")
+    if groups.get("image_coverage_and_quality"):
+        parts.append("Image coverage and quality descriptors include " + ", ".join(groups["image_coverage_and_quality"][:5]) + ".")
+    if groups.get("selection_and_targeting_flags"):
+        parts.append("Survey selection and targeting flags include " + ", ".join(groups["selection_and_targeting_flags"][:5]) + ".")
     if groups.get("environmental_covariates"):
         parts.append("Environmental covariates include " + ", ".join(groups["environmental_covariates"][:6]) + ".")
     return " ".join(parts) or "The available metadata are insufficient to describe the data content without additional user notes."
@@ -499,8 +580,15 @@ def _processing_summary(inventory: dict[str, Any], observations: list[dict[str, 
     if notes:
         return notes[:1200]
     processed_count = sum(1 for item in inventory.get("files") or [] if item.get("kind") == "processed")
+    external_count = sum(1 for item in inventory.get("files") or [] if item.get("kind") == "external_read_only")
     if inventory.get("remote_source_count"):
         return "Large remote products are treated as read-only source material, and compact analysis-ready records are produced by selective extraction or streaming rather than by bulk copying."
+    if external_count:
+        return (
+            "The external collection is accessed in place through a hashed read-only inventory. "
+            "Analysis-ready cohorts are formed by identifier-based integration, availability and validity checks, "
+            "and explicit missingness accounting; the original assets are not duplicated into the project."
+        )
     if processed_count:
         return "Processed analysis-ready records provide the scientific content and provenance for the Data section."
     return "No explicit preprocessing narrative has been recorded; omit detailed processing claims unless the user provides them."
@@ -643,6 +731,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
     )
     number_roles = _evidence_number_roles(inventory if isinstance(inventory, dict) else {}, data_code_manifest if isinstance(data_code_manifest, dict) else {})
     key_facts = _data_key_facts(inventory if isinstance(inventory, dict) else {}, observations, number_roles)
+    label_semantics = _read_optional_json(state.path / "data" / "label_semantics.json", {})
     claim_boundary = _clean_sentence(feasibility.get("supported_claim_level"))
     if claim_boundary:
         claim_boundary = "The data support level is bounded as follows: " + claim_boundary + "."
@@ -670,6 +759,7 @@ def build_data_writing_context(project: str | Path) -> dict[str, Any]:
         "plugin_binding_summary": plugin_binding_summary,
         "evidence_number_roles": number_roles,
         "data_key_facts": key_facts,
+        "label_semantics": label_semantics if isinstance(label_semantics, dict) else {},
         "claim_boundary": claim_boundary,
         "variable_groups": groups,
         "observation_count": len(observations),
@@ -856,6 +946,8 @@ def render_data_tex(context: dict[str, Any]) -> str:
 def write_data(project: str | Path) -> dict[str, Any]:
     """Write data.tex from the manuscript-facing data context."""
     state = load_project(project)
+    from .manuscript_revision import assert_writer_may_replace_section
+    assert_writer_may_replace_section(state.path, "data")
     ensure_registry_consistent(state.path)
     context_path = state.path / DATA_WRITING_CONTEXT_JSON
     context = _load_json(state.path, DATA_WRITING_CONTEXT_JSON) if context_path.exists() else build_data_writing_context(state.path)

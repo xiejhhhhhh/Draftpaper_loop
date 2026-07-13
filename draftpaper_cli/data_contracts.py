@@ -53,6 +53,10 @@ ROLE_ALIASES = {
     "category": "label_or_response",
     "class_label": "label_or_response",
     "classification_label": "label_or_response",
+    "morphtype": "label_or_response",
+    "morphology_label": "label_or_response",
+    "profile_label": "label_or_response",
+    "profile_type": "label_or_response",
     "probability": "prediction_score",
     "prediction": "prediction_score",
     "prediction_score": "prediction_score",
@@ -211,6 +215,9 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
             add("image_or_raster_data")
         for column in item.get("columns") or []:
             all_columns.append(str(column))
+            if re.fullmatch(r"emb_\d+", str(column).lower()):
+                add("features")
+                continue
             add(normalize_role(column))
     column_blob = " ".join(re.sub(r"[^a-z0-9]+", "_", column.lower()) for column in all_columns)
     column_set = {re.sub(r"[^a-z0-9]+", "_", column.lower()).strip("_") for column in all_columns}
@@ -223,8 +230,26 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
     if {"has_pha", "has_arf", "has_rmf"} & column_set or "has_photon" in column_blob:
         add("modality_availability")
         add("spectral_or_remote_sensing_features")
-    if {"feature", "importance", "feature_importance"} & column_set or "embedding" in column_blob:
+    if {"feature", "importance", "feature_importance"} & column_set or "embedding" in column_blob or any(re.fullmatch(r"emb_\d+", column) for column in column_set):
         add("features")
+    if any(
+        column in column_set
+        for column in {"z", "redshift", "mag_g", "mag_r", "mag_z", "abs_mag_r", "color_gr", "color_rz", "color_w1w2", "age", "sex", "site", "batch"}
+    ):
+        add("confounder_variables")
+    if any(
+        "missing" in column
+        or "availability" in column
+        or column.endswith(("_available", "_exists"))
+        or column in {"coverage", "availability"}
+        for column in column_set
+    ):
+        add("missingness_reason")
+    if any(
+        token in column_blob
+        for token in ("quality", "flag", "zwarn", "fiberstatus", "cutout_exists", "is_anomaly", "valid_image")
+    ):
+        add("quality_flags")
     if {"rows", "n_rows", "row_count", "evt_n_rows", "cat_n_rows", "n_events"} & column_set:
         add("event_level_samples")
     if {"fold", "split", "n_train", "n_test", "source_id", "object_id", "group_id"} & column_set:

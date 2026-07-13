@@ -88,6 +88,33 @@ def write_formal_writing_release(project_path: Path) -> None:
 
 
 class OrchestratorPassportTests(unittest.TestCase):
+    def test_passport_tracks_stage_owned_method_entrypoint_from_code_manifest(self) -> None:
+        from draftpaper_cli.passport import refresh_project_passport
+        from draftpaper_cli.stale_sync import detect_artifact_drift
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Track method code", field="machine learning")
+            script = project.path / "methods" / "scripts" / "run_analysis.py"
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text("print('first')\n", encoding="utf-8")
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({
+                    "verify_command_argv": ["{python}", "methods/scripts/run_analysis.py"],
+                    "declared_outputs": ["results/tables/metrics.csv"],
+                }),
+                encoding="utf-8",
+            )
+            refresh_project_passport(project.path, event="test_code_baseline")
+
+            script.write_text("print('changed')\n", encoding="utf-8")
+            drift = detect_artifact_drift(project.path)
+
+            self.assertEqual(drift["status"], "drift_detected")
+            self.assertIn(
+                "methods/scripts/run_analysis.py",
+                [item["path"] for item in drift["changed_artifacts"]],
+            )
+
     def test_status_is_strictly_read_only_for_all_project_files(self) -> None:
         from draftpaper_cli.orchestrator import status_project
 
@@ -171,17 +198,82 @@ class OrchestratorPassportTests(unittest.TestCase):
             self.assertEqual([event["kind"] for event in checkpoint_events], ["checkpoint", "resume"])
 
     def test_resuming_core_evidence_checkpoint_promotes_snapshot(self) -> None:
-        from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+        from draftpaper_cli.orchestrator import checkpoint_project, resume_project, status_project
 
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Core evidence approval", field="astronomy")
             (project.path / "results" / "figures" / "main.png").write_bytes(b"approved")
+            (project.path / "core_evidence" / "core_evidence_report.json").write_text(
+                json.dumps(
+                    {
+                        "decision": "pass",
+                        "evidence_ready_for_manuscript": True,
+                        "requires_user_confirmation": True,
+                        "reviewable_figures": [{"path": "results/figures/main.png"}],
+                        "input_artifact_hashes": {
+                            "results/figures/main.png": hashlib.sha256(b"approved").hexdigest(),
+                        },
+                        "issues": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
 
             checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Review figures.")
+            self.assertTrue(checkpoint["checkpoint_hash"])
             resumed = resume_project(project.path, checkpoint_hash=checkpoint["checkpoint_hash"], note="Approved.")
 
             self.assertEqual(resumed["status"], "resumed")
             self.assertTrue((project.path / "results" / "promoted_evidence_snapshot.json").exists())
+            status = status_project(project.path)
+            self.assertNotEqual(status["next_action"]["command"], "checkpoint")
+
+    def test_changed_core_evidence_requires_a_new_bound_checkpoint(self) -> None:
+        from draftpaper_cli.orchestrator import OrchestratorError, checkpoint_project, resume_project, status_project
+        from draftpaper_cli.project_state import update_stage_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Version-bound evidence", field="astronomy")
+            figure = project.path / "results" / "figures" / "main.png"
+            figure.write_bytes(b"first")
+            report = project.path / "core_evidence" / "core_evidence_report.json"
+            report.write_text(
+                json.dumps(
+                    {
+                        "decision": "pass",
+                        "evidence_ready_for_manuscript": True,
+                        "requires_user_confirmation": True,
+                        "reviewable_figures": [{"path": "results/figures/main.png"}],
+                        "input_artifact_hashes": {
+                            "results/figures/main.png": hashlib.sha256(b"first").hexdigest(),
+                        },
+                        "issues": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            update_stage_status(project.path, "core_evidence", "draft")
+            first = checkpoint_project(project.path, stage="core_evidence", note="Review first evidence.")
+            figure.write_bytes(b"changed")
+            with self.assertRaisesRegex(OrchestratorError, "changed after assessment"):
+                resume_project(project.path, checkpoint_hash=first["checkpoint_hash"], note="Approve stale evidence.")
+
+            # The stale checkpoint remains append-only, so consume it as rejected before opening a fresh review.
+            events = read_jsonl(project.path / "checkpoint_ledger.jsonl")
+            self.assertEqual(events[-1]["kind"], "checkpoint")
+            from draftpaper_cli.passport import append_checkpoint_event
+            append_checkpoint_event(
+                project.path,
+                {
+                    "kind": "resume",
+                    "consumes_hash": first["checkpoint_hash"],
+                    "stage": "core_evidence",
+                    "note": "Rejected because evidence changed.",
+                },
+            )
+            waiting = status_project(project.path)
+            self.assertEqual(waiting["pipeline_state"], "core_evidence_refresh_required")
+            self.assertEqual(waiting["next_action"]["command"], "assess-core-evidence")
 
     def test_cli_status_checkpoint_resume_and_run_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -281,8 +373,11 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
             write_passing_result_support(project.path)
-            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
+            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True, "input_artifact_hashes": {"methods/run_manifest.yaml": hashlib.sha256(b'{"status":"success"}').hexdigest()}})
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
+            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
@@ -346,8 +441,11 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
             write_passing_result_support(project.path)
-            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True})
+            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True, "input_artifact_hashes": {"methods/run_manifest.yaml": hashlib.sha256(b'{"status":"success"}').hexdigest()}})
             (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
+            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
+            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")

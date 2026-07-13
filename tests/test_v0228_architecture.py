@@ -30,7 +30,10 @@ def test_formal_command_registry_matches_cli_parser() -> None:
 
 def test_cli_root_help_renders_all_registered_command_descriptions() -> None:
     help_text = build_parser().format_help()
-    assert "prepare-blind-quality-evaluation" in help_text
+    assert "prepare-independent-manuscript-review" in help_text
+    assert "record-independent-manuscript-review" in help_text
+    assert "assess-manuscript-quality-release" in help_text
+    assert "prepare-blind-quality-evaluation" not in help_text
     assert "quality-check" in help_text
 
 

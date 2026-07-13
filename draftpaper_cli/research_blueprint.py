@@ -103,6 +103,10 @@ def _context_flags(project_meta: dict[str, Any], literature_synthesis: dict[str,
         "time_series": any(term in text for term in ["time", "light curve", "sequence", "temporal", "irregular"]),
         "transformer": any(term in text for term in ["transformer", "attention", "token"]),
         "multimodal": any(term in text for term in ["multimodal", "spectral", "multiwavelength", "tabular", "fusion"]),
+        "scientific_image": any(term in text for term in ["image", "imaging", "visual", "cutout", "morphology", "dinov2", "embedding"]),
+        "group_validation": any(term in text for term in ["group-aware", "spatial grouping", "held-out", "group validation"]),
+        "confounder_control": any(term in text for term in ["confound", "selection effect", "redshift", "luminosity", "leakage"]),
+        "anomaly": any(term in text for term in ["anomaly", "outlier", "rare candidate"]),
         "astronomy": any(term in text for term in ["astronomy", "x-ray", "wxt", "flare", "transient", "source"]),
         "remote_sensing": any(term in text for term in ["ndvi", "remote sensing", "yield", "climate", "geography"]),
     }
@@ -110,6 +114,34 @@ def _context_flags(project_meta: dict[str, Any], literature_synthesis: dict[str,
 
 def _claim_templates(project_meta: dict[str, Any], flags: dict[str, bool]) -> list[dict[str, str]]:
     idea = str(project_meta.get("idea") or project_meta.get("title") or "the proposed study")
+    if flags["scientific_image"]:
+        return [
+            {
+                "claim_id": "claim_1_data_support",
+                "research_question": f"What cohort, image coverage, label provenance, and missingness support {idea}?",
+                "expected_finding": "The sample flow should define distinct source, image-available, image-valid, and analysis cohorts before any representation claim is made.",
+            },
+            {
+                "claim_id": "claim_2_representation_signal",
+                "research_question": "Does the image representation contain structure associated with an independently defined scientific target rather than only identifiers or preprocessing artifacts?",
+                "expected_finding": "Representation structure should be related to an independent target while remaining explicitly separated from exploratory visualization and label-defining variables.",
+            },
+            {
+                "claim_id": "claim_3_generalization",
+                "research_question": "Does representation-based prediction generalize under group-aware validation and class imbalance?",
+                "expected_finding": "Held-out performance and uncertainty should be compared with transparent baselines on the same cohort, sample unit, and split.",
+            },
+            {
+                "claim_id": "claim_4_incremental_value",
+                "research_question": "What information does the image representation add beyond catalog, selection, or other confounding variables?",
+                "expected_finding": "Ablation should distinguish incremental visual information from redshift, brightness, color, acquisition, or label leakage.",
+            },
+            {
+                "claim_id": "claim_5_error_boundary",
+                "research_question": "Which classes, sample regimes, image-quality conditions, or anomaly candidates remain uncertain?",
+                "expected_finding": "Class-wise errors, stability, and candidate diagnostics should bound interpretation and identify cases requiring independent confirmation.",
+            },
+        ]
     if flags["classification"]:
         return [
             {
@@ -130,7 +162,7 @@ def _claim_templates(project_meta: dict[str, Any], flags: dict[str, bool]) -> li
             {
                 "claim_id": "claim_4_modality_value",
                 "research_question": "Which data modality or method component contributes most to the result?",
-                "expected_finding": "Ablation should show whether long-term sequences, current observations, spectral features, or fusion drive the result.",
+                "expected_finding": "Ablation should show which declared feature groups or method components drive the result.",
             },
             {
                 "claim_id": "claim_5_error_boundary",
@@ -208,32 +240,62 @@ def _storyboard_figures(
     if flags["multimodal"]:
         method_prefix.append("multimodal_fusion")
     if flags["classification"]:
-        titles = [
-            "End-to-end time-aware flaring-source classification workflow",
-            "Class support and modality completeness for the source sample",
-            "Spectral-feature structure before model training",
-            "Baseline versus time-aware multimodal model performance",
-            "Ablation of sequence, current-observation, and spectral feature blocks",
-            "Error structure and uncertainty across confused source classes",
-        ]
-        plot_types = ["data_overview", "class_balance", "scatter_regression", "metric_summary", "metric_summary", "metric_summary"]
-        metrics = ["pipeline_completeness", "imbalance_ratio", "class_separation_summary", "f1", "ablation_delta", "confusion_summary"]
-        data = [
-            ["source_catalog", "light_curve", "current_observation_tokens", "spectral_features"],
-            ["class_label", "modality_availability"],
-            ["spectral_features", "class_label"],
-            ["features", "class_label", "validation_split"],
-            ["light_curve", "current_observation_tokens", "spectral_features", "class_label"],
-            ["predicted_label", "class_label", "prediction_score"],
-        ]
-        methods = [
-            method_prefix,
-            ["class_balance_check", "missingness_check"],
-            ["feature_space_diagnostic"],
-            ["baseline_model", "time_aware_transformer", "metric_evaluation"],
-            ["ablation_study", "multimodal_fusion"],
-            ["confusion_or_error_analysis", "uncertainty_summary"],
-        ]
+        if flags["scientific_image"]:
+            titles = [
+                "Sample construction, image coverage, and missingness",
+                "Image-representation structure against independent targets and confounders",
+                "Group-aware representation prediction versus transparent baselines",
+                "Incremental-value and confounder ablation",
+                "Class-wise error, imbalance, and uncertainty structure",
+                "Anomaly candidates and image-quality interpretation boundary",
+            ]
+            plot_types = ["data_overview", "embedding_diagnostic", "metric_summary", "metric_summary", "confusion_matrix", "image_gallery"]
+            metrics = ["cohort_coverage", "target_and_confounder_association", "group_held_out_metric", "incremental_metric_delta", "classwise_uncertainty", "candidate_stability"]
+            data = [
+                ["source_catalog", "image_availability", "valid_image_cohort", "missingness_reason"],
+                ["image_embedding", "independent_target", "confounder_variables"],
+                ["image_embedding", "independent_target", "group_validation_split", "class_label"],
+                ["image_embedding", "catalog_baseline_features", "confounder_variables", "class_label"],
+                ["predicted_label", "class_label", "prediction_score", "class_support"],
+                ["image_embedding", "image_cutout", "quality_flags", "candidate_score"],
+            ]
+            methods = [
+                ["cohort_flow_audit", "missingness_analysis"],
+                ["representation_projection", "target_confounder_diagnostic"],
+                ["group_aware_validation", "transparent_baseline_comparison", "uncertainty_estimation"],
+                ["feature_group_ablation", "confounder_control", "label_leakage_check"],
+                ["confusion_or_error_analysis", "class_imbalance_analysis", "uncertainty_summary"],
+                ["anomaly_stability_analysis", "image_quality_review", "candidate_interpretation_boundary"],
+            ]
+        else:
+            temporal = flags["time_series"]
+            titles = [
+                "End-to-end temporal classification workflow" if temporal else "End-to-end classification workflow",
+                "Class support and modality completeness for the sample",
+                "Temporal and feature structure before model training" if temporal else "Feature structure before model training",
+                "Baseline versus proposed-model performance",
+                "Ablation of declared feature and method components",
+                "Error structure and uncertainty across confused classes",
+            ]
+            plot_types = ["data_overview", "class_balance", "scatter_regression", "metric_summary", "metric_summary", "metric_summary"]
+            metrics = ["pipeline_completeness", "imbalance_ratio", "class_separation_summary", "f1", "ablation_delta", "confusion_summary"]
+            data = [
+                ["source_catalog", "primary_observations", "declared_feature_groups"],
+                ["class_label", "modality_availability"],
+                ["features", "class_label"],
+                ["features", "class_label", "validation_split"],
+                ["declared_feature_groups", "class_label"],
+                ["predicted_label", "class_label", "prediction_score"],
+            ]
+            primary_model = "time_aware_transformer" if flags["transformer"] and temporal else "proposed_model"
+            methods = [
+                method_prefix,
+                ["class_balance_check", "missingness_check"],
+                ["feature_space_diagnostic"],
+                ["baseline_model", primary_model, "metric_evaluation"],
+                ["ablation_study", "declared_component_comparison"],
+                ["confusion_or_error_analysis", "uncertainty_summary"],
+            ]
     else:
         titles = [
             "End-to-end research workflow",

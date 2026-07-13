@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,12 +20,27 @@ PASSPORT_FILES = {
     "artifact_ledger": "artifact_ledger.jsonl",
     "checkpoint_ledger": "checkpoint_ledger.jsonl",
     "integrity_ledger": "integrity_ledger.jsonl",
+    "transaction_ledger": "transaction_ledger.jsonl",
+    "token_ledger": "token_ledger.jsonl",
 }
 
 ROOT_ARTIFACTS = [
     "project.json",
     "project.yaml",
     "idea/idea.md",
+    "project_system_of_record.json",
+    "project_lineage.json",
+    "lineage/asset_import_plan.json",
+    "lineage/import_ledger.json",
+]
+
+CODE_MANIFEST_ARTIFACTS = [
+    "code/stage_code_manifest.json",
+    "code/code_ownership_manifest.json",
+    "data/data_code_manifest.json",
+    "methods/method_code_manifest.json",
+    "methods/analysis_code_manifest.json",
+    "methods/model_provenance.json",
 ]
 
 
@@ -84,6 +100,34 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _artifact_semantic_fingerprint(path: Path, relative: str) -> dict[str, Any] | None:
+    if relative != "references/library.bib":
+        return None
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    entries = re.findall(r"@[A-Za-z]+\s*\{\s*([^,\s]+)\s*,(.*?)(?=\n@|\Z)", text, flags=re.S)
+    citation_keys: list[str] = []
+    work_ids: list[str] = []
+    for key, body in entries:
+        citation_keys.append(key.strip())
+        doi_match = re.search(r"(?im)^\s*doi\s*=\s*[\{\"]([^}\"]+)", body)
+        title_match = re.search(r"(?im)^\s*title\s*=\s*[\{\"]([^}\"]+)", body)
+        if doi_match:
+            doi = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", doi_match.group(1).strip(), flags=re.I).lower()
+            work_ids.append("doi:" + doi)
+        elif title_match:
+            title = re.sub(r"[^a-z0-9]+", "", title_match.group(1).replace("{", "").replace("}", "").lower())
+            work_ids.append("title:" + title)
+    key_blob = "\n".join(sorted(set(citation_keys))).encode("utf-8")
+    work_blob = "\n".join(sorted(set(work_ids))).encode("utf-8")
+    return {
+        "kind": "reference_library",
+        "citation_key_count": len(set(citation_keys)),
+        "work_count": len(set(work_ids)),
+        "citation_keys_sha256": hashlib.sha256(key_blob).hexdigest(),
+        "work_ids_sha256": hashlib.sha256(work_blob).hexdigest(),
+    }
+
+
 def _metadata(project_path: Path) -> dict[str, Any]:
     metadata = _read_json(project_path / "project.json", {})
     if not isinstance(metadata, dict) or "project_id" not in metadata:
@@ -114,12 +158,76 @@ def _stage_manifest_outputs(project_path: Path, metadata: dict[str, Any]) -> lis
     return outputs
 
 
+def _code_manifest_artifacts(project_path: Path) -> list[str]:
+    """Collect stage-owned code and declared outputs from code manifests.
+
+    Code is scientific evidence, not an incidental implementation detail. Some
+    migrated projects have sparse stage manifests, so relying only on their
+    output_files would let method scripts change without passport drift.
+    """
+    candidates: list[str] = []
+
+    def add(value: Any) -> None:
+        text = str(value or "").replace("\\", "/").strip()
+        if text and text not in candidates:
+            candidates.append(text)
+
+    for relative in CODE_MANIFEST_ARTIFACTS:
+        manifest_path = project_path / relative
+        if not manifest_path.is_file():
+            continue
+        add(relative)
+        payload = _read_json(manifest_path, {})
+        if not isinstance(payload, dict):
+            continue
+        for key in (
+            "canonical_files",
+            "formula_source_files",
+            "generated_files",
+            "compatibility_files",
+            "declared_outputs",
+            "input_data",
+            "output_files",
+            "source_files",
+            "scripts",
+        ):
+            values = payload.get(key) or []
+            if isinstance(values, str):
+                values = [values]
+            if isinstance(values, list):
+                for item in values:
+                    if isinstance(item, dict):
+                        for path_key in ("canonical_path", "path", "source_path", "target_path"):
+                            if item.get(path_key):
+                                add(item[path_key])
+                    else:
+                        add(item)
+        files = payload.get("files") or []
+        if isinstance(files, list):
+            for item in files:
+                if not isinstance(item, dict):
+                    add(item)
+                    continue
+                for path_key in ("canonical_path", "path", "source_path", "target_path"):
+                    if item.get(path_key):
+                        add(item[path_key])
+        for key in ("verify_command_argv", "install_plotting_command_argv"):
+            argv = payload.get(key) or []
+            if isinstance(argv, list):
+                for token in argv:
+                    token_text = str(token or "").replace("\\", "/").strip()
+                    if token_text and not token_text.startswith("{") and Path(token_text).suffix.lower() in {".py", ".r", ".jl", ".sh"}:
+                        add(token_text)
+    return candidates
+
+
 def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
     """Collect current project artifacts with stable hashes."""
     project_path = project_root(project)
     metadata = _metadata(project_path)
     candidates = list(ROOT_ARTIFACTS)
     candidates.extend(_stage_manifest_outputs(project_path, metadata))
+    candidates.extend(_code_manifest_artifacts(project_path))
     seen: set[str] = set()
     artifacts: list[dict[str, Any]] = []
     for relative in candidates:
@@ -134,14 +242,18 @@ def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
             continue
         if not path.is_file():
             continue
-        artifacts.append({
+        artifact = {
             "artifact_id": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
             "stage": _stage_from_relative(normalized),
             "path": normalized,
             "sha256": _sha256(path),
             "size_bytes": path.stat().st_size,
             "updated_at": utc_now(),
-        })
+        }
+        semantic = _artifact_semantic_fingerprint(path, normalized)
+        if semantic:
+            artifact["semantic_fingerprint"] = semantic
+        artifacts.append(artifact)
     artifacts.sort(key=lambda item: item["path"])
     return artifacts
 

@@ -15,10 +15,12 @@ INTERNAL_LANGUAGE = re.compile(
     r"\b[\w.-]+\.(?:png|csv|json|py)\b)",
     flags=re.I,
 )
-NUMBER = re.compile(r"(?<![A-Za-z_])[-+]?(?:\d+\.\d+|\d+)(?:[eE][-+]?\d+)?(?![A-Za-z_])")
+NUMBER = re.compile(
+    r"(?<![A-Za-z0-9_])[-+]?(?:(?:\d{1,3}(?:,\d{3})+)|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?(?![A-Za-z0-9_])"
+)
 METRIC_NUMBER = re.compile(
     r"(?P<metric>macro[- ]?f1|f1|roc[- ]?auc|auc|accuracy|precision|recall|r2|r\^2|p[-_ ]?value)"
-    r"[^.;\n]{0,32}?(?P<value>[-+]?(?:\d+\.\d+|\d+)(?:[eE][-+]?\d+)?)",
+    r"[^.;\n]{0,32}?(?P<value>[-+]?(?:(?:\d{1,3}(?:,\d{3})+)|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?)",
     flags=re.I,
 )
 
@@ -26,6 +28,16 @@ METRIC_NUMBER = re.compile(
 REQUIRED_BINDING_FIELDS = (
     "evidence_id", "run_id", "cohort_id", "sample_unit", "split", "model_id", "metric_dimension",
 )
+SCIENTIFIC_SCOPE_FIELDS = tuple(field for field in REQUIRED_BINDING_FIELDS if field != "evidence_id")
+
+
+def _strip_alphanumeric_identifiers(text: str) -> str:
+    """Remove model, checkpoint, and dataset identifiers before claim parsing."""
+    return re.sub(
+        r"\b(?=[A-Za-z0-9_./+-]*[A-Za-z])(?=[A-Za-z0-9_./+-]*\d{2})[A-Za-z][A-Za-z0-9_./+-]*\b",
+        " ",
+        text,
+    )
 
 
 def _evidence_records(registry: dict[str, Any]) -> list[dict[str, Any]]:
@@ -76,22 +88,42 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
         without_commands,
         flags=re.I,
     )
+    without_commands = _strip_alphanumeric_identifiers(without_commands)
     claims: list[dict[str, Any]] = []
     for sentence in re.split(r"(?<=[.!?;])\s+|\n+", without_commands):
+        boundaries = [0]
+        boundaries.extend(
+            match.start()
+            for match in re.finditer(r"\b(?:whereas|while)\b|,\s*(?:whereas|while|but)\b", sentence, flags=re.I)
+        )
+        boundaries.extend(
+            match.start()
+            for match in re.finditer(r"\band\b", sentence, flags=re.I)
+            if NUMBER.search(sentence[:match.start()]) and NUMBER.search(sentence[match.end():])
+        )
+        boundaries.append(len(sentence))
+        boundaries = sorted(set(boundaries))
         for match in NUMBER.finditer(sentence):
             try:
-                value = float(match.group(0))
+                value = float(match.group(0).replace(",", ""))
             except ValueError:
                 continue
+            segment_start = max(boundary for boundary in boundaries if boundary <= match.start())
+            segment_end = min(boundary for boundary in boundaries if boundary > match.start())
+            local_context = sentence[segment_start:segment_end].strip(" ,")
+            local_offset = sentence.find(local_context, segment_start, segment_end) if local_context else segment_start
             suffix = sentence[match.end(): match.end() + 2]
+            normalized_number = match.group(0).replace(",", "")
             claims.append({
                 "value": value,
                 "raw_value": match.group(0),
-                "decimal_places": len(match.group(0).split(".", 1)[1]) if "." in match.group(0) else 0,
+                "decimal_places": len(normalized_number.split(".", 1)[1]) if "." in normalized_number else 0,
                 "sentence": sentence.strip(),
+                "local_context": local_context,
                 "percent": "%" in suffix,
                 "start": match.start(),
                 "end": match.end(),
+                "local_start": match.start() - max(local_offset, 0),
             })
     return claims
 
@@ -107,6 +139,17 @@ def _value_matches(claim: dict[str, Any], record: dict[str, Any]) -> bool:
     decimals = int(claim.get("decimal_places") or 0)
     rounding_tolerance = 0.5 * (10 ** (-decimals)) if decimals else 1e-8
     return any(abs(value - candidate) <= max(1e-8, rounding_tolerance, abs(candidate) * 5e-5) for value in values)
+
+
+def _value_distance(claim: dict[str, Any], record: dict[str, Any]) -> float:
+    try:
+        candidate = float(record.get("value"))
+    except (TypeError, ValueError):
+        return float("inf")
+    values = [float(claim["value"])]
+    if claim.get("percent"):
+        values.append(float(claim["value"]) / 100.0)
+    return min(abs(value - candidate) for value in values)
 
 
 def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
@@ -136,7 +179,7 @@ def _metric_signal(sentence: str, claim: dict[str, Any]) -> str:
     match = next(
         (
             candidate for candidate in METRIC_NUMBER.finditer(sentence)
-            if candidate.start("value") == int(claim.get("start", -1))
+            if candidate.start("value") == int(claim.get("local_start", claim.get("start", -1)))
         ),
         None,
     )
@@ -212,7 +255,8 @@ def _resolve_numeric_claim(
     run_verified = [record for record in candidates if str(record.get("confidence") or "") == "verified_run_output"]
     if run_verified:
         candidates = run_verified
-    metric_signal = _metric_signal(claim["sentence"], claim)
+    local_context = str(claim.get("local_context") or claim["sentence"])
+    metric_signal = _metric_signal(local_context, claim)
     if metric_signal:
         metric_matches = [record for record in candidates if _metric_matches(metric_signal, _record_metric(record))]
         if not metric_matches:
@@ -230,14 +274,21 @@ def _resolve_numeric_claim(
             }
         candidates = dimension_matches
     else:
-        role_matches = [record for record in candidates if _role_matches_sentence(record, claim["sentence"])]
+        role_matches = [record for record in candidates if _role_matches_sentence(record, local_context)]
         if role_matches:
             candidates = role_matches
 
+    if candidates:
+        best_distance = min(_value_distance(claim, record) for record in candidates)
+        candidates = [
+            record for record in candidates
+            if abs(_value_distance(claim, record) - best_distance) <= 1e-12
+        ]
+
     scope_signals: dict[str, set[str]] = {}
-    for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id", "metric_dimension"):
+    for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id"):
         known_all = {_binding_value(record, field) for record in records}
-        mentioned = {value for value in known_all if value and _scope_mentioned(claim["sentence"], value)}
+        mentioned = {value for value in known_all if value and _scope_mentioned(local_context, value)}
         if mentioned:
             scope_signals[field] = mentioned
             if not any(_binding_value(record, field) in mentioned for record in candidates):
@@ -263,7 +314,7 @@ def _resolve_numeric_claim(
             "missing_fields": sorted({field for record in candidates for field in REQUIRED_BINDING_FIELDS if not _binding_value(record, field)}),
         }
     scopes = {
-        tuple(_binding_value(record, field) for field in REQUIRED_BINDING_FIELDS)
+        tuple(_binding_value(record, field) for field in SCIENTIFIC_SCOPE_FIELDS)
         for record in complete
     }
     if len(scopes) > 1:
@@ -293,6 +344,7 @@ def _numeric_claims(text: str) -> list[float]:
         "",
         without_commands,
     )
+    without_commands = _strip_alphanumeric_identifiers(without_commands)
     values = []
     for match in NUMBER.findall(without_commands):
         try:
@@ -385,7 +437,7 @@ def validate_section_writing(section: str, text: str, registry: dict[str, Any]) 
             "detail": "Observed result metrics belong in Results, not in pre-Results framing or method description.",
         })
     numeric_bindings: list[dict[str, Any]] = []
-    if normalized_section in {"results", "data", "discussion"}:
+    if normalized_section in {"abstract", "results", "data", "discussion"}:
         for claim in _numeric_claims_with_context(text):
             binding = _resolve_numeric_claim(
                 claim, records, normalized_section, str(registry.get("preferred_run_id") or ""),

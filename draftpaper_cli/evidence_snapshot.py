@@ -23,6 +23,19 @@ SNAPSHOT_ARTIFACTS = [
     "results/figure_semantic_validation_report.json",
     "results/result_validity_report.json",
 ]
+CORE_EVIDENCE_REPORT = "core_evidence/core_evidence_report.json"
+_MUTABLE_CONFIRMATION_FIELDS = {
+    "generated_at",
+    "generated_by",
+    "generator_url",
+    "generator_contact",
+    "generator_license",
+    "generator_sponsorship_note",
+    "human_confirmation_status",
+    "human_confirmation_checkpoint_hash",
+    "human_confirmation_subject_id",
+    "promoted_evidence_snapshot_id",
+}
 MANUSCRIPT_ARTIFACTS = [
     "introduction/introduction.tex",
     "data/data.tex",
@@ -42,11 +55,48 @@ def _hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+_VOLATILE_JSON_KEYS = {
+    "generated_at",
+    "updated_at",
+    "created_at",
+    "recorded_at",
+    "generated_by",
+    "generator_url",
+    "generator_contact",
+    "generator_license",
+    "generator_sponsorship_note",
+}
+
+
+def _stable_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _stable_json_value(item)
+            for key, item in value.items()
+            if key not in _VOLATILE_JSON_KEYS
+        }
+    if isinstance(value, list):
+        return [_stable_json_value(item) for item in value]
+    return value
+
+
+def confirmation_artifact_hash(path: Path) -> str:
+    """Hash scientific JSON semantics while ignoring regeneration metadata."""
+    if path.suffix.lower() == ".json":
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (json.JSONDecodeError, OSError):
+            return _hash(path)
+        canonical = json.dumps(_stable_json_value(payload), sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return _hash(path)
+
+
 def _artifact_hashes(project_path: Path) -> dict[str, str]:
     paths = [project_path / item for item in SNAPSHOT_ARTIFACTS]
     paths.extend(sorted((project_path / "results" / "figures").glob("*")))
     return {
-        path.relative_to(project_path).as_posix(): _hash(path)
+        path.relative_to(project_path).as_posix(): confirmation_artifact_hash(path)
         for path in paths
         if path.is_file()
     }
@@ -55,6 +105,56 @@ def _artifact_hashes(project_path: Path) -> dict[str, str]:
 def _snapshot_id(artifacts: dict[str, str]) -> str:
     canonical = json.dumps(artifacts, sort_keys=True, ensure_ascii=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:20]
+
+
+def _confirmation_report_payload(report: dict[str, Any]) -> dict[str, Any]:
+    """Return the scientific report content that a human actually confirms."""
+    return {
+        key: value
+        for key, value in report.items()
+        if key not in _MUTABLE_CONFIRMATION_FIELDS
+    }
+
+
+def evidence_confirmation_subject(project: str | Path) -> dict[str, Any]:
+    """Build a stable identity for the exact core evidence offered for approval."""
+    state = load_project(project)
+    report_path = state.path / CORE_EVIDENCE_REPORT
+    if not report_path.exists():
+        raise EvidenceSnapshotMismatch("A current core-evidence report is required before confirmation.")
+    report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+    if str(report.get("decision") or "").lower() not in {"pass", "passed"}:
+        raise EvidenceSnapshotMismatch("Core evidence must pass before it can be confirmed.")
+    recorded_inputs = report.get("input_artifact_hashes")
+    if not isinstance(recorded_inputs, dict) or not recorded_inputs:
+        raise EvidenceSnapshotMismatch(
+            "The core-evidence report is not bound to its evaluated inputs; reassess core evidence."
+        )
+    changed_inputs = []
+    for relative, expected_hash in recorded_inputs.items():
+        path = state.path / str(relative)
+        current_hash = confirmation_artifact_hash(path) if path.is_file() else ""
+        if current_hash != str(expected_hash or ""):
+            changed_inputs.append(str(relative))
+    if changed_inputs:
+        raise EvidenceSnapshotMismatch(
+            "Core-evidence inputs changed after assessment; reassess core evidence: "
+            + ", ".join(sorted(changed_inputs))
+        )
+    artifacts = _artifact_hashes(state.path)
+    evidence_snapshot_id = _snapshot_id(artifacts)
+    payload = {
+        "project_id": state.metadata.get("project_id"),
+        "evidence_snapshot_id": evidence_snapshot_id,
+        "artifacts": artifacts,
+        "core_evidence": _confirmation_report_payload(report),
+    }
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return {
+        "confirmation_subject_id": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "evidence_snapshot_id": evidence_snapshot_id,
+        "artifact_count": len(artifacts),
+    }
 
 
 def create_evidence_snapshot(project: str | Path) -> dict[str, Any]:
@@ -150,6 +250,7 @@ def reopen_evidence_snapshot(project: str | Path, *, reason: str) -> dict[str, A
     snapshot_path.replace(archive_path)
     affected = [
         "result_validity",
+        "result_support",
         "core_evidence",
         "results",
         "introduction",

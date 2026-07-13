@@ -43,6 +43,28 @@ SAMPLE_ITEMS = [
 
 
 class ReferencesTests(unittest.TestCase):
+    def test_normalized_publication_metadata_reaches_bibtex(self) -> None:
+        from draftpaper_cli.references import generate_bibtex, normalize_reference_item
+
+        item = normalize_reference_item({
+            "title": "A structured journal article",
+            "authors": ["Ada Example"],
+            "year": "2026",
+            "publication": "Journal of Structured Results",
+            "volume": "12",
+            "issue": "3",
+            "pages_or_article_number": "e1042",
+            "publisher": "Example Press",
+            "doi": "10.1234/example",
+        }, 0)
+
+        bibtex = generate_bibtex([item])
+
+        self.assertIn("volume = {12}", bibtex)
+        self.assertIn("number = {3}", bibtex)
+        self.assertIn("pages = {e1042}", bibtex)
+        self.assertIn("publisher = {Example Press}", bibtex)
+
     def test_write_reference_outputs_creates_fixed_artifacts(self) -> None:
         from draftpaper_cli.references import write_reference_outputs
 
@@ -74,7 +96,17 @@ class ReferencesTests(unittest.TestCase):
                 rows = list(csv.DictReader(handle))
             self.assertEqual(
                 list(rows[0].keys()),
-                ["citation_key", "section", "claim", "evidence_summary", "source", "doi", "url"],
+                [
+                    "citation_key",
+                    "section",
+                    "claim",
+                    "evidence_summary",
+                    "source",
+                    "doi",
+                    "url",
+                    "citation_role",
+                    "data_citation_requirement",
+                ],
             )
             self.assertEqual(rows[0]["citation_key"], "Smith2024Transformer1")
             self.assertEqual(rows[0]["section"], "introduction")
@@ -439,6 +471,24 @@ class ReferencesTests(unittest.TestCase):
             self.assertIn("query_plan", search_queries)
             self.assertGreaterEqual(len(search_queries["query_plan"]), 10)
 
+    def test_canonical_method_query_rejects_related_but_wrong_titles(self) -> None:
+        from draftpaper_cli.literature_search import _canonical_candidates
+
+        items = [
+            {"title": "SpectraNet for Clinical Event Forecasting"},
+            {"title": "SpectraNet: Robust Spectral Representations Without Supervision"},
+        ]
+        identity = {
+            "expected_title": "SpectraNet Robust Spectral Representations Without Supervision",
+            "minimum_title_similarity": 0.86,
+        }
+
+        matched = _canonical_candidates(items, identity)
+
+        self.assertEqual(len(matched), 1)
+        self.assertIn("Robust Spectral Representations", matched[0]["title"])
+        self.assertEqual(matched[0]["canonical_identity"]["status"], "verified")
+
     def test_duplicate_paper_can_support_multiple_reference_contexts(self) -> None:
         from draftpaper_cli.references import write_reference_outputs
 
@@ -469,6 +519,27 @@ class ReferencesTests(unittest.TestCase):
                 sections = {row["section"] for row in csv.DictReader(handle)}
             self.assertIn("data", sections)
             self.assertIn("methods", sections)
+
+    def test_scientific_image_topic_does_not_inherit_unrelated_time_series_queries(self) -> None:
+        from draftpaper_cli.literature_search import build_context_search_queries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea=(
+                    "Test self-supervised vision representations of microscopy image tiles with assay measurements, "
+                    "group-aware validation, confounder control, class imbalance, and anomaly discovery."
+                ),
+                field="biology machine learning scientific image representation",
+            )
+            queries = build_context_search_queries(project.path)
+            rendered = json.dumps(queries, ensure_ascii=False).lower()
+            self.assertIn("self-supervised vision representations", rendered)
+            self.assertIn("scientific image collection", rendered)
+            self.assertIn("group-aware cross-validation", rendered)
+            self.assertNotIn("x-ray transient", rendered)
+            self.assertNotIn("wxt fxt", rendered)
+            self.assertNotIn("1d cnn resnet", rendered)
 
 
 if __name__ == "__main__":

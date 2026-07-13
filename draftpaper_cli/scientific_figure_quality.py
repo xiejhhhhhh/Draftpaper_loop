@@ -80,6 +80,31 @@ def _pixel_evidence(path: Path) -> dict[str, Any]:
                 if occupied and not active:
                     groups += 1
                 active = occupied
+            textured_cells = 0
+            grid_cells = 8
+            for grid_y in range(2):
+                for grid_x in range(4):
+                    cell_left = grid_x * width // 4
+                    cell_right = (grid_x + 1) * width // 4
+                    cell_top = grid_y * height // 2
+                    cell_bottom = (grid_y + 1) * height // 2
+                    x0 = cell_left + max(1, (cell_right - cell_left) * 12 // 100)
+                    x1 = cell_right - max(1, (cell_right - cell_left) * 12 // 100)
+                    y0 = cell_top + max(1, (cell_bottom - cell_top) * 22 // 100)
+                    y1 = cell_bottom - max(1, (cell_bottom - cell_top) * 10 // 100)
+                    values = [pixels[y * width + x] for y in range(y0, y1) for x in range(x0, x1)]
+                    if not values:
+                        continue
+                    mean = sum(values) / len(values)
+                    cell_variance = sum((value - mean) ** 2 for value in values) / len(values)
+                    edges = 0
+                    comparisons = 0
+                    for y in range(y0, y1):
+                        for x in range(x0 + 1, x1):
+                            edges += abs(pixels[y * width + x] - pixels[y * width + x - 1]) > 18
+                            comparisons += 1
+                    if cell_variance >= 12.0 and edges / max(comparisons, 1) >= 0.003:
+                        textured_cells += 1
             return {
                 "decoded": True,
                 "nonwhite_fraction": round(nonwhite_fraction, 6),
@@ -88,6 +113,8 @@ def _pixel_evidence(path: Path) -> dict[str, Any]:
                 "axis_region_evidence": left_density > 0.004 and bottom_density > 0.004,
                 "text_edge_evidence": edge_density > 0.004,
                 "inferred_horizontal_content_groups": groups,
+                "textured_grid_cells": textured_cells,
+                "textured_grid_fraction": round(textured_cells / grid_cells, 3),
                 "nonblank": nonwhite_fraction >= 0.002 and variance >= 4.0 and edge_density >= 0.001,
             }
     except Exception as exc:
@@ -213,12 +240,17 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
             issues.append({"kind": "insufficient_pixel_dimensions", "width": width, "height": height})
         if not pixels.get("axis_region_evidence") or not pixels.get("text_edge_evidence"):
             issues.append({"kind": "rendered_axis_or_text_evidence_missing"})
+        if str(contract.get("plot_grammar") or item.get("plot_grammar") or "").lower() == "image_gallery":
+            if float(pixels.get("textured_grid_fraction") or 0.0) < 0.5:
+                artifact_integrity = 0.0
+                issues.append({
+                    "kind": "empty_image_gallery_panels",
+                    "textured_grid_fraction": pixels.get("textured_grid_fraction"),
+                })
 
-        required_roles = (
-            _values(contract.get("required_variable_roles"))
-            | _values(contract.get("required_data_roles"))
-            | _values(contract.get("required_data"))
-        )
+        required_roles = _values(contract.get("required_variable_roles"))
+        if not required_roles:
+            required_roles = _values(contract.get("required_data_roles")) | _values(contract.get("required_data"))
         plugin_data_roles = {
             str(value).split(":", 1)[-1].strip().lower()
             for value in trace.get("data_plugin_ids") or [] if str(value).strip()

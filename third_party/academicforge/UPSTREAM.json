@@ -1,0 +1,10 @@
+{
+  "source_id": "academicforge",
+  "repository": "https://github.com/HughYau/AcademicForge",
+  "branch": "site-first",
+  "commit": "1e3ece9e82758e34ca442398bac6edcaf1c61ea6",
+  "catalog_path": "registry/skills.json",
+  "attribution_path": "ATTRIBUTIONS.md",
+  "use_mode": "taxonomy_inspiration",
+  "note": "AcademicForge is a catalog layer. Every transformed skill must continue to its original repository and per-skill license."
+}

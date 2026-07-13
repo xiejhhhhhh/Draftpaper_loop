@@ -7,9 +7,11 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from pathlib import Path
 
 from draftpaper_cli.manuscript_composer import (
     SectionCompositionError,
+    _functional_job_coverage,
     accept_section_draft,
     build_section_evidence_packet,
     select_validated_section_draft,
@@ -19,6 +21,41 @@ from draftpaper_cli.project_scaffold import create_project
 
 
 class ManuscriptComposerTests(unittest.TestCase):
+    def test_data_packet_exposes_source_provenance_and_required_topics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=Path(tmp), idea="Source provenance", field="astronomy")
+            provenance = {
+                "source_products": [{"logical_id": "survey-r1", "release": "R1"}],
+                "selection_contract": {"duplicate_rule": "one-to-one"},
+            }
+            (project.path / "data" / "source_provenance.json").write_text(
+                json.dumps(provenance), encoding="utf-8"
+            )
+            packet = build_section_evidence_packet(project.path, "data")
+            contract = packet["section_evidence_pack"]["data_writing_contract"]
+            self.assertEqual(contract["source_provenance"], provenance)
+            self.assertIn("selection, matching, duplicate-resolution, and join rules", contract["required_writer_topics"])
+            self.assertTrue(packet["hard_constraints"]["available_data_or_model_provenance_must_be_reported_or_explicitly_bounded"])
+
+    def test_results_packet_carries_non_nested_pipeline_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=Path(tmp), idea="Pipeline comparison", field="machine learning")
+            context = {
+                "reproducibility_contract": {
+                    "preprocessing_components": [{"component": "PCA", "parameters": {"n_components": 64}}],
+                    "comparison_semantics_policy": "Non-nested variants require pipeline-performance contrast wording.",
+                }
+            }
+            (project.path / "methods" / "method_writing_context.json").write_text(
+                json.dumps(context), encoding="utf-8"
+            )
+
+            packet = build_section_evidence_packet(project.path, "results")
+
+            contract = packet["section_evidence_pack"]["model_comparison_contract"]
+            self.assertIn("Non-nested", contract["comparison_semantics_policy"])
+            self.assertTrue(packet["hard_constraints"]["incremental_or_conditional_model_claim_requires_verified_nested_preprocessing"])
+
     EVIDENCE_REGISTRY = (
         '{"records":[{"evidence_id":"metric-main","entity_role":"result_metric_f1_macro",'
         '"value":0.8667,"unit":"score","metric_dimension":"score","run_id":"run-1",'
@@ -128,6 +165,24 @@ class ManuscriptComposerTests(unittest.TestCase):
             accepted = accept_section_draft(project.path, "results")
             self.assertEqual(accepted["status"], "accepted")
             self.assertTrue(accepted["formal_release_eligible"])
+
+    def test_outline_jobs_outrank_unconsolidated_reasoning_rows(self) -> None:
+        packet = {
+            "section_outline": {"paragraphs": [{"paragraph_id": f"intro-{index}"} for index in range(3)]},
+            "section_reasoning_inputs": [{"gap_id": f"gap-{index}"} for index in range(6)],
+        }
+        text = (
+            "Previous studies have shown that image representations preserve useful survey information.\n\n"
+            "Yet it remains unclear whether that structure survives independent validation.\n\n"
+            "We ask whether the proposed comparison resolves this research question within a bounded cohort."
+        )
+
+        report = _functional_job_coverage("introduction", text, packet)
+
+        self.assertEqual(report["expected_paragraph_jobs"], 3)
+        self.assertEqual(report["paragraph_coverage"], 1.0)
+        self.assertEqual(report["role_coverage"], 1.0)
+        self.assertEqual(report["decision"], "pass")
 
 
 if __name__ == "__main__":

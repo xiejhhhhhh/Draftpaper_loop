@@ -80,7 +80,7 @@ FILESYSTEM_PATTERN = re.compile(
     r"([A-Za-z]:\\|(?:data|results|code)/(?:raw|processed|figures|tables|scripts)/|\b[\w.-]+\.(?:csv|tsv|xlsx|xls|json|py|svg|png|jpg|jpeg)\b)",
     re.IGNORECASE,
 )
-METHOD_EXECUTION_PATTERN = re.compile(r"(\\texttt\{|recorded command|output files?|run_manifest|code/scripts|python\s+code/)", re.IGNORECASE)
+METHOD_EXECUTION_PATTERN = re.compile(r"(recorded command|output files?|run_manifest|code/scripts|python\s+code/)", re.IGNORECASE)
 
 
 @dataclass
@@ -514,6 +514,7 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
     repo = ArtifactRepository(project_path)
     report = repo.read_mapping("citation_audit/final_citation_audit_report.json")
     coverage_report = repo.read_mapping("citation_audit/reference_coverage_report.json")
+    stale_marker = repo.read_mapping("citation_audit/stale_marker.json")
     status = report.get("status")
     summary = report.get("summary") or {}
     coverage = report.get("reference_coverage") or coverage_report or {}
@@ -523,6 +524,13 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
             "citation_audit_not_passed",
             "Final quality check requires citation_audit/final_citation_audit_report.json with status=passed.",
             "citation_audit/final_citation_audit_report.json",
+        ))
+    if stale_marker:
+        issues.append(QualityIssue(
+            "error",
+            "citation_audit_revision_marker_present",
+            "A citation-bearing manuscript revision was accepted after the last final citation audit; rerun audit-citations --final.",
+            "citation_audit/stale_marker.json",
         ))
     blocking = int(summary.get("blocking_issue_count") or 0)
     if blocking:
@@ -586,6 +594,7 @@ def _check_citation_audit(project_path: Path, issues: list[QualityIssue]) -> dic
         "unverifiable": summary.get("unverifiable"),
         "manuscript_snapshot_status": snapshot_status,
         "evidence_snapshot_id": audited_evidence_snapshot_id,
+        "revision_marker_present": bool(stale_marker),
     }
 
 

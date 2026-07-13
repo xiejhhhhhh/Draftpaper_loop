@@ -48,11 +48,18 @@ def _command(project: Path, name: str, extra: str = "") -> str:
 def _routes(project: Path, scope: dict[str, Any], academicforge_root: str | None, github_metadata: str | None) -> list[dict[str, Any]]:
     discipline = str(scope.get("discipline") or "default")
     role = str(scope.get("role") or "missing_capability")
-    routes = [{
-        "route": "existing_registry",
-        "action": "Re-run structured plugin sufficiency after confirming aliases, variants, and manifest overlays.",
-        "command": _command(project, "assess-plugin-sufficiency"),
-    }]
+    routes = [
+        {
+            "route": "project_local",
+            "action": "Audit stage-owned local data and method code before searching externally; a project-local binding may support this paper without global promotion.",
+            "command": _command(project, "audit-project-capabilities"),
+        },
+        {
+            "route": "existing_registry",
+            "action": "Re-run structured plugin sufficiency after confirming capability packs, aliases, variants, and manifest overlays.",
+            "command": _command(project, "assess-plugin-sufficiency"),
+        },
+    ]
     if academicforge_root:
         routes.append({
             "route": "academicforge",

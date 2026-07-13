@@ -44,6 +44,8 @@ def _fetch_text(url: str, timeout: int = 30) -> str:
 
 def _target_to_overleaf_url(target_journal: str) -> str | None:
     normalized = re.sub(r"[^a-z0-9]+", " ", (target_journal or "").lower()).strip()
+    if normalized.startswith("the "):
+        normalized = normalized[4:]
     if normalized in {"apjs", "apj supplement", "apj supplements", "astrophysical journal supplement", "astrophysical journal supplement series"}:
         return APJS_OVERLEAF_URL
     if normalized in {"apj", "aj", "apjl", "psj", "rnaas", "aas", "aas journals"}:
@@ -113,8 +115,16 @@ def _journal_code(target_journal: str) -> str:
 
 def _render_aas_template(project_meta: dict[str, Any], target_journal: str) -> str:
     journal_code = _journal_code(target_journal)
+    topic = f"{project_meta.get('idea') or ''} {project_meta.get('field') or ''}".lower()
+    if any(term in topic for term in ("galaxy", "morphology", "astronomical image")):
+        keywords = "Galaxies --- Galaxy classification systems --- Astronomy data analysis --- Machine learning"
+    elif any(term in topic for term in ("x-ray", "transient", "light curve", "high-energy")):
+        keywords = "High energy astrophysics --- Time domain astronomy --- Machine learning"
+    else:
+        keywords = "Astronomy data analysis --- Statistical methods --- Machine learning"
     return "\n".join([
         r"\documentclass[linenumbers,trackchanges]{aastex701}",
+        r"\usepackage{amsmath,amssymb}",
         r"\graphicspath{{../}}",
         f"\\submitjournal{{{journal_code}}}",
         "",
@@ -130,7 +140,7 @@ def _render_aas_template(project_meta: dict[str, Any], target_journal: str) -> s
         r"This draft abstract is a placeholder. AAS journal submissions require a concise abstract; ApJ, AJ, ApJS, ApJL, and PSJ use a 250 word limit, while RNAAS uses a 150 word limit.",
         r"\end{abstract}",
         "",
-        r"\keywords{High energy astrophysics --- Time domain astronomy --- Machine learning}",
+        f"\\keywords{{{keywords}}}",
         "",
         r"%%DRAFTPAPER_SECTIONS%%",
         "",
@@ -303,6 +313,10 @@ def resolve_journal_template(
         state.metadata["target_journal"] = journal
         _write_json(state.path / "project.json", state.metadata)
     update_stage_status(state.path, "journal_profile", "draft")
+    if (state.path / "references" / "library.bib").is_file():
+        from .bibliography import build_reference_registry
+
+        build_reference_registry(state.path)
     _set_journal_profile_manifest(state.path)
     return {
         "status": "written",
