@@ -161,7 +161,8 @@ def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool) -> str:
             names.append(_safe_latex_text(name))
     if not names:
         return ""
-    lines = [rf"\author{{{' \and '.join(names)}"]
+    joined_names = r" \and ".join(names)
+    lines = [rf"\author{{{joined_names}"]
     details = [_safe_latex_text(value) for value in ordered_affiliations]
     corresponding = metadata.get("corresponding_author")
     email = metadata.get("email")
