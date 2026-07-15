@@ -22,6 +22,56 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 class FigureContractGateTests(unittest.TestCase):
+    def test_preexecution_gate_ignores_stale_run_and_derived_output_roles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Independent partition concordance", field="astronomy machine learning")
+            contracts = [
+                {
+                    "figure_id": f"fig_main_{index}",
+                    "path": f"results/figures/fig_main_{index}.png",
+                    "required_data": ["assignment_stability"] if index == 1 else [],
+                    "required_method": [],
+                    "expected_finding": "Current-plan evidence",
+                    "required_variable_roles": ["concordance_metric"],
+                    "required_method_outputs": ["ari"],
+                    "plot_grammar": "current_concordance_plot",
+                }
+                for index in range(1, 6)
+            ]
+            _write_json(project.path / "results" / "figure_contracts.json", {"contracts": contracts, "main_figure_group_count": 5})
+            _write_json(project.path / "results" / "figure_plan.json", {
+                "confirmed_plan_hash": "current-plan-hash",
+                "figure_policy": {"minimum_main_figures": 5},
+                "main_figure_group_count": 5,
+            })
+            _write_json(project.path / "research_plan" / "confirmed_research_blueprint_snapshot.json", {
+                "confirmed_plan_hash": "current-plan-hash",
+            })
+            _write_json(project.path / "results" / "storyboard_alignment_report.json", {"all_storyboard_figures_planned": True})
+            _write_json(project.path / "methods" / "method_feasibility_report.json", {"decision": "pass"})
+            _write_json(project.path / "data" / "data_role_coverage_report.json", {"available_roles": ["local_data"]})
+            _write_json(project.path / "methods" / "run_manifest.yaml", {
+                "status": "success",
+                "output_files": [f"results/figures/fig_main_{index}.png" for index in range(1, 6)],
+                "method_code_manifest": {"confirmed_plan_hash": "stale-plan-hash"},
+            })
+            _write_json(project.path / "results" / "figure_metadata.json", {"figures": [{
+                "figure_id": "fig_main_1",
+                "path": "results/figures/fig_main_1.png",
+                "variable_roles": ["identifier"],
+                "method_outputs": ["f1"],
+                "plot_grammar": "stale_supervised_plot",
+            }]})
+
+            result = assess_figure_contracts(project.path)
+            report = json.loads((project.path / "results" / "figure_contract_gate_report.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(result["decision"], "pass")
+            self.assertFalse(report["run_matches_current_plan"])
+            self.assertFalse(report["execution_complete_for_current_plan"])
+            self.assertNotIn("assignment_stability", report["contract_checks"][0]["required_data_roles"])
+            self.assertEqual(report["contract_checks"][0]["issues"], [])
+
     def test_promoted_review_rule_is_deferred_until_results_review(self) -> None:
         rule = {
             "rule_id": "external_validation_figure_gate_test",

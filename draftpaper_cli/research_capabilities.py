@@ -44,6 +44,8 @@ EXTERNAL_RUNTIME_CLASSES = {"remote_api", "remote_server", "gpu_model", "laborat
 # pre-method data would create a circular sufficiency gate.
 DERIVED_METHOD_OUTPUT_ROLES = {
     "predicted_label",
+    "predicted_image_class",
+    "predicted_probability",
     "prediction_score",
     "prediction_probability",
     "class_support",
@@ -51,7 +53,37 @@ DERIVED_METHOD_OUTPUT_ROLES = {
     "anomaly_score",
     "residual",
     "model_output",
+    "image_morphology_measurement",
+    "selection_function",
+    "sample_support",
+    "neighbour_contamination",
+    "background_quality",
+    "image_class_assignment",
+    "physical_class_assignment",
+    "assignment_stability",
+    "physical_feature_subset",
+    "concordance_metric",
+    "bootstrap_interval",
+    "observed_concordance",
+    "permutation_null_distribution",
+    "discordance_indicator",
+    "measured_class_interval",
+    "measured_interval_uncertainty",
+    "passband_mapping",
 }
+
+
+def is_derived_method_output_role(value: object) -> bool:
+    """Return whether a role is produced by analysis rather than supplied as data."""
+    normalised = _normalise(value)
+    if normalised in DERIVED_METHOD_OUTPUT_ROLES:
+        return True
+    tokens = set(normalised.split("_"))
+    if tokens & {"prediction", "predictions", "probability", "probabilities", "logit", "logits"}:
+        return True
+    if normalised in {"calibration_bins", "error_gallery", "confusion_matrix"}:
+        return True
+    return False
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -189,7 +221,7 @@ def _extract_requirements(project_path: Path, profile: dict[str, Any]) -> tuple[
         for role in data_roles:
             role = str(role)
             normalised_role = _normalise(role)
-            role_class = "derived_method_output" if normalised_role in DERIVED_METHOD_OUTPUT_ROLES else "input_data"
+            role_class = "derived_method_output" if is_derived_method_output_role(normalised_role) else "input_data"
             requirements.append({
                 "requirement_id": f"data:{figure_id}:{normalised_role}",
                 "kind": "data",
@@ -568,6 +600,27 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         if execution_pending
         else "pass"
     )
+    exhausted_unavailable = [item for item in core if item.get("state") == "unavailable_after_search"]
+    bootstrap_blockers = [
+        item for item in exhausted_unavailable
+        if item.get("kind") in {"data", "method"}
+    ]
+    bootstrap_sufficiency = {
+        "decision": "blocked" if bootstrap_blockers else "pass",
+        "blocking_requirement_ids": [item.get("requirement_id") for item in bootstrap_blockers],
+        "implementation_requirement_ids": [item.get("requirement_id") for item in implementation_required],
+        "rescue_requirement_ids": [item.get("requirement_id") for item in rescue_required],
+        "policy": "Design may continue with an auditable project-local implementation. It blocks only after data/method discovery and implementation routes are exhausted or user-controlled access is required.",
+    }
+    release_pending = [
+        item for item in core
+        if item.get("state") not in {"covered", "covered_project_local"}
+    ]
+    release_sufficiency = {
+        "decision": "pass" if not release_pending else "pending",
+        "pending_requirement_ids": [item.get("requirement_id") for item in release_pending],
+        "policy": "Scientific release requires a verified plugin or accepted project-local capability passport with bound inputs, outputs, hashes, and execution scope.",
+    }
     report = {
         "status": "written",
         "generated_at": utc_now(),
@@ -576,6 +629,8 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"),
         "decision": decision,
         "core_figure_decision": decision,
+        "bootstrap_sufficiency": bootstrap_sufficiency,
+        "release_sufficiency": release_sufficiency,
         "requirement_assessments": assessments,
         "covered_count": sum(item.get("state") == "covered" for item in assessments),
         "blocking_count": 0,
@@ -583,7 +638,7 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "rescue_required_count": len(rescue_required),
         "execution_required_count": len(execution_pending),
         "rescue_tasks": rescue_tasks,
-        "policy": "Contract-only, mock, plan, and fixture-only plugins cannot satisfy core figures. Missing methods first enter auditable project-local implementation; only exhausted project-local, registry, AcademicForge, and GitHub rescue may produce a scientific block.",
+        "policy": "Bootstrap sufficiency permits audited project-local implementation. Release sufficiency requires verified bindings. Contract-only, mock, plan, and fixture-only plugins cannot satisfy core figures; only exhausted project-local, registry, AcademicForge, and GitHub rescue may produce a scientific block.",
     }
     binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"), "bindings": bindings}
     gap_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "gaps": rescue_tasks, "requires_human_confirmation": bool(rescue_tasks)}

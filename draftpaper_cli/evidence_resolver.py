@@ -22,7 +22,7 @@ SECTION_TOKEN_BUDGETS = {
     "introduction": 13000,
     "data": 10000,
     "methods": 18000,
-    "discussion": 15000,
+    "discussion": 16500,
 }
 
 
@@ -187,6 +187,24 @@ def _record_excerpt(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _factor_common_record_context(records: list[dict[str, Any]]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Factor repeated run/cohort semantics without dropping record-level evidence."""
+    if not records:
+        return {}, []
+    protected = {"evidence_id", "entity_role", "value"}
+    candidate_keys = set.intersection(*(set(item) for item in records)) - protected
+    defaults: dict[str, Any] = {}
+    for key in sorted(candidate_keys):
+        first = records[0].get(key)
+        if first not in (None, "", [], {}) and all(item.get(key) == first for item in records[1:]):
+            defaults[key] = first
+    factored = [
+        {key: value for key, value in item.items() if key not in defaults}
+        for item in records
+    ]
+    return defaults, factored
+
+
 def _retrieval_terms(paragraph: dict[str, Any]) -> set[str]:
     values: list[Any] = [
         paragraph.get("objective"),
@@ -266,20 +284,22 @@ def resolve_paragraph_evidence(
         if not selected and section_records:
             selected = list(section_records)
         compact = [_record_excerpt(item) for item in selected]
+        evidence_context_defaults, factored_compact = _factor_common_record_context(compact)
         new_compact = []
         shared_refs = []
-        for item in compact:
+        for item, factored_item in zip(compact, factored_compact):
             evidence_id = str(item.get("evidence_id") or "")
             digest = hashlib.sha256(json.dumps(item, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
             shared_refs.append({"evidence_id": evidence_id, "content_hash": digest})
             if digest not in shared_records:
                 shared_records[digest] = item
-                new_compact.append(item)
+                new_compact.append(factored_item)
         slice_payload = {
             "schema_version": "dpl.paragraph_evidence_slice.v1",
             "section": normalized,
             "paragraph_id": paragraph.get("paragraph_id"),
             "objective": paragraph.get("objective"),
+            "evidence_context_defaults": evidence_context_defaults,
             "selected_evidence": new_compact,
             "selected_evidence_refs": shared_refs,
             "bound_numbers": [
@@ -297,7 +317,9 @@ def resolve_paragraph_evidence(
                 for item in selected
                 if item.get("citation_key")
             ],
-            "allowed_interpretations": [item.get("allowed_interpretation") for item in compact if item.get("allowed_interpretation")],
+            "allowed_interpretations": list(dict.fromkeys(
+                item.get("allowed_interpretation") for item in compact if item.get("allowed_interpretation")
+            )),
             "forbidden_moves": list(paragraph.get("forbidden_content") or [])
             + ["invent an unbound number", "change cohort, model, split, unit or run silently"],
             "omitted_candidates": [

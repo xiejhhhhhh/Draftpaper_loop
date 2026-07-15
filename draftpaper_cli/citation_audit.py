@@ -88,6 +88,7 @@ class CitationUsage:
     verdict: str
     match_score: float
     citation_intent: str
+    citation_intent_standard: str
     support_status: str
     topic_relevance_score: float
     claim_alignment_score: float
@@ -106,6 +107,19 @@ class CitationUsage:
 
 class CitationAuditError(RuntimeError):
     """Raised when the citation audit loop cannot load project artifacts."""
+
+
+def _standard_citation_intent(intent: str) -> str:
+    normalized = str(intent or "").strip().lower()
+    if normalized in {"claim_support", "direct_support", "result_comparison_support"}:
+        return "direct_support"
+    if normalized in {"method_tool_background", "method_or_tool_provenance", "method_background", "tool_provenance"}:
+        return "method_or_tool_provenance"
+    if normalized in {"comparison_context", "context", "discussion_context", "background_context"}:
+        return "comparison_context"
+    if normalized in {"dataset_or_product_provenance", "dataset_provenance", "data_source_background", "product_provenance"}:
+        return "dataset_or_product_provenance"
+    return "direct_support" if "support" in normalized else "comparison_context"
 
 
 def _read_text(path: Path) -> str:
@@ -139,11 +153,12 @@ def _read_bib(project_path: Path) -> dict[str, dict[str, str]]:
 
 
 def _read_evidence(project_path: Path) -> dict[str, list[dict[str, str]]]:
-    path = project_path / "references" / "citation_evidence.csv"
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        rows = list(csv.DictReader(handle))
+    rows: list[dict[str, str]] = []
+    for name in ["citation_evidence.csv", "supplemental_citation_evidence.csv"]:
+        path = project_path / "references" / name
+        if path.exists():
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                rows.extend(csv.DictReader(handle))
     evidence: dict[str, list[dict[str, str]]] = {}
     for row in rows:
         key = (row.get("citation_key") or "").strip()
@@ -279,7 +294,12 @@ def _numbers(text: str) -> list[float]:
 
 
 def _negated(text: str) -> bool:
-    return bool(re.search(r"\b(?:no evidence|not|never|failed to|did not|does not|cannot)\b", text, flags=re.I))
+    return bool(re.search(
+        r"\b(?:no evidence|not|never|failed to|did not|does not|cannot|"
+        r"non[- ]?(?:interchangeable|equivalent|identical|transferable|comparable))\b",
+        text,
+        flags=re.I,
+    ))
 
 
 def _causal_pair(text: str) -> tuple[set[str], set[str]] | None:
@@ -453,6 +473,7 @@ def _collect_usages(project_path: Path, bib: dict[str, dict[str, str]], evidence
                         verdict=verdict,
                         match_score=score,
                         citation_intent=intent,
+                        citation_intent_standard=_standard_citation_intent(intent),
                         support_status=(
                             "directly_supported" if verdict == "supported" else
                             "contextually_relevant" if not blocking and relevance >= 0.45 and alignment < 0.18 else
@@ -485,6 +506,12 @@ def _summary(usages: list[CitationUsage]) -> dict[str, Any]:
     contextual = sum(1 for usage in usages if usage.support_status == "contextually_relevant")
     low_confidence = sum(1 for usage in usages if usage.match_score < 0.55)
     average = round(sum(usage.match_score for usage in usages) / len(usages), 3) if usages else 1.0
+    intent_counts: dict[str, int] = {}
+    direct_confidences = []
+    for usage in usages:
+        intent_counts[usage.citation_intent_standard] = intent_counts.get(usage.citation_intent_standard, 0) + 1
+        if usage.citation_intent_standard == "direct_support":
+            direct_confidences.append(usage.claim_alignment_score)
     return {
         "total_usages": len(usages),
         "supported": counts["supported"],
@@ -495,6 +522,8 @@ def _summary(usages: list[CitationUsage]) -> dict[str, Any]:
         "low_confidence": low_confidence,
         "blocking_issue_count": blocking,
         "average_match_score": average,
+        "intent_counts": intent_counts,
+        "direct_support_confidence": round(sum(direct_confidences) / len(direct_confidences), 3) if direct_confidences else 1.0,
     }
 
 

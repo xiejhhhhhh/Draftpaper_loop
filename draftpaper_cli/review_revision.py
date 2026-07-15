@@ -747,13 +747,42 @@ def _domain_context_text(metadata: dict[str, Any], archive_context: dict[str, An
     return " ".join(chunks).lower()
 
 
-def _domain_statistical_routes(metadata: dict[str, Any], archive_context: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+def _authoritative_disciplines(project_path: Path, metadata: dict[str, Any]) -> set[str]:
+    """Read the confirmed discipline contract before falling back to metadata text."""
+    contract = _read_json(project_path / "research_plan" / "discipline_contract.json")
+    disciplines = {
+        str(item).strip().lower()
+        for item in [contract.get("primary_discipline"), *(contract.get("secondary_disciplines") or [])]
+        if str(item or "").strip()
+    }
+    if disciplines:
+        return disciplines
+    field = str(metadata.get("field") or "").lower()
+    inferred: set[str] = set()
+    if "astronom" in field:
+        inferred.add("astronomy")
+    if any(token in field for token in ("machine learning", "deep learning", "computer vision")):
+        inferred.add("machine_learning")
+    if any(token in field for token in ("geograph", "remote sensing", "agriculture", "ecology")):
+        inferred.add("geography")
+    return inferred
+
+
+def _domain_statistical_routes(
+    metadata: dict[str, Any],
+    archive_context: dict[str, Any],
+    disciplines: set[str],
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Build discipline-aware rescue routes from saved project artifacts."""
     text = _domain_context_text(metadata, archive_context)
     routes: list[dict[str, Any]] = []
     sources: list[str] = []
 
-    if any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
+    geography_active = bool(disciplines & {"geography", "ecology", "agriculture"})
+    astronomy_active = "astronomy" in disciplines
+    machine_learning_active = "machine_learning" in disciplines
+
+    if geography_active and any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
         sources.append("agricultural_remote_sensing_signal")
         routes.append(_rescue_route(
             "agricultural_remote_sensing_feature_rebuild",
@@ -769,7 +798,7 @@ def _domain_statistical_routes(metadata: dict[str, Any], archive_context: dict[s
             ],
         ))
 
-    if any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
+    if geography_active and any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
         sources.append("spatial_or_ecological_signal")
         routes.append(_rescue_route(
             "spatial_ecological_validation",
@@ -784,22 +813,22 @@ def _domain_statistical_routes(metadata: dict[str, Any], archive_context: dict[s
             ],
         ))
 
-    if any(token in text for token in ("light curve", "x-ray", "flare", "astronom", "source classification", "catalog", "photometric", "spectral")):
+    if astronomy_active:
         sources.append("astronomy_time_series_signal")
         routes.append(_rescue_route(
-            "astronomy_time_series_feature_rebuild",
-            "Rebuild astronomical source features and validation",
+            "astronomy_observation_validation",
+            "Strengthen astronomical labels, measurements, and survey validation",
             "methods",
-            "The project context suggests astronomical source or time-series classification, where result quality often depends on variability features, catalog cross-matching, and leakage-aware validation.",
+            "The confirmed discipline contract identifies astronomy, so revisions should audit the actual catalogue, image, spectral, photometric, and selection evidence used by this project rather than importing another domain's rescue recipe.",
             [
-                "derive variability descriptors, hardness or color ratios, flux percentiles, and uncertainty-aware summary features",
-                "separate training and validation by survey field, source family, or observation campaign when possible",
-                "audit class imbalance and report macro metrics, calibrated probabilities, and confusion structure",
-                "cross-match with trusted catalogs or external labels before making strong source-population claims",
+                "audit catalogue joins, label provenance, duplicate detections, quality flags, and sample-flow counts",
+                "define every photometric or physical quantity and distinguish observed-frame, derived, and rest-frame measurements",
+                "test survey, field, tile, or angular-neighbour leakage when image or catalogue observations are split for validation",
+                "report uncertainty and selection effects before making source-population claims",
             ],
         ))
 
-    if any(token in text for token in ("machine learning", "deep learning", "cnn", "transformer", "random forest", "classifier", "classification", "regression model")):
+    if machine_learning_active or any(token in text for token in ("machine learning", "deep learning", "cnn", "transformer", "random forest", "classifier", "classification", "regression model")):
         sources.append("machine_learning_validation_signal")
         routes.append(_rescue_route(
             "machine_learning_validation_rebuild",
@@ -821,6 +850,7 @@ def _weak_effect_rescue_routes(
     metadata: dict[str, Any],
     archive_context: dict[str, Any],
     weak_effects: list[dict[str, Any]],
+    disciplines: set[str],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     if not weak_effects:
         return [], []
@@ -847,7 +877,9 @@ def _weak_effect_rescue_routes(
     ]
     sources = ["weak_effect_statistics"]
 
-    if any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
+    geography_active = bool(disciplines & {"geography", "ecology", "agriculture"})
+    astronomy_active = "astronomy" in disciplines
+    if geography_active and any(token in text for token in ("ndvi", "wheat", "crop", "agriculture", "yield", "vegetation index", "remote sensing")):
         sources.append("agricultural_remote_sensing_qc_signal")
         routes.append(_rescue_route(
             "agricultural_remote_sensing_qc_rebuild",
@@ -863,7 +895,7 @@ def _weak_effect_rescue_routes(
             ],
         ))
 
-    if any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
+    if geography_active and any(token in text for token in ("gis", "spatial", "geographic", "geospatial", "raster", "longitude", "latitude", "map", "ecology", "habitat")):
         sources.append("spatial_qc_signal")
         routes.append(_rescue_route(
             "spatial_data_quality_audit",
@@ -878,7 +910,7 @@ def _weak_effect_rescue_routes(
             ],
         ))
 
-    if any(token in text for token in ("light curve", "x-ray", "flare", "astronom", "source classification", "catalog", "photometric", "spectral")):
+    if astronomy_active:
         sources.append("astronomy_qc_signal")
         routes.append(_rescue_route(
             "astronomy_measurement_qc_rebuild",
@@ -993,13 +1025,14 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
             ],
         ))
 
-    weak_routes, weak_sources = _weak_effect_rescue_routes(metadata, archive_context, weak_effects)
+    disciplines = _authoritative_disciplines(project_path, metadata)
+    weak_routes, weak_sources = _weak_effect_rescue_routes(metadata, archive_context, weak_effects, disciplines)
     if weak_routes:
         likely_sources.extend(weak_sources)
         existing_route_ids = {route["route_id"] for route in routes}
         routes.extend(route for route in weak_routes if route["route_id"] not in existing_route_ids)
 
-    domain_routes, domain_sources = _domain_statistical_routes(metadata, archive_context)
+    domain_routes, domain_sources = _domain_statistical_routes(metadata, archive_context, disciplines)
     if domain_routes and (routes or issues or validity_decision in {"revise_required", "conditional_pass"} or data_decision in {"revise_required", "conditional_pass"}):
         likely_sources.extend(domain_sources)
         existing_route_ids = {route["route_id"] for route in routes}
@@ -1054,6 +1087,7 @@ def recommend_statistical_revision(project: str | Path) -> dict[str, Any]:
         "issues": [asdict(issue) for issue in _dedupe_issues(issues)],
         "readiness_score": readiness.get("readiness_score"),
         "readiness_band": readiness.get("readiness_band"),
+        "discipline_basis": sorted(disciplines),
     }
     review_dir = _review_dir(project_path)
     _write_json(review_dir / "statistical_rescue_plan.json", plan)

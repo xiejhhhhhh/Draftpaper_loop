@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -25,11 +26,10 @@ class AnalysisRevisionError(RuntimeError):
 
 
 ROLE_ALIASES: dict[str, tuple[str, ...]] = {
-    "target": ("yield", "production", "suitability", "response", "label", "class", "biomass", "output"),
+    "target": ("yield", "production", "suitability", "response", "label", "class", "type", "biomass", "output"),
     "predictors": (
         "ndvi",
         "vegetation",
-        "index",
         "temperature",
         "temp",
         "climate",
@@ -39,6 +39,13 @@ ROLE_ALIASES: dict[str, tuple[str, ...]] = {
         "soil",
         "feature",
         "predictor",
+        "embedding",
+        "emb",
+        "flux",
+        "magnitude",
+        "mag",
+        "color",
+        "colour",
     ),
     "spatial_group_or_coordinates": (
         "longitude",
@@ -53,6 +60,10 @@ ROLE_ALIASES: dict[str, tuple[str, ...]] = {
         "plot",
         "grid",
         "spatial",
+        "ra",
+        "dec",
+        "tile",
+        "brick",
     ),
     "time": ("year", "date", "time", "month", "season", "doy", "phenology", "stage"),
     "quality_flag": ("quality", "qc", "cloud", "mask", "flag", "valid", "saturation"),
@@ -175,6 +186,47 @@ ACTION_LIBRARY: dict[str, dict[str, Any]] = {
         "success_criteria": ["baseline metric exists", "ablation metric exists"],
         "fallback_if_missing": "Baseline and ablation require at least one target and predictor set.",
     },
+    "astronomy_observation_validation": {
+        "source_codes": {
+            "astronomy_observation_validation",
+            "astronomy_catalog_crossmatch_qc",
+            "astronomy_measurement_qc_rebuild",
+            "astronomy_uncertainty_selection_effects",
+        },
+        "discipline": "astronomy",
+        "target_stage": "data",
+        "required_data_roles": ["target"],
+        "optional_data_roles": ["predictors", "spatial_group_or_coordinates", "quality_flag", "group"],
+        "figure_plan_hints": ["auditable_sample_flow", "measurement_and_selection_sensitivity"],
+        "code_generation_hints": [
+            "reconcile survey parent, matched, quality-screened, modeled, and held-out cohorts",
+            "audit catalogue-label provenance and measurement definitions",
+            "test duplicate, angular-neighbour, tile, or acquisition-group leakage when available",
+        ],
+        "success_criteria": [
+            "sample-flow counts reconcile across machine-readable outputs and manuscript evidence",
+            "astronomical measurements and label provenance have explicit audit records",
+        ],
+        "fallback_if_missing": "Ask for catalogue labels, survey identifiers, coordinates or grouping fields, and measurement provenance needed by the claimed analysis.",
+    },
+    "astronomy_classification_validation": {
+        "source_codes": {
+            "astronomy_class_imbalance_validation",
+            "astronomy_time_series_feature_rebuild",
+        },
+        "discipline": "astronomy",
+        "target_stage": "methods",
+        "required_data_roles": ["target", "predictors"],
+        "optional_data_roles": ["group", "spatial_group_or_coordinates", "quality_flag"],
+        "figure_plan_hints": ["subtype_confusion_and_support", "grouped_validation_and_calibration"],
+        "code_generation_hints": [
+            "report class and native-subtype support with confusion structure",
+            "compare repeated or grouped validation when the data permit",
+            "report calibration metrics and uncertainty without overstating probability calibration",
+        ],
+        "success_criteria": ["class-conditional metrics and support exist", "validation uncertainty is explicitly bounded"],
+        "fallback_if_missing": "Classification validation requires labels and scientifically meaningful predictors or image representations.",
+    },
 }
 
 
@@ -204,8 +256,9 @@ def _data_role_map(inventory: dict[str, Any]) -> dict[str, list[str]]:
     role_map: dict[str, list[str]] = {role: [] for role in ROLE_ALIASES}
     for column in columns:
         lowered = column.lower().replace("-", "_")
+        tokens = set(re.findall(r"[a-z0-9]+", lowered))
         for role, aliases in ROLE_ALIASES.items():
-            if any(alias in lowered for alias in aliases):
+            if any(set(re.findall(r"[a-z0-9]+", alias)) <= tokens for alias in aliases):
                 role_map[role].append(column)
     return {role: values for role, values in role_map.items() if values}
 

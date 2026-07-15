@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import sys
 from pathlib import Path
@@ -234,6 +236,12 @@ def build_parser() -> argparse.ArgumentParser:
     pre_execution_rescue.add_argument("--project", required=True)
     review_plan = subparsers.add_parser("review-research-plan", help="Render the Chinese-first research blueprint and feasibility packet for human confirmation.")
     review_plan.add_argument("--project", required=True)
+    revise_objective = subparsers.add_parser(
+        "revise-research-objective",
+        help="Apply a science-first objective contract and stale the research chain before plan confirmation.",
+    )
+    revise_objective.add_argument("--project", required=True)
+    revise_objective.add_argument("--objective-file", required=True)
     confirm_plan = subparsers.add_parser("confirm-research-plan", help="Human-confirm the exact research blueprint hash used by key-figure execution.")
     confirm_plan.add_argument("--project", required=True)
     confirm_plan.add_argument("--plan-hash", required=True)
@@ -456,7 +464,7 @@ def build_parser() -> argparse.ArgumentParser:
     method_plan = subparsers.add_parser("collect-method-plan", help="Collect user method intent and synthesize literature-informed method requirements.")
     method_plan.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     method_plan.add_argument("--method-note", action="append", default=[], help="User-provided method note. Can be repeated.")
-    method_plan.add_argument("--primary-metric", default="f1", help="Primary metric expected for result validity.")
+    method_plan.add_argument("--primary-metric", default=None, help="Primary metric expected for result validity. When omitted, infer it from the structured research method contract.")
     method_plan.add_argument("--minimum-primary-metric", type=float, default=None, help="Minimum acceptable primary metric value.")
 
     method_blueprint = subparsers.add_parser("prepare-method-blueprint", help="Build a discipline-aware data-to-method code blueprint.")
@@ -604,6 +612,12 @@ def build_parser() -> argparse.ArgumentParser:
     submit_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     submit_section.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
     submit_section.add_argument("--input", required=True, help="Path to a Codex-composed LaTeX section candidate.")
+
+    apply_section_revision_parser = subparsers.add_parser("apply-section-revision", help="Validate, edit, accept, install, and stale a bounded section revision as one transaction.")
+    apply_section_revision_parser.add_argument("--project", required=True)
+    apply_section_revision_parser.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
+    apply_section_revision_parser.add_argument("--input", required=True)
+    apply_section_revision_parser.add_argument("--change-class", choices=["presentation_only", "citation_local", "prose_semantic_no_evidence_change", "metadata_claim_change", "cohort_definition_change", "analysis_spec_change", "run_output_change", "figure_semantic_change", "claim_contract_change"])
 
     accept_section = subparsers.add_parser("accept-section-draft", help="Accept an editor-cleared free-prose section for formal manuscript writing.")
     accept_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -874,6 +888,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subparsers.add_parser("doctor", help="Run a deterministic, read-only Draftpaper-loop environment and project diagnosis.")
     doctor.add_argument("--project", default=None)
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
+    doctor.add_argument("--explain", action="store_true", help="Include artifact dependency and failure-route details.")
     start = subparsers.add_parser("start", help="Create a project and report the first executable workflow action.")
     start.add_argument("--root", "--projects-root", dest="root", default=None)
     start.add_argument("--idea", required=True)
@@ -2448,8 +2463,12 @@ _READ_ONLY_PROJECT_COMMANDS = {
 
 def main(argv: list[str] | None = None) -> int:
     """Run one CLI command and commit managed writes independently of scientific outcome."""
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    compact_requested = "--compact" in raw_argv
+    full_json = "--json-full" in raw_argv or "--verbose" in raw_argv or (not sys.stdout.isatty() and not compact_requested)
+    raw_argv = [item for item in raw_argv if item not in {"--json-full", "--verbose", "--compact"}]
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
     project = getattr(args, "project", None)
     command = str(getattr(args, "command", "") or "")
     spec = command_spec(command)
@@ -2499,7 +2518,21 @@ def main(argv: list[str] | None = None) -> int:
             return 4
         workflow_trace = begin_workflow_trace(project, command, vars(args))
 
-    exit_code = _main_without_passport_refresh(argv)
+    captured = io.StringIO()
+    if full_json:
+        exit_code = _main_without_passport_refresh(raw_argv)
+    else:
+        with contextlib.redirect_stdout(captured):
+            exit_code = _main_without_passport_refresh(raw_argv)
+        output = captured.getvalue().strip()
+        if output:
+            try:
+                from .cli_output import compact_payload
+
+                payload = json.loads(output.splitlines()[-1])
+                print(json.dumps(compact_payload(payload), ensure_ascii=False))
+            except (json.JSONDecodeError, TypeError, ValueError):
+                print(output)
     if mutates_project:
         if write_guard is not None:
             assessment = write_guard.assess()

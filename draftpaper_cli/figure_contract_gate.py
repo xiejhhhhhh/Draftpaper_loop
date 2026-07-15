@@ -12,6 +12,7 @@ from .figure_semantics import validate_figure_semantics
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
+from .research_capabilities import is_derived_method_output_role
 
 
 FIGURE_CONTRACT_GATE_JSON = "results/figure_contract_gate_report.json"
@@ -33,6 +34,11 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
     figure_metadata = read_json(state.path / "results" / "figure_metadata.json", {})
     run_manifest = read_json(state.path / "methods" / "run_manifest.yaml", {})
     semantic_annotations = read_json(state.path / "results" / "figure_semantic_annotations.json", {})
+    cohort_registry = read_json(state.path / "data" / "cohort_registry.json", {})
+    cohort_view_registry = read_json(state.path / "data" / "cohort_view_registry.json", {})
+    analysis_spec_payload = read_json(state.path / "methods" / "executable_analysis_spec.json", {})
+    claim_contract = read_json(state.path / "research_plan" / "claim_contract.json", {})
+    confirmed_snapshot = read_json(state.path / "research_plan" / "confirmed_research_blueprint_snapshot.json", {})
     plugin_trace = None
     if (state.path / "research_plan" / "research_capability_contract.json").exists():
         from .figure_plugin_trace import validate_figure_plugin_trace
@@ -87,16 +93,56 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         for contract in main_contracts
         if contract.get("path")
     }
+    current_plan_hash = str(
+        (figure_plan or {}).get("confirmed_plan_hash")
+        or (confirmed_snapshot or {}).get("confirmed_plan_hash")
+        or ""
+    ).strip()
+    embedded_method_manifest = (run_manifest or {}).get("method_code_manifest") or {}
+    run_plan_hash = str(
+        (run_manifest or {}).get("confirmed_plan_hash")
+        or (embedded_method_manifest.get("confirmed_plan_hash") if isinstance(embedded_method_manifest, dict) else "")
+        or ""
+    ).strip()
+    run_matches_current_plan = not current_plan_hash or run_plan_hash == current_plan_hash
     execution_complete = (
         str((run_manifest or {}).get("status") or "").lower() == "success"
         and bool(current_contract_paths)
         and current_contract_paths.issubset(declared_run_outputs)
+        and run_matches_current_plan
     )
     semantic_checks: list[dict[str, Any]] = []
+    semantic_inputs_present = bool(
+        cohort_registry.get("cohorts")
+        or cohort_view_registry.get("views")
+        or analysis_spec_payload.get("analysis_specs")
+    )
+    semantic_v2_required = semantic_inputs_present and bool(
+        claim_contract.get("claims")
+        or contracts.get("semantic_contract_version") == "dpl.figure_contract.v2"
+    )
+    analysis_specs = [item for item in analysis_spec_payload.get("analysis_specs") or [] if isinstance(item, dict)]
+    specs_by_id = {str(item.get("analysis_spec_id")): item for item in analysis_specs if item.get("analysis_spec_id")}
+    specs_by_figure = {
+        str(figure_id): item
+        for item in analysis_specs
+        for figure_id in item.get("figure_ids") or []
+        if figure_id
+    }
+    default_analysis_spec = analysis_specs[0] if len(analysis_specs) == 1 else {}
 
     for index, contract in enumerate(main_contracts, start=1):
         figure_id = str(contract.get("figure_id") or contract.get("storyboard_id") or contract.get("id") or f"figure_{index}")
-        required_data = normalize_roles(contract.get("required_data_roles") or contract.get("required_data") or contract.get("data_roles") or [])
+        required_data = [
+            role
+            for role in normalize_roles(
+                contract.get("required_data_roles")
+                or contract.get("required_data")
+                or contract.get("data_roles")
+                or []
+            )
+            if not is_derived_method_output_role(role)
+        ]
         coverage = assess_role_coverage(required_data, available_data_roles)
         required_methods = [
             str(item)
@@ -111,6 +157,41 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         method_source_status = str(contract.get("method_source_status") or "").strip().lower()
         expected_finding = str(contract.get("expected_finding") or contract.get("scientific_question") or contract.get("research_question") or "").strip()
         figure_issues: list[dict[str, str]] = []
+        analysis_spec = specs_by_id.get(str(contract.get("analysis_spec_id") or "")) or specs_by_figure.get(figure_id) or default_analysis_spec
+        claim_id = str(contract.get("claim_id") or "").strip()
+        cohort_view_id = str(contract.get("cohort_view_id") or analysis_spec.get("cohort_view_id") or "").strip()
+        estimand_id = str(contract.get("estimand_id") or analysis_spec.get("estimand_id") or "").strip()
+        analysis_spec_id = str(contract.get("analysis_spec_id") or analysis_spec.get("analysis_spec_id") or "").strip()
+        if semantic_v2_required:
+            for field_name, value in (
+                ("claim_id", claim_id),
+                ("cohort_view_id", cohort_view_id),
+                ("estimand_id", estimand_id),
+                ("analysis_spec_id", analysis_spec_id),
+            ):
+                if not value:
+                    figure_issues.append({"severity": "blocking", "kind": f"missing_{field_name}", "detail": f"Figure {figure_id} lacks {field_name}."})
+        if semantic_v2_required and cohort_view_id:
+            from .cohort_semantics import validate_cohort_registries
+
+            cohort_validation = validate_cohort_registries(
+                cohort_registry,
+                cohort_view_registry,
+                [{
+                    "artifact_id": figure_id,
+                    "cohort_view_id": cohort_view_id,
+                    "sample_unit": contract.get("sample_unit") or analysis_spec.get("sample_unit"),
+                    "count": contract.get("cohort_count"),
+                }],
+            )
+            for issue in cohort_validation.get("blocking_issues") or []:
+                figure_issues.append({"severity": "blocking", "kind": str(issue.get("code")), "detail": str(issue.get("message"))})
+        if semantic_v2_required and execution_complete:
+            if not str(contract.get("run_id") or run_manifest.get("run_id") or "").strip():
+                figure_issues.append({"severity": "blocking", "kind": "missing_run_id", "detail": "Executed figure lacks run_id."})
+            evidence_ids = contract.get("evidence_ids") or (metadata_by_id.get(figure_id) or {}).get("evidence_ids") or []
+            if not evidence_ids:
+                figure_issues.append({"severity": "blocking", "kind": "missing_evidence_ids", "detail": "Executed figure lacks evidence_ids."})
         if coverage.get("blocking_missing_roles"):
             for role in coverage.get("blocking_missing_roles") or []:
                 figure_issues.append({"severity": "blocking", "kind": "missing_data_role", "detail": role})
@@ -135,7 +216,7 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
                 figure_issues.append({"severity": "conditional", "kind": "partial_data_role", "detail": role})
         contract_path = str(contract.get("path") or "").replace("\\", "/")
         produced = None
-        if contract_path in declared_run_outputs:
+        if execution_complete and contract_path in declared_run_outputs:
             produced = metadata_by_id.get(figure_id) or metadata_by_path.get(contract_path)
         if produced:
             annotation = annotations_by_id.get(figure_id) or annotations_by_path.get(str(contract.get("path") or "").replace("\\", "/"))
@@ -165,6 +246,10 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
             figure_issues.extend(missing_semantic["issues"])
         contract_checks.append({
             "figure_id": figure_id,
+            "claim_id": claim_id,
+            "cohort_view_id": cohort_view_id,
+            "estimand_id": estimand_id,
+            "analysis_spec_id": analysis_spec_id,
             "decision": "blocked" if any(item.get("severity") == "blocking" for item in figure_issues) else "conditional" if figure_issues else "pass",
             "required_data_roles": coverage.get("required_roles") or [],
             "missing_data_roles": coverage.get("missing_roles") or [],
@@ -216,6 +301,10 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         "supporting_figure_count": int(figure_plan.get("supporting_figure_count") or 0) if isinstance(figure_plan, dict) else 0,
         "appendix_figure_count": int(figure_plan.get("appendix_figure_count") or 0) if isinstance(figure_plan, dict) else 0,
         "method_feasibility_decision": method_status,
+        "current_plan_hash": current_plan_hash or None,
+        "run_plan_hash": run_plan_hash or None,
+        "run_matches_current_plan": run_matches_current_plan,
+        "execution_complete_for_current_plan": execution_complete,
         "contract_checks": contract_checks,
         "storyboard_alignment_missing": missing_storyboard,
         "issues": issues,
@@ -224,6 +313,7 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         "figure_plugin_trace": plugin_trace,
         "figure_plugin_trace_decision": (plugin_trace or {}).get("decision"),
         "policy": "Before code generation this gate checks executable data/method readiness and figure contracts only. Discipline review rules are selected from the plugins that actually generated figures and are assessed after Results writing.",
+        "semantic_contract_version": "dpl.figure_contract.v2",
     }
     results_dir = state.path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)

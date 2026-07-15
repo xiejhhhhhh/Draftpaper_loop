@@ -425,6 +425,20 @@ class CitationAuditRepairTests(unittest.TestCase):
             self.assertTrue(any(item["numeric_consistency"] == "unsupported_or_mismatched" for item in checks))
             self.assertTrue(any(item["causal_direction_consistency"] == "reversed_direction" for item in checks))
 
+    def test_semantic_audit_treats_non_interchangeable_as_not_interchangeable(self) -> None:
+        from draftpaper_cli.citation_audit import _semantic_support_checks
+
+        checks = _semantic_support_checks(
+            "Morphology and colour are correlated but non-interchangeable descriptors.",
+            "Morphology and colour are correlated but not interchangeable.",
+            "comparison_context",
+            0.8,
+            0.8,
+        )
+
+        self.assertEqual(checks["polarity_consistency"], "consistent")
+        self.assertNotIn("negation_or_polarity", checks["contradiction_types"])
+
 
 if __name__ == "__main__":
     unittest.main()

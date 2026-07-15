@@ -28,6 +28,7 @@ JOURNAL_PROFILE_OUTPUTS = [
     "journal_profile/journal_guidelines.md",
     "journal_profile/template_source.html",
     "journal_profile/template_main.tex",
+    "journal_profile/journal_intent.json",
     "latex/template/main.tex",
 ]
 
@@ -295,6 +296,23 @@ def resolve_journal_template(
         source_tex=source_tex,
         guideline_text=guideline_text,
     )
+    intent_status = (
+        "confirmed"
+        if (target_journal and target_journal.strip()) or str(state.metadata.get("target_journal") or "").strip()
+        else "unset"
+    )
+    journal_intent = {
+        "schema_version": "dpl.journal_intent.v1",
+        "journal": journal if intent_status == "confirmed" else None,
+        "article_type": str(state.metadata.get("article_type") or "research_article"),
+        "template_source": source_url or source_type,
+        "template_version": profile.get("documentclass"),
+        "selection_status": intent_status,
+        "anonymous_review_required": bool(state.metadata.get("anonymous_review_required", True)),
+        "figure_widths": {"single_column_inches": 3.5, "double_column_inches": 7.1} if "aastex" in str(profile.get("documentclass") or "").lower() else {"single_column_inches": 3.35, "double_column_inches": 6.9},
+        "bibliography_style": profile.get("bibliography_style"),
+        "submission_label_policy": "Only a confirmed journal intent may render a Submitted to label; provisional or unset drafts remain neutral.",
+    }
     template_tex = source_tex or (_render_aas_template(state.metadata, journal) if _target_to_overleaf_url(journal) else _render_generic_template(state.metadata))
     if "%%DRAFTPAPER_SECTIONS%%" not in template_tex:
         template_tex = _render_aas_template(state.metadata, journal) if "aastex" in profile["documentclass"].lower() else _render_generic_template(state.metadata)
@@ -304,6 +322,7 @@ def resolve_journal_template(
     (journal_dir / "template_source.html").write_text(source_html, encoding="utf-8")
     (journal_dir / "template_main.tex").write_text(template_tex, encoding="utf-8")
     _write_json(journal_dir / "journal_profile.json", profile)
+    _write_json(journal_dir / "journal_intent.json", journal_intent)
     (journal_dir / "journal_guidelines.md").write_text(guidelines, encoding="utf-8")
     latex_template_dir = state.path / "latex" / "template"
     latex_template_dir.mkdir(parents=True, exist_ok=True)

@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .data_contracts import assess_role_coverage, available_data_roles
+
 from .figure_plan import FigurePlanError, plan_figures, validate_figure_plan_for_codegen
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .metadata import PYTHON_SOURCE_NOTICE
@@ -108,17 +110,33 @@ def _select_tabular_input(inventory: dict[str, Any], *, method_text: str = "", r
     lowered_method = method_text.lower()
     feature_terms = [str(item).lower() for item in (required_features or [])]
 
-    def score(item: dict[str, Any]) -> tuple[int, int, int, int, int]:
+    def score(item: dict[str, Any]) -> tuple[int, int, int, int, int, int]:
         path = str(item.get("path") or "")
         lowered_path = path.lower()
         name = Path(path).name.lower()
         columns = " ".join(str(column).lower() for column in item.get("columns") or [])
         mentioned = int(bool(lowered_path and lowered_path in lowered_method) or bool(name and name in lowered_method))
         processed = int(str(item.get("kind") or "") == "processed")
-        feature_match = sum(1 for term in feature_terms if term and (term in columns or term.replace("_", " ") in columns))
+        feature_match = sum(
+            1
+            for term in feature_terms
+            if term
+            and (
+                term in columns
+                or term in lowered_path
+                or any(part in columns or part in lowered_path for part in term.split("_") if len(part) >= 5)
+            )
+        )
+        single_file_roles = available_data_roles({"files": [item]}, {})
+        coverage = assess_role_coverage(required_features or [], single_file_roles)
+        scientific_role_match = len(coverage.get("required_roles") or []) - len(coverage.get("missing_roles") or [])
+        diagnostic_only = int(
+            any(token in name for token in ("quality", "audit", "diagnostic"))
+            and not any(token in name for token in ("catalog", "sample", "model_input", "analysis"))
+        )
         row_count = int(item.get("row_count") or 0)
         column_count = int(item.get("column_count") or 0)
-        return (mentioned, processed, feature_match, row_count, column_count)
+        return (mentioned, scientific_role_match, feature_match, -diagnostic_only, processed, row_count + column_count)
 
     files.sort(key=score, reverse=True)
     return files[0]

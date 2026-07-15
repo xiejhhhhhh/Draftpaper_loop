@@ -45,6 +45,26 @@ _FAMILY_DEFINITIONS: dict[str, dict[str, Any]] = {
         "evidence": ["held_out_predictions", "class_support", "classwise_metrics", "confusion_matrix"],
         "preferred_rules": ["model_statistical_validity_gate", "baseline_ablation_gate"],
     },
+    "unsupervised_partition_validation": {
+        "question": "Are class number, partition stability, within-view separation, preprocessing sensitivity, and resampling units justified without using cross-view agreement for model selection?",
+        "evidence": ["candidate_partition_count", "cluster_stability", "internal_separation", "preprocessing_sensitivity", "resampling_unit"],
+        "preferred_rules": ["rigor_reviewer_reproducibility_gate", "statistical_assumption_gate", "peer_review_evidence_gate"],
+    },
+    "partition_concordance": {
+        "question": "Are independent partitions compared with label-invariant agreement estimates, uncertainty intervals, and a chance-agreement null?",
+        "evidence": ["paired_assignments", "ari", "nmi", "aligned_agreement", "kappa", "bootstrap_interval", "permutation_null"],
+        "preferred_rules": ["statistical_assumption_gate", "peer_review_evidence_gate", "model_statistical_validity_gate"],
+    },
+    "label_alignment_and_null": {
+        "question": "Is label alignment used only for interpretation after model selection, and does the permutation null preserve sample pairing and class frequencies?",
+        "evidence": ["alignment_algorithm", "selection_objective", "permutation_scheme", "class_frequency_preservation"],
+        "preferred_rules": ["statistical_assumption_gate", "rigor_reviewer_reproducibility_gate"],
+    },
+    "stratified_concordance_support": {
+        "question": "Are stratum-specific concordance estimates restricted to supported cells and accompanied by uncertainty and selection-sensitivity analyses?",
+        "evidence": ["stratum_definition", "stratum_support", "stratified_concordance", "uncertainty_interval", "selection_sensitivity"],
+        "preferred_rules": ["experimental_design_gate", "statistical_power_gate", "peer_review_evidence_gate"],
+    },
     "calibration": {
         "question": "Are prediction scores calibrated and interpreted as probabilities only when calibration evidence exists?",
         "evidence": ["calibration_curve", "calibration_metric", "held_out_predictions"],
@@ -73,7 +93,12 @@ _FAMILY_DEFINITIONS: dict[str, dict[str, Any]] = {
     "spatial_validation": {
         "question": "Are spatial dependence, coordinate reference, and blocked or external spatial validation addressed?",
         "evidence": ["spatial_group", "crs", "spatial_validation_result"],
-        "preferred_rules": ["crs_consistency_gate", "spatial_unit_alignment_gate", "local_spatial_coverage_gate"],
+        "preferred_rules": [
+            "crs_consistency_gate",
+            "spatial_unit_alignment_gate",
+            "local_spatial_coverage_gate",
+            "sky_partition_overlap_validation",
+        ],
     },
     "temporal_validation": {
         "question": "Does validation respect temporal order, cadence, autocorrelation, and future-information boundaries?",
@@ -116,7 +141,27 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _context(project_path: Path, blueprint: dict[str, Any]) -> str:
     state = load_project(project_path)
     parts = [str(state.metadata.get(key) or "") for key in ("idea", "field", "title")]
-    parts.append(json.dumps(blueprint, ensure_ascii=False))
+    storyboard = blueprint.get("figure_storyboard") if isinstance(blueprint.get("figure_storyboard"), dict) else {}
+    contract_view = {
+        "research_claims": blueprint.get("research_claims") or [],
+        "figures": [
+            {
+                key: item.get(key)
+                for key in (
+                    "research_question",
+                    "expected_finding",
+                    "required_data",
+                    "required_method",
+                    "validation_metric",
+                    "statistical_validation_ids",
+                )
+            }
+            for item in (storyboard.get("figures") or [])
+            if isinstance(item, dict)
+        ],
+        "method_plan": blueprint.get("method_plan") or {},
+    }
+    parts.append(json.dumps(contract_view, ensure_ascii=False))
     return " ".join(parts).lower()
 
 
@@ -127,12 +172,36 @@ def _task_families(text: str, profile: dict[str, Any]) -> list[str]:
         if value not in families:
             families.append(value)
 
-    if any(term in text for term in ("classif", "classifier", "f1", "auc", "confusion", "label")):
+    unsupervised_partition = any(
+        term in text
+        for term in ("unsupervised", "clustering", "cluster number", "partition", "consensus clustering")
+    )
+    supervised_classification = bool(re.search(r"\bsupervised\b", text)) or any(
+        term in text
+        for term in ("held-out prediction", "classifier", "f1", "auc", "confusion matrix")
+    )
+    if unsupervised_partition:
+        add("unsupervised_partition_validation")
+    partition_metric_token = bool(re.search(r"(?<![a-z0-9])(?:ari|nmi)(?![a-z0-9])", text))
+    if partition_metric_token or any(
+        term in text
+        for term in ("cross-view concordance", "partition concordance", "cohen", "aligned agreement")
+    ):
+        add("partition_concordance")
+    if any(term in text for term in ("optimal label alignment", "permutation concordance", "permutation null", "chance agreement")):
+        add("label_alignment_and_null")
+    if any(term in text for term in ("stratified concordance", "within-stratum concordance", "observational support and selection")):
+        add("stratified_concordance_support")
+    if supervised_classification or (
+        any(term in text for term in ("classif", "classification", "label")) and not unsupervised_partition
+    ):
         add("classification_validation")
         add("group_leakage_and_generalization")
+    if any(term in text for term in ("baseline", "ablation", "feature omission", "feature sensitivity")):
         add("baseline_and_ablation")
+    if any(term in text for term in ("calibration curve", "calibrated probability", "probability calibration", "brier")):
         add("calibration")
-    if any(term in text for term in ("regression", "r2", "fit", "fitting", "residual", "parameter")):
+    if any(term in text for term in ("regression", "r2", "model fit", "fitting", "residual", "heteroscedastic")):
         add("regression_fit_diagnostics")
     if any(term in text for term in ("multiple testing", "fdr", "many features", "differential")):
         add("multiple_testing")
@@ -317,8 +386,29 @@ def statistical_plan_summary(project: str | Path, *, language: str = "en") -> st
     contract = _read_json(state.path / CONTRACT_JSON)
     families = [str(item) for item in contract.get("task_families") or []]
     if language.lower().startswith("zh"):
+        descriptions = {
+            "sampling_and_independence": "明确独立样本单位、样本队列、重复观测和依赖结构。",
+            "missingness_and_selection": "量化缺失、排除步骤、选择效应和最终分析样本的形成过程。",
+            "uncertainty_reporting": "在正确的重采样层级报告主要效应或性能估计的不确定性。",
+            "classification_validation": "同时检查总体判别能力、类别级性能、类别不平衡和留出泛化。",
+            "unsupervised_partition_validation": "在不利用跨视图一致性调参的前提下，检验类别数、分区稳定性、视图内可分性、预处理敏感性和重采样单位。",
+            "partition_concordance": "使用标签置换不变的一致性指标、重采样区间和随机一致性零分布比较两套独立分区。",
+            "label_alignment_and_null": "确保标签对齐只用于模型选择后的解释，并保证置换零分布保留样本配对和类别频率。",
+            "stratified_concordance_support": "仅在样本支持充分的分层中报告一致性，并同时给出不确定性和选择敏感性。",
+            "group_leakage_and_generalization": "确保训练与评估划分遵守对象、空间位置、时间或观测批次分组。",
+            "baseline_and_ablation": "在相同样本和划分上比较拟采用模型、透明基线与消融方案。",
+            "calibration": "只有存在校准证据时，才将预测得分解释为概率。",
+            "regression_fit_diagnostics": "检查拟合质量、残差结构、异方差、影响点和参数不确定性。",
+            "multiple_testing": "在检验多个假设或特征时处理多重比较和假发现率。",
+            "spatial_validation": "检查空间依赖、坐标定义以及空间分块或外部区域验证。",
+            "temporal_validation": "检查时间顺序、时间泄漏和跨时间区间泛化。",
+            "representation_confounding": "区分表示空间中的科学目标信号、标识符、选择变量和实测混杂因素。",
+            "anomaly_stability": "检查异常排序对随机种子、预处理、重采样和参照样本的稳定性。",
+            "survival_validation": "检查删失处理、风险集定义和生存模型假设。",
+            "simulation_convergence": "检查数值收敛、边界条件、量纲一致性和数值不确定性。",
+        }
         lines = ["## 统计验证计划", "", "关键图表执行前需要固定以下统计验证范围：", ""]
-        lines.extend(f"- `{family}`：按正确的样本单位、cohort、数据划分和不确定性证据进行验证。" for family in families)
+        lines.extend(f"- `{family}`：{descriptions.get(family, '按正确的样本单位、样本队列、数据划分和不确定性证据进行验证。')}" for family in families)
         lines.extend(["", "任何硬阈值都必须来自用户或期刊要求、有引用的领域规范，或已经验证且证据匹配的学科插件；系统不得使用跨项目通用的 F1、R2 或 p 值门槛。", ""])
         return "\n".join(lines)
     lines = ["## Statistical Validation Plan", "", "The key-figure execution is bound to these task-aware validation families:", ""]

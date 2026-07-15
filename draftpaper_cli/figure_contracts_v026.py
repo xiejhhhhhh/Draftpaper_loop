@@ -23,6 +23,26 @@ class ConfirmedFigureContractError(RuntimeError):
     """Raised when a planned or generated figure diverges from the confirmed blueprint."""
 
 
+_PANEL_EXPECTED_CONTENT = {
+    "cohort_flow_audit": "Quantify the source, image-available, image-valid, and analysis cohorts together with every exclusion step.",
+    "missingness_analysis": "Compare image missingness rates and recorded reasons across the declared sample groups and relevant covariates.",
+    "representation_projection": "Visualize the representation geometry as exploratory evidence while coloring points only by the independent scientific target.",
+    "target_confounder_diagnostic": "Quantify target association separately from redshift, luminosity, acquisition group, and other declared confounders.",
+    "group_aware_validation": "Report held-out performance across the declared groups and folds without allowing group leakage between training and evaluation.",
+    "transparent_baseline_comparison": "Compare the representation-based model with transparent catalog-only and simple predictive baselines on identical cohorts and splits.",
+    "uncertainty_estimation": "Show fold- or group-level uncertainty intervals for every primary performance estimate.",
+    "feature_group_ablation": "Measure the change in held-out performance when each declared feature group is removed or added on matched folds.",
+    "confounder_control": "Compare image-representation gain before and after controlling the declared catalog and acquisition confounders.",
+    "label_leakage_check": "Demonstrate that identifiers and label-defining variables cannot leak into the predictive feature set.",
+    "confusion_or_error_analysis": "Show class-wise confusion and error patterns using held-out predictions only.",
+    "class_imbalance_analysis": "Report class support together with class-wise precision, recall, and performance sensitivity to imbalance handling.",
+    "uncertainty_summary": "Compare confidence or calibration evidence across classes and identify unreliable prediction regimes.",
+    "anomaly_stability_analysis": "Measure candidate-rank stability across seeds, resampling, preprocessing choices, and reference cohorts.",
+    "image_quality_review": "Display candidate cutouts with image-quality diagnostics to separate scientific structure from artefacts.",
+    "candidate_interpretation_boundary": "Retain only stable candidates not explained by quality failures and mark them as requiring independent confirmation.",
+}
+
+
 def _headline(title: str) -> str:
     phrase = re.sub(r"\s+", " ", str(title or "planned scientific evidence")).strip().rstrip(".?!")
     phrase = phrase.replace(",", "").replace(";", "")
@@ -41,7 +61,10 @@ def enrich_storyboard_figure(item: dict[str, Any], *, index: int, claim_id: str)
                 "scientific_role": method.replace("_", " "),
                 "required_method": method,
                 "required_data_roles": list(enriched.get("required_data") or []),
-                "expected_content": f"Show the evidence produced by {method.replace('_', ' ')} for the contracted research question.",
+                "expected_content": _PANEL_EXPECTED_CONTENT.get(
+                    method,
+                    f"Show the evidence produced by {method.replace('_', ' ')} for the contracted research question.",
+                ),
             }
             for offset, method in enumerate(methods[:4], start=1)
         ]

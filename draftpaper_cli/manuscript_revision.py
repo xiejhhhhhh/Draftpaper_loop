@@ -618,65 +618,95 @@ def set_manuscript_metadata(project: str | Path, input_path: str | Path) -> dict
             raise ManuscriptRevisionError("Abstract evidence contract failed: " + details)
     target = state.path / METADATA_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    existing = yaml.safe_load(target.read_text(encoding="utf-8-sig")) if target.is_file() else {}
+    if not isinstance(existing, dict):
+        existing = {}
+    merged = {**existing, **payload}
+    target.write_text(yaml.safe_dump(merged, allow_unicode=True, sort_keys=False), encoding="utf-8")
     stale = mark_stages_stale(state.path, [stage for stage in ("latex", "quality_checks") if stage in state.metadata.get("stages", {})])
-    return {"status": "written", "metadata": METADATA_PATH, "fields": sorted(payload), "stale_scope": stale}
+    return {
+        "status": "written",
+        "metadata": METADATA_PATH,
+        "fields": sorted(payload),
+        "preserved_fields": sorted(set(existing) - set(payload)),
+        "stale_scope": stale,
+    }
 
 
 def add_custom_reference(project: str | Path, input_path: str | Path) -> dict[str, Any]:
     state = load_project(project)
     source = Path(input_path).expanduser().resolve()
-    payload = json.loads(source.read_text(encoding="utf-8-sig"))
-    if not isinstance(payload, dict):
-        raise ManuscriptRevisionError("Custom reference input must be a JSON object.")
-    required = ["citation_key", "title", "authors", "year", "evidence_notes"]
-    missing = [field for field in required if payload.get(field) in (None, "", [])]
-    if missing:
-        raise ManuscriptRevisionError("Custom reference is missing: " + ", ".join(missing))
+    raw_payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    payloads = raw_payload if isinstance(raw_payload, list) else [raw_payload]
+    if not payloads or not all(isinstance(payload, dict) for payload in payloads):
+        raise ManuscriptRevisionError("Custom reference input must be a JSON object or a non-empty list of objects.")
     bib_path = state.path / "references" / "library.bib"
     bib = bib_path.read_text(encoding="utf-8-sig") if bib_path.is_file() else ""
-    key = str(payload["citation_key"])
-    if re.search(rf"@[A-Za-z]+\{{\s*{re.escape(key)}\s*,", bib):
-        raise ManuscriptRevisionError(f"Citation key already exists: {key}")
-    doi = str(payload.get("doi") or "")
-    url = str(payload.get("url") or (f"https://doi.org/{doi}" if doi else ""))
-    entry_type = str(payload.get("entry_type") or ("article" if payload.get("journal") else "misc"))
-    fields = {
-        "author": " and ".join(str(item) for item in payload["authors"]),
-        "title": payload["title"],
-        "year": payload["year"],
-        "journal": payload.get("journal"),
-        "volume": payload.get("volume"),
-        "number": payload.get("issue"),
-        "pages": payload.get("pages_or_article_number"),
-        "doi": doi,
-        "url": url,
-        "eprint": payload.get("eprint"),
-        "archivePrefix": payload.get("archive_prefix"),
-        "primaryClass": payload.get("primary_class"),
-    }
-    rendered = f"@{entry_type}{{{key},\n" + ",\n".join(f"  {name} = {{{value}}}" for name, value in fields.items() if value not in (None, "")) + "\n}\n"
-    bib_path.parent.mkdir(parents=True, exist_ok=True)
-    bib_path.write_text(bib.rstrip() + "\n\n" + rendered, encoding="utf-8")
     items_path = state.path / "references" / "literature_items.json"
     items = json.loads(items_path.read_text(encoding="utf-8-sig")) if items_path.is_file() else []
     if not isinstance(items, list):
         items = []
-    item = {
-        "bibtex_key": key,
-        "title": payload["title"],
-        "authors": payload["authors"],
-        "year": str(payload["year"]),
-        "publication": payload.get("journal") or "",
-        "doi": doi,
-        "url": url,
-        "abstract": payload.get("abstract") or "",
-        "evidence_notes": payload["evidence_notes"],
-        "source": "user_curated",
-        "search_contexts": payload.get("search_contexts") or ["introduction", "discussion"],
-        "user_confirmed": True,
-    }
-    items.append(item)
+    item_index = {str(item.get("bibtex_key") or item.get("citation_key") or ""): index for index, item in enumerate(items) if isinstance(item, dict)}
+    citation_keys: list[str] = []
+    new_bibtex_keys: list[str] = []
+    evidence_only_keys: list[str] = []
+    for payload in payloads:
+        required = ["citation_key", "title", "authors", "year", "evidence_notes"]
+        missing = [field for field in required if payload.get(field) in (None, "", [])]
+        if missing:
+            raise ManuscriptRevisionError("Custom reference is missing: " + ", ".join(missing))
+        key = str(payload["citation_key"])
+        citation_keys.append(key)
+        exists = bool(re.search(rf"@[A-Za-z]+\{{\s*{re.escape(key)}\s*,", bib))
+        evidence_only = bool(payload.get("evidence_only"))
+        if exists and not evidence_only:
+            raise ManuscriptRevisionError(f"Citation key already exists: {key}")
+        doi = str(payload.get("doi") or "")
+        url = str(payload.get("url") or (f"https://doi.org/{doi}" if doi else ""))
+        if not exists:
+            entry_type = str(payload.get("entry_type") or ("article" if payload.get("journal") else "misc"))
+            fields = {
+                "author": " and ".join(str(item) for item in payload["authors"]),
+                "title": payload["title"],
+                "year": payload["year"],
+                "journal": payload.get("journal"),
+                "volume": payload.get("volume"),
+                "number": payload.get("issue"),
+                "pages": payload.get("pages_or_article_number"),
+                "doi": doi,
+                "url": url,
+                "eprint": payload.get("eprint"),
+                "archivePrefix": payload.get("archive_prefix"),
+                "primaryClass": payload.get("primary_class"),
+            }
+            rendered = f"@{entry_type}{{{key},\n" + ",\n".join(f"  {name} = {{{value}}}" for name, value in fields.items() if value not in (None, "")) + "\n}\n"
+            bib = bib.rstrip() + "\n\n" + rendered
+            new_bibtex_keys.append(key)
+        else:
+            evidence_only_keys.append(key)
+        item = {
+            "bibtex_key": key,
+            "title": payload["title"],
+            "authors": payload["authors"],
+            "year": str(payload["year"]),
+            "publication": payload.get("journal") or "",
+            "doi": doi,
+            "url": url,
+            "abstract": payload.get("abstract") or "",
+            "evidence_notes": payload["evidence_notes"],
+            "source": "user_curated",
+            "search_contexts": payload.get("search_contexts") or ["introduction", "discussion"],
+            "user_confirmed": True,
+            "evidence_only": evidence_only,
+        }
+        if key in item_index:
+            items[item_index[key]] = item
+        else:
+            item_index[key] = len(items)
+            items.append(item)
+    if new_bibtex_keys:
+        bib_path.parent.mkdir(parents=True, exist_ok=True)
+        bib_path.write_text(bib, encoding="utf-8")
     items_path.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     rows = citation_evidence_rows(items)
     with (state.path / "references" / "citation_evidence.csv").open("w", encoding="utf-8", newline="") as handle:
@@ -686,10 +716,25 @@ def add_custom_reference(project: str | Path, input_path: str | Path) -> dict[st
         writer.writerows(rows)
     write_literature_html_summaries(state.path / "references", items)
     build_reference_registry(state.path)
-    update_stage_status(state.path, "references", "draft")
-    stale = mark_stages_stale(state.path, [stage for stage in ("latex", "quality_checks") if stage in state.metadata.get("stages", {})])
-    _write_json(state.path / "citation_audit" / "stale_marker.json", {"reason": "custom reference added", "citation_key": key})
-    return {"status": "added", "citation_key": key, "reference_registry": "references/reference_registry.json", "stale_scope": stale, "next_command": "preview-manuscript-revision"}
+    if new_bibtex_keys:
+        update_stage_status(state.path, "references", "draft")
+    stale = mark_stages_stale(
+        state.path,
+        [stage for stage in ("citation_audit", "latex", "quality_checks") if stage in state.metadata.get("stages", {})],
+    )
+    _write_json(state.path / "citation_audit" / "stale_marker.json", {
+        "reason": "custom reference evidence added",
+        "citation_keys": citation_keys,
+        "evidence_only_keys": evidence_only_keys,
+    })
+    return {
+        "status": "added" if new_bibtex_keys else "evidence_registered",
+        "citation_key": citation_keys[0] if len(citation_keys) == 1 else None,
+        "citation_keys": citation_keys,
+        "reference_registry": "references/reference_registry.json",
+        "stale_scope": stale,
+        "next_command": "preview-manuscript-revision",
+    }
 
 
 def prepare_revision_from_task(project: str | Path, task: str) -> dict[str, Any]:

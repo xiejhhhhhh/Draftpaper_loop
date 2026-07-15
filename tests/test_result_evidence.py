@@ -15,6 +15,39 @@ from draftpaper_cli.result_evidence import resolve_result_evidence
 
 
 class ResultEvidenceResolverTests(unittest.TestCase):
+    def test_distinct_validation_table_families_keep_distinct_analysis_variants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Multi-seed and grouped validation", field="machine learning")
+            tables = project.path / "results" / "tables"
+            (tables / "multi_seed_metrics.csv").write_text(
+                "seed,macro_f1\n1,0.90\n2,0.88\n", encoding="utf-8"
+            )
+            (tables / "tile_grouped_validation.csv").write_text(
+                "seed,macro_f1\n1,0.87\n2,0.86\n", encoding="utf-8"
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({
+                    "status": "success",
+                    "run_id": "run-1",
+                    "output_files": [
+                        "results/tables/multi_seed_metrics.csv",
+                        "results/tables/tile_grouped_validation.csv",
+                    ],
+                }),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+            registry = build_scientific_evidence_registry(project.path)
+
+            variants = {
+                item["analysis_variant"]
+                for item in report["evidence_records"]
+                if item["entity_role"] == "result_metric_macro_f1"
+            }
+            self.assertEqual(variants, {"multi_seed_summary", "tile_grouped_validation"})
+            self.assertEqual(registry["blocking_conflict_count"], 0)
+
     def test_quality_filtered_metrics_remain_distinct_sensitivity_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Primary and sensitivity metrics", field="machine learning")
@@ -148,6 +181,29 @@ class ResultEvidenceResolverTests(unittest.TestCase):
 
             self.assertEqual(report["primary_metric"]["value"], 0.8053)
             self.assertTrue(any(item.get("model") == "logistic" and item["value"] == 0.8667 for item in report["metrics"]))
+
+    def test_unconfigured_primary_metric_does_not_promote_ablation_variant(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Fine-tuning sensitivity", field="machine learning")
+            table = project.path / "results" / "tables" / "metrics.csv"
+            table.write_text(
+                "variant,macro_f1\n"
+                "fine_tune_last_three_blocks,0.7211\n"
+                "ablation_no_augmentation,0.7305\n",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_requirements.json").write_text(
+                json.dumps({"primary_metric": "f1"}), encoding="utf-8"
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1", "output_files": ["results/tables/metrics.csv"]}),
+                encoding="utf-8",
+            )
+
+            report = resolve_result_evidence(project.path)
+
+            self.assertEqual(report["primary_metric"]["model"], "fine_tune_last_three_blocks")
+            self.assertEqual(report["primary_metric_selection"], "highest_ranked_non_ablation_run_bound_model")
 
     def test_resolver_is_byte_stable_when_run_evidence_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

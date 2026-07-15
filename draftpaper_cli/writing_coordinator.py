@@ -19,6 +19,20 @@ SECTION_PRECONDITIONS = {
     "data": ("data/data_writing_context.json", "build-data-context"),
     "methods": ("methods/method_writing_context.json", "build-method-context"),
 }
+SECTION_ACTIVE_ARTIFACTS = {
+    "results": "results/results.tex",
+    "introduction": "introduction/introduction.tex",
+    "data": "data/data.tex",
+    "methods": "methods/methods.tex",
+    "discussion": "discussion/discussion.tex",
+}
+SECTION_WRITER_COMMANDS = {
+    "results": "write-results",
+    "introduction": "write-introduction",
+    "data": "write-data",
+    "methods": "write-methods",
+    "discussion": "write-discussion",
+}
 
 
 def _quote(path: Path) -> str:
@@ -77,6 +91,25 @@ def section_lifecycle_action(project_path: Path, section: str) -> dict[str, Any]
     acceptance = repo.read_mapping(f"writing/section_acceptance/{section}.json")
     if not (acceptance.get("status") == "accepted" and acceptance.get("formal_release_eligible") is True and acceptance.get("candidate_hash") == candidate_hash and acceptance.get("evidence_snapshot_id") == snapshot_id):
         return {"stage": f"{section}_acceptance", "command": "accept-section-draft", "cli": _cli(project_path, "accept-section-draft") + f" --section {section}", "reason": f"Record explicit acceptance of the editor-cleared {section} candidate.", "section": section, "writing_state": "acceptance_required"}
+    active_artifact = SECTION_ACTIVE_ARTIFACTS[section]
+    active_path = repo.resolve(active_artifact)
+    if _text_hash(active_path) != candidate_hash:
+        writer_command = SECTION_WRITER_COMMANDS[section]
+        return {
+            "stage": stage_name,
+            "command": writer_command,
+            "cli": _cli(project_path, writer_command),
+            "reason": (
+                f"Install the accepted {section} candidate as the active manuscript section "
+                "before downstream review or assembly."
+            ),
+            "section": section,
+            "writing_state": "accepted_candidate_installation_required",
+            "candidate_path": candidate_path.relative_to(project_path).as_posix(),
+            "active_artifact": active_artifact,
+            "candidate_hash": candidate_hash,
+            "active_hash": _text_hash(active_path),
+        }
     return None
 
 

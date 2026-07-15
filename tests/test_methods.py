@@ -135,6 +135,54 @@ class MethodsHardGateTests(unittest.TestCase):
             self.assertFalse(manifest["shell_used"])
             self.assertEqual(manifest["returncode"], 0)
 
+    def test_verify_methods_registers_structured_runner_outputs_and_evidence(self) -> None:
+        from draftpaper_cli.methods import verify_methods
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Structured method output", field="machine learning")
+            prepare_passing_data_gate(project.path)
+            runner = project.path / "methods" / "scripts" / "run_analysis.py"
+            runner.parent.mkdir(parents=True, exist_ok=True)
+            runner.write_text(
+                """import json
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[2]
+metrics = root / "results" / "tables" / "metrics.csv"
+detail = root / "results" / "tables" / "detailed_metrics.csv"
+metrics.parent.mkdir(parents=True, exist_ok=True)
+metrics.write_text("metric,value\\nmacro_f1,0.91\\n", encoding="utf-8")
+detail.write_text("model,macro_f1\\nprimary,0.91\\n", encoding="utf-8")
+print(json.dumps({
+    "status": "success",
+    "outputs": ["results/tables/metrics.csv", "results/tables/detailed_metrics.csv"],
+    "final_test_metrics": {"macro_f1": 0.91},
+    "cohort_audit": {"class_counts": {"A": 30, "B": 20}, "split_counts": {"train": 40, "test": 10}},
+}))
+""",
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "method_code_manifest.json").write_text(
+                json.dumps({
+                    "verify_command_argv": ["{python}", "methods/scripts/run_analysis.py"],
+                    "declared_outputs": ["results/tables/metrics.csv"],
+                }),
+                encoding="utf-8",
+            )
+
+            result = verify_methods(project.path)
+
+            self.assertEqual(result["status"], "success")
+            manifest = json.loads((project.path / "methods" / "run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertIn("results/tables/detailed_metrics.csv", manifest["output_files"])
+            self.assertEqual(manifest["reported_output_files"], [
+                "results/tables/metrics.csv",
+                "results/tables/detailed_metrics.csv",
+            ])
+            values = {item["value"] for item in manifest["evidence_records"]}
+            self.assertTrue({0.91, 30, 20, 40, 10}.issubset(values))
+            self.assertTrue(manifest["run_id"])
+
     def test_verify_methods_rejects_shell_operators_and_shell_runners(self) -> None:
         from draftpaper_cli.methods import MethodsGateError, verify_methods
 

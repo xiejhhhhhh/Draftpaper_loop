@@ -167,12 +167,63 @@ COMMAND_SPECS = {
         CommandSpec("assess-review-rule-coverage", "capability_coordinator", True, "capabilities", "statistical_validation", "assess_review_rule_coverage", (("project", "project"),)),
         CommandSpec("assess-pre-execution-support", "capability_coordinator", True, "capabilities", "pre_execution_support", "assess_pre_execution_support", (("project", "project"),)),
         CommandSpec("prepare-pre-execution-rescue", "capability_coordinator", True, "capabilities", "pre_execution_support", "prepare_pre_execution_rescue", (("project", "project"),)),
+        CommandSpec(
+            "resolve-research-capabilities",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            "research_capabilities",
+            "resolve_research_capabilities",
+            (("project", "project"),),
+        ),
+        CommandSpec(
+            "audit-project-capabilities",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            "project_capability_audit",
+            "audit_project_capabilities",
+            (("project", "project"),),
+        ),
         CommandSpec("review-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "review_research_plan", (("project", "project"),)),
+        CommandSpec(
+            "revise-research-objective",
+            "capability_coordinator",
+            True,
+            "state",
+            "research_objective",
+            "revise_research_objective",
+            (("project", "project"), ("objective_file", "objective_file")),
+            allowed_write_globs=("idea/**", *_COMMON_MANAGED_WRITES),
+        ),
         CommandSpec("confirm-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "confirm_research_plan", (("project", "project"), ("plan_hash", "plan_hash"), ("accept_limitations", "accept_limitations")), protected_action=True, manual_only=True),
         CommandSpec("reopen-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "reopen_research_plan", (("project", "project"), ("reason", "reason")), protected_action=True, manual_only=True),
         CommandSpec("validate-confirmed-figure-alignment", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_confirmed_figure_alignment", (("project", "project"),), "decision_pass"),
         CommandSpec("validate-figure-captions", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_figure_captions", (("project", "project"),), "decision_pass"),
+        CommandSpec(
+            "assess-core-evidence",
+            "evidence_coordinator",
+            True,
+            "results",
+            allowed_write_globs=tuple(
+                dict.fromkeys(
+                    (
+                        *_stage_write_globs("results"),
+                        "core_evidence/**",
+                    )
+                )
+            ),
+        ),
         CommandSpec("review-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "review_final_manuscript", (("project", "project"),)),
+        CommandSpec(
+            "apply-section-revision",
+            "writing_coordinator",
+            True,
+            "writing",
+            "revision_transaction",
+            "apply_section_revision",
+            (("project", "project"), ("section", "section"), ("input", "input_path"), ("change_class", "change_class")),
+        ),
         CommandSpec("confirm-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "confirm_final_manuscript", (("project", "project"), ("release_hash", "release_hash")), protected_action=True, manual_only=True),
         CommandSpec(
             "prepare-project-method-implementation",
@@ -233,6 +284,28 @@ COMMAND_SPECS = {
         ),
         CommandSpec("validate-bibliography", "reference_coordinator", True, "quality_checks", "bibliography", "validate_bibliography", (("project", "project"),), "status_passed"),
         CommandSpec("render-reference-proof", "reference_coordinator", True, "quality_checks", "bibliography", "render_reference_proof", (("project", "project"),)),
+        CommandSpec(
+            "resolve-journal-template",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            allowed_write_globs=tuple(
+                dict.fromkeys(
+                    (
+                        *_stage_write_globs("capabilities"),
+                        "references/bibliography_contract.json",
+                        "references/reference_duplicate_report.json",
+                        "references/reference_registry.json",
+                    )
+                )
+            ),
+        ),
+        CommandSpec(
+            "preflight-research-feasibility",
+            "capability_coordinator",
+            True,
+            "capabilities",
+        ),
         CommandSpec("prepare-section-writing", "writing_coordinator", True, "writing", "manuscript_composer", "build_section_evidence_packet", (("project", "project"), ("section", "section"))),
         CommandSpec("submit-section-draft", "writing_coordinator", True, "writing", "manuscript_composer", "submit_section_draft", (("project", "project"), ("section", "section"), ("input_path", "input"))),
         CommandSpec("prepare-scientific-editor", "writing_coordinator", True, "writing", "writing_architecture", "prepare_scientific_editor", (("project", "project"), ("section", "section"), ("input_path", "input"))),
@@ -383,6 +456,32 @@ for _name in sorted(DECLARED_COMMAND_NAMES):
     )
 
 COMMAND_SPECS.update({
+    "reopen-core-evidence": CommandSpec(
+        "reopen-core-evidence",
+        "evidence_coordinator",
+        True,
+        "results",
+        protected_action=True,
+        allowed_write_globs=(
+            "results/evidence_snapshot_reopen_report.json",
+            "results/evidence_snapshots/**",
+            "results/promoted_evidence_snapshot.json",
+            *_COMMON_MANAGED_WRITES,
+        ),
+    ),
+    "resume": CommandSpec(
+        "resume",
+        "state_kernel",
+        True,
+        "state",
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=(
+            "core_evidence/**",
+            "results/promoted_evidence_snapshot.json",
+            *_COMMON_MANAGED_WRITES,
+        ),
+    ),
     "install-skill": CommandSpec("install-skill", "state_kernel", False, "state", "skill_sync", "install_skill", (("destination", "destination"), ("force", "force")), risk_level="write_project", allowed_write_globs=(), resource_class="local_cpu", mcp_exposed=False),
     "skill-doctor": CommandSpec("skill-doctor", "state_kernel", False, "state", "skill_sync", "skill_doctor", (("destination", "destination"),)),
     "snapshot-plugin-catalog": CommandSpec("snapshot-plugin-catalog", "capability_coordinator", True, "capabilities", "plugin_catalog", "write_plugin_catalog_snapshot", (("project", "project"),)),
@@ -395,7 +494,7 @@ COMMAND_SPECS.update({
     "recover-jobs": CommandSpec("recover-jobs", "state_kernel", True, "state", "jobs", "recover_jobs", (("project", "project"),), allowed_write_globs=(".draftpaper/**", "transaction_ledger.jsonl", "workflow_trace.jsonl", "project_passport.yaml", "artifact_ledger.jsonl")),
     "mcp-install": CommandSpec("mcp-install", "state_kernel", False, "state", "mcp_install", "mcp_install", (("output", "output"),), risk_level="write_project", mcp_exposed=False),
     "mcp-doctor": CommandSpec("mcp-doctor", "state_kernel", False, "state", "mcp_install", "mcp_doctor"),
-    "doctor": CommandSpec("doctor", "state_kernel", False, "state", "doctor", "doctor_project", (("project", "project"),)),
+    "doctor": CommandSpec("doctor", "state_kernel", False, "state", "doctor", "doctor_project", (("project", "project"), ("explain", "explain"))),
     "verify-next-action": CommandSpec("verify-next-action", "state_kernel", False, "state", "doctor", "verify_next_action", (("project", "project"),), "status_passed"),
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),
     "start": CommandSpec("start", "state_kernel", True, "state", "workflow_macros", "start_workflow", (("root", "root"), ("idea", "idea"), ("field", "field"), ("target_journal", "target_journal"))),

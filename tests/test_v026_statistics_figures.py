@@ -10,6 +10,41 @@ from tests.test_v026_workspace_blueprint import _write_json, prepare_formal_blue
 
 
 class StatisticsAndFiguresV026Tests(unittest.TestCase):
+    def test_astronomy_sky_partition_rule_is_preferred_for_spatial_validation(self) -> None:
+        from draftpaper_cli.statistical_validation import _FAMILY_DEFINITIONS
+
+        self.assertIn(
+            "sky_partition_overlap_validation",
+            _FAMILY_DEFINITIONS["spatial_validation"]["preferred_rules"],
+        )
+
+    def test_unsupervised_multiview_plan_uses_partition_statistics_not_supervised_calibration(self) -> None:
+        from draftpaper_cli.statistical_validation import _task_families
+
+        families = _task_families(
+            "unsupervised consensus clustering cross-view concordance ARI NMI optimal label alignment permutation null stratified concordance",
+            {"primary_discipline": "astronomy", "secondary_disciplines": ["machine_learning"]},
+        )
+
+        self.assertIn("unsupervised_partition_validation", families)
+        self.assertIn("partition_concordance", families)
+        self.assertIn("label_alignment_and_null", families)
+        self.assertIn("stratified_concordance_support", families)
+        self.assertNotIn("classification_validation", families)
+        self.assertNotIn("calibration", families)
+        self.assertNotIn("regression_fit_diagnostics", families)
+
+    def test_model_variants_and_literature_agreement_do_not_imply_partition_concordance(self) -> None:
+        from draftpaper_cli.statistical_validation import _task_families
+
+        families = _task_families(
+            "supervised classifier variants compare physical intervals with observational literature agreement",
+            {"primary_discipline": "astronomy", "secondary_disciplines": ["machine_learning"]},
+        )
+
+        self.assertIn("classification_validation", families)
+        self.assertNotIn("partition_concordance", families)
+
     def test_task_aware_statistical_contracts_cover_cross_discipline_cases(self) -> None:
         from draftpaper_cli.statistical_validation import build_statistical_validation_contract
 

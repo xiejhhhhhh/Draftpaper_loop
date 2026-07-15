@@ -44,6 +44,10 @@ ROLE_ALIASES = {
     "source": "source_catalog",
     "source_id": "source_catalog",
     "source_identifier": "source_catalog",
+    "targetid": "identifier_or_metadata",
+    "sourceid": "identifier_or_metadata",
+    "objectid": "identifier_or_metadata",
+    "paired_object_id": "identifier_or_metadata",
     "catalog": "source_catalog",
     "catalog_id": "source_catalog",
     "target": "label_or_response",
@@ -119,9 +123,40 @@ ROLE_ALIASES = {
     "feature_importance": "features",
     "embedding": "features",
     "embeddings": "features",
+    "physical_observables": "physical_observables",
+    "literature_observational_interval": "literature_observational_interval",
+    "citation_evidence": "citation_evidence",
+    "redshift_uncertainty": "redshift_uncertainty",
+    "spectral_type": "spectral_type",
+    "spectype": "spectral_type",
+    "photometric_colours": "photometric_colours",
+    "photometric_colors": "photometric_colours",
+    "image_quality_flags": "image_quality_flags",
     "token_sequence_arrays": "features",
     "image": "image_or_raster_data",
     "raster": "image_or_raster_data",
+    "image_manifest": "image_manifest",
+    "acquisition_group": "acquisition_group",
+}
+
+
+# Some research-plan roles are deliberately more specific than inventory
+# roles. Keep that specificity in reports, but define the concrete evidence
+# combination that can satisfy each role.
+ROLE_EVIDENCE_REQUIREMENTS = {
+    "vis_cutout_manifest": {"image_manifest"},
+    "held_out_vis_cutouts": {"image_manifest", "validation_design"},
+    "euclid_tile": {"acquisition_group"},
+    "observed_colours": {"photometric_colours"},
+    "observed_colors": {"photometric_colours"},
+    "apparent_r_magnitude": {"apparent_magnitude"},
+    "spectroscopic_redshift": {"redshift"},
+    "calibration_bins": {"prediction_score"},
+    "dev_exp_vis_images": {"image_or_raster_data"},
+    "ser_rex_images": {"image_or_raster_data"},
+    "euclid_tile_groups": {"acquisition_group"},
+    "curated_literature_evidence": {"citation_evidence"},
+    "study_passbands": {"passband_metadata"},
 }
 
 
@@ -138,10 +173,12 @@ def normalize_role(value: Any) -> str:
     text = re.sub(r"[^a-z0-9]+", "_", str(value or "").lower()).strip("_")
     if not text:
         return ""
+    if text in {"targetid", "sourceid", "objectid", "paired_object_id"}:
+        return "identifier_or_metadata"
     if text in ROLE_ALIASES:
         return ROLE_ALIASES[text]
     for key, role in ROLE_ALIASES.items():
-        if len(key) >= 4 and key in text:
+        if len(key) >= 4 and re.search(rf"(?:^|_){re.escape(key)}(?:_|$)", text):
             return role
     if any(token in text for token in ["source_catalog", "ra_dec", "skycoord"]):
         return "source_catalog"
@@ -237,6 +274,43 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
         for column in {"z", "redshift", "mag_g", "mag_r", "mag_z", "abs_mag_r", "color_gr", "color_rz", "color_w1w2", "age", "sex", "site", "batch"}
     ):
         add("confounder_variables")
+        add("selection_covariates")
+        add("continuous_physical_observables")
+        add("physical_observables")
+    if {"color_gr", "abs_mag_r"}.issubset(column_set) or {"mag_g", "mag_r", "mag_z"}.issubset(column_set):
+        add("continuous_colour_magnitude_observables")
+    if "adaptive_label" in column_set:
+        add("physical_state_proxy")
+    if "morphtype" in column_set:
+        add("catalog_profile_morphology")
+    if {"z", "redshift"} & column_set:
+        add("redshift")
+    if {"zerr", "redshift_error", "redshift_uncertainty"} & column_set:
+        add("redshift_uncertainty")
+    if {"spectype", "spectral_type"} & column_set:
+        add("spectral_type")
+    if {"color_gr", "color_rz", "color_w1w2"} & column_set:
+        add("photometric_colours")
+    if "abs_mag_r" in column_set:
+        add("absolute_magnitude")
+    if "mag_r" in column_set:
+        add("apparent_magnitude")
+    if "mag_r" in column_set and ({"bgs_target", "target_state"} & column_set):
+        add("selection_function")
+    if {"citation_key", "evidence_locator"}.issubset(column_set) or {
+        "citation_key", "doi", "evidence_status"
+    }.issubset(column_set):
+        add("citation_evidence")
+    if {"citation_key", "physical_parameter", "interval_kind"}.issubset(column_set) and (
+        {"lower", "upper"} & column_set or "central" in column_set
+    ):
+        add("literature_observational_interval")
+    if {"passband", "filter", "band_definition"} & column_set:
+        add("passband_metadata")
+    if {"neighbour_contamination", "neighbor_contamination", "neighbour_contamination_score", "neighbor_contamination_score"} & column_set:
+        add("neighbour_contamination")
+    if {"background_quality", "background_quality_score", "background_quality_failure", "border_mad"} & column_set:
+        add("background_quality")
     if any(
         "missing" in column
         or "availability" in column
@@ -250,11 +324,21 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
         for token in ("quality", "flag", "zwarn", "fiberstatus", "cutout_exists", "is_anomaly", "valid_image")
     ):
         add("quality_flags")
+        add("image_quality_flags")
     if {"rows", "n_rows", "row_count", "evt_n_rows", "cat_n_rows", "n_events"} & column_set:
         add("event_level_samples")
     if {"fold", "split", "n_train", "n_test", "source_id", "object_id", "group_id"} & column_set:
         add("sample_group")
         add("validation_design")
+    if {"cutout_file_path", "image_file_path", "raster_file_path"} & column_set and (
+        {"cutout_exists", "image_exists", "raster_exists"} & column_set
+    ):
+        add("image_manifest")
+    if any(
+        column in column_set
+        for column in {"tile", "tile_id", "euclid_tile", "euclid_primary_tile_id", "field_id", "exposure_id", "acquisition_group"}
+    ):
+        add("acquisition_group")
     if isinstance(acquisition_plan, dict):
         for task in acquisition_plan.get("tasks") or []:
             if not isinstance(task, dict):
@@ -267,6 +351,8 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
 
 
 def required_roles_from_storyboard(storyboard: dict[str, Any]) -> list[str]:
+    from .research_capabilities import is_derived_method_output_role
+
     required: list[str] = []
     for item in (storyboard.get("figures") or []) if isinstance(storyboard, dict) else []:
         if not isinstance(item, dict):
@@ -275,7 +361,12 @@ def required_roles_from_storyboard(storyboard: dict[str, Any]) -> list[str]:
         candidates.extend(item.get("required_data") or [])
         candidates.extend(item.get("required_data_roles") or [])
         candidates.extend(item.get("data_roles") or [])
-        for role in normalize_roles(candidates):
+        input_candidates = [
+            role
+            for role in candidates
+            if not is_derived_method_output_role(role)
+        ]
+        for role in normalize_roles(input_candidates):
             if role not in required:
                 required.append(role)
     return required
@@ -284,7 +375,14 @@ def required_roles_from_storyboard(storyboard: dict[str, Any]) -> list[str]:
 def assess_role_coverage(required_roles: list[str], available_roles: list[str]) -> dict[str, Any]:
     normalized_required = normalize_roles(required_roles)
     normalized_available = normalize_roles(available_roles)
-    missing = [role for role in normalized_required if role not in normalized_available]
+    available = set(normalized_available)
+    missing = []
+    role_evidence: dict[str, list[str]] = {}
+    for role in normalized_required:
+        required_evidence = ROLE_EVIDENCE_REQUIREMENTS.get(role, {role})
+        role_evidence[role] = sorted(required_evidence)
+        if not required_evidence.issubset(available):
+            missing.append(role)
     partial = [role for role in missing if role in {"validation_design", "processed_dataset", "remote_or_api_source"}]
     blocking = [role for role in missing if role not in partial]
     if blocking:
@@ -300,6 +398,7 @@ def assess_role_coverage(required_roles: list[str], available_roles: list[str]) 
         "missing_roles": missing,
         "blocking_missing_roles": blocking,
         "partial_missing_roles": partial,
+        "role_evidence_requirements": role_evidence,
     }
 
 
@@ -333,6 +432,11 @@ def write_data_contract_reports(project_path: str | Path, *, required_roles: lis
     _write_json(root / DATA_ROLE_COVERAGE_JSON, payload)
     _write_json(root / DATA_CONTRACT_FULFILLMENT_JSON, fulfillment)
     _write_json(root / DATA_DEGRADATION_RECOMMENDATIONS_JSON, recommendations)
+    from .cohort_semantics import build_data_semantic_contracts
+
+    semantic_contracts = build_data_semantic_contracts(root)
+    payload["semantic_contracts"] = semantic_contracts
+    _write_json(root / DATA_ROLE_COVERAGE_JSON, payload)
     write_html_report(root / DATA_ROLE_COVERAGE_HTML, render_role_coverage_markdown(payload, recommendations), title="Data Role Coverage")
     return payload
 

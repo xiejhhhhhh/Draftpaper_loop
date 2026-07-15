@@ -6,7 +6,7 @@ import json
 import tempfile
 import unittest
 
-from draftpaper_cli.paper_narrative import build_paper_narrative, build_results_synthesis_plan, build_section_outline
+from draftpaper_cli.paper_narrative import _paragraph_blueprint, build_paper_narrative, build_results_synthesis_plan, build_section_outline
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.writing_architecture import (
     assess_functional_quality_release,
@@ -200,6 +200,106 @@ tables: []
             candidate.write_text(text, encoding="utf-8")
             editor = prepare_scientific_editor(project.path, "results", candidate)
             self.assertFalse(any("internal_artifact_language" in task["issues"] for task in editor["tasks"]))
+
+    def test_scientific_editor_ignores_all_latex_sectioning_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            text = (
+                "\\section{Methods}\n\n"
+                "\\subsection{Image representation}\n\n"
+                "\\subsubsection{Optimization}\n\n"
+                "This paragraph explains the scientific method, why the selected representation is suitable, "
+                "how validation constrains model choice, and which interpretation remains outside the evidence "
+                "boundary. It contains enough scientific reasoning for editor review and connects the design "
+                "choice to a reproducible comparison across the declared analysis cohort.\n\n"
+                "\\paragraph{Uncertainty}\n\n"
+                "This paragraph defines the uncertainty calculation, connects it to the scientific estimand, "
+                "and explains why the resulting interval limits rather than enlarges the supported conclusion. "
+                "It also contains enough scientific reasoning for editor review and identifies how resampling "
+                "preserves the source-level unit used by the inferential design.\n"
+            )
+            candidate = project.path / "candidate_with_sectioning.tex"
+            candidate.write_text(text, encoding="utf-8")
+            editor = prepare_scientific_editor(project.path, "methods", candidate)
+            self.assertEqual(editor["decision"], "pass")
+            self.assertEqual(editor["tasks"], [])
+
+    def test_discussion_blueprint_binds_evidence_by_figure_story(self) -> None:
+        stories = [{"story_id": f"story-{index}", "claim": f"Finding {index}"} for index in range(1, 7)]
+        evidence = [
+            {
+                "evidence_id": f"evidence-{story_index}-{item_index}",
+                "figure_links": [f"story-{story_index}"],
+                "claim_role": "uncertainty evidence" if item_index == 0 else "result metric",
+            }
+            for story_index in range(1, 7)
+            for item_index in range(10)
+        ]
+        paragraphs = _paragraph_blueprint(
+            "discussion",
+            {"allocated_claims": [], "figure_story_links": stories, "evidence_items": evidence},
+        )
+        finding_paragraphs = [item for item in paragraphs if str(item["paragraph_id"]).startswith("discussion_finding_")]
+        self.assertEqual(len(finding_paragraphs), 6)
+        for index, paragraph in enumerate(finding_paragraphs, start=1):
+            self.assertEqual(len(paragraph["required_evidence_ids"]), 10)
+            self.assertTrue(all(value.startswith(f"evidence-{index}-") for value in paragraph["required_evidence_ids"]))
+        self.assertEqual(paragraphs[-1]["paragraph_id"], "discussion_synthesis")
+        self.assertLessEqual(len(paragraphs[-1]["required_evidence_ids"]), 8)
+
+    def test_results_blueprint_caps_prompt_evidence_without_dropping_registry_items(self) -> None:
+        stories = [{"story_id": "story-model", "claim": "Compare verified models"}]
+        evidence = [
+            {
+                "evidence_id": f"metric-{index:03d}",
+                "figure_links": ["story-model"],
+                "claim_role": "result_metric_macro_f1" if index % 2 == 0 else "result_metric_threshold",
+                "model_id": f"model-{index % 6}",
+                "analysis_variant": "primary" if index < 60 else "sensitivity",
+                "value": index / 100,
+            }
+            for index in range(120)
+        ]
+
+        paragraphs = _paragraph_blueprint(
+            "results",
+            {"allocated_claims": [], "figure_story_links": stories, "evidence_items": evidence},
+        )
+
+        self.assertEqual(len(paragraphs[0]["required_evidence_ids"]), 28)
+        self.assertEqual(len(evidence), 120)
+        selected = set(paragraphs[0]["required_evidence_ids"])
+        self.assertTrue(selected.issubset({item["evidence_id"] for item in evidence}))
+
+    def test_methods_blueprint_selects_role_diverse_evidence_with_a_bounded_prompt(self) -> None:
+        evidence = []
+        for variant in range(20):
+            for metric in ("macro_f1", "roc_auc", "balanced_accuracy", "ece"):
+                evidence.append({
+                    "evidence_id": f"metric-{variant}-{metric}",
+                    "entity_role": f"result_metric_variant_{variant}_{metric}",
+                    "analysis_variant": f"variant_{variant}",
+                    "metric_dimension": metric,
+                })
+        evidence.extend([
+            {"evidence_id": "cohort", "entity_role": "cohort_audit_primary_eligible_count"},
+            {"evidence_id": "split", "entity_role": "cohort_audit_split_counts_train"},
+            {"evidence_id": "loss", "entity_role": "training_loss", "formula_ids": ["weighted_cross_entropy"]},
+            {"evidence_id": "model", "entity_role": "model_architecture_trainable_blocks"},
+            {"evidence_id": "citation", "entity_role": "method_reference", "citation_key": "Method2026"},
+        ])
+
+        paragraphs = _paragraph_blueprint(
+            "methods",
+            {"allocated_claims": [], "figure_story_links": [], "evidence_items": evidence},
+        )
+
+        self.assertEqual(len(paragraphs), 3)
+        self.assertTrue(all(len(item["required_evidence_ids"]) <= 18 for item in paragraphs))
+        self.assertIn("cohort", paragraphs[0]["required_evidence_ids"])
+        self.assertIn("loss", paragraphs[1]["required_evidence_ids"])
+        self.assertTrue(any(value.startswith("metric-") for value in paragraphs[2]["required_evidence_ids"]))
+        self.assertEqual(len(evidence), 85)
 
     def test_release_rejects_missing_free_prose_sections(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

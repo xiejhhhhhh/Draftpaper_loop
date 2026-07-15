@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.journal_profile import resolve_journal_template
+from draftpaper_cli.command_registry import command_spec
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -36,6 +37,25 @@ Abstract text.
 
 
 class JournalProfileTests(unittest.TestCase):
+    def test_journal_template_command_allows_only_derived_reference_registry_writes(self) -> None:
+        spec = command_spec("resolve-journal-template")
+        self.assertIsNotNone(spec)
+        self.assertIn("references/bibliography_contract.json", spec.allowed_write_globs)
+        self.assertIn("references/reference_duplicate_report.json", spec.allowed_write_globs)
+        self.assertIn("references/reference_registry.json", spec.allowed_write_globs)
+        self.assertNotIn("references/**", spec.allowed_write_globs)
+
+    def test_research_preflight_command_owns_research_plan_outputs(self) -> None:
+        spec = command_spec("preflight-research-feasibility")
+        self.assertIsNotNone(spec)
+        self.assertIn("research_plan/**", spec.allowed_write_globs)
+
+    def test_project_capability_audit_owns_research_plan_reports(self) -> None:
+        spec = command_spec("audit-project-capabilities")
+        self.assertIsNotNone(spec)
+        self.assertEqual(spec.formal_stage, "capabilities")
+        self.assertIn("research_plan/**", spec.allowed_write_globs)
+
     def test_resolve_journal_template_writes_profile_and_latex_template(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="APJS template test", field="astronomy", target_journal="APJS")

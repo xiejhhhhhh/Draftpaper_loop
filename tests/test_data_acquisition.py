@@ -300,6 +300,25 @@ class DataAcquisitionTests(unittest.TestCase):
             self.assertEqual(catalog["row_count"], 2)
             self.assertEqual(catalog["columns"], ["TARGETID", "label", "z"])
 
+    def test_repeated_prepare_preserves_existing_private_source_root(self) -> None:
+        from draftpaper_cli.data_acquisition import prepare_data_acquisition
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            external = root / "external"
+            external.mkdir()
+            (external / "catalog.csv").write_text("id,value\n1,2\n", encoding="utf-8")
+            project = create_project(root=root / "projects", idea="External data", field="astronomy")
+
+            prepare_data_acquisition(project.path, source_root=external)
+            prepare_data_acquisition(project.path)
+
+            private_locator = json.loads(
+                (project.path / "data" / "external_data_locators.private.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(Path(private_locator["source_root"]), external.resolve())
+            self.assertEqual(private_locator["status"], "ready")
+
 
 if __name__ == "__main__":
     unittest.main()

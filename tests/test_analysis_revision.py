@@ -125,6 +125,39 @@ def write_review_inputs(project_path: Path) -> None:
 
 
 class AnalysisRevisionTests(unittest.TestCase):
+    def test_data_role_map_uses_token_roles_without_identifier_substring_collisions(self) -> None:
+        from draftpaper_cli.analysis_revision import _data_role_map
+
+        inventory = {
+            "files": [
+                {
+                    "readable": True,
+                    "columns": [
+                        "adaptive_label",
+                        "desi_row_index",
+                        "population",
+                        "COADD_EXPTIME",
+                        "emb_0",
+                        "color_gr",
+                        "RA",
+                        "DEC",
+                        "euclid_region",
+                    ],
+                }
+            ]
+        }
+
+        roles = _data_role_map(inventory)
+
+        self.assertIn("adaptive_label", roles["target"])
+        self.assertIn("emb_0", roles["predictors"])
+        self.assertIn("color_gr", roles["predictors"])
+        self.assertNotIn("desi_row_index", roles["predictors"])
+        self.assertIn("RA", roles["spatial_group_or_coordinates"])
+        self.assertIn("DEC", roles["spatial_group_or_coordinates"])
+        self.assertNotIn("population", roles["spatial_group_or_coordinates"])
+        self.assertNotIn("COADD_EXPTIME", roles.get("time", []))
+
     def test_prepare_analysis_revision_writes_executable_geography_tasks_when_data_roles_exist(self) -> None:
         from draftpaper_cli.analysis_revision import prepare_analysis_revision
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.project_versioning import create_project_version_from_plan, import_version_assets, plan_project_version
 
 
 SAMPLE_ITEMS = [
@@ -43,6 +44,148 @@ SAMPLE_ITEMS = [
 
 
 class ReferencesTests(unittest.TestCase):
+    def test_domain_anchor_terms_exclude_objective_boilerplate_and_method_names(self) -> None:
+        from draftpaper_cli.references import domain_anchor_terms
+
+        terms = domain_anchor_terms(
+            "Quantify galaxy morphology with DINOv2 used only as one visual tool rather than the scientific objective"
+        )
+
+        self.assertIn("galaxy", terms)
+        self.assertIn("morphology", terms)
+        self.assertNotIn("dinov2", terms)
+        self.assertNotIn("objective", terms)
+        self.assertNotIn("only", terms)
+        self.assertNotIn("used", terms)
+        self.assertNotIn("survey", terms)
+
+    def test_external_method_survey_does_not_pass_on_abstract_only_domain_mentions(self) -> None:
+        from draftpaper_cli.references import select_references_by_context
+
+        selected = select_references_by_context(
+            [
+                {
+                    "title": "Euclid galaxy morphology measurements",
+                    "authors": ["A. Astronomer"],
+                    "year": "2025",
+                    "abstract": "Euclid images measure galaxy morphology and physical state.",
+                    "publication": "Astronomy Journal",
+                    "_lineage_runtime_verified": True,
+                },
+                {
+                    "title": "A survey on self-supervised visual representation learning",
+                    "authors": ["B. Researcher"],
+                    "year": "2025",
+                    "abstract": "A broad survey that briefly mentions astronomy galaxy applications.",
+                    "publication": "Machine Learning",
+                },
+            ],
+            project_text="Euclid galaxy morphology and physical activity state",
+            target_journal="ApJS",
+        )
+
+        self.assertEqual([item["title"] for item in selected], ["Euclid galaxy morphology measurements"])
+
+    def test_verified_lineage_seed_can_use_curated_evidence_note_without_abstract(self) -> None:
+        from draftpaper_cli.references import select_references_by_context
+
+        selected = select_references_by_context(
+            [
+                {
+                    "title": "DINOv2: Learning Robust Visual Features without Supervision",
+                    "authors": ["M. Oquab"],
+                    "year": "2024",
+                    "publication": "Transactions on Machine Learning Research",
+                    "evidence_notes": "Primary DINOv2 method provenance for the verified visual representation.",
+                    "reference_origin": "parent_lineage_curated",
+                    "lineage_previous_origin": "user_curated",
+                    "_lineage_runtime_verified": True,
+                }
+            ],
+            project_text="Euclid galaxy morphology with DINOv2 visual representations",
+            target_journal="APJS",
+        )
+
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["reference_origin"], "parent_lineage_curated")
+        self.assertNotIn("_lineage_runtime_verified", selected[0])
+
+    def test_versioned_project_reuses_only_verified_topic_relevant_parent_references(self) -> None:
+        from draftpaper_cli.literature_search import search_literature_for_project
+        from draftpaper_cli.references import write_reference_outputs
+
+        parent_items = [
+            {
+                "title": "Euclid preparation: VIS instrument and galaxy morphology",
+                "authors": ["A. Astronomer"],
+                "year": "2024",
+                "abstract": "Euclid VIS imaging supports galaxy morphology measurements and survey quality control.",
+                "publication": "Astronomy & Astrophysics",
+                "source": "semantic_scholar",
+            },
+            {
+                "title": "Digital elevation model completion for terrain mapping",
+                "authors": ["B. Geographer"],
+                "year": "2024",
+                "abstract": "A terrain interpolation study for digital elevation models.",
+                "publication": "Geomorphology",
+                "source": "semantic_scholar",
+            },
+            {
+                "title": "DINOv2: Learning Robust Visual Features without Supervision",
+                "authors": ["M. Oquab"],
+                "year": "2024",
+                "abstract": "DINOv2 learns general-purpose visual representations without supervised labels.",
+                "evidence_notes": "Primary provenance for the DINOv2 representation used in the proposed study.",
+                "publication": "Transactions on Machine Learning Research",
+                "source": "user_curated",
+                "user_confirmed": True,
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            parent = create_project(
+                root=root,
+                idea="DINOv2 representations of Euclid VIS galaxy morphology with DESI spectroscopy",
+                field="astronomy machine learning",
+            ).path
+            write_reference_outputs(parent, parent_items, query="Euclid galaxy morphology DINOv2 DESI")
+            plan_path = root / "version_plan.json"
+            plan_project_version(parent, output=plan_path)
+            child = Path(create_project_version_from_plan(plan_path)["project_path"])
+            import_version_assets(child, plan_path)
+
+            unrelated_search_result = {
+                "title": "Deep learning for concrete crack detection",
+                "authors": ["C. Engineer"],
+                "year": "2025",
+                "abstract": "This paper classifies concrete surface damage in civil engineering images.",
+                "publication": "Construction Materials",
+                "source": "semantic_scholar",
+            }
+            with patch("draftpaper_cli.literature_search.search_free_literature", return_value=[unrelated_search_result]), patch(
+                "draftpaper_cli.literature_search.enrich_with_paper_fetch",
+                side_effect=lambda _project, items: (items, {}),
+            ):
+                search_literature_for_project(child, limit=12)
+
+            items = json.loads((child / "references" / "literature_items.json").read_text(encoding="utf-8"))
+            titles = {item["title"] for item in items}
+            self.assertIn("Euclid preparation: VIS instrument and galaxy morphology", titles)
+            self.assertIn("DINOv2: Learning Robust Visual Features without Supervision", titles)
+            self.assertNotIn("Digital elevation model completion for terrain mapping", titles)
+            self.assertNotIn("Deep learning for concrete crack detection", titles)
+            euclid = next(item for item in items if item["title"].startswith("Euclid preparation"))
+            self.assertEqual(euclid["reference_origin"], "parent_lineage_curated")
+            self.assertNotIn("_lineage_runtime_verified", euclid)
+            dinov2 = next(item for item in items if item["title"].startswith("DINOv2:"))
+            self.assertTrue(dinov2["prior_user_confirmed"])
+            self.assertFalse(dinov2["user_confirmed"])
+            report = json.loads((child / "references" / "search_queries.json").read_text(encoding="utf-8"))["lineage_reference_seeds"]
+            self.assertEqual(report["status"], "loaded")
+            self.assertEqual(report["candidate_count"], 3)
+            self.assertEqual(report["accepted_count"], 2)
+
     def test_normalized_publication_metadata_reaches_bibtex(self) -> None:
         from draftpaper_cli.references import generate_bibtex, normalize_reference_item
 
@@ -431,6 +574,66 @@ class ReferencesTests(unittest.TestCase):
                 self.assertLessEqual(len(entry["query"]), 180)
                 self.assertNotIn("using long-term light curves, current observation tokens, and spectral features", entry["query"])
                 self.assertNotIn("Time-aware Transformer classification of EP WXT flaring sources using long-term", entry["query"])
+
+    def test_revised_objective_contract_overrides_stale_method_plan_queries(self) -> None:
+        from draftpaper_cli.literature_search import build_context_search_queries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Independent image and physical galaxy classification concordance",
+                field="astronomy unsupervised learning",
+            )
+            metadata_path = project.path / "project.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["research_objective"] = {
+                "primary_scientific_questions": [
+                    {
+                        "figure_contract": {
+                            "required_data": ["image_embedding", "physical_observables"],
+                            "required_method": ["consensus_embedding_clustering", "partition_concordance_metrics"],
+                            "validation_metric": "ari_nmi_with_permutation_null",
+                        }
+                    }
+                ]
+            }
+            metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+            (project.path / "methods" / "method_plan.md").write_text(
+                "morphology state association\nselection sensitivity analysis",
+                encoding="utf-8",
+            )
+
+            queries = build_context_search_queries(project.path)
+            rendered = json.dumps(queries, ensure_ascii=False).lower()
+
+            self.assertIn("consensus embedding clustering", rendered)
+            self.assertIn("partition concordance metrics", rendered)
+            self.assertNotIn("morphology state association", rendered)
+
+    def test_revised_objective_queries_cover_distinct_figure_contracts(self) -> None:
+        from draftpaper_cli.literature_search import build_context_search_queries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Independent multi-view galaxy classifications",
+                field="astronomy unsupervised learning",
+            )
+            metadata_path = project.path / "project.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            metadata["research_objective"] = {
+                "primary_scientific_questions": [
+                    {"figure_contract": {"required_data": [f"data_{index}_a", f"data_{index}_b"], "required_method": [f"method_{index}_a", f"method_{index}_b"]}}
+                    for index in range(1, 7)
+                ]
+            }
+            metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            queries = build_context_search_queries(project.path)
+            methods = " ".join(queries["methods"]).lower()
+
+            for index in range(1, 7):
+                self.assertIn(f"method {index} a", methods)
 
     def test_live_search_uses_small_per_query_limits_for_data_and_methods(self) -> None:
         from draftpaper_cli.literature_search import search_literature_for_project

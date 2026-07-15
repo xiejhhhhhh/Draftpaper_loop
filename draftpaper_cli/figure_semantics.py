@@ -239,6 +239,21 @@ def validate_figure_semantics(contract: dict[str, Any], produced: dict[str, Any]
             "detail": f"expected={expected_grammar}; observed={observed_grammar}",
         })
 
+    declared_text = " ".join(str(contract.get(key) or "") for key in ("expected_claim", "claim_boundary", "caption_draft", "comparison_scope")).lower()
+    rendered_text = " ".join(str(produced.get(key) or "") for key in ("title", "annotation_text", "caption", "rendered_text")).lower()
+    if "selected comparison" in declared_text and "systematic" in rendered_text:
+        issues.append({
+            "severity": "blocking",
+            "kind": "rendered_text_overstates_comparison_scope",
+            "detail": "A selected comparison cannot be labelled systematic in the rendered figure.",
+        })
+    if "reliable subset" in declared_text and any(token in rendered_text for token in ("all sample", "full sample", "entire cohort")):
+        issues.append({
+            "severity": "blocking",
+            "kind": "rendered_text_cohort_scope_mismatch",
+            "detail": "Rendered text describes the full cohort while the contract is limited to a reliable subset.",
+        })
+
     return {
         "figure_id": contract.get("figure_id") or contract.get("storyboard_id") or "",
         "decision": "blocked" if any(item["severity"] == "blocking" for item in issues) else "pass",

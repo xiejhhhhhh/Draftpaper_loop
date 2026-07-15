@@ -61,7 +61,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _compact_registry(registry: dict[str, Any], section: str) -> dict[str, Any]:
-    evidence_ids = []
+    evidence_count = 0
     for record in registry.get("records") or []:
         if not isinstance(record, dict):
             continue
@@ -69,17 +69,39 @@ def _compact_registry(registry: dict[str, Any], section: str) -> dict[str, Any]:
         if targets and section not in targets:
             continue
         if record.get("evidence_id"):
-            evidence_ids.append(str(record["evidence_id"]))
+            evidence_count += 1
     return {
         key: registry.get(key)
-        for key in ("status", "schema_version", "project_id", "preferred_run_id", "policy")
+        for key in ("status", "schema_version", "project_id", "preferred_run_id", "preferred_model_id", "policy")
         if registry.get(key) not in (None, "", [], {})
     } | {
-        "record_count": len(evidence_ids),
-        "evidence_ids": evidence_ids,
+        "record_count": evidence_count,
+        "evidence_id_index_omitted_from_packet": True,
         "records_omitted_from_packet": True,
         "registry_reference": "writing/scientific_evidence_registry.json",
     }
+
+
+def _compact_reference_items(items: Any, *, summary_limit: int = 420) -> list[dict[str, Any]]:
+    """Keep citation identity and paragraph-relevant evidence without embedding full summaries."""
+    compact: list[dict[str, Any]] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        summary = re.sub(r"\s+", " ", str(item.get("summary") or item.get("evidence_notes") or "")).strip()
+        if len(summary) > summary_limit:
+            summary = summary[:summary_limit].rstrip() + "..."
+        compact.append({
+            key: value
+            for key, value in {
+                "citation_key": item.get("citation_key") or item.get("bibtex_key") or item.get("key"),
+                "title": item.get("title"),
+                "summary": summary,
+                "search_contexts": item.get("search_contexts") or [],
+            }.items()
+            if value not in (None, "", [], {})
+        })
+    return compact
 
 
 def _narrative_claims(items: Any) -> list[dict[str, Any]]:
@@ -90,13 +112,15 @@ def _narrative_claims(items: Any) -> list[dict[str, Any]]:
     ]
 
 
-def _compact_result_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+def _compact_result_manifest(manifest: dict[str, Any], *, section: str = "results") -> dict[str, Any]:
     figure_fields = (
-        "id", "path", "figure_role", "manuscript_role", "storyboard_id",
-        "figure_group", "scientific_question", "caption_draft", "result_claim",
-        "claim_boundary", "linked_main_figure",
+        "id", "figure_role", "manuscript_role", "storyboard_id", "figure_group",
+        "scientific_question", "result_claim", "claim_boundary", "linked_main_figure",
     )
-    table_fields = ("id", "path", "table_role", "caption_draft", "result_claim", "storyboard_id", "figure_group")
+    table_fields = ("id", "table_role", "storyboard_id", "figure_group")
+    if section == "results":
+        figure_fields = figure_fields + ("path", "caption_draft")
+        table_fields = table_fields + ("path", "caption_draft", "result_claim")
     figures = [
         {key: item.get(key) for key in figure_fields if item.get(key) not in (None, "", [], {})}
         for item in manifest.get("figures") or [] if isinstance(item, dict)
@@ -128,14 +152,50 @@ def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
             )
             if item.get(key) not in (None, "", [], {})
         })
-    verified_metrics = [
+    all_verified_metrics = [
         {
             key: item.get(key)
-            for key in ("metric_name", "value", "run_id", "model_id", "cohort_id", "split")
+            for key in (
+                "metric_name", "value", "run_id", "model_id", "cohort_id", "split",
+                "analysis_variant", "aggregation",
+            )
             if item.get(key) not in (None, "", [], {})
         }
         for item in contract.get("verified_metrics") or [] if isinstance(item, dict)
     ]
+    metric_priority = {
+        "macro_f1": 10,
+        "f1_macro": 10,
+        "balanced_accuracy": 9,
+        "roc_auc": 9,
+        "auc": 8,
+        "ece": 8,
+        "brier": 8,
+        "delta_over_frozen": 10,
+    }
+
+    def metric_score(item: dict[str, Any]) -> tuple[int, str, str]:
+        name = str(item.get("metric_name") or "").lower()
+        score = max((weight for token, weight in metric_priority.items() if token in name), default=0)
+        if str(item.get("analysis_variant") or "").lower() in {"primary", "primary_fixed_partition"}:
+            score += 2
+        return score, str(item.get("model_id") or ""), name
+
+    ranked_metrics = sorted(all_verified_metrics, key=lambda item: (-metric_score(item)[0], metric_score(item)[1:]))
+    verified_metrics: list[dict[str, Any]] = []
+    seen_metric_scopes: set[tuple[str, str, str]] = set()
+    for item in ranked_metrics:
+        scope = (
+            str(item.get("metric_name") or ""),
+            str(item.get("model_id") or ""),
+            str(item.get("analysis_variant") or ""),
+        )
+        if scope in seen_metric_scopes:
+            continue
+        seen_metric_scopes.add(scope)
+        verified_metrics.append(item)
+        if len(verified_metrics) >= 24:
+            break
     return {
         key: contract.get(key)
         for key in ("status", "schema_version", "project_id", "minimum_quality_score", "policy")
@@ -143,6 +203,8 @@ def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
     } | {
         "figure_groups": groups,
         "verified_metrics": verified_metrics,
+        "verified_metric_count": len(all_verified_metrics),
+        "verified_metrics_omitted_from_packet": max(0, len(all_verified_metrics) - len(verified_metrics)),
         "verified_metrics_reference": "writing/scientific_evidence_registry.json",
     }
 
@@ -213,7 +275,7 @@ def _compact_writing_context(
     compact_pack = {
         "section": section,
         "allocated_claims": _narrative_claims(pack.get("allocated_claims")),
-        "reference_items": pack.get("reference_items") or [],
+        "reference_items": _compact_reference_items(pack.get("reference_items")),
         "section_policy": pack.get("section_policy") or {},
         "evidence_registry_reference": "writing/scientific_evidence_registry.json",
         "full_pack_reference": f"writing/section_evidence_packs/{section}.json",
@@ -270,8 +332,26 @@ def _write_quantitative_claim_bindings(
     evidence_snapshot_id: str,
 ) -> dict[str, Any]:
     bindings = list(validation.get("numeric_claim_bindings") or [])
+    sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+|\n\s*\n", text) if item.strip()]
+    claim_rows = []
+    for index, sentence in enumerate(sentences, start=1):
+        sentence_bindings = [
+            item for item in bindings
+            if str(item.get("claim") or item.get("sentence") or "").strip() in {"", sentence}
+            and item.get("status") == "bound"
+        ]
+        evidence_ids = sorted({str(evidence_id) for item in sentence_bindings for evidence_id in item.get("evidence_ids") or [] if evidence_id})
+        if evidence_ids or re.search(r"\d", sentence):
+            claim_rows.append({
+                "section_claim_id": f"{section}:claim:{index:03d}",
+                "sentence_hash": _hash_text(sentence),
+                "evidence_ids": evidence_ids,
+                "rounding_policy": "declared_precision_with_registry_tolerance",
+                "claim_strength": "quantitative" if re.search(r"\d", sentence) else "interpretive",
+                "citation_intent": "none" if section == "results" else "inherit_from_section_packet",
+            })
     report = {
-        "schema_version": "v0.22.3",
+        "schema_version": "dpl.section_claim_map.v2",
         "generated_at": utc_now(),
         "section": section,
         "candidate_hash": _hash_text(text),
@@ -281,11 +361,15 @@ def _write_quantitative_claim_bindings(
         "bound_claim_count": sum(1 for item in bindings if item.get("status") == "bound"),
         "status": "passed" if all(item.get("status") == "bound" for item in bindings) else "blocked",
         "bindings": bindings,
+        "section_claims": claim_rows,
         "policy": "Every quantitative manuscript claim must resolve to one complete evidence/run/cohort/unit/split/model/dimension binding.",
     }
     target = project_path / "writing" / "claim_bindings" / f"{section}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     _write_json(target, report)
+    claim_map = project_path / "writing" / "claim_maps" / f"{section}.json"
+    claim_map.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(claim_map, report)
     return report
 
 
@@ -387,7 +471,7 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "composition_mode": "outline_then_codex_free_writing_with_post_validation",
         "scientific_evidence_registry": _compact_registry(registry, normalized),
         "resolved_result_evidence": _compact_resolved_evidence(resolved_evidence),
-        "result_manifest": _compact_result_manifest(result_manifest),
+        "result_manifest": _compact_result_manifest(result_manifest, section=normalized),
         "results_narrative_contract": _compact_results_contract(results_narrative_contract) if results_narrative_contract else {},
         "promoted_evidence_snapshot": promoted_snapshot,
         "paper_narrative": compact_narrative,
@@ -450,13 +534,22 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "agent_draft_path": f"writing/drafts/{normalized}.tex",
         "candidate_path": f"writing/candidates/{normalized}.tex",
     }
+    component_token_estimates = {
+        key: estimate_tokens(value)
+        for key, value in packet.items()
+        if key not in {"estimated_input_tokens", "component_token_estimates"}
+    }
+    packet["component_token_estimates"] = component_token_estimates
     packet["estimated_input_tokens"] = estimate_tokens(packet)
     packet["hard_token_budget"] = paragraph_context.get("budget")
     packet["within_token_budget"] = packet["estimated_input_tokens"] <= int(packet["hard_token_budget"] or 0)
     if not packet["within_token_budget"]:
+        largest = sorted(component_token_estimates.items(), key=lambda item: (-item[1], item[0]))[:6]
+        breakdown = ", ".join(f"{key}={tokens}" for key, tokens in largest)
         raise SectionCompositionError(
             f"{normalized.capitalize()} evidence packet requires {packet['estimated_input_tokens']} estimated tokens, "
-            f"above the hard budget {packet['hard_token_budget']}. Split or compact paragraph jobs before writing."
+            f"above the hard budget {packet['hard_token_budget']}. Largest components: {breakdown}. "
+            "Split or compact paragraph jobs before writing."
         )
     output = state.path / "writing" / "section_packets" / f"{normalized}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -595,11 +688,15 @@ def submit_section_draft(project: str | Path, section: str, input_path: str | Pa
     target = state.path / "writing" / "candidates" / f"{normalized}.tex"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
+    canonical_draft = state.path / "writing" / "drafts" / f"{normalized}.tex"
+    canonical_draft.parent.mkdir(parents=True, exist_ok=True)
+    canonical_draft.write_text(text, encoding="utf-8")
     report.update({
         "quality_parity_eligible": report.get("functional_job_coverage", {}).get("decision") == "pass",
         "status": "accepted",
         "composition_mode": "codex_free_candidate",
         "candidate_path": target.relative_to(state.path).as_posix(),
+        "draft_path": canonical_draft.relative_to(state.path).as_posix(),
         "candidate_hash": _hash_text(text),
         "evidence_snapshot_id": str(
             (packet.get("promoted_evidence_snapshot") or {}).get("snapshot_id") or "legacy_unpromoted"

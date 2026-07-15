@@ -111,7 +111,21 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "discipline_anchor": str(item.get("discipline_anchor") or "").strip(),
         "query_components": item.get("query_components") if isinstance(item.get("query_components"), dict) else {},
         "query_provenance": item.get("query_provenance") if isinstance(item.get("query_provenance"), list) else [],
+        "canonical_identity": item.get("canonical_identity") if isinstance(item.get("canonical_identity"), dict) else {},
+        "selection_policy": str(item.get("selection_policy") or "").strip(),
+        "user_confirmed": bool(item.get("user_confirmed")),
+        "prior_user_confirmed": bool(item.get("prior_user_confirmed")),
+        "lineage_previous_origin": str(item.get("lineage_previous_origin") or "").strip(),
+        "lineage_source_project_id": str(item.get("lineage_source_project_id") or "").strip(),
+        "lineage_asset_id": str(item.get("lineage_asset_id") or "").strip(),
+        "lineage_topic_overlap": [str(value) for value in (item.get("lineage_topic_overlap") or []) if str(value)],
+        "lineage_domain_overlap": [str(value) for value in (item.get("lineage_domain_overlap") or []) if str(value)],
+        "lineage_title_domain_overlap": [str(value) for value in (item.get("lineage_title_domain_overlap") or []) if str(value)],
+        "lineage_requires_current_citation_audit": bool(item.get("lineage_requires_current_citation_audit")),
+        "_lineage_runtime_verified": bool(item.get("_lineage_runtime_verified")),
     }
+    if normalized["reference_origin"] == "parent_lineage_curated" and not normalized["_lineage_runtime_verified"]:
+        normalized["reference_origin"] = normalized["lineage_previous_origin"] or "unverified_lineage_carryover"
     if not normalized["query_provenance"] and normalized["search_query"]:
         normalized["query_provenance"] = [{
             "query_id": normalized["search_query_id"],
@@ -296,7 +310,14 @@ def enrich_pdf_text(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def has_readable_evidence(item: dict[str, Any]) -> bool:
-    return bool(item.get("abstract") or item.get("pdf_text_excerpt"))
+    return bool(
+        item.get("abstract")
+        or item.get("pdf_text_excerpt")
+        or (
+            item.get("reference_origin") == "parent_lineage_curated"
+            and (item.get("evidence_notes") or item.get("deep_summary"))
+        )
+    )
 
 
 def _is_zotero_reference(item: dict[str, Any]) -> bool:
@@ -344,6 +365,37 @@ def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> N
         for entry in provenance
         if isinstance(entry, dict)
     }
+
+
+_GENERIC_RESEARCH_TERMS = {
+    "after", "algorithm", "anomaly", "automated", "baseline", "bounded", "candidate", "catalog", "class",
+    "control", "controlling", "deep", "detection", "dinov2", "discovery", "evaluate",
+    "feature", "features", "group", "image", "imagenet", "imaging", "information", "learning",
+    "machine", "missingness", "multimodal", "network", "pretrained", "prediction", "quality", "representation",
+    "representations", "retain", "sample", "scientific", "selection", "self-supervised", "spatial", "supported",
+    "supervised", "test", "testing", "training", "transformer", "uncertainty", "use", "validation", "visual",
+    "whether", "associated", "determine", "indicator", "indicators", "limit", "limits", "measured", "objective",
+    "only", "one", "provide", "provides", "quantify", "rather", "tool", "tools", "used", "activity",
+    "cross-matched", "physical", "relation", "state", "states", "survey",
+}
+
+_DOMAIN_TOKEN_ALIASES = {
+    "astronomical": "astronomy",
+    "galaxies": "galaxy",
+    "morphological": "morphology",
+    "spectroscopic": "spectroscopy",
+}
+
+
+def domain_anchor_terms(text: str) -> set[str]:
+    """Return topic terms likely to identify a scientific domain rather than a reusable method."""
+    return tokenize_for_relevance(text) - _GENERIC_RESEARCH_TERMS
+
+
+def domain_title_overlap(title: str, domain_terms: set[str]) -> set[str]:
+    normalized_domain = {_DOMAIN_TOKEN_ALIASES.get(term, term) for term in domain_terms}
+    title_terms = {_DOMAIN_TOKEN_ALIASES.get(term, term) for term in tokenize_for_relevance(title)}
+    return normalized_domain & title_terms
     for entry in source.get("query_provenance") or []:
         if not isinstance(entry, dict):
             continue
@@ -371,9 +423,13 @@ def _rank_for_context(items: list[dict[str, Any]], context: str, query: str, tar
     for item in weighted:
         copied = dict(item)
         copied["context_rank_score"] = copied.get("citation_weight", 0)
+        if copied.get("_lineage_runtime_verified"):
+            copied["citation_weight"] = round(min(1.0, float(copied.get("citation_weight") or 0) + 0.18), 3)
+            copied["context_rank_score"] = copied["citation_weight"]
         copied["search_context"] = context
         copied["search_query"] = copied.get("search_query") or query
         ranked.append(copied)
+    ranked.sort(key=lambda entry: (entry.get("context_rank_score", 0), entry.get("citation_count", 0)), reverse=True)
     return ranked
 
 
@@ -422,6 +478,30 @@ def select_references_by_context(
         for index, item in enumerate(items or [])
         if str(item.get("title") or "").strip()
     ]
+    has_lineage_seeds = any(item.get("_lineage_runtime_verified") for item in normalized)
+    if has_lineage_seeds:
+        project_terms = tokenize_for_relevance(project_text)
+        domain_terms = domain_anchor_terms(project_text)
+        filtered = []
+        for item in normalized:
+            if item.get("_lineage_runtime_verified") or item.get("user_confirmed"):
+                filtered.append(item)
+                continue
+            canonical = item.get("canonical_identity") if isinstance(item.get("canonical_identity"), dict) else {}
+            if canonical.get("status") == "verified":
+                filtered.append(item)
+                continue
+            item_terms = tokenize_for_relevance(
+                " ".join([str(item.get("title") or ""), str(item.get("abstract") or ""), str(item.get("evidence_notes") or "")])
+            )
+            overlap = project_terms & item_terms
+            domain_overlap = overlap & domain_terms
+            title_overlap = domain_title_overlap(str(item.get("title") or ""), domain_terms)
+            if len(overlap) >= 2 and (
+                not domain_terms or (bool(domain_overlap) and bool(title_overlap))
+            ):
+                filtered.append(item)
+        normalized = filtered
     zotero_items = []
     external_items = []
     for item in normalized:
@@ -436,7 +516,13 @@ def select_references_by_context(
             preserved.setdefault("citation_authority_score", 0)
             preserved.setdefault("journal_score", 0)
             zotero_items.append(preserved)
-        elif has_sufficient_metadata_or_pdf(item):
+        elif has_sufficient_metadata_or_pdf(item) or (
+            item.get("_lineage_runtime_verified")
+            and item.get("title")
+            and item.get("authors")
+            and item.get("year") not in {None, "", "n.d."}
+            and item.get("evidence_notes")
+        ):
             external_items.append(item)
     by_context: dict[str, list[dict[str, Any]]] = {"idea": [], "introduction": [], "target_journal_anchor": [], "data": [], "methods": []}
     for item in external_items:
@@ -478,7 +564,10 @@ def select_references_by_context(
             _merge_context_metadata(zotero_by_key[key], item)
             continue
         external_without_zotero_duplicates.append(item)
-    return zotero_items + external_without_zotero_duplicates
+    selected_items = zotero_items + external_without_zotero_duplicates
+    for item in selected_items:
+        item.pop("_lineage_runtime_verified", None)
+    return selected_items
 
 
 def generate_bibtex(items: list[dict[str, Any]]) -> str:

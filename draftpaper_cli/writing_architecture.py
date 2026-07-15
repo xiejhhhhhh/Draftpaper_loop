@@ -347,7 +347,14 @@ def _paragraphs(text: str) -> list[str]:
         text,
         flags=re.S,
     )
-    return [item.strip() for item in re.split(r"\n\s*\n", prose) if item.strip() and not item.lstrip().startswith("\\section")]
+    sectioning_command = re.compile(
+        r"^\\(?:part|chapter|section|subsection|subsubsection|paragraph|subparagraph)\*?\s*\{"
+    )
+    return [
+        item.strip()
+        for item in re.split(r"\n\s*\n", prose)
+        if item.strip() and not sectioning_command.match(item.lstrip())
+    ]
 
 
 def _normalized_reference(value: Any) -> str:

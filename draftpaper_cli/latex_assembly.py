@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from .bibliography import BibliographyError, materialize_effective_bibliography
 from .citation_utils import bibtex_keys_in_text, citation_keys_in_text
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
@@ -22,6 +23,7 @@ from .latex_utils import safe_latex_text
 from .metadata import GENERATOR_TEX_COMMENT
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
+from .section_contracts import validate_section_writing
 
 
 SECTION_INPUTS = [
@@ -39,6 +41,14 @@ LATEX_INPUTS = [relative for _name, relative in SECTION_INPUTS] + [
     "results/result_manifest.yaml",
     "latex/template/main.tex",
 ]
+
+SECTION_TITLES = {
+    "introduction": "Introduction",
+    "data": "Data",
+    "methods": "Methods",
+    "results": "Results",
+    "discussion": "Discussion",
+}
 
 LATEX_OUTPUTS = [
     "latex/main.tex",
@@ -107,6 +117,17 @@ def _read_manuscript_metadata(project_path: Path) -> dict[str, Any]:
         return {}
     if not isinstance(payload, dict):
         raise LatexAssemblyError("writing/manuscript_metadata.yaml must contain a mapping.")
+    abstract = str(payload.get("abstract") or "").strip()
+    registry_path = project_path / "writing" / "scientific_evidence_registry.json"
+    if abstract and registry_path.is_file():
+        try:
+            registry = json.loads(registry_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            raise LatexAssemblyError("Scientific evidence registry is invalid JSON.") from exc
+        report = validate_section_writing("abstract", abstract, registry if isinstance(registry, dict) else {})
+        if report.get("decision") != "pass":
+            details = "; ".join(str(item.get("detail") or item.get("kind")) for item in report.get("issues") or [])
+            raise LatexAssemblyError("Manuscript abstract is stale or violates the current evidence contract: " + details)
     return payload
 
 
@@ -314,7 +335,10 @@ def _read_sections(project_path: Path) -> dict[str, str]:
 
 
 def _validate_citations(project_path: Path, sections: dict[str, str]) -> tuple[set[str], set[str]]:
-    bibtex = (project_path / "references" / "library.bib").read_text(encoding="utf-8")
+    try:
+        bibtex, _report = materialize_effective_bibliography(project_path)
+    except BibliographyError as exc:
+        raise LatexCitationError(str(exc)) from exc
     bib_keys = _bibtex_keys(bibtex)
     citation_keys: set[str] = set()
     for content in sections.values():
@@ -337,7 +361,11 @@ def _copy_sections(project_path: Path, sections: dict[str, str]) -> list[str]:
 
 
 def _copy_bibtex(project_path: Path) -> None:
-    shutil.copyfile(project_path / "references" / "library.bib", project_path / "latex" / "library.bib")
+    try:
+        bibtex, _report = materialize_effective_bibliography(project_path)
+    except BibliographyError as exc:
+        raise LatexAssemblyError(str(exc)) from exc
+    (project_path / "latex" / "library.bib").write_text(bibtex, encoding="utf-8")
 
 
 def _read_mapping(path: Path) -> dict[str, Any]:
@@ -351,7 +379,7 @@ def _read_mapping(path: Path) -> dict[str, Any]:
 
 
 def _safe_result_label(value: Any) -> str:
-    return re.sub(r"[^A-Za-z0-9_:-]+", "-", str(value or "result")).strip("-") or "result"
+    return re.sub(r"[^A-Za-z0-9:-]+", "-", str(value or "result")).strip("-") or "result"
 
 
 def _figure_caption(entry: dict[str, Any], metadata: dict[str, Any]) -> str:
@@ -501,6 +529,16 @@ def _render_default_main(project_meta: dict[str, Any]) -> str:
     ])
 
 
+def _section_input(project_path: Path, name: str) -> str:
+    """Wrap prose-only section artifacts with a manuscript-level heading."""
+    relative = dict(SECTION_INPUTS)[name]
+    content = (project_path / relative).read_text(encoding="utf-8-sig", errors="replace")
+    input_line = rf"\input{{sections/{name}}}"
+    if re.match(r"\s*\\section\*?\{", content):
+        return input_line
+    return rf"\section{{{SECTION_TITLES[name]}}}" + "\n" + input_line
+
+
 def _ensure_math_support(tex: str) -> str:
     """Ensure journal-supplied templates can compile generated scientific formulas."""
     package_groups = re.findall(r"\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}", tex)
@@ -526,15 +564,16 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         return GENERATOR_TEX_COMMENT + rendered
     template = template_path.read_text(encoding="utf-8")
     sections = "\n".join([
-        r"\input{sections/introduction}",
-        r"\input{sections/data}",
-        r"\input{sections/methods}",
-        r"\input{sections/results}",
+        _section_input(project_path, "introduction"),
+        _section_input(project_path, "data"),
+        _section_input(project_path, "methods"),
+        _section_input(project_path, "results"),
         r"\input{sections/result_artifacts}",
         r"\clearpage",
-        r"\input{sections/discussion}",
+        _section_input(project_path, "discussion"),
     ])
     journal_profile = _read_journal_profile(project_path)
+    journal_intent = _read_mapping(project_path / "journal_profile" / "journal_intent.json")
     bibliography_style = journal_profile.get("bibliography_style") or "plainnat"
     bibliography = "\n".join([rf"\bibliographystyle{{{bibliography_style}}}", r"\bibliography{library}"])
     title = _safe_latex_text(project_meta.get("title") or project_meta.get("idea") or "Draft Paper")
@@ -561,6 +600,8 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         acknowledgments = _draftpaper_acknowledgments(aastex=aastex)
         rendered = _insert_acknowledgments(rendered, acknowledgments)
     rendered = _ensure_aastex_author_block(rendered)
+    if journal_intent.get("selection_status") != "confirmed":
+        rendered = re.sub(r"(?m)^\s*\\submitjournal\{[^{}]*\}\s*$", "% Target journal is provisional or unset.", rendered)
     if "Generated with Draftpaper-loop" not in rendered:
         rendered = GENERATOR_TEX_COMMENT + rendered
     return rendered.rstrip() + "\n"

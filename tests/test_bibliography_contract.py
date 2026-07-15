@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from draftpaper_cli.bibliography import (
+    BibliographyError,
     build_reference_registry,
     inspect_reference_duplicates,
     render_reference_proof,
@@ -90,6 +91,10 @@ def test_explicit_version_resolution_renders_only_confirmed_citable_work(tmp_pat
 
 def test_journal_profile_overrides_hardcoded_template_bibliography_style(tmp_path: Path) -> None:
     project = _project(tmp_path)
+    for section in ("introduction", "data", "methods", "results", "discussion"):
+        target = project / section / f"{section}.tex"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"\\section{{{section.title()}}}\nTest prose.\n", encoding="utf-8")
     template = project / "latex" / "template" / "main.tex"
     template.write_text(
         "\\documentclass{aastex701}\n\\begin{document}\n%%DRAFTPAPER_SECTIONS%%\n"
@@ -140,6 +145,41 @@ def test_continuous_publication_journal_accepts_url_without_volume_or_pages(tmp_
 
     assert report["status"] == "passed"
     assert not any(item["kind"] == "missing_required_field" for item in report["issues"])
+
+
+def test_registry_merges_explicit_supplemental_bibliography_with_provenance(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    (project / "references" / "supplemental_library.bib").write_text(
+        "@article{Comparison2020,author={Doe, Jane},title={Independent comparison},year={2020},"
+        "journal={Test Journal},doi={10.1234/comparison},url={https://doi.org/10.1234/comparison}}\n",
+        encoding="utf-8",
+    )
+
+    result = build_reference_registry(project)
+    registry = json.loads((project / "references" / "reference_registry.json").read_text(encoding="utf-8"))
+    merge = json.loads((project / "references" / "supplemental_bibliography_merge_report.json").read_text(encoding="utf-8"))
+
+    assert result["record_count"] == 3
+    comparison = next(item for item in registry["records"] if item["citation_key"] == "Comparison2020")
+    assert "supplemental_library.bib" in comparison["metadata_sources"]
+    assert merge["status"] == "passed"
+    assert merge["accepted_supplemental_keys"] == ["Comparison2020"]
+
+
+def test_supplemental_bibliography_rejects_doi_alias_conflict(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    (project / "references" / "supplemental_library.bib").write_text(
+        "@article{Alias2024,author={Doe, Jane},title={Alias},year={2024},journal={Test},"
+        "doi={10.1234/example.42}}\n",
+        encoding="utf-8",
+    )
+
+    try:
+        build_reference_registry(project)
+    except BibliographyError as exc:
+        assert "Alias2024" in str(exc)
+    else:
+        raise AssertionError("A DOI alias conflict must not be silently merged.")
 
 
 def test_compile_manifest_records_profile_tex_aux_and_bbl_style_evidence(tmp_path: Path) -> None:

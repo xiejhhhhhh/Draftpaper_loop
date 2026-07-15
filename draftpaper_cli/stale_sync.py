@@ -33,6 +33,15 @@ MANAGED_STATE_ARTIFACTS = {
 }
 
 
+def _is_managed_state_artifact(path: str) -> bool:
+    normalized = str(path or "").replace("\\", "/")
+    return (
+        normalized in MANAGED_STATE_ARTIFACTS
+        or normalized.endswith("/stage_manifest.json")
+        or normalized.startswith("stage_manifests/")
+    )
+
+
 def _stage_for_path(path: str) -> str:
     normalized = path.replace("\\", "/")
     if normalized in {"project.json", "project.yaml"}:
@@ -69,7 +78,7 @@ def _artifact_maps(project: str | Path) -> tuple[dict[str, dict[str, Any]], dict
         if (
             isinstance(item, dict)
             and item.get("path")
-            and str(item.get("path")).replace("\\", "/") not in MANAGED_STATE_ARTIFACTS
+            and not _is_managed_state_artifact(str(item.get("path")))
         )
     }
     current = {
@@ -78,7 +87,7 @@ def _artifact_maps(project: str | Path) -> tuple[dict[str, dict[str, Any]], dict
         if (
             isinstance(item, dict)
             and item.get("path")
-            and str(item.get("path")).replace("\\", "/") not in MANAGED_STATE_ARTIFACTS
+            and not _is_managed_state_artifact(str(item.get("path")))
         )
     }
     return baseline, current

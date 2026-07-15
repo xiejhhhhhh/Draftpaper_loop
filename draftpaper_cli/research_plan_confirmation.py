@@ -12,6 +12,7 @@ from .html_utils import write_html_report
 from .pre_execution_support import REPORT_JSON as PRE_EXECUTION_REPORT, assess_pre_execution_support
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stage_stale
+from .state_kernel import atomic_write_text
 from .statistical_validation import (
     CONTRACT_JSON as STATISTICAL_CONTRACT,
     COVERAGE_JSON as REVIEW_RULE_COVERAGE,
@@ -130,6 +131,23 @@ def _render_review_packet(packet: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _refresh_cn_plan_projection(project: str | Path) -> str:
+    """Render the Chinese plan from the final blueprint and statistical contract."""
+    state = load_project(project)
+    blueprint = _read_json(state.path / "research_plan" / "research_blueprint.json")
+    if not blueprint:
+        raise ResearchPlanConfirmationError("research_plan/research_blueprint.json is required.")
+    from .research_plan import _assert_cn_plan_quality, _render_research_plan_cn
+    from .statistical_validation import statistical_plan_summary
+
+    text = _render_research_plan_cn(state.metadata, blueprint).rstrip()
+    text += "\n\n" + statistical_plan_summary(state.path, language="zh-CN")
+    _assert_cn_plan_quality(text)
+    path = state.path / "research_plan" / "research_plan.zh-CN.md"
+    atomic_write_text(path, text)
+    return _sha256(path)
+
+
 def review_research_plan(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     if not (state.path / STATISTICAL_CONTRACT).exists():
@@ -139,6 +157,7 @@ def review_research_plan(project: str | Path) -> dict[str, Any]:
     support = assess_pre_execution_support(state.path)
     coverage = _read_json(state.path / REVIEW_RULE_COVERAGE)
     sufficiency = _read_json(state.path / "research_plan" / "plugin_sufficiency_preview.json")
+    _refresh_cn_plan_projection(state.path)
     plan_hash = current_plan_hash(state.path)
     limitations = []
     if support.get("decision") != "ready_for_confirmation":

@@ -153,6 +153,9 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
     })
     results_bytes = results_path.read_bytes()
     results_semantic_audit = _audit_results_semantics(state.path, results_bytes.decode("utf-8-sig", errors="replace"))
+    from .discipline_review_compiler import compile_discipline_review_inputs
+
+    compiled_review_inputs = compile_discipline_review_inputs(state.path)
     narrative_contract = build_results_narrative_contract(state.path)
     manuscript_quality = (
         assess_results_manuscript_quality(
@@ -174,6 +177,7 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "active_plugin_ids": active_plugin_ids,
         "reviewed_figure_ids": reviewed_figure_ids,
         "results_semantic_issues": results_semantic_audit["issues"],
+        "compiled_claim_inputs": compiled_review_inputs.get("claim_inputs") or [],
     }
     statistical_contract = _read_json(state.path / "research_plan" / "statistical_validation_contract.json")
     rule_coverage = _read_json(state.path / "research_plan" / "review_rule_coverage_report.json")
@@ -201,7 +205,13 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
             "policy": "No data/method-plugin-generated figure was present, so discipline plugin review rules were not activated.",
         }
     semantic_repairs = [item for item in results_semantic_audit["issues"] if item.get("severity") == "repair_required"]
-    if semantic_repairs or manuscript_quality.get("decision") == "repair_required" or figure_quality.get("decision") == "repair_required":
+    if compiled_review_inputs.get("decision") == "repair_required":
+        decision = "repair_required"
+        action = {
+            "command": "prepare-results-semantic-repair",
+            "reason": "Results claims require explicit cohort, estimand, analysis-spec and evidence bindings before discipline rules can be frozen.",
+        }
+    elif semantic_repairs or manuscript_quality.get("decision") == "repair_required" or figure_quality.get("decision") == "repair_required":
         decision = "repair_required"
         action = {
             "command": "verify-methods" if figure_quality.get("decision") == "repair_required" else "prepare-results-semantic-repair",
@@ -236,6 +246,7 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "review_rule_coverage": rule_coverage,
         "review_rule_gate": rule_gate,
         "results_semantic_audit": results_semantic_audit,
+        "compiled_review_inputs": compiled_review_inputs,
         "manuscript_quality": manuscript_quality,
         "figure_publication_quality": figure_quality,
         "recommended_next_action": action,

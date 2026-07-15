@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
-from draftpaper_cli.method_plan import collect_method_plan
+from draftpaper_cli.method_plan import _resolve_primary_metric, collect_method_plan
 from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.references import write_reference_outputs
@@ -46,6 +46,19 @@ def prepare_project(project_path: Path) -> None:
 
 
 class MethodPlanAndResultValidityTests(unittest.TestCase):
+    def test_classification_primary_metric_precedes_adjustment_regression(self) -> None:
+        metric = _resolve_primary_metric(
+            None,
+            [
+                "staged_dinov2_finetuning",
+                "confusion_matrix",
+                "class_conditional_metrics",
+                "confounder_adjusted_regression",
+            ],
+        )
+
+        self.assertEqual(metric, "macro_f1")
+
     def test_collect_method_plan_writes_user_and_literature_synthesis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="X-ray transient classification", field="machine learning astronomy")
@@ -108,6 +121,32 @@ class MethodPlanAndResultValidityTests(unittest.TestCase):
             self.assertIn("image_embedding", requirements["required_data_features"])
             self.assertNotIn("time_series_deep_learning", requirements["method_families"])
             self.assertNotIn("light_curve", requirements["required_data_features"])
+
+    def test_collect_method_plan_infers_ari_for_partition_concordance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Compare independent image and physical partitions",
+                field="astronomy machine learning",
+            )
+            prepare_project(project.path)
+            (project.path / "research_plan" / "method_plan.json").write_text(
+                json.dumps({
+                    "method_tasks": [{
+                        "method_family": "partition_concordance_metrics",
+                        "method_components": ["permutation_concordance_test"],
+                        "required_data": ["image_class_assignment", "physical_class_assignment"],
+                    }]
+                }),
+                encoding="utf-8",
+            )
+
+            collect_method_plan(project.path)
+
+            requirements = json.loads(
+                (project.path / "methods" / "method_requirements.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(requirements["primary_metric"], "ari")
 
     def test_result_validity_blocks_weak_results_and_identifies_backtracking_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

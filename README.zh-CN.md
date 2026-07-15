@@ -343,6 +343,27 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.26.1-v0.28.0（2026-07-16）-- 可执行科研语义与精确恢复
+
+- `v0.26.1` 将失败明确分为产物 stale、引用支撑、正文语义、可复现包、渲染质量、科学分析、图表合同和人工审阅八类。引用或匿名包失败不再兜底返回 `plan-figures`；质量报告会给出真实失败 predicate、受影响产物和唯一合理命令。交互终端默认摘要输出，重定向/API 保留完整 JSON，也可用 `--compact` 与 `--json-full` 显式选择。
+- `v0.26.2` 新增领域无关的 `DataProvenanceContract`、`CohortRegistry`、`CohortViewRegistry` 和追加式 join/filter ledger。每个分析视图声明父 cohort、样本单位、数量、缺失策略、split、允许用途和论断边界。展示子集与回归子集可以不同，但禁止静默混用数量或样本单位。
+- `v0.26.3` 新增 `ExecutableAnalysisSpec`、公式 AST、重采样合同和事前运行选择策略。estimand、cohort view、split、预处理拟合范围、实现入口、不确定性语义、校准定义、公式和变量解释来自同一合同。ECE 定义漂移、伪 paired/grouped 区间以及事后挑最佳 seed 作为主结果都会被阻断。
+- `v0.27.0` 将插件充分性拆为 bootstrap 与 release 两层。全新课题可以先使用受审计的 project-local 实现继续设计，不再形成“缺插件所以不能生成代码”的死锁；正式发布仍要求已验证的数据/方法绑定、输入输出 hash、执行范围和 capability passport。AcademicForge/GitHub rescue 只在真实能力缺口时启动。
+- `v0.27.1` 将 Scientific Evidence Registry 主键升级为 estimand/cohort-view/analysis-spec/run/model/split/aggregation/dimension，并为章节生成带句子 hash 和 evidence ID 的 claim map。Figure Contract v2 绑定 claim、panel、cohort view、estimand、analysis spec、run、evidence 和图内文字；期刊宽度 QA 记录字体、重叠、裁切、配色与 caption。Results 后的学科规则读取编译后的 claim-level 证据，不再依赖宽泛角色字符串。
+- `v0.27.2` 新增 artifact dependency DAG 与事务命令 `apply-section-revision`。引用局部、纯排版、正文语义、cohort、analysis、run、figure 和 claim contract 修改分别触发不同的最小 stale 集合。已通过且候选 hash 一致的功能发布不会被可选 manifest 回填意外重开。
+- `v0.27.3` 匿名审稿包只收当前 selected run、正文引用图表及 Python import 依赖闭包，排除无关历史图表，并在发布前编译 smoke test。manuscript/evidence/bundle hash 变化后，旧 reviewer 报告按旧 bundle hash 归档。finding 结构化区分局部文案、渲染、可复现性、补分析、论断降维和新证据。
+- `v0.28.0` 统一 direct support、方法/工具 provenance、比较语境和数据集/产品 provenance 四类引用意图，继续保留全部已确认参考文献并优先修改正文。段落证据保持内容寻址、delta 缓存。五类跨学科发布夹具和 cohort、校准、run selection、图表、插件、引用对抗回归共同保护通用架构。
+- 新增 `JournalIntentContract`：只有已确认期刊才能显示投稿标签，provisional/unset 项目保持中性 draft。状态明确区分 `draft_pdf_ready`、`review_blocked`、`release_ready`；`doctor --explain` 以只读方式展示 artifact DAG 和恢复理由。
+
+关键命令：
+
+```powershell
+draftpaper doctor --project <project> --explain
+draftpaper apply-section-revision --project <project> --section methods --input revised_methods.tex
+draftpaper prepare-independent-manuscript-review --project <project>
+draftpaper status --project <project> --compact
+```
+
 ### v0.25.1-v0.26.0（2026-07-14）-- 人工确认研究蓝图、任务感知统计验证与项目工作区隔离
 
 - 新论文默认统一创建在配置的中央 `projects` 根目录，不再跟随 idea 或数据集所在位置。可通过 `DRAFTPAPER_PROJECTS_ROOT`、用户配置或 `--projects-root` 设置根目录；自动 slug 最长 48 个字符，并附带稳定的 8 位 project ID。干净的 `_vN` 子项目也采用同一短路径规则。

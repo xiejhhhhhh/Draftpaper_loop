@@ -108,10 +108,15 @@ def _latex_citation_keys(content: str) -> set[str]:
 
 
 def _read_citation_evidence(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        return []
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        return list(csv.DictReader(handle))
+    rows: list[dict[str, str]] = []
+    sources = [path]
+    if path.name == "citation_evidence.csv":
+        sources.append(path.with_name("supplemental_citation_evidence.csv"))
+    for source in sources:
+        if source.exists():
+            with source.open("r", encoding="utf-8-sig", newline="") as handle:
+                rows.extend(csv.DictReader(handle))
+    return rows
 
 
 def _project_relative_path(project_path: Path, relative: str, issues: list[QualityIssue], *, code: str) -> Path | None:
@@ -618,6 +623,17 @@ def _check_latex_hygiene(project_path: Path, issues: list[QualityIssue]) -> dict
             issues.append(QualityIssue("warning", "aas_keywords_missing", "AAS templates expect UAT keywords.", "latex/main.tex"))
         if "\\bibliographystyle{aasjournal}" not in main_tex and "\\bibliographystyle{aasjournalv7}" not in main_tex:
             issues.append(QualityIssue("error", "aas_bibliography_style_missing", "AAS templates should use an AAS journal bibliography style.", "latex/main.tex"))
+        first_input = main_tex.find("\\input{sections/")
+        heading_before_input = re.search(r"\\section\*?\{[^{}]+\}", main_tex[:first_input]) if first_input >= 0 else None
+        introduction = _read_text(project_path / "latex" / "sections" / "introduction.tex")
+        heading_in_first_input = bool(re.match(r"\s*\\section\*?\{", introduction))
+        if first_input >= 0 and not heading_before_input and not heading_in_first_input:
+            issues.append(QualityIssue(
+                "error",
+                "aas_front_matter_deferred",
+                "AASTeX requires a top-level section at the first manuscript input so front matter is rendered before prose.",
+                "latex/main.tex",
+            ))
     inline_dollars = re.sub(r"\\\$", "", main_tex).count("$")
     if inline_dollars % 2 != 0:
         issues.append(QualityIssue("error", "unbalanced_inline_math", "latex/main.tex has an odd number of inline math delimiters.", "latex/main.tex"))
@@ -702,10 +718,22 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         ))
     paper_quality_parity = release_bundle["paper_quality_parity"]
     if paper_quality_parity.get("decision") != "pass":
+        failed_hard_checks = sorted(
+            str(name)
+            for name, passed in (paper_quality_parity.get("hard_checks") or {}).items()
+            if passed is not True
+        )
+        score = paper_quality_parity.get("score")
+        minimum = paper_quality_parity.get("minimum_score")
+        reasons = []
+        if isinstance(score, (int, float)) and isinstance(minimum, (int, float)) and score < minimum:
+            reasons.append(f"functional score {score} is below {minimum}")
+        if failed_hard_checks:
+            reasons.append("failed hard checks: " + ", ".join(failed_hard_checks))
         issues.append(QualityIssue(
             "error",
             "paper_quality_parity_below_target",
-            f"Full-paper quality score {paper_quality_parity.get('score')} is below 0.95 or a hard correctness check failed.",
+            "; ".join(reasons) or "Paper quality parity did not pass its declared predicates.",
             "quality_checks/paper_quality_parity_report.json",
         ))
 
@@ -744,6 +772,9 @@ def run_quality_check(project: str | Path) -> dict[str, Any]:
         "functional_quality_release": functional_quality_release,
         "paper_quality_parity": paper_quality_parity,
     }
+    from .failure_router import routes_from_quality_report
+
+    report["failure_routes"] = routes_from_quality_report(report)
 
     quality_dir = state.path / "quality_checks"
     quality_dir.mkdir(parents=True, exist_ok=True)

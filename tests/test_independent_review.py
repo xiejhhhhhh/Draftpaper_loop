@@ -13,6 +13,7 @@ from draftpaper_cli.independent_review import (
     assess_manuscript_quality_release,
     prepare_independent_manuscript_review,
     record_independent_manuscript_review,
+    _anonymize_review_tex,
 )
 from draftpaper_cli.project_scaffold import create_project
 
@@ -167,3 +168,24 @@ def test_review_bundle_accepts_explicit_anonymous_metadata(tmp_path: Path) -> No
     prepared = prepare_independent_manuscript_review(project)
 
     assert prepared["status"] == "prepared"
+
+
+def test_anonymous_review_tex_redacts_identity_and_preserves_front_matter_contract() -> None:
+    rendered = _anonymize_review_tex(
+        "\\documentclass{aastex701}\n"
+        "\\begin{document}\n"
+        "\\title{Study}\n"
+        "\\author{Jinray Xie}\n"
+        "\\affiliation{University}\n"
+        "\\email{author@example.org}\n"
+        "\\graphicspath{{../}}\n"
+        "\\section{Introduction}\nText.\n"
+        "\\end{document}\n"
+    )
+
+    assert "Jinray Xie" not in rendered
+    assert "author@example.org" not in rendered
+    assert "\\author{Anonymous Manuscript}" in rendered
+    assert "\\affiliation{Withheld for anonymous review}" in rendered
+    assert "\\email{withheld@anonymous.invalid}" in rendered
+    assert "\\graphicspath{{../../../}}" in rendered

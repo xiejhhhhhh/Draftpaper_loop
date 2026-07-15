@@ -99,7 +99,7 @@ def _select_targets(items: list[dict[str, Any]], *, min_per_context: int) -> lis
 
 def _safe_stem(text: str, fallback: str) -> str:
     stem = re.sub(r"[^A-Za-z0-9]+", "_", text or "").strip("_").lower()
-    return (stem[:72].strip("_") or fallback)
+    return (stem[:48].strip("_") or fallback)
 
 
 def _extract_metadata(payload: Any) -> dict[str, Any]:

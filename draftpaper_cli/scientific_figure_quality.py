@@ -220,6 +220,8 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
     checks = []
     all_issues = []
     ledger_events = _read_ledger_events(state.path)
+    journal_intent = _read_json(state.path / "journal_profile" / "journal_intent.json")
+    target_widths = journal_intent.get("figure_widths") if isinstance(journal_intent.get("figure_widths"), dict) else {}
     for index, contract in enumerate(contracts, start=1):
         if not isinstance(contract, dict) or str(contract.get("manuscript_role") or "main").lower() == "appendix":
             continue
@@ -240,6 +242,23 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
             issues.append({"kind": "insufficient_pixel_dimensions", "width": width, "height": height})
         if not pixels.get("axis_region_evidence") or not pixels.get("text_edge_evidence"):
             issues.append({"kind": "rendered_axis_or_text_evidence_missing"})
+        render_qa = {
+            "target_width_inches": target_widths.get("double_column_inches") or 6.9,
+            "minimum_font_points": item.get("minimum_font_points"),
+            "panel_overlap_detected": bool(item.get("panel_overlap_detected")),
+            "content_cropped": bool(item.get("content_cropped")),
+            "colorblind_safe": item.get("colorblind_safe"),
+            "caption_self_contained": item.get("caption_self_contained"),
+        }
+        if render_qa["panel_overlap_detected"]:
+            legibility = 0.0
+            issues.append({"kind": "journal_width_panel_overlap"})
+        if render_qa["content_cropped"]:
+            legibility = 0.0
+            issues.append({"kind": "journal_width_content_cropped"})
+        if isinstance(render_qa["minimum_font_points"], (int, float)) and render_qa["minimum_font_points"] < 7:
+            legibility = 0.0
+            issues.append({"kind": "journal_width_font_below_minimum", "minimum_font_points": render_qa["minimum_font_points"]})
         if str(contract.get("plot_grammar") or item.get("plot_grammar") or "").lower() == "image_gallery":
             if float(pixels.get("textured_grid_fraction") or 0.0) < 0.5:
                 artifact_integrity = 0.0
@@ -290,13 +309,13 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         }
         weights = {"artifact_integrity": 0.15, "legibility": 0.15, "semantic_alignment": 0.25, "evidence_reporting": 0.15, "plugin_run_trace": 0.20, "panel_completeness": 0.10}
         score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
-        check = {"figure_id": figure_id, "score": score, "decision": "pass" if score >= MINIMUM_SCORE else "repair_required", "dimensions": dimensions, "pixel_evidence": pixels, "source_artifact_evidence": sources, "issues": issues}
+        check = {"figure_id": figure_id, "score": score, "decision": "pass" if score >= MINIMUM_SCORE else "repair_required", "dimensions": dimensions, "pixel_evidence": pixels, "publication_render_qa": render_qa, "source_artifact_evidence": sources, "issues": issues}
         checks.append(check)
         all_issues.extend({**issue, "figure_id": figure_id} for issue in issues)
     score = round(sum(item["score"] for item in checks) / max(1, len(checks)), 4)
     report = {
         "status": "written",
-        "schema_version": "v0.22.6",
+        "schema_version": "dpl.scientific_figure_quality.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": score,
@@ -304,7 +323,8 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         "decision": "pass" if checks and all(item["decision"] == "pass" for item in checks) else "repair_required",
         "figure_checks": checks,
         "issues": all_issues,
-        "policy": "Metadata is never self-proving: publication readiness requires nonblank rendered pixels, visible layout evidence, run-hashed source artifacts, table-bound statistics, semantic contracts, plugin execution, and panel completeness.",
+        "journal_figure_widths": target_widths,
+        "policy": "Metadata is never self-proving: publication readiness requires nonblank rendered pixels, journal-width legibility, visible layout evidence, run-hashed source artifacts, table-bound statistics, semantic contracts, plugin execution, and panel completeness.",
     }
     _write_json(state.path / REPORT, report)
     return report

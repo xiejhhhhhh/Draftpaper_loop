@@ -130,7 +130,14 @@ class MethodBlueprintTests(unittest.TestCase):
                             {
                                 "method_family": "group_aware_validation",
                                 "method_components": ["transparent_baseline_comparison"],
-                                "required_data": ["group_validation_split", "class_label", "prediction_score"],
+                                "required_data": [
+                                    "group_validation_split",
+                                    "class_label",
+                                    "prediction_score",
+                                    "image_class_assignment",
+                                    "physical_class_assignment",
+                                    "assignment_stability",
+                                ],
                                 "validation_metric": "group_held_out_metric",
                             },
                         ]
@@ -172,6 +179,9 @@ class MethodBlueprintTests(unittest.TestCase):
             self.assertNotIn("event_level_transformer_input_builder", code_plan["method_families"])
             self.assertNotIn("light_curve_or_time_series", contract["required_roles"])
             self.assertNotIn("prediction_score", contract["required_roles"])
+            self.assertNotIn("image_class_assignment", contract["required_roles"])
+            self.assertNotIn("physical_class_assignment", contract["required_roles"])
+            self.assertNotIn("assignment_stability", contract["required_roles"])
             self.assertEqual(contract["missing_roles"], [])
             self.assertIn("principal_component_projection", blueprint["method_formula_plan"]["formula_families"])
             self.assertIn("macro_f1", blueprint["method_formula_plan"]["formula_families"])

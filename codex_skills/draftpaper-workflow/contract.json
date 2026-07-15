@@ -1,7 +1,7 @@
 {
   "schema_version": "dpl.workflow_skill.v1",
   "skill_id": "draftpaper-workflow",
-  "skill_version": "0.26.0",
+  "skill_version": "0.28.0",
   "canonical_resource": "draftpaper_cli/resources/draftpaper_workflow/SKILL.md",
   "required_control_commands": ["status", "verify-next-action", "continue"],
   "protected_actions": ["checkpoint", "resume", "confirm-research-plan", "reopen-research-plan", "confirm-final-manuscript", "apply-result-downgrade", "promote-plugin-candidate", "accept-revision", "rebase-project-passport"]

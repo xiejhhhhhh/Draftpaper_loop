@@ -1,0 +1,12 @@
+{
+  "coordinate_definition": "ICRS right ascension and declination in degrees",
+  "partition_unit": "source with Euclid tile sensitivity",
+  "cutout_support_arcsec": 20.0,
+  "exact_source_overlap_count": 0,
+  "minimum_cross_partition_separation_arcsec": 28.7,
+  "shared_acquisition_group_count": 97,
+  "grouped_validation_reported": true,
+  "claims_spatial_generalization": false,
+  "claims_leakage_free": false,
+  "tested_leakage_modes": ["exact_source_identity", "angular_cutout_overlap", "tile_grouping"]
+}

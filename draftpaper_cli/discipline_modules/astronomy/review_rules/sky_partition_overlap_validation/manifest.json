@@ -1,0 +1,53 @@
+{
+  "display_name": "Sky partition and cutout overlap validation",
+  "discipline": "astronomy",
+  "packages": ["numpy", "scipy"],
+  "package_modules": ["numpy", "scipy"],
+  "maturity": "runnable",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "fixture_runnable",
+  "aliases": ["spatial validation", "sky partition validation", "tile grouped validation", "cutout overlap audit"],
+  "provenance_notes": "First-party astronomy validation rule using source coordinates, image support, and acquisition groups; no external source code is copied.",
+  "rule_id": "sky_partition_overlap_validation",
+  "rule_group_id": "sky_partition_overlap_validation",
+  "rule_family": "spatial_validation",
+  "criterion_type": "statistical_validity_gate",
+  "applicable_disciplines": ["astronomy"],
+  "evidence_roles": ["sample_definition", "method_output", "result_metric", "figure_metadata"],
+  "evidence_binding": {
+    "registry_record_types": ["sample_definition", "method_output", "result_metric", "figure_metadata"],
+    "required_fields": ["coordinate_definition", "partition_unit", "overlap_audit"],
+    "forbidden_conflicts": ["identifier_only_leakage_free_claim", "unreported_shared_acquisition_group"]
+  },
+  "checks": [
+    "Declare the sky-coordinate frame and angular units used by the overlap audit.",
+    "Report exact source duplication separately from angular cutout overlap.",
+    "Compare the nearest cross-partition angular separation with the declared cutout support.",
+    "Report shared field, tile, exposure, or acquisition groups across partitions.",
+    "Use grouped or blocked validation when broad spatial or acquisition generalization is claimed.",
+    "Do not call a split leakage-free when only identifier duplication was tested."
+  ],
+  "threshold_policy": {
+    "mode": "data_support_relative",
+    "rules": [
+      "The angular-overlap radius must come from the declared image support, not a universal constant.",
+      "No universal performance threshold is imposed on grouped validation; report the random-versus-grouped difference and uncertainty."
+    ]
+  },
+  "threshold_source": {
+    "type": "project_data_contract",
+    "citation_or_note": "Cutout size, coordinate frame, and acquisition grouping are project-specific evidence."
+  },
+  "threshold_mode": "data_support_relative",
+  "threshold_validation_status": "validated_by_fixture",
+  "blocking_level": "warn_and_repair",
+  "failure_route": "result_semantic_repair_or_method_supplement",
+  "pipeline_hooks": {"method_plan": "required", "result_support_checkpoint": "required", "post_results": "required"},
+  "deployment_state": "live_runnable",
+  "human_confirmation_required": false,
+  "review_question": "Do the declared source and sky partitions support the manuscript's leakage and generalization claims?",
+  "scientific_risk": "Identifier-only checks can miss overlapping cutouts, nearby sources, and shared acquisition context across train and evaluation partitions.",
+  "minimum_evidence_required": ["coordinate_definition", "partition_unit", "cutout_or_image_support", "exact_source_overlap_count", "angular_overlap_audit", "shared_acquisition_group_count"],
+  "allowed_claim_strength": "bounded_to_tested_leakage_modes",
+  "repair_priority": ["narrow_leakage_wording", "add_angular_overlap_audit", "add_tile_or_field_grouped_validation"]
+}

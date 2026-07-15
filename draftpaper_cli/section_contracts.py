@@ -19,7 +19,7 @@ NUMBER = re.compile(
     r"(?<![A-Za-z0-9_])[-+]?(?:(?:\d{1,3}(?:,\d{3})+)|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?(?![A-Za-z0-9_])"
 )
 METRIC_NUMBER = re.compile(
-    r"(?P<metric>macro[- ]?f1|f1|roc[- ]?auc|auc|accuracy|precision|recall|r2|r\^2|p[-_ ]?value)"
+    r"\b(?P<metric>macro[- ]?f1|f1|roc[- ]?auc|auc|accuracy|precision|recall|r2|r\^2|p[-_ ]?value)\b"
     r"[^.;\n]{0,32}?(?P<value>[-+]?(?:(?:\d{1,3}(?:,\d{3})+)|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?)",
     flags=re.I,
 )
@@ -37,6 +37,16 @@ def _strip_alphanumeric_identifiers(text: str) -> str:
         r"\b(?=[A-Za-z0-9_./+-]*[A-Za-z])(?=[A-Za-z0-9_./+-]*\d{2})[A-Za-z][A-Za-z0-9_./+-]*\b",
         " ",
         text,
+    )
+
+
+def _strip_release_identifiers(text: str) -> str:
+    """Remove product edition labels such as Quick Release 1 and Data Release 3."""
+    return re.sub(
+        r"\b(?:quick\s+release|data\s+release|catalog(?:ue)?\s+release|release|version)\s+\d+(?:\.\d+)*\b",
+        " ",
+        text,
+        flags=re.I,
     )
 
 
@@ -59,6 +69,12 @@ def _normalized_words(value: Any) -> str:
 def _scope_mentioned(sentence: str, value: str) -> bool:
     normalized_sentence = _normalized_words(sentence)
     normalized_value = _normalized_words(value)
+    if normalized_value in {
+        "all", "source", "sources", "main", "primary", "not applicable",
+        "run summary", "current run", "declared partition", "model evaluation",
+        "figure evidence",
+    }:
+        return False
     if not normalized_value or normalized_value in {"main", "not applicable", "run summary"}:
         return normalized_value == "main" and bool(re.search(r"\bmain\b", normalized_sentence))
     if normalized_value in normalized_sentence:
@@ -69,6 +85,12 @@ def _scope_mentioned(sentence: str, value: str) -> bool:
 
 
 def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
+    text = re.sub(
+        r"(?P<mantissa>[-+]?\d+(?:\.\d+)?)\s*\\times\s*10\s*\^\s*\{\s*(?P<exponent>[-+]?\d+)\s*\}",
+        lambda match: f"{match.group('mantissa')}e{match.group('exponent')}",
+        text,
+    )
+    text = re.sub(r"(?<=\d)--(?=[-+]?\d)", " to ", text)
     without_commands = re.sub(
         r"\\begin\{equation\}.*?\\end\{equation\}|\\\[.*?\\\]",
         "",
@@ -88,13 +110,17 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
         without_commands,
         flags=re.I,
     )
-    without_commands = _strip_alphanumeric_identifiers(without_commands)
+    without_commands = _strip_release_identifiers(_strip_alphanumeric_identifiers(without_commands))
     claims: list[dict[str, Any]] = []
     for sentence in re.split(r"(?<=[.!?;])\s+|\n+", without_commands):
         boundaries = [0]
         boundaries.extend(
             match.start()
-            for match in re.finditer(r"\b(?:whereas|while)\b|,\s*(?:whereas|while|but)\b", sentence, flags=re.I)
+            for match in re.finditer(
+                r"\b(?:whereas|while|compared\s+(?:with|to))\b|,\s*(?:whereas|while|but)\b",
+                sentence,
+                flags=re.I,
+            )
         )
         boundaries.extend(
             match.start()
@@ -114,10 +140,22 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
             local_offset = sentence.find(local_context, segment_start, segment_end) if local_context else segment_start
             suffix = sentence[match.end(): match.end() + 2]
             normalized_number = match.group(0).replace(",", "")
+            nearby_suffix = sentence[match.end(): match.end() + 24]
+            if re.match(r"\s*per\s+cent\b", nearby_suffix, flags=re.I) and re.search(
+                r"\b(?:confidence|bootstrap|credible|prediction)?\s*interval\b", sentence,
+                flags=re.I,
+            ):
+                continue
+            mantissa, exponent = normalized_number.lower(), 0
+            if "e" in mantissa:
+                mantissa, exponent_text = mantissa.split("e", 1)
+                exponent = int(exponent_text)
+            mantissa_decimals = len(mantissa.split(".", 1)[1]) if "." in mantissa else 0
             claims.append({
                 "value": value,
                 "raw_value": match.group(0),
-                "decimal_places": len(normalized_number.split(".", 1)[1]) if "." in normalized_number else 0,
+                "decimal_places": mantissa_decimals,
+                "rounding_tolerance": 0.5 * (10 ** (exponent - mantissa_decimals)) if mantissa_decimals or exponent else 0.0,
                 "sentence": sentence.strip(),
                 "local_context": local_context,
                 "percent": "%" in suffix,
@@ -136,9 +174,15 @@ def _value_matches(claim: dict[str, Any], record: dict[str, Any]) -> bool:
     values = [claim["value"]]
     if claim.get("percent"):
         values.append(claim["value"] / 100.0)
-    decimals = int(claim.get("decimal_places") or 0)
-    rounding_tolerance = 0.5 * (10 ** (-decimals)) if decimals else 1e-8
-    return any(abs(value - candidate) <= max(1e-8, rounding_tolerance, abs(candidate) * 5e-5) for value in values)
+    candidates = [candidate]
+    if re.search(r"\b(?:lower|smaller|decrease|reduction|drop)(?:ed)?\b[^.;]{0,48}\bby\b", str(claim.get("local_context") or ""), flags=re.I):
+        candidates.append(abs(candidate))
+    rounding_tolerance = float(claim.get("rounding_tolerance") or 0.0)
+    relative_tolerance = abs(candidate) * 5e-5
+    return any(
+        value == observed or abs(value - observed) <= max(rounding_tolerance, relative_tolerance)
+        for value in values for observed in candidates
+    )
 
 
 def _value_distance(claim: dict[str, Any], record: dict[str, Any]) -> float:
@@ -149,7 +193,10 @@ def _value_distance(claim: dict[str, Any], record: dict[str, Any]) -> float:
     values = [float(claim["value"])]
     if claim.get("percent"):
         values.append(float(claim["value"]) / 100.0)
-    return min(abs(value - candidate) for value in values)
+    candidates = [candidate]
+    if re.search(r"\b(?:lower|smaller|decrease|reduction|drop)(?:ed)?\b[^.;]{0,48}\bby\b", str(claim.get("local_context") or ""), flags=re.I):
+        candidates.append(abs(candidate))
+    return min(abs(value - observed) for value in values for observed in candidates)
 
 
 def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
@@ -167,11 +214,67 @@ def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
         return True
     if "prediction" in role and re.search(r"\bpredictions?\b", normalized):
         return True
+    if "split_counts_test" in role and re.search(r"\btests?|testing\b", normalized):
+        return True
+    if "split_counts_validation" in role and re.search(r"\bvalidation\b", normalized):
+        return True
+    if "split_counts_train" in role and re.search(r"\btraining\b", normalized):
+        return True
+    role_hints = {
+        "survey_parent_count": ("survey parent", "parent sample"),
+        "parent_count": ("survey parent", "parent sample"),
+        "vis_manifest_count": ("vis cutout", "available vis"),
+        "catalogue_join_count": ("joined analysis catalogue", "catalogue join"),
+        "primary_eligible_count": ("primary classification", "retained"),
+        "dev_support": ("dev", "sources"),
+        "exp_support": ("exp", "sources"),
+        "reliable_spectroscopic_count": ("reliable spectroscopic", "spectroscopic redshift filter"),
+        "external_profile_counts_ser": ("ser",),
+        "external_profile_counts_rex": ("rex",),
+    }
+    for suffix, terms in role_hints.items():
+        if suffix in role and all(_normalized_words(term) in normalized for term in terms):
+            return True
+    if role.endswith("_ece") and "expected calibration error" in normalized:
+        return True
     if role.startswith("result_metric_"):
         metric = role.removeprefix("result_metric_").replace("_", " ")
         aliases = {"f1 macro": ("macro f1", "macro-f1"), "roc auc": ("roc auc", "roc-auc", "auc")}
         terms = aliases.get(metric, (metric,))
         return any(_normalized_words(term) in normalized for term in terms)
+    return False
+
+
+def _model_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
+    model = _normalized_words(_binding_value(record, "model_id"))
+    normalized = _normalized_words(sentence)
+    if not model or model in {"not applicable", "run summary", "primary model"}:
+        return False
+    if model in normalized:
+        return True
+    aliases = {
+        "ablation no augmentation": ("without augmentation", "no augmentation"),
+        "ablation no class weighting": ("removal of class weighting", "without class weighting", "no class weighting"),
+        "frozen logistic": ("frozen feature", "frozen classifier", "frozen logistic"),
+        "fine tune last three blocks": ("final fine tuned", "three block fine tuning"),
+        "fine tune last block": ("last block fine tuning",),
+        "hog logistic": ("hog logistic",),
+        "downsampled pixel pca logistic": ("downsampled pixel pca",),
+    }
+    return any(alias in normalized for alias in aliases.get(model, ()))
+
+
+def _analysis_variant_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
+    variant = str(record.get("analysis_variant") or "").lower()
+    normalized = _normalized_words(sentence)
+    if "tile grouped" in normalized:
+        return variant == "tile_grouped_validation"
+    if "source random" in normalized or "training seed" in normalized:
+        return variant == "multi_seed_summary"
+    if "calibration" in normalized:
+        return variant == "calibration_audit"
+    if "external" in normalized and any(token in normalized for token in ("ser", "rex", "transfer")):
+        return variant == "external_transfer"
     return False
 
 
@@ -233,7 +336,11 @@ def _metric_dimension_matches(record: dict[str, Any], metric: str, claim: dict[s
 
 
 def _resolve_numeric_claim(
-    claim: dict[str, Any], records: list[dict[str, Any]], section: str, preferred_run_id: str = "",
+    claim: dict[str, Any],
+    records: list[dict[str, Any]],
+    section: str,
+    preferred_run_id: str = "",
+    preferred_model_id: str = "",
 ) -> dict[str, Any]:
     candidates = [record for record in records if _value_matches(claim, record)]
     if not candidates:
@@ -252,10 +359,40 @@ def _resolve_numeric_claim(
     preferred = [record for record in candidates if preferred_run_id and _binding_value(record, "run_id") == preferred_run_id]
     if preferred:
         candidates = preferred
-    run_verified = [record for record in candidates if str(record.get("confidence") or "") == "verified_run_output"]
+    run_verified = [
+        record for record in candidates
+        if str(record.get("confidence") or "") in {
+            "verified_run_output", "verified_structured_run_output", "figure_metadata_bound",
+        }
+    ]
     if run_verified:
         candidates = run_verified
     local_context = str(claim.get("local_context") or claim["sentence"])
+    analysis_context = [record for record in candidates if _analysis_variant_matches_sentence(record, local_context)]
+    if analysis_context:
+        candidates = analysis_context
+    model_context = [record for record in candidates if _model_matches_sentence(record, local_context)]
+    if model_context:
+        candidates = model_context
+    explicit_variant_context = bool(re.search(
+        r"\b(?:without|removal|ablation|baseline|frozen|seed|tile[- ]grouped|sensitivity|external)\b",
+        local_context,
+        flags=re.I,
+    ))
+    if not model_context and not explicit_variant_context:
+        preferred_model = [
+            record for record in candidates
+            if preferred_model_id and _binding_value(record, "model_id") == preferred_model_id
+        ]
+        if preferred_model:
+            candidates = preferred_model
+    if re.search(r"\b(?:model|classifier|variant|probe|baseline|fine[- ]?tun)\w*\b", local_context, flags=re.I):
+        explicit_model = [
+            record for record in candidates
+            if _binding_value(record, "model_id") not in {"", "run_summary", "not_applicable"}
+        ]
+        if explicit_model:
+            candidates = explicit_model
     metric_signal = _metric_signal(local_context, claim)
     if metric_signal:
         metric_matches = [record for record in candidates if _metric_matches(metric_signal, _record_metric(record))]
@@ -277,6 +414,30 @@ def _resolve_numeric_claim(
         role_matches = [record for record in candidates if _role_matches_sentence(record, local_context)]
         if role_matches:
             candidates = role_matches
+
+    if not model_context and not explicit_variant_context:
+        primary_candidates = [
+            record for record in candidates
+            if str(record.get("analysis_variant") or "").lower() in {"primary", "primary_fixed_partition"}
+        ]
+        if primary_candidates:
+            candidates = primary_candidates
+
+    explicit_model_candidates = [
+        record for record in candidates
+        if _binding_value(record, "model_id") not in {"", "run_summary", "not_applicable"}
+    ]
+    generic_model_candidates = [
+        record for record in candidates
+        if _binding_value(record, "model_id") in {"", "run_summary", "not_applicable"}
+    ]
+    if explicit_model_candidates and generic_model_candidates:
+        explicit_scopes = {
+            (_binding_value(record, "model_id"), _record_metric(record), record.get("value"))
+            for record in explicit_model_candidates
+        }
+        if len(explicit_scopes) == 1:
+            candidates = explicit_model_candidates
 
     if candidates:
         best_distance = min(_value_distance(claim, record) for record in candidates)
@@ -344,7 +505,7 @@ def _numeric_claims(text: str) -> list[float]:
         "",
         without_commands,
     )
-    without_commands = _strip_alphanumeric_identifiers(without_commands)
+    without_commands = _strip_release_identifiers(_strip_alphanumeric_identifiers(without_commands))
     values = []
     for match in NUMBER.findall(without_commands):
         try:
@@ -440,7 +601,11 @@ def validate_section_writing(section: str, text: str, registry: dict[str, Any]) 
     if normalized_section in {"abstract", "results", "data", "discussion"}:
         for claim in _numeric_claims_with_context(text):
             binding = _resolve_numeric_claim(
-                claim, records, normalized_section, str(registry.get("preferred_run_id") or ""),
+                claim,
+                records,
+                normalized_section,
+                str(registry.get("preferred_run_id") or ""),
+                str(registry.get("preferred_model_id") or ""),
             )
             numeric_bindings.append(binding)
             issue_kinds = {

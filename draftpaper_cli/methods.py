@@ -291,6 +291,139 @@ def _write_process_log(log_dir: Path, name: str, text: str) -> dict[str, Any]:
     }
 
 
+def _structured_stdout_payload(stdout: str) -> dict[str, Any]:
+    """Return the final structured method payload without trusting free-form logs."""
+    text = str(stdout or "").strip()
+    if not text:
+        return {}
+    candidates = [text]
+    candidates.extend(line.strip() for line in reversed(text.splitlines()) if line.strip())
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return {}
+
+
+def _reported_output_files(project_path: Path, payload: dict[str, Any]) -> list[str]:
+    """Accept only existing project-local files explicitly reported by a successful run."""
+    if str(payload.get("status") or "").strip().lower() not in {"success", "passed", "complete", "completed"}:
+        return []
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, list):
+        return []
+    reported: list[str] = []
+    for item in outputs:
+        relative = str(item or "").strip().replace("\\", "/")
+        if not relative:
+            continue
+        try:
+            path = _project_relative_path(project_path, relative)
+        except MethodsGateError:
+            continue
+        if path.is_file() and relative not in reported:
+            reported.append(relative)
+    return reported
+
+
+def _verified_run_id(command_argv: list[str], outputs: list[str]) -> str:
+    seed = json.dumps(
+        {"command": command_argv, "outputs": outputs},
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
+
+def _structured_run_evidence(payload: dict[str, Any], *, run_id: str) -> list[dict[str, Any]]:
+    """Bind explicit records and common scientific runner facts to one verified run."""
+    explicit = payload.get("evidence_records")
+    records = [dict(item) for item in explicit or [] if isinstance(item, dict)] if isinstance(explicit, list) else []
+    seen = {json.dumps(item, ensure_ascii=False, sort_keys=True, default=str) for item in records}
+
+    def add_record(record: dict[str, Any]) -> None:
+        key = json.dumps(record, ensure_ascii=False, sort_keys=True, default=str)
+        if key not in seen:
+            records.append(record)
+            seen.add(key)
+
+    def add_metrics(metrics: Any, *, model_id: str, analysis_variant: str) -> None:
+        if not isinstance(metrics, dict):
+            return
+        for name, value in metrics.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            add_record({
+                "entity_role": f"result_metric_{str(name).strip().lower()}",
+                "value": value,
+                "unit": "score",
+                "metric_dimension": "score",
+                "cohort_id": "main",
+                "sample_unit": "model_evaluation",
+                "split": "run_summary",
+                "run_id": run_id,
+                "model_id": model_id,
+                "analysis_variant": analysis_variant,
+                "confidence": "verified_structured_run_output",
+                "target_sections": ["results", "methods", "discussion"],
+            })
+
+    def add_cohort_audit(audit: Any) -> None:
+        if not isinstance(audit, dict):
+            return
+
+        def walk(value: Any, path: list[str]) -> None:
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    walk(child, [*path, str(key)])
+                return
+            if isinstance(value, list):
+                for index, child in enumerate(value):
+                    walk(child, [*path, str(index)])
+                return
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return
+            role = "cohort_audit_" + "_".join(part.strip().lower() for part in path if part.strip())
+            is_count = any(token in role for token in ("count", "total", "size", "support"))
+            add_record({
+                "entity_role": role,
+                "value": value,
+                "unit": "count" if is_count else "value",
+                "metric_dimension": "count" if is_count else "value",
+                "cohort_id": "main",
+                "sample_unit": "source",
+                "split": "declared_partition" if "split_counts" in role else "all",
+                "run_id": run_id,
+                "model_id": "not_applicable",
+                "analysis_variant": "cohort_audit",
+                "confidence": "verified_structured_run_output",
+                "target_sections": ["results", "data", "methods", "discussion"],
+            })
+
+        walk(audit, [])
+
+    primary_model = str(payload.get("model_id") or payload.get("primary_model_id") or "primary_model")
+    add_metrics(payload.get("final_test_metrics"), model_id=primary_model, analysis_variant="primary")
+    add_cohort_audit(payload.get("cohort_audit"))
+    seed_runs = payload.get("seed_runs")
+    if isinstance(seed_runs, list):
+        for index, seed_run in enumerate(seed_runs):
+            if not isinstance(seed_run, dict):
+                continue
+            seed = str(seed_run.get("seed") or index)
+            model = str(seed_run.get("model_id") or payload.get("model_id") or "model")
+            add_metrics(
+                seed_run.get("final_test_metrics"),
+                model_id=f"{model}_seed_{seed}",
+                analysis_variant="multi_seed",
+            )
+            add_cohort_audit(seed_run.get("cohort_audit"))
+    return records
+
+
 def _figure_contract_issues(project_path: Path) -> tuple[list[str], dict[str, Any]]:
     contracts_payload = _read_json(project_path / "results" / "figure_contracts.json", {})
     contracts = contracts_payload.get("contracts") if isinstance(contracts_payload, dict) else []
@@ -386,6 +519,11 @@ def verify_methods(
     run_log_dir = methods_dir / "run_logs"
     stdout_log = _write_process_log(run_log_dir, f"verify_methods_{log_stamp}.stdout.txt", completed.stdout)
     stderr_log = _write_process_log(run_log_dir, f"verify_methods_{log_stamp}.stderr.txt", completed.stderr)
+    structured_output = _structured_stdout_payload(completed.stdout) if completed.returncode == 0 else {}
+    reported_outputs = _reported_output_files(state.path, structured_output)
+    declared_outputs = list(dict.fromkeys([*declared_outputs, *reported_outputs]))
+    run_id = _verified_run_id(command_argv, declared_outputs)
+    run_evidence = _structured_run_evidence(structured_output, run_id=run_id)
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
     figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
     figure_contract_issues, figure_contract_checks = _figure_contract_issues(state.path)
@@ -412,11 +550,14 @@ def verify_methods(
         "command_source": command_source,
         "shell_used": False,
         "returncode": completed.returncode,
+        "run_id": run_id,
         "input_data": resolved_input_data,
         "output_files": declared_outputs,
+        "reported_output_files": reported_outputs,
         "output_artifact_hashes": output_artifact_hashes,
         "method_code_manifest": method_code_manifest,
         "metrics": parsed_metrics,
+        "evidence_records": run_evidence,
         "figures_generated": [item for item in declared_outputs if item.lower().endswith((".png", ".jpg", ".jpeg", ".pdf", ".svg"))],
         "tables_generated": [item for item in declared_outputs if item.lower().endswith((".csv", ".tsv", ".xlsx", ".json"))],
         "started_at": started_at,
@@ -1115,8 +1256,32 @@ def _latex_formula_entries(context: dict[str, Any]) -> list[dict[str, Any]]:
     payload = context.get("formula_manifest") if isinstance(context.get("formula_manifest"), dict) else {}
     entries = payload.get("formulas") if isinstance(payload, dict) else []
     if not isinstance(entries, list):
-        return []
-    return [entry for entry in entries if isinstance(entry, dict) and str(entry.get("latex") or "").strip()]
+        entries = []
+    normalized = [entry for entry in entries if isinstance(entry, dict) and str(entry.get("latex") or "").strip()]
+    ast_payload = context.get("analysis_formula_ast") if isinstance(context.get("analysis_formula_ast"), dict) else {}
+    seen = {str(item.get("formula_id") or item.get("name") or item.get("latex")) for item in normalized}
+    for formula in ast_payload.get("formulas") or []:
+        if not isinstance(formula, dict) or not formula.get("latex"):
+            continue
+        formula_id = str(formula.get("formula_id") or formula.get("latex"))
+        if formula_id in seen:
+            continue
+        variables = [item for item in formula.get("variables") or [] if isinstance(item, dict)]
+        explanation = "; ".join(
+            f"${item.get('symbol')}$ denotes {item.get('meaning')}"
+            for item in variables if item.get("symbol") and item.get("meaning")
+        )
+        normalized.append({
+            "formula_id": formula_id,
+            "name": formula_id.replace("_", " "),
+            "method_step": "validation" if any(token in formula_id.lower() for token in ("ece", "auc", "f1", "metric")) else "model",
+            "latex": formula.get("latex"),
+            "variables": [item.get("symbol") for item in variables if item.get("symbol")],
+            "variable_explanations": explanation + ("." if explanation else ""),
+            "analysis_spec_id": formula.get("analysis_spec_id"),
+        })
+        seen.add(formula_id)
+    return normalized
 
 
 def _render_formula_block(entries: list[dict[str, Any]], *, only_steps: set[str] | None = None) -> str:
@@ -1423,6 +1588,10 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         analysis_manifest = _read_json(state.path / "methods" / "analysis_code_manifest.json", {})
     _write_method_formulas(state.path, manifest)
     formula_manifest = _read_json(state.path / "methods" / "method_formula_manifest.json", {})
+    executable_analysis_spec = _read_json(state.path / "methods" / "executable_analysis_spec.json", {})
+    analysis_formula_ast = _read_json(state.path / "methods" / "analysis_formula_ast.json", {})
+    run_selection_policy = _read_json(state.path / "methods" / "run_selection_policy.json", {})
+    resampling_contract = _read_json(state.path / "methods" / "resampling_contract.json", {})
     figure_code_trace = _read_json(state.path / "results" / "figure_code_trace.json", {})
     if not figure_code_trace:
         figure_code_trace = _read_json(state.path / "results" / "figure_plugin_trace_report.json", {})
@@ -1465,6 +1634,10 @@ def build_method_writing_context(project: str | Path) -> dict[str, Any]:
         "method_plugin_bindings": method_bindings,
         "method_code_manifest": analysis_manifest,
         "formula_manifest": formula_manifest if isinstance(formula_manifest, dict) else {},
+        "executable_analysis_spec": executable_analysis_spec,
+        "analysis_formula_ast": analysis_formula_ast,
+        "run_selection_policy": run_selection_policy,
+        "resampling_contract": resampling_contract,
         "figure_code_trace": figure_code_trace if isinstance(figure_code_trace, dict) else {},
         "reproducibility_contract": _method_reproducibility_contract(state.path),
         "narrative_summary": narrative_summary,

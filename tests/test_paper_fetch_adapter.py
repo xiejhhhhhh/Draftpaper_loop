@@ -14,6 +14,12 @@ from draftpaper_cli.project_scaffold import create_project
 
 
 class PaperFetchAdapterTests(unittest.TestCase):
+    def test_fulltext_cache_stem_is_bounded_for_windows_path_budget(self) -> None:
+        from draftpaper_cli.paper_fetch_adapter import _safe_stem
+
+        stem = _safe_stem("A " + "very long scientific paper title " * 10, "paper")
+        self.assertLessEqual(len(stem), 48)
+
     def test_adapter_enriches_weak_context_items_from_paper_fetch_output(self) -> None:
         from draftpaper_cli.paper_fetch_adapter import enrich_with_paper_fetch
 

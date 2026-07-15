@@ -214,6 +214,39 @@ class EvidenceRegistryTests(unittest.TestCase):
             self.assertTrue(all("data" in item["target_sections"] for item in cohort_records))
             self.assertTrue(all(item["metric_dimension"] == "count" for item in cohort_records))
 
+    def test_nested_figure_lists_are_registered_as_numeric_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Nested figure evidence", field="machine learning")
+            (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({
+                "figures": [{
+                    "id": "figure-audit",
+                    "storyboard_id": "figure-audit",
+                    "scientific_question": "How does the cohort flow into the held-out confusion matrix?",
+                    "metrics": {
+                        "sample_flow": [5544, 5275, 4800, 1225],
+                        "confusion_matrix": [[105, 11], [4, 64]],
+                        "tile_grouped": [{"macro_f1": 0.8662, "test_group_count": 15}],
+                        "shared_tiles_remain": True,
+                    },
+                }]
+            }), encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            values = {item["value"] for item in registry["records"]}
+            self.assertTrue({5544.0, 5275.0, 4800.0, 1225.0, 105.0, 11.0, 4.0, 64.0}.issubset(values))
+            self.assertNotIn(1.0, values)
+            confusion = [item for item in registry["records"] if "confusion_matrix" in item["entity_role"]]
+            self.assertTrue(confusion)
+            self.assertTrue(all(item["metric_dimension"] == "count" for item in confusion))
+            grouped_f1 = next(item for item in registry["records"] if "tile_grouped_0_macro_f1" in item["entity_role"])
+            grouped_count = next(item for item in registry["records"] if "test_group_count" in item["entity_role"])
+            self.assertEqual(grouped_f1["metric_dimension"], "score")
+            self.assertEqual(grouped_count["metric_dimension"], "count")
+
 
 if __name__ == "__main__":
     unittest.main()

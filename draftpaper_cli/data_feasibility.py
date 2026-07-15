@@ -42,6 +42,10 @@ DATA_OUTPUTS = [
     DATA_ROLE_COVERAGE_HTML,
     DATA_CONTRACT_FULFILLMENT_JSON,
     DATA_DEGRADATION_RECOMMENDATIONS_JSON,
+    "data/data_provenance_contract.json",
+    "data/cohort_registry.json",
+    "data/cohort_view_registry.json",
+    "data/join_and_filter_ledger.jsonl",
 ]
 
 DATA_WRITING_OUTPUTS = [

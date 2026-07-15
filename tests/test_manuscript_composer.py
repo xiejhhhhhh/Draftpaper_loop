@@ -11,6 +11,8 @@ from pathlib import Path
 
 from draftpaper_cli.manuscript_composer import (
     SectionCompositionError,
+    _compact_reference_items,
+    _compact_result_manifest,
     _functional_job_coverage,
     accept_section_draft,
     build_section_evidence_packet,
@@ -21,6 +23,37 @@ from draftpaper_cli.project_scaffold import create_project
 
 
 class ManuscriptComposerTests(unittest.TestCase):
+    def test_reference_packet_compacts_long_summaries_without_losing_identity(self) -> None:
+        compact = _compact_reference_items([{
+            "citation_key": "Example2026",
+            "title": "A bounded comparison",
+            "summary": "evidence " * 200,
+            "search_contexts": ["discussion"],
+            "authors": ["Internal metadata omitted"],
+        }])
+        self.assertEqual(compact[0]["citation_key"], "Example2026")
+        self.assertLessEqual(len(compact[0]["summary"]), 423)
+        self.assertNotIn("authors", compact[0])
+
+    def test_non_results_manifest_omits_repeated_paths_and_caption_text(self) -> None:
+        manifest = {
+            "figures": [{
+                "id": "fig-1", "path": "results/figures/fig_01.png",
+                "caption_draft": "A repeated caption.", "result_claim": "A bounded claim.",
+            }],
+            "tables": [{
+                "id": "table-1", "path": "results/tables/table.csv",
+                "caption_draft": "A repeated table caption.", "result_claim": "Supporting values.",
+            }],
+        }
+
+        compact = _compact_result_manifest(manifest, section="discussion")
+
+        self.assertNotIn("path", compact["figures"][0])
+        self.assertNotIn("caption_draft", compact["figures"][0])
+        self.assertEqual(compact["figures"][0]["result_claim"], "A bounded claim.")
+        self.assertEqual(compact["tables"], [{"id": "table-1"}])
+
     def test_data_packet_exposes_source_provenance_and_required_topics(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=Path(tmp), idea="Source provenance", field="astronomy")
@@ -136,6 +169,10 @@ class ManuscriptComposerTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "accepted")
             self.assertTrue((project.path / "writing" / "candidates" / "results.tex").exists())
+            self.assertEqual(
+                (project.path / "writing" / "drafts" / "results.tex").read_text(encoding="utf-8"),
+                source.read_text(encoding="utf-8"),
+            )
 
     def test_section_acceptance_requires_current_scientific_editor_pass(self) -> None:
         import hashlib

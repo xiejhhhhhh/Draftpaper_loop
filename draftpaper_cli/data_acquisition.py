@@ -716,7 +716,13 @@ def _render_plan_markdown(plan: dict[str, Any]) -> str:
 
 def prepare_data_acquisition(project: str | Path, *, source_root: str | Path | None = None) -> dict[str, Any]:
     state = load_project(project)
-    profile = classify_data_access(state.path, source_root=source_root)
+    effective_source_root = source_root
+    if effective_source_root is None:
+        existing_locator = _read_json(state.path / EXTERNAL_DATA_LOCATORS_PRIVATE_JSON)
+        existing_root = str(existing_locator.get("source_root") or "").strip()
+        if existing_root:
+            effective_source_root = existing_root
+    profile = classify_data_access(state.path, source_root=effective_source_root)
     binding_plan = _read_json(state.path / "research_plan" / "plugin_binding_plan.json")
     bound_data_plugins = [
         item for item in binding_plan.get("bindings") or []

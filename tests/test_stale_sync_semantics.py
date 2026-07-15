@@ -14,6 +14,19 @@ from draftpaper_cli.stale_sync import detect_artifact_drift, sync_artifact_stale
 
 
 class SemanticStaleSyncTests(unittest.TestCase):
+    def test_stage_manifest_updates_are_managed_state_not_artifact_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Managed stage state", field="workflow engineering")
+            refresh_project_passport(project.path, event="test_stage_manifest_baseline")
+            manifest_path = project.path / "results" / "stage_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["status"] = "approved"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            report = detect_artifact_drift(project.path)
+
+            self.assertEqual(report["status"], "clean")
+
     def test_managed_project_state_updates_are_not_scientific_artifact_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Managed state", field="workflow engineering")

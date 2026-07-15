@@ -18,10 +18,73 @@ REGISTRY = {
 
 
 class SectionWritingContractTests(unittest.TestCase):
+    def test_publication_rounding_and_latex_interval_bind_to_explicit_model(self) -> None:
+        def record(evidence_id: str, role: str, value: float, model_id: str) -> dict:
+            return {
+                "evidence_id": evidence_id,
+                "entity_role": role,
+                "value": value,
+                "unit": "score",
+                "metric_dimension": "score",
+                "run_id": "run-1",
+                "cohort_id": "main",
+                "sample_unit": "model_evaluation",
+                "split": "held_out",
+                "model_id": model_id,
+                "confidence": "verified_run_output",
+                "target_sections": ["results"],
+            }
+
+        registry = {"preferred_run_id": "run-1", "records": [
+            record("f1-model", "result_metric_macro_f1", 0.721120719, "fine_tune_last_three_blocks"),
+            record("f1-summary", "result_metric_macro_f1", 0.721120719, "run_summary"),
+            record("ci-low", "result_metric_macro_f1_ci_low", 0.682335572, "fine_tune_last_three_blocks"),
+            record("ci-high", "result_metric_macro_f1_ci_high", 0.758235287, "fine_tune_last_three_blocks"),
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "The fine-tune-last-three-blocks model reached macro-F1=0.721 with a 95 per cent bootstrap interval of 0.682--0.758.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual({item["value"] for item in report["numeric_claim_bindings"]}, {0.721, 0.682, 0.758})
+
+    def test_tiny_scientific_notation_does_not_bind_to_zero(self) -> None:
+        registry = {"records": [{
+            "evidence_id": "zero-overlap",
+            "entity_role": "result_metric_overlap_count",
+            "value": 0.0,
+            "unit": "count",
+            "metric_dimension": "count",
+            "run_id": "run-1",
+            "cohort_id": "main",
+            "sample_unit": "source",
+            "split": "held_out",
+            "model_id": "not_applicable",
+            "target_sections": ["results"],
+        }]}
+
+        report = validate_section_writing("results", r"The adjusted p-value was $4.96\times10^{-15}$.", registry)
+
+        self.assertEqual(report["decision"], "blocked")
+        self.assertTrue(any(item["kind"] == "unsupported_numeric_claim" for item in report["issues"]))
+
     def test_model_and_dataset_identifiers_are_not_numeric_claims(self) -> None:
         report = validate_section_writing(
             "discussion",
             "Encoder-X ViT-S/16 was trained on the Corpus-100M collection and used as a fixed representation.",
+            {"records": []},
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"], [])
+
+    def test_named_data_release_editions_are_not_numeric_claims(self) -> None:
+        report = validate_section_writing(
+            "data",
+            "Euclid Quick Release 1 (Q1) images were joined to DESI Data Release 1 catalogue records.",
             {"records": []},
         )
 
@@ -203,6 +266,115 @@ class SectionWritingContractTests(unittest.TestCase):
         self.assertEqual(
             [item["binding"]["model_id"] for item in report["numeric_claim_bindings"]],
             ["candidate", "candidate_minus_baseline"],
+        )
+
+    def test_generic_scope_words_do_not_override_bound_figure_counts(self) -> None:
+        registry = {"records": [{
+            "evidence_id": "shared-tiles",
+            "entity_role": "result_metric_shared_tile_count",
+            "value": 70,
+            "unit": "count",
+            "metric_dimension": "count",
+            "run_id": "run-1",
+            "cohort_id": "main",
+            "sample_unit": "figure_evidence",
+            "split": "current_run",
+            "model_id": "not_applicable",
+            "confidence": "figure_metadata_bound",
+            "target_sections": ["results"],
+        }]}
+
+        report = validate_section_writing(
+            "results", "The split did not remove all acquisition dependence because 70 tiles remained shared.", registry
+        )
+
+        self.assertEqual(report["decision"], "pass")
+
+    def test_lower_by_magnitude_binds_to_negative_adjusted_coefficient(self) -> None:
+        registry = {"records": [{
+            "evidence_id": "colour-effect",
+            "entity_role": "result_metric_adjusted_coefficient",
+            "value": -0.3099167,
+            "unit": "mag",
+            "metric_dimension": "effect",
+            "run_id": "run-1",
+            "cohort_id": "main",
+            "sample_unit": "source",
+            "split": "held_out",
+            "model_id": "adjusted_linear_model",
+            "confidence": "figure_metadata_bound",
+            "target_sections": ["results"],
+        }]}
+
+        report = validate_section_writing(
+            "results", "The EXP assignment was associated with a lower observed colour by 0.310 mag.", registry
+        )
+
+        self.assertEqual(report["decision"], "pass")
+
+    def test_preferred_model_resolves_equal_metric_values(self) -> None:
+        def metric(evidence_id: str, model_id: str) -> dict:
+            return {
+                "evidence_id": evidence_id,
+                "entity_role": "result_metric_exp_recall",
+                "value": 0.94117647,
+                "unit": "score",
+                "metric_dimension": "score",
+                "run_id": "run-1",
+                "cohort_id": "main",
+                "sample_unit": "model_evaluation",
+                "split": "held_out",
+                "model_id": model_id,
+                "confidence": "verified_run_output",
+                "target_sections": ["results"],
+            }
+
+        registry = {
+            "preferred_run_id": "run-1",
+            "preferred_model_id": "fine_tuned",
+            "records": [metric("frozen", "frozen"), metric("fine", "fine_tuned")],
+        }
+        report = validate_section_writing("results", "EXP recall was 0.941.", registry)
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["evidence_id"], "fine")
+
+    def test_compared_validation_ranges_bind_to_their_own_analysis_variants(self) -> None:
+        def metric(evidence_id: str, value: float, variant: str, model_id: str) -> dict:
+            return {
+                "evidence_id": evidence_id,
+                "entity_role": "result_metric_macro_f1",
+                "value": value,
+                "unit": "score",
+                "metric_dimension": "score",
+                "run_id": "run-1",
+                "cohort_id": "main",
+                "sample_unit": "model_evaluation",
+                "split": "held_out",
+                "model_id": model_id,
+                "analysis_variant": variant,
+                "confidence": "figure_metadata_bound",
+                "target_sections": ["results"],
+            }
+
+        registry = {"preferred_run_id": "run-1", "records": [
+            metric("tile-low", 0.86616, "tile_grouped_validation", "run_summary"),
+            metric("tile-high", 0.88203, "tile_grouped_validation", "run_summary"),
+            metric("seed-low", 0.88208, "multi_seed_summary", "fine_tuned"),
+            metric("seed-high", 0.91422, "multi_seed_summary", "fine_tuned"),
+            metric("nearby-wrong", 0.86627, "primary", "one_block"),
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "Tile-grouped evaluations yielded macro-F1 values of 0.866--0.882, compared with 0.882--0.914 for the source-random training seeds.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(
+            [item["evidence_id"] for item in report["numeric_claim_bindings"]],
+            ["tile-low", "tile-high", "seed-low", "seed-high"],
         )
 
     def test_duplicate_evidence_ids_for_the_same_scientific_scope_are_not_ambiguous(self) -> None:

@@ -39,6 +39,11 @@ def artifact_role_for_path(path: str) -> tuple[str, str]:
     """Map a project-relative artifact to its scientific role and owner stage."""
     normalized = str(path or "").replace("\\", "/").lstrip("./")
     lowered = normalized.lower()
+    if lowered in {
+        "core_evidence/core_evidence_report.json",
+        "core_evidence/core_evidence_report.html",
+    }:
+        return "evidence_assessment", "core_evidence"
     if lowered.startswith("latex/"):
         return "latex_style", "latex"
     if lowered.startswith("citation_audit/"):
@@ -187,6 +192,16 @@ def classify_change(
             "Citation audit report changed without changing empirical evidence.",
             declaration,
         )
+    if role == "evidence_assessment":
+        return ChangeClassification(
+            "derived_assessment",
+            role,
+            source_stage,
+            False,
+            False,
+            "A derived evidence assessment changed; source scientific artifacts are unchanged.",
+            declaration,
+        )
     if role == "figure":
         if declaration.get("cosmetic_only") is True and _same_evidence_fingerprint(declaration):
             return ChangeClassification(
@@ -287,6 +302,8 @@ def affected_stages(change: ChangeClassification) -> list[str]:
         return list(dict.fromkeys([change.source_stage, *FINAL_STAGES]))
     if change.change_class == "reference_metadata_only":
         return list(dict.fromkeys(["references", "citation_audit", "latex", "quality_checks"]))
+    if change.change_class == "derived_assessment":
+        return [change.source_stage]
     if change.change_class == "presentation_only":
         if change.artifact_role == "figure":
             return ["results", "latex", "quality_checks"]

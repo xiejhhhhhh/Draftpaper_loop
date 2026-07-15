@@ -493,6 +493,11 @@ def build_review_evidence_bundle(project: str | Path, extra_context: dict[str, A
         for item in metrics
     }
     conflicts = sorted(_collect_evidence_conflicts(project_path, extra_context))
+    context = {
+        str(key): value
+        for key, value in (extra_context or {}).items()
+        if key not in {"active_plugin_ids", "available_evidence_roles", "compiled_claim_inputs"}
+    }
     return {
         "schema_version": "v0.22.5",
         "project_path": str(project_path),
@@ -502,6 +507,7 @@ def build_review_evidence_bundle(project: str | Path, extra_context: dict[str, A
         "metric_values": metric_map,
         "run_manifest": run_manifest,
         "conflicts": conflicts,
+        "context": context,
         "baseline_metrics": [
             item for item in metrics
             if "baseline" in _normalise(" ".join(str(item.get(key) or "") for key in ("model_id", "entity_role", "cohort_id", "source_artifact")))
@@ -594,6 +600,7 @@ def _execute_review_plugin(rule: dict[str, Any], bundle: dict[str, Any]) -> dict
                 "roles": bundle.get("roles") or [], "evidence_roles": bundle.get("roles") or [],
                 "metrics": bundle.get("metric_values") or {}, "records": bundle.get("records") or [],
                 "conflicts": bundle.get("conflicts") or [],
+                **(bundle.get("context") or {}),
             })
             return {"status": "executed", "template": str(path), "result": result if isinstance(result, dict) else {"value": result}}
     except Exception as exc:

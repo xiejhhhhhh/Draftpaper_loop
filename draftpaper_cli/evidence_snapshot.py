@@ -40,6 +40,7 @@ _MUTABLE_CONFIRMATION_FIELDS = {
     "promoted_evidence_snapshot_id",
 }
 MANUSCRIPT_ARTIFACTS = [
+    "writing/manuscript_metadata.yaml",
     "introduction/introduction.tex",
     "data/data.tex",
     "methods/methods.tex",
@@ -47,6 +48,9 @@ MANUSCRIPT_ARTIFACTS = [
     "discussion/discussion.tex",
     "latex/library.bib",
     "references/library.bib",
+    "references/supplemental_library.bib",
+    "references/citation_evidence.csv",
+    "references/supplemental_citation_evidence.csv",
 ]
 
 

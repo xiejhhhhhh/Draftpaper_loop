@@ -1,4 +1,4 @@
-"""Wheel-installable held-out scientific release regressions for v0.26.0."""
+"""Wheel-installable held-out scientific release regressions for v0.28.0."""
 
 from __future__ import annotations
 
@@ -82,9 +82,14 @@ def _evidence_records(spec: dict[str, Any]) -> list[dict[str, Any]]:
     common = {
         "run_id": "run-main",
         "cohort_id": spec["cohort_id"],
+        "cohort_view_id": f"cohort_view:{spec['cohort_id']}:heldout",
+        "estimand_id": f"estimand:{spec['metric_name']}:heldout",
+        "analysis_spec_id": f"analysis_spec:{spec['fixture_id']}:primary",
         "sample_unit": spec["sample_unit"],
         "split": spec["split"],
+        "split_id": spec["split"],
         "metric_dimension": spec["metric_dimension"],
+        "aggregation": "prespecified_primary",
         "target_sections": ["results", "discussion"],
     }
     metric = str(spec["metric_name"])
@@ -283,8 +288,18 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
                 "power_or_precision", "axis_units", "sample_size", "held_out_metrics", "uncertainty",
                 "figure_metadata", "crs", "coordinate_transform_provenance", "biological_replicates",
                 "sample_unit", "multiple_testing_method", "adjusted_p_values", "subject_level_split",
-                "leakage_check", "variable_units", "dimension_check",
+                "leakage_check", "variable_units", "dimension_check", "coordinate_definition",
+                "partition_unit", "cutout_or_image_support", "exact_source_overlap_count",
+                "angular_overlap_audit", "shared_acquisition_group_count", "unit_consistency",
+                "overlap_audit",
             ],
+            "coordinate_definition": "declared project coordinate reference and angular units",
+            "partition_unit": spec["sample_unit"],
+            "cutout_support_arcsec": 1.0,
+            "exact_source_overlap_count": 0,
+            "minimum_cross_partition_separation_arcsec": 2.0,
+            "shared_acquisition_group_count": 0,
+            "tested_leakage_modes": ["exact_source_identity", "spatial_support", "acquisition_group"],
         },
         write_path=repo.resolve("review/release_review_rule_report.json"),
     )
@@ -425,15 +440,40 @@ def run_release_regressions(output_root: str | Path) -> dict[str, Any]:
     root.mkdir(parents=True, exist_ok=True)
     domains = [run_domain_regression(root, name) for name in FIXTURE_NAMES]
     adversarial = run_adversarial_regressions(root, domains[0]["project_path"])
+    from .cohort_semantics import validate_cohort_registries
+    from .executable_analysis import validate_analysis_spec, validate_run_selection_policy
+
+    semantic_checks = {
+        "cohort_view_count_mismatch_rejected": validate_cohort_registries(
+            {"cohorts": [{"cohort_id": "all", "sample_unit": "subject", "count": 20}]},
+            {"views": [{"cohort_view_id": "complete", "parent_cohort_id": "all", "sample_unit": "subject", "count": 19, "missingness_policy": "complete_case", "allowed_uses": ["regression"]}]},
+            [{"artifact_id": "panel", "cohort_view_id": "complete", "sample_unit": "subject", "count": 20}],
+        ).get("decision") == "blocked",
+        "calibration_definition_drift_rejected": any(
+            item.get("code") == "calibration_definition_implementation_mismatch"
+            for item in validate_analysis_spec({
+                "analysis_spec_id": "analysis:calibration", "estimand_id": "estimand:ece", "cohort_view_id": "view:test",
+                "sample_unit": "observation", "split_id": "test", "implementation_entry_point": "methods/src/calibration.py",
+                "calibration": {"definition": "event_probability_ece", "implementation_definition": "confidence_accuracy_ece"},
+            })
+        ),
+        "unlocked_best_seed_rejected": any(
+            item.get("code") == "post_hoc_best_seed_primary"
+            for item in validate_run_selection_policy({"selection_role": "primary", "aggregation_policy": "best_seed", "test_access_policy": "single_access", "locked_before_test_access": False})
+        ),
+    }
+    _assert(all(semantic_checks.values()), "One or more v0.28.0 scientific semantic regressions were not rejected")
     report = {
-        "schema_version": "v0.26.0",
+        "schema_version": "v0.28.0",
         "generated_at": utc_now(),
         "status": "passed" if all(item["status"] == "passed" for item in domains) and adversarial["status"] == "passed" else "failed",
         "domain_regressions": domains,
         "adversarial_regressions": adversarial,
+        "semantic_contract_regressions": semantic_checks,
         "quality_claim_policy": "Synthetic regressions prove scientific contracts, not manuscript quality. A 95% claim remains blocked until the blind complete-manuscript and real-figure evaluation contract is supplied.",
     }
     atomic_write_json(root / "v0260_release_regression_report.json", report)
+    atomic_write_json(root / "v0280_release_regression_report.json", report)
     atomic_write_json(root / "v0250_release_regression_report.json", report)
     return report
 

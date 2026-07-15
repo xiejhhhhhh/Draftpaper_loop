@@ -57,11 +57,31 @@ def assess_pre_execution_support(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     if not (state.path / "research_plan" / "figure_storyboard.json").exists():
         raise PreExecutionSupportError("research_plan/figure_storyboard.json is required.")
+    from .data_contracts import write_data_contract_reports
+
+    # Plan review must use the current storyboard and inventory. A stale
+    # coverage report from an earlier scientific objective creates false data
+    # rescue tasks and can misclassify method outputs as external inputs.
+    write_data_contract_reports(state.path)
     sufficiency_result = assess_plugin_sufficiency(state.path)
+    from .project_capability_audit import audit_project_capabilities
+
+    audit_project_capabilities(state.path)
     sufficiency = _read_json(state.path / "research_plan" / "plugin_sufficiency_report.json")
     coverage_result = assess_review_rule_coverage(state.path)
     coverage = _read_json(state.path / "research_plan" / "review_rule_coverage_report.json")
-    rescue_prepared = (state.path / RESCUE_TASKS_JSON).exists()
+    rescue_payload = _read_json(state.path / RESCUE_TASKS_JSON)
+    current_rescue_ids = sorted(
+        str(item.get("requirement_id") or "")
+        for item in sufficiency.get("rescue_tasks") or []
+        if str(item.get("requirement_id") or "")
+    )
+    prepared_rescue_ids = sorted(
+        str(item.get("requirement_id") or "")
+        for item in rescue_payload.get("tasks") or []
+        if str(item.get("requirement_id") or "")
+    )
+    rescue_prepared = bool(rescue_payload) and prepared_rescue_ids == current_rescue_ids
     sufficiency_decision = str(sufficiency.get("decision") or sufficiency_result.get("decision") or "unknown")
     exhausted = any(
         str(item.get("outcome") or item.get("status") or "").lower() in {"exhausted", "blocked_unavailable", "unavailable_after_search"}
@@ -126,10 +146,8 @@ def assess_pre_execution_support(project: str | Path) -> dict[str, Any]:
 
 def prepare_pre_execution_rescue(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
+    assess_pre_execution_support(state.path)
     report = _read_json(state.path / REPORT_JSON)
-    if not report:
-        assess_pre_execution_support(state.path)
-        report = _read_json(state.path / REPORT_JSON)
     sufficiency = _read_json(state.path / "research_plan" / "plugin_sufficiency_report.json")
     coverage = _read_json(state.path / "research_plan" / "review_rule_coverage_report.json")
     tasks: list[dict[str, Any]] = []
@@ -160,6 +178,8 @@ def prepare_pre_execution_rescue(project: str | Path) -> dict[str, Any]:
         "project_id": state.metadata.get("project_id"),
         "task_count": len(tasks),
         "tasks": tasks,
+        "research_capability_contract_sha256": sufficiency.get("research_capability_contract_sha256"),
+        "source_sufficiency_generated_at": sufficiency.get("generated_at"),
         "route_options": report.get("route_options") or [],
         "policy": "Repair implementation first. Any scientific design change reopens the research plan for human correction and confirmation.",
     }

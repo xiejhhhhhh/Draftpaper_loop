@@ -427,6 +427,27 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.26.1-v0.28.0 (2026-07-16) -- Executable Scientific Semantics and Precise Recovery
+
+- `v0.26.1` separates stale artifacts, citation support, manuscript semantics, reproducibility packages, render quality, scientific analysis, figure contracts, and human review into explicit failure domains. Citation or bundle failures no longer fall back to `plan-figures`; hard-check reports name the failed predicate, artifact, and valid next command. Interactive CLI output is compact, while redirected/API output preserves complete JSON; `--compact` and `--json-full` select either contract explicitly.
+- `v0.26.2` adds domain-neutral `DataProvenanceContract`, `CohortRegistry`, `CohortViewRegistry`, and append-only join/filter ledger artifacts. Every analysis view declares its parent cohort, sample unit, count, missingness policy, split, allowed use, and claim boundary. Distinct display and regression subsets may coexist, but silent count or sample-unit reuse is rejected.
+- `v0.26.3` adds `ExecutableAnalysisSpec`, formula AST, resampling contract, and prespecified run-selection policy. Estimand, cohort view, split, preprocessing scope, implementation entry point, uncertainty semantics, calibration definition, formulas, and variable explanations now share one contract. ECE definition drift, false paired/grouped intervals, and unlocked best-seed headline selection are blocking semantic errors.
+- `v0.27.0` splits plugin sufficiency into bootstrap and release decisions. Auditable project-local implementations can unblock a new topic before formal reusable plugins exist; final release still requires verified data/method bindings, input/output hashes, execution scope, and a capability passport. AcademicForge/GitHub rescue runs only for a real unresolved capability gap.
+- `v0.27.1` upgrades the Scientific Evidence Registry key to estimand/cohort-view/analysis-spec/run/model/split/aggregation/dimension and writes section claim maps with sentence hashes and evidence IDs. Figure Contract v2 binds claims, panels, cohort views, estimands, analysis specs, runs, evidence and rendered text; journal-width QA records font, overlap, crop, color and caption checks. Post-Results discipline rules consume compiled claim-level evidence rather than broad role strings.
+- `v0.27.2` adds an artifact dependency DAG and transactional `apply-section-revision`. Citation-only, presentation-only, prose-semantic, cohort, analysis, run, figure and claim-contract changes propagate to different minimal stale sets. A current functional section release is authoritative over optional manifest backfills, while changed accepted hashes still reopen the correct chain.
+- `v0.27.3` builds anonymous review supplements from the selected run and Python import dependency closure, excludes unrelated historical figures/tables, compiles the closure before release, and archives reviewer reports under the superseded bundle hash when the manuscript, evidence or bundle changes. Review findings carry structured repair classes for prose, rendering, reproducibility, analysis supplements, claim downgrade or new evidence.
+- `v0.28.0` adds normalized citation intents for direct support, method/tool provenance, comparison context, and dataset/product provenance while retaining all curated references and repairing prose first. Paragraph evidence remains content-addressed and delta-cached. Five cross-domain release fixtures plus adversarial cohort, calibration, run-selection, figure, plugin, and citation regressions guard the generic architecture.
+- Added `JournalIntentContract`: only a confirmed journal may render a submission label; provisional and unset projects remain neutral drafts. Status distinguishes `draft_pdf_ready`, `review_blocked`, and `release_ready`, and `doctor --explain` exposes the read-only artifact DAG and recovery rationale.
+
+Key commands:
+
+```powershell
+draftpaper doctor --project <project> --explain
+draftpaper apply-section-revision --project <project> --section methods --input revised_methods.tex
+draftpaper prepare-independent-manuscript-review --project <project>
+draftpaper status --project <project> --compact
+```
+
 ### v0.25.1-v0.26.0 (2026-07-14) -- Confirmed Research Blueprints, Task-aware Statistics, and Project Workspace Isolation
 
 - New papers now default to the configured central `projects` root instead of following the idea or dataset location. `DRAFTPAPER_PROJECTS_ROOT`, user config, and `--projects-root` control the root; generated slugs are capped at 48 characters and use an eight-character stable project ID. Clean `_vN` children use the same short-name policy.

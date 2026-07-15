@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from draftpaper_cli.latex_assembly import _render_main
 from draftpaper_cli.manuscript_revision import (
@@ -182,6 +183,28 @@ code_availability: Analysis code is archived with the release.
     assert "placeholder.invalid" not in rendered
 
 
+def test_partial_metadata_update_preserves_existing_authorship_and_captions(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    initial = tmp_path / "initial_metadata.yaml"
+    initial.write_text(
+        "title: Initial title\nauthors:\n  - name: Alice Example\nfigure_captions:\n  fig_01: Initial caption.\n",
+        encoding="utf-8",
+    )
+    update = tmp_path / "abstract_update.yaml"
+    update.write_text(
+        "abstract: We report a bounded analysis without unsupported quantitative claims.\n",
+        encoding="utf-8",
+    )
+
+    set_manuscript_metadata(project, initial)
+    result = set_manuscript_metadata(project, update)
+    merged = yaml.safe_load((project / "writing" / "manuscript_metadata.yaml").read_text(encoding="utf-8"))
+
+    assert merged["authors"][0]["name"] == "Alice Example"
+    assert merged["figure_captions"]["fig_01"] == "Initial caption."
+    assert "authors" in result["preserved_fields"]
+
+
 def test_custom_reference_and_review_findings_enter_structured_queues(tmp_path: Path) -> None:
     project = _project(tmp_path)
     custom = tmp_path / "reference.json"
@@ -199,6 +222,23 @@ def test_custom_reference_and_review_findings_enter_structured_queues(tmp_path: 
     assert "Custom2025" in (project / "references" / "library.bib").read_text(encoding="utf-8")
     registry = json.loads((project / "references" / "reference_registry.json").read_text(encoding="utf-8"))
     assert any(item.get("citation_key") == "Custom2025" for item in registry.get("records") or [])
+
+    enrichment = tmp_path / "reference_enrichment.json"
+    enrichment.write_text(json.dumps([{
+        "citation_key": "Custom2025",
+        "title": "A custom verified source",
+        "authors": ["A. Researcher", "B. Researcher"],
+        "year": 2025,
+        "journal": "Journal of Tests",
+        "doi": "10.1234/example",
+        "evidence_notes": "Supports a Discussion-only comparison boundary.",
+        "search_contexts": ["discussion"],
+        "evidence_only": True,
+    }]), encoding="utf-8")
+    registered = add_custom_reference(project, enrichment)
+    assert registered["status"] == "evidence_registered"
+    evidence = (project / "references" / "citation_evidence.csv").read_text(encoding="utf-8")
+    assert "Custom2025,discussion" in evidence
 
     aggregate = project / "quality_checks" / "blind_reviews" / "aggregate.json"
     aggregate.parent.mkdir(parents=True, exist_ok=True)

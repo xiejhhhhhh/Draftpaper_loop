@@ -87,6 +87,27 @@ def write_failed_gate_reports(project_path: Path) -> None:
 
 
 class ReviewRevisionTests(unittest.TestCase):
+    def test_confirmed_disciplines_prevent_cross_domain_rescue_contamination(self) -> None:
+        from draftpaper_cli.review_revision import _domain_statistical_routes
+
+        routes, sources = _domain_statistical_routes(
+            {"field": "galaxy survey astronomy computer vision"},
+            {
+                "artifacts": {
+                    "results_text": "A map and a software yield statement appear in archived text.",
+                    "method_context": "DINOv2 image classification with Euclid catalogue data.",
+                }
+            },
+            {"astronomy", "machine_learning"},
+        )
+
+        route_ids = {route["route_id"] for route in routes}
+        self.assertIn("astronomy_observation_validation", route_ids)
+        self.assertIn("machine_learning_validation_rebuild", route_ids)
+        self.assertNotIn("agricultural_remote_sensing_feature_rebuild", route_ids)
+        self.assertNotIn("spatial_ecological_validation", route_ids)
+        self.assertNotIn("agricultural_remote_sensing_signal", sources)
+
     def test_diagnose_gate_failures_writes_unified_revision_issues(self) -> None:
         from draftpaper_cli.review_revision import diagnose_gate_failures
 

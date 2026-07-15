@@ -432,7 +432,92 @@ def _pack_item(record: dict[str, Any], section: str) -> dict[str, Any]:
         "figure_links": list(record.get("figure_ids") or record.get("figure_groups") or []),
         "formula_links": list(record.get("formula_ids") or []),
         "source_artifact": _text(record.get("source_artifact"), 400),
+        "value": record.get("value"),
+        "unit": _text(record.get("unit"), 80),
+        "model_id": _text(record.get("model_id") or record.get("model"), 160),
+        "analysis_variant": _text(record.get("analysis_variant"), 160),
+        "aggregation": _text(record.get("aggregation"), 160),
     }
+
+
+def _representative_story_evidence(
+    evidence: list[dict[str, Any]],
+    story_id: str,
+    *,
+    limit: int = 28,
+) -> list[str]:
+    """Select prompt-sized evidence while leaving the full registry authoritative."""
+    matched = [
+        item for item in evidence
+        if item.get("evidence_id") and story_id in {str(value) for value in item.get("figure_links") or []}
+    ]
+    if len(matched) <= limit:
+        return [str(item["evidence_id"]) for item in matched]
+    high_value_tokens = {
+        "sample": 10,
+        "cohort": 10,
+        "count": 9,
+        "confusion": 10,
+        "macro_f1": 10,
+        "balanced_accuracy": 8,
+        "roc_auc": 8,
+        "delta_over_frozen": 10,
+        "ci_low": 8,
+        "ci_high": 8,
+        "adjusted_coefficient": 10,
+        "adjusted_p": 9,
+        "brier": 8,
+        "ece": 8,
+        "separation": 9,
+        "overlap": 9,
+        "shared_tile": 8,
+        "external": 8,
+        "literature": 8,
+    }
+    low_value_tokens = {
+        "temperature": -5,
+        "threshold": -3,
+        "trainable": -5,
+        "average_precision": -2,
+        "standard_error": -1,
+    }
+
+    def score(item: dict[str, Any]) -> tuple[int, str]:
+        role = str(item.get("claim_role") or "").lower()
+        value = sum(weight for token, weight in high_value_tokens.items() if token in role)
+        value += sum(weight for token, weight in low_value_tokens.items() if token in role)
+        if str(item.get("analysis_variant") or "").lower() in {"primary", "primary_fixed_partition"}:
+            value += 3
+        return value, str(item.get("evidence_id") or "")
+
+    # First retain the strongest item for each semantic role/model/analysis layer,
+    # then fill remaining space with the next most informative bound values.
+    ranked = sorted(matched, key=lambda item: (-score(item)[0], score(item)[1]))
+    selected: list[dict[str, Any]] = []
+    signatures: set[tuple[str, str, str]] = set()
+    for item in ranked:
+        signature = (
+            str(item.get("claim_role") or ""),
+            str(item.get("model_id") or ""),
+            str(item.get("analysis_variant") or ""),
+        )
+        if signature in signatures:
+            continue
+        signatures.add(signature)
+        selected.append(item)
+        if len(selected) >= limit:
+            break
+    if len(selected) < limit:
+        selected_ids = {str(item.get("evidence_id") or "") for item in selected}
+        for item in ranked:
+            evidence_id = str(item.get("evidence_id") or "")
+            if evidence_id in selected_ids:
+                continue
+            selected.append(item)
+            selected_ids.add(evidence_id)
+            if len(selected) >= limit:
+                break
+    return [str(item["evidence_id"]) for item in selected]
 
 
 def build_section_evidence_pack(project: str | Path, section: str) -> dict[str, Any]:
@@ -538,7 +623,7 @@ def _paragraph_blueprint(section: str, pack: dict[str, Any]) -> list[dict[str, A
                 "forbidden_content": ["literature citation", "filename or path", "claim beyond the stated boundary"],
             })
         for index, story in enumerate(stories, start=1):
-            matched_ids = [item.get("evidence_id") for item in evidence if item.get("figure_links") and story.get("story_id") in set(item.get("figure_links") or [])]
+            matched_ids = _representative_story_evidence(evidence, str(story.get("story_id") or ""))
             if not matched_ids and evidence:
                 start = (index - 1) * len(evidence) // max(1, len(stories))
                 end = index * len(evidence) // max(1, len(stories))
@@ -555,11 +640,122 @@ def _paragraph_blueprint(section: str, pack: dict[str, Any]) -> list[dict[str, A
                 "transition_logic": "Explain how this finding changes the scientific interpretation before moving to the next finding.",
                 "forbidden_content": ["literature citation", "filename or path", "claim beyond the stated boundary"],
             })
+    elif section == "discussion":
+        if not stories:
+            paragraphs.append({
+                "paragraph_id": "discussion_1",
+                "objective": "Interpret the approved findings against compatible literature and preserve their claim boundaries.",
+                "required_evidence_ids": [item.get("evidence_id") for item in evidence[:8] if item.get("evidence_id")],
+                "figure_or_formula_links": [],
+                "citation_intent": "Compare like with like; use citations as evidence for the stated comparison rather than as a coverage list.",
+                "forbidden_content": ["internal artifact names", "unsupported metric", "conclusion outside the approved evidence boundary"],
+            })
+        for index, story in enumerate(stories, start=1):
+            story_id = str(story.get("story_id") or "")
+            matched_ids = _representative_story_evidence(evidence, story_id)
+            if not matched_ids and evidence:
+                start = (index - 1) * len(evidence) // max(1, len(stories))
+                end = index * len(evidence) // max(1, len(stories))
+                matched_ids = [item.get("evidence_id") for item in evidence[start:end] if item.get("evidence_id")]
+            paragraphs.append({
+                "paragraph_id": f"discussion_finding_{index}",
+                "objective": "Interpret this finding, compare it with scientifically compatible literature, explain the likely mechanism or methodological contrast, and state the remaining boundary.",
+                "required_evidence_ids": matched_ids,
+                "allocated_claim_ids": [f"claim:{story_id}"] if story_id else [],
+                "figure_or_formula_links": [story_id] if story_id else [],
+                "required_claim": story.get("claim") or story.get("scientific_question"),
+                "citation_intent": "Support the exact agreement, disagreement, mechanism, or comparability boundary; do not cite by topical similarity alone.",
+                "transition_logic": "End with the consequence of this finding for the next part of the paper's argument.",
+                "forbidden_content": ["internal artifact names", "unsupported metric", "result repetition without interpretation", "conclusion outside the approved evidence boundary"],
+            })
+        boundary_terms = {"uncertainty", "limitation", "selection", "coverage", "calibration", "imbalance", "missing"}
+        boundary_ids = []
+        for item in evidence:
+            searchable = " ".join(str(item.get(key) or "") for key in ("claim_role", "allowed_interpretation", "forbidden_overclaim")).lower()
+            if any(term in searchable for term in boundary_terms) and item.get("evidence_id"):
+                boundary_ids.append(item.get("evidence_id"))
+            if len(boundary_ids) >= 8:
+                break
+        if stories:
+            paragraphs.append({
+                "paragraph_id": "discussion_synthesis",
+                "objective": "Synthesize the innovation, limitations, external-validity boundary, and the next decisive validation without repeating the Results section.",
+                "required_evidence_ids": boundary_ids or [item.get("evidence_id") for item in evidence[:8] if item.get("evidence_id")],
+                "allocated_claim_ids": [f"claim:{story.get('story_id')}" for story in stories if story.get("story_id")],
+                "figure_or_formula_links": [str(story.get("story_id")) for story in stories if story.get("story_id")],
+                "citation_intent": "Use references to delimit generalizability and motivate the next validation, not to inflate novelty.",
+                "transition_logic": "Close with the maximum supported conclusion and the evidence needed to extend it.",
+                "forbidden_content": ["internal artifact names", "unsupported metric", "novelty by absence of an identical title", "conclusion outside the approved evidence boundary"],
+            })
+    elif section == "methods":
+        jobs = [
+            (
+                "describe sample construction, image representation, and split units",
+                {"sample", "cohort", "class", "split", "source", "image", "representation", "embedding", "input"},
+            ),
+            (
+                "explain model architecture, trainable stages, and optimization objective",
+                {"model", "architecture", "training", "trainable", "optimizer", "loss", "objective", "parameter", "finetun", "probe"},
+            ),
+            (
+                "define validation, metrics, baselines, ablations, calibration, and uncertainty",
+                {"validation", "metric", "macro", "auc", "precision", "recall", "calibration", "baseline", "ablation", "seed", "uncertainty", "threshold"},
+            ),
+        ]
+        for index, (objective, keywords) in enumerate(jobs, start=1):
+            scored: list[tuple[int, str, dict[str, Any]]] = []
+            for item in evidence:
+                searchable = " ".join(
+                    str(item.get(key) or "")
+                    for key in (
+                        "entity_role", "claim_role", "allowed_interpretation", "model_id",
+                        "analysis_variant", "metric_dimension", "citation_role", "citation_key",
+                    )
+                ).lower()
+                score = sum(token in searchable for token in keywords)
+                if item.get("formula_ids"):
+                    score += 4 if index == 2 else 1
+                if item.get("citation_key") and index in {1, 2}:
+                    score += 2
+                if index < 3 and searchable.startswith("result_metric_"):
+                    score -= 2
+                scored.append((score, str(item.get("evidence_id") or ""), item))
+            scored.sort(key=lambda row: (-row[0], row[1]))
+            selected: list[dict[str, Any]] = []
+            families: set[str] = set()
+            for score, _evidence_id, item in scored:
+                if score <= 0 and selected:
+                    continue
+                role = str(item.get("entity_role") or item.get("claim_role") or item.get("citation_key") or item.get("evidence_id") or "")
+                family = re.sub(r"_\d+(?=_|$)", "", role.lower())
+                if family in families:
+                    continue
+                selected.append(item)
+                families.add(family)
+                if len(selected) >= 18:
+                    break
+            if not selected:
+                selected = evidence[:8]
+            selected_ids = [str(item.get("evidence_id")) for item in selected if item.get("evidence_id")]
+            paragraphs.append({
+                "paragraph_id": f"methods_{index}",
+                "objective": objective,
+                "required_evidence_ids": selected_ids,
+                "allocated_claim_ids": selected_ids,
+                "figure_or_formula_links": sorted({
+                    str(link)
+                    for item in selected
+                    for link in (item.get("formula_ids") or [])
+                    if str(link)
+                }),
+                "citation_intent": "Cite only the method, model, or data standard directly described in this paragraph.",
+                "transition_logic": "Connect the implemented operation to the next reproducibility or validation decision.",
+                "forbidden_content": ["internal artifact names", "unsupported metric", "result values presented as method design"],
+            })
     else:
         role_goals = {
             "introduction": ["establish the literature-backed problem", "define the unresolved gap", "state the testable question and bounded contribution"],
             "data": ["define scientific data source and access boundary", "explain processing and analytical cohort", "state coverage and claim boundary"],
-            "methods": ["describe sample and representation", "explain model or estimator and objective", "define validation, metrics, and ablations with formula links"],
             "discussion": ["interpret main findings", "compare with relevant literature", "state limitations, innovation, and next validation"],
         }
         goals = role_goals.get(section, [])

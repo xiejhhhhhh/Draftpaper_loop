@@ -297,10 +297,71 @@ def _result_support_action(project_path: Path, result_support: dict[str, Any]) -
     }
 
 
+def _minimum_outputs_exist(project_path: Path, stage: str) -> bool:
+    required = MINIMUM_STAGE_OUTPUTS.get(stage) or []
+    return bool(required) and all((project_path / relative).exists() for relative in required)
+
+
+def _functional_release_is_current(project_path: Path, release: dict[str, Any]) -> bool:
+    if release.get("decision") != "pass":
+        return False
+    expected = release.get("accepted_candidate_hashes") or {}
+    if not isinstance(expected, dict) or not expected:
+        return False
+    for section, digest in expected.items():
+        candidate = project_path / "writing" / "candidates" / f"{section}.tex"
+        if not candidate.is_file():
+            return False
+        normalized_text_hash = hashlib.sha256(
+            candidate.read_text(encoding="utf-8-sig", errors="replace").encode("utf-8")
+        ).hexdigest()
+        if normalized_text_hash != str(digest):
+            return False
+    return True
+
+
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
+    stage_state = (load_project(project_path).metadata.get("stages") or {})
+    research_plan_state = stage_state.get("research_plan") or {}
+    if research_plan_state.get("stale"):
+        # All gate reports below were derived from the superseded scientific
+        # contract. Rebuild from the earliest stale stage before interpreting
+        # any old capability, method, result, or review diagnosis.
+        return None
+    research_plan_current = (
+        research_plan_state.get("status") in COMPLETE_STATUSES
+    )
+    latex_state = stage_state.get("latex") or {}
+    latex_current = latex_state.get("status") in COMPLETE_STATUSES and not latex_state.get("stale")
+    if latex_current:
+        integrity = _read_report(project_path, "integrity/integrity_report.json")
+        if integrity and integrity.get("status") not in {"passed", "pass"}:
+            return _review_sequence_action(project_path, "The integrity gate failed")
+        quality_state = stage_state.get("quality_checks") or {}
+        quality = _read_report(project_path, "quality_checks/quality_report.json")
+        if quality and quality_state.get("status") == "failed" and not quality_state.get("stale"):
+            from .failure_router import primary_route
+
+            route = primary_route(quality)
+            if route and route.get("domain") != "manuscript_semantic":
+                command = str(route.get("command") or "diagnose-gate-failures")
+                return {
+                    "stage": str(route.get("domain") or "quality_checks"),
+                    "command": command.split()[0],
+                    "cli": _cli_for(project_path, command),
+                    "reason": str(route.get("reason") or "The final quality gate failed."),
+                    "failure_domain": route.get("domain"),
+                    "failed_predicate": route.get("predicate"),
+                    "affected_artifact": route.get("artifact"),
+                    "prohibited_commands": route.get("prohibited_commands") or [],
+                }
+            return _review_sequence_action(project_path, "The final quality gate failed")
     research_plan = project_path / "research_plan" / "research_plan.md"
     confirmation_marker = project_path / "research_plan" / "research_plan_confirmation_required.json"
-    if research_plan.exists() and confirmation_marker.exists():
+    if research_plan_current and research_plan.exists() and confirmation_marker.exists():
+        # A prior review packet is historical evidence once the scientific
+        # objective or another upstream design input changes. Normal stage
+        # routing must rebuild the stale chain before exposing a checkpoint.
         from .research_plan_confirmation import (
             REVIEW_PACKET_JSON,
             confirmation_state,
@@ -532,6 +593,10 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
     trace_path = project_path / "results" / "figure_plugin_trace_report.json"
     current_result_manifest_hash = hashlib.sha256(result_manifest_path.read_bytes()).hexdigest() if result_manifest_path.exists() else ""
     current_trace_hash = hashlib.sha256(trace_path.read_bytes()).hexdigest() if trace_path.exists() else ""
+    functional_release_current = _functional_release_is_current(
+        project_path,
+        _read_report(project_path, "quality/functional_quality_release.json"),
+    )
     review_matches_results = bool(
         result_discipline_review
         and result_discipline_review.get("results_sha256") == current_results_hash
@@ -545,6 +610,7 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         )
     if (
         results_stage_current
+        and not functional_release_current
         and (project_path / "research_plan" / "research_capability_contract.json").exists()
         and results_path.exists()
     ):
@@ -553,6 +619,8 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             return lifecycle_action
     if (
         results_stage_current
+        and promoted_snapshot_id
+        and not functional_release_current
         and (project_path / "research_plan" / "research_capability_contract.json").exists()
         and results_path.exists()
         and not review_matches_results
@@ -565,6 +633,8 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         }
     if (
         (project_path / "research_plan" / "research_capability_contract.json").exists()
+        and promoted_snapshot_id
+        and not functional_release_current
         and results_stage_current
         and review_matches_results
         and result_discipline_review.get("decision") in {"repair_required", "revise_required"}
@@ -577,6 +647,15 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             "cli": _cli_for(project_path, command),
             "reason": str(action.get("reason") or "Results discipline review requires evidence repair before manuscript writing continues."),
         }
+    if (
+        results_stage_current
+        and not functional_release_current
+        and review_matches_results
+        and result_discipline_review.get("decision") == "pass"
+    ):
+        writing_action = coordinated_formal_release_action(project_path)
+        if writing_action:
+            return writing_action
     plan_feasibility = _read_report(project_path, "research_plan/research_plan_feasibility_report.json")
     if plan_feasibility and plan_feasibility.get("decision") == "blocked":
         command = str(plan_feasibility.get("recommended_next_action") or "revise-research-plan")
@@ -653,6 +732,21 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         return _review_sequence_action(project_path, "The integrity gate failed")
     quality = _read_report(project_path, "quality_checks/quality_report.json")
     if (quality_stage_current or quality_stage_failed) and quality and quality.get("status") not in {"passed", "pass"}:
+        from .failure_router import primary_route
+
+        route = primary_route(quality)
+        if route:
+            command = str(route.get("command") or "diagnose-gate-failures")
+            return {
+                "stage": str(route.get("domain") or "quality_checks"),
+                "command": command.split()[0],
+                "cli": _cli_for(project_path, command),
+                "reason": str(route.get("reason") or "The final quality gate failed."),
+                "failure_domain": route.get("domain"),
+                "failed_predicate": route.get("predicate"),
+                "affected_artifact": route.get("artifact"),
+                "prohibited_commands": route.get("prohibited_commands") or [],
+            }
         return _review_sequence_action(project_path, "The final quality gate failed")
     return None
 
@@ -760,11 +854,32 @@ def _has_downstream_progress(stages: dict[str, Any], stage: str) -> bool:
 
 def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
     stages = metadata.get("stages") or {}
+    functional_release = _read_report(project_path, "quality/functional_quality_release.json")
+    functional_release_current = _functional_release_is_current(project_path, functional_release)
+    released_writing_stages = {"results", "introduction", "data_writing", "methods_writing", "discussion"}
     for stage in STAGE_ORDER:
         if stage == "idea":
             continue
         stage_meta = stages.get(stage) or {}
         if not _stage_is_current(project_path, stage, stage_meta):
+            if (
+                stage in released_writing_stages
+                and functional_release_current
+            ):
+                # A functional section release freezes the accepted candidate
+                # hashes. Optional manifest backfills cannot supersede it.
+                continue
+            if (
+                stage_meta.get("status") in COMPLETE_STATUSES
+                and not stage_meta.get("stale")
+                and _has_downstream_progress(stages, stage)
+                and _minimum_outputs_exist(project_path, stage)
+            ):
+                # Functional downstream release is authoritative for legacy or
+                # newly extended manifests. Optional backfill artifacts cannot
+                # reopen an already released stage unless its scientific state
+                # is explicitly stale.
+                continue
             if stage in BACKFILL_COMPATIBLE_STAGES and _has_downstream_progress(stages, stage):
                 continue
             return stage
@@ -953,9 +1068,11 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
         if lifecycle_action:
             return lifecycle_action
     if stage in {"latex", "quality_checks"}:
-        release_action = coordinated_formal_release_action(project_path)
-        if release_action:
-            return release_action
+        release = _read_report(project_path, "quality/functional_quality_release.json")
+        if not _functional_release_is_current(project_path, release):
+            release_action = coordinated_formal_release_action(project_path)
+            if release_action:
+                return release_action
     command = _stage_command(project_path, stage)
     if stage == "quality_checks" and not _integrity_is_current(project_path):
         command = "run-integrity-gate"
@@ -1114,6 +1231,19 @@ def status_project(project: str | Path) -> dict[str, Any]:
         sufficiency = _read_report(state.path, "research_plan/plugin_sufficiency_report.json")
         if any(str(item.get("state") or "") == "blocked_external" for item in sufficiency.get("requirement_assessments") or [] if isinstance(item, dict)):
             pipeline_state = "awaiting_external_access"
+    blind_review = _read_report(state.path, "quality_checks/blind_reviews/aggregate.json")
+    quality_report = _read_report(state.path, "quality_checks/quality_report.json")
+    if blind_review.get("status") in {"revision_required", "adjudication_required"}:
+        pipeline_state = "review_blocked"
+    elif (
+        quality_report.get("status") in {"pass", "passed"}
+        and command in {"review-final-manuscript", "confirm-final-manuscript"}
+    ):
+        pipeline_state = "release_ready"
+    elif (state.path / "latex" / "main.pdf").is_file() and command in {
+        "prepare-independent-review", "record-independent-review", "assess-manuscript-quality-release"
+    }:
+        pipeline_state = "draft_pdf_ready"
     return {
         "status": "reported",
         "project_path": str(state.path),
@@ -1121,6 +1251,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "current_stage": state.metadata.get("current_stage"),
         "awaiting_checkpoint": None,
         "passport": str(state.path / PASSPORT_FILES["passport"]),
+        "current_snapshot": _read_report(state.path, "results/promoted_evidence_snapshot.json").get("snapshot_id"),
         "next_action": next_action,
     }
 

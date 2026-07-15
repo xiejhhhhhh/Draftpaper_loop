@@ -21,6 +21,8 @@ from .project_state import load_project
 REFERENCE_REGISTRY = "references/reference_registry.json"
 BIBLIOGRAPHY_CONTRACT = "references/bibliography_contract.json"
 DUPLICATE_REPORT = "references/reference_duplicate_report.json"
+SUPPLEMENTAL_BIBLIOGRAPHY = "references/supplemental_library.bib"
+SUPPLEMENTAL_MERGE_REPORT = "references/supplemental_bibliography_merge_report.json"
 VERSION_DECISIONS = "references/reference_version_decisions.json"
 BIBLIOGRAPHY_REPORT = "quality_checks/bibliography_quality_report.json"
 REFERENCE_PROOF = "quality_checks/reference_proof.html"
@@ -139,6 +141,74 @@ def _bib_entries(path: Path) -> list[dict[str, Any]]:
     return [dict(item) for item in database.entries]
 
 
+def materialize_effective_bibliography(project: str | Path) -> tuple[str, dict[str, Any]]:
+    """Merge the curated and optional supplemental BibTeX sources without hiding conflicts."""
+    root = Path(project)
+    primary_path = root / "references" / "library.bib"
+    supplemental_path = root / SUPPLEMENTAL_BIBLIOGRAPHY
+    primary = _bib_entries(primary_path)
+    supplemental = _bib_entries(supplemental_path)
+    merged = list(primary)
+    by_key = {str(item.get("ID") or ""): item for item in primary}
+    by_doi = {_doi(item.get("doi")): item for item in primary if _doi(item.get("doi"))}
+    accepted: list[str] = []
+    skipped: list[dict[str, str]] = []
+    conflicts: list[dict[str, str]] = []
+
+    for entry in supplemental:
+        key = str(entry.get("ID") or "").strip()
+        doi = _doi(entry.get("doi"))
+        title_id = _title_identity(entry.get("title"))
+        existing_key = by_key.get(key)
+        if not key:
+            conflicts.append({"citation_key": "", "reason": "missing_citation_key"})
+            continue
+        if existing_key is not None:
+            same_work = bool(
+                (doi and doi == _doi(existing_key.get("doi")))
+                or (title_id and title_id == _title_identity(existing_key.get("title")))
+            )
+            if same_work:
+                skipped.append({"citation_key": key, "reason": "duplicate_citation_key_same_work"})
+            else:
+                conflicts.append({"citation_key": key, "reason": "citation_key_conflict"})
+            continue
+        if doi and doi in by_doi:
+            conflicts.append({
+                "citation_key": key,
+                "reason": "duplicate_doi_with_different_citation_key",
+                "existing_citation_key": str(by_doi[doi].get("ID") or ""),
+            })
+            continue
+        merged.append(entry)
+        by_key[key] = entry
+        if doi:
+            by_doi[doi] = entry
+        accepted.append(key)
+
+    report = {
+        "schema_version": "dpl.supplemental_bibliography_merge_report.v1",
+        "generated_at": utc_now(),
+        "status": "failed" if conflicts else "passed",
+        "primary_source": "references/library.bib",
+        "supplemental_source": SUPPLEMENTAL_BIBLIOGRAPHY if supplemental_path.is_file() else None,
+        "primary_record_count": len(primary),
+        "supplemental_record_count": len(supplemental),
+        "effective_record_count": len(merged),
+        "accepted_supplemental_keys": accepted,
+        "skipped_duplicates": skipped,
+        "conflicts": conflicts,
+        "policy": "Supplemental records are explicit project evidence; citation-key or DOI conflicts must be resolved rather than silently overwritten.",
+    }
+    _write_json(root / SUPPLEMENTAL_MERGE_REPORT, report)
+    if conflicts:
+        labels = ", ".join(item.get("citation_key") or "<missing>" for item in conflicts)
+        raise BibliographyError(f"Supplemental bibliography conflicts require resolution: {labels}")
+    database = bibtexparser.bibdatabase.BibDatabase()
+    database.entries = merged
+    return bibtexparser.dumps(database), report
+
+
 def _literature_index(root: Path) -> dict[str, dict[str, Any]]:
     payload = _read_json(root / "references" / "literature_items.json")
     rows = payload if isinstance(payload, list) else payload.get("items") or [] if isinstance(payload, dict) else []
@@ -166,9 +236,12 @@ def _bst_record(root: Path, style: str) -> dict[str, Any]:
 def build_reference_registry(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     bib_path = state.path / "references" / "library.bib"
+    effective_bibtex, merge_report = materialize_effective_bibliography(state.path)
+    effective_database = bibtexparser.loads(effective_bibtex)
+    supplemental_keys = set(merge_report.get("accepted_supplemental_keys") or [])
     literature = _literature_index(state.path)
     records = []
-    for entry in _bib_entries(bib_path):
+    for entry in effective_database.entries:
         key = str(entry.get("ID") or "")
         source = literature.get(key, {})
         doi = _doi(entry.get("doi") or source.get("doi"))
@@ -199,7 +272,11 @@ def build_reference_registry(project: str | Path) -> dict[str, Any]:
             "publication_status": "published" if work_type == "journal_article" else "preprint" if work_type == "preprint" else "other",
             "related_versions": [],
             "preferred_citable_version": None,
-            "metadata_sources": sorted(set(["library.bib"] + ([str(source.get("source") or "literature_items")] if source else []))),
+            "metadata_sources": sorted(set(
+                ["library.bib"]
+                + (["supplemental_library.bib"] if key in supplemental_keys else [])
+                + ([str(source.get("source") or "literature_items")] if source else [])
+            )),
             "field_confidence": {"title": "source", "doi": "source" if doi else "missing", "authors": "source"},
             "user_confirmed": False,
             "raw_extra_fields": {
@@ -258,7 +335,8 @@ def build_reference_registry(project: str | Path) -> dict[str, Any]:
         "status": "needs_version_confirmation" if any(len(items) > 1 for items in groups.values()) else "ready",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
-        "source_bibtex_sha256": hashlib.sha256(bib_path.read_bytes()).hexdigest() if bib_path.is_file() else None,
+        "source_bibtex_sha256": hashlib.sha256(effective_bibtex.encode("utf-8")).hexdigest(),
+        "supplemental_merge_report": SUPPLEMENTAL_MERGE_REPORT,
         "record_count": len(records),
         "records": records,
     }

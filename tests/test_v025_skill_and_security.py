@@ -38,6 +38,36 @@ def test_every_command_has_v2_policy_and_schema() -> None:
     assert command_allowed_via_mcp(protected)[0] is False
 
 
+def test_assess_core_evidence_can_write_its_reports_and_result_validations() -> None:
+    spec = COMMAND_SPECS["assess-core-evidence"]
+
+    assert spec.formal_stage == "results"
+    assert "core_evidence/**" in spec.allowed_write_globs
+    assert "results/**" in spec.allowed_write_globs
+
+
+def test_resolve_research_capabilities_can_write_research_plan_contracts() -> None:
+    spec = COMMAND_SPECS["resolve-research-capabilities"]
+
+    assert spec.formal_stage == "capabilities"
+    assert "research_plan/**" in spec.allowed_write_globs
+
+
+def test_resume_can_promote_core_evidence_snapshot_within_its_write_boundary() -> None:
+    spec = COMMAND_SPECS["resume"]
+
+    assert "core_evidence/**" in spec.allowed_write_globs
+    assert "results/promoted_evidence_snapshot.json" in spec.allowed_write_globs
+
+
+def test_reopen_core_evidence_can_archive_and_remove_promoted_snapshot_within_boundary() -> None:
+    spec = COMMAND_SPECS["reopen-core-evidence"]
+
+    assert "results/evidence_snapshot_reopen_report.json" in spec.allowed_write_globs
+    assert "results/evidence_snapshots/**" in spec.allowed_write_globs
+    assert "results/promoted_evidence_snapshot.json" in spec.allowed_write_globs
+
+
 def test_path_confinement_rejects_parent_symlink_and_unc(tmp_path: Path) -> None:
     root = tmp_path / "project"
     root.mkdir()

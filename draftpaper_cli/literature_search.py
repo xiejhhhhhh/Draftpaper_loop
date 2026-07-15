@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -16,7 +17,7 @@ from typing import Any
 
 from .paper_fetch_adapter import enrich_with_paper_fetch
 from .project_state import load_project
-from .references import has_sufficient_metadata_or_pdf, normalize_reference_items, write_reference_outputs
+from .references import domain_anchor_terms, domain_title_overlap, has_sufficient_metadata_or_pdf, normalize_reference_items, tokenize_for_relevance, write_reference_outputs
 from .project_scaffold import _write_json
 from .zotero_adapter import fetch_zotero_collection_items
 
@@ -269,6 +270,36 @@ def _method_phrases_from_requirements(raw_json: str) -> list[str]:
     return _unique_queries(phrases, limit=5)
 
 
+def _objective_contract_terms(objective: Any, *, key: str, limit: int = 6) -> list[str]:
+    """Return current human-revised contract terms without consulting stale plans."""
+    if not isinstance(objective, dict):
+        return []
+    per_question: list[list[str]] = []
+    for question in objective.get("primary_scientific_questions") or []:
+        if not isinstance(question, dict):
+            continue
+        contract = question.get("figure_contract")
+        if not isinstance(contract, dict):
+            continue
+        question_terms: list[str] = []
+        for value in contract.get(key) or []:
+            compact = str(value or "").replace("_", " ").strip()
+            if compact:
+                question_terms.append(compact)
+        if key == "required_method":
+            validation = str(contract.get("validation_metric") or "").replace("_", " ").strip()
+            if validation:
+                question_terms.append(validation)
+        if question_terms:
+            per_question.append(question_terms)
+    terms: list[str] = []
+    for offset in range(max((len(values) for values in per_question), default=0)):
+        for values in per_question:
+            if offset < len(values):
+                terms.append(values[offset])
+    return _unique_terms(terms, limit=limit)
+
+
 def _data_terms(data_text: str) -> str:
     allowed = [
         "image cutout",
@@ -353,13 +384,23 @@ def build_context_search_queries(project: str | Path, query: str | None = None) 
         _read_text_if_exists(state.path / "methods" / "method_plan.md"),
         method_requirements_text,
     ])
+    objective = state.metadata.get("research_objective")
+    objective_data_terms = _objective_contract_terms(objective, key="required_data")
+    objective_method_terms = _objective_contract_terms(objective, key="required_method")
     data_terms = _data_terms(data_text)
-    data_term_list = _topic_data_terms(str(state.metadata.get("idea", "")), discipline, data_terms)
-    method_term_list = (
-        _method_phrases_from_requirements(method_requirements_text)
-        or _method_phrases(method_text)
-        or _topic_method_terms(str(state.metadata.get("idea", "")), discipline)
+    data_term_list = _unique_terms(
+        [*objective_data_terms, *_topic_data_terms(str(state.metadata.get("idea", "")), discipline, data_terms)],
+        limit=6,
     )
+    if objective_method_terms:
+        # A revised objective is authoritative while old method-plan files are stale.
+        method_term_list = objective_method_terms
+    else:
+        method_term_list = (
+            _method_phrases_from_requirements(method_requirements_text)
+            or _method_phrases(method_text)
+            or _topic_method_terms(str(state.metadata.get("idea", "")), discipline)
+        )
     plan: list[dict[str, Any]] = []
     plan.append(_query_entry(
         query_id="all_idea_data_method_01",
@@ -388,7 +429,7 @@ def build_context_search_queries(project: str | Path, query: str | None = None) 
             data_terms=[term],
             combination_level="pairwise",
         ))
-    for index, term in enumerate(method_term_list[:5], start=1):
+    for index, term in enumerate(method_term_list[:6], start=1):
         plan.append(_query_entry(
             query_id=f"methods_pairwise_{index:02d}",
             context="methods",
@@ -746,6 +787,130 @@ def _as_query_list(value: str | list[str]) -> list[str]:
     return [str(value).strip()] if str(value).strip() else []
 
 
+_LINEAGE_REFERENCE_PATH = "lineage/imported_sources/references/literature_items.json"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_verified_lineage_reference_seeds(project: str | Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Load topic-relevant parent references without activating parent workflow state."""
+    state = load_project(project)
+    lineage = state.metadata.get("lineage") if isinstance(state.metadata.get("lineage"), dict) else {}
+    report: dict[str, Any] = {
+        "status": "not_available",
+        "source": _LINEAGE_REFERENCE_PATH,
+        "candidate_count": 0,
+        "accepted_count": 0,
+        "rejected_count": 0,
+    }
+    parent_project_id = str(lineage.get("parent_project_id") or "").strip()
+    if not parent_project_id:
+        return [], report
+
+    ledger_path = state.path / "lineage" / "import_ledger.json"
+    source_path = state.path / Path(_LINEAGE_REFERENCE_PATH)
+    if not ledger_path.is_file() or not source_path.is_file():
+        report["status"] = "missing_verified_import"
+        return [], report
+    try:
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        report["status"] = "invalid_import_ledger"
+        return [], report
+    if (
+        ledger.get("status") != "imported"
+        or str(ledger.get("project_id") or "") != str(state.metadata.get("project_id") or "")
+        or str(ledger.get("source_project_id") or "") != parent_project_id
+    ):
+        report["status"] = "lineage_mismatch"
+        return [], report
+
+    event = next(
+        (
+            entry
+            for entry in (ledger.get("events") or [])
+            if isinstance(entry, dict)
+            and str(entry.get("target_path") or "").replace("\\", "/") == _LINEAGE_REFERENCE_PATH
+            and entry.get("state") == "imported"
+        ),
+        None,
+    )
+    if not event or not event.get("sha256") or _sha256_file(source_path) != str(event.get("sha256")):
+        report["status"] = "hash_verification_failed"
+        return [], report
+    try:
+        payload = json.loads(source_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        report["status"] = "invalid_reference_payload"
+        return [], report
+    candidates = payload.get("items", payload) if isinstance(payload, dict) else payload
+    if not isinstance(candidates, list):
+        report["status"] = "invalid_reference_payload"
+        return [], report
+
+    project_text = " ".join(str(state.metadata.get(key) or "") for key in ("title", "idea", "field"))
+    project_terms = tokenize_for_relevance(project_text)
+    domain_terms = domain_anchor_terms(project_text)
+    accepted: list[dict[str, Any]] = []
+    rejected_titles: list[str] = []
+    for item in candidates:
+        if not isinstance(item, dict) or not str(item.get("title") or "").strip():
+            continue
+        evidence_text = " ".join(
+            [
+                str(item.get("title") or ""),
+                str(item.get("abstract") or ""),
+                str(item.get("evidence_notes") or ""),
+                json.dumps(item.get("deep_summary") or {}, ensure_ascii=False),
+            ]
+        )
+        overlap = sorted(project_terms & tokenize_for_relevance(evidence_text))
+        domain_overlap = sorted(set(overlap) & domain_terms)
+        title_domain_overlap = sorted(domain_title_overlap(str(item.get("title") or ""), domain_terms))
+        prior_user_confirmed = bool(item.get("user_confirmed"))
+        domain_supported = not domain_terms or (
+            bool(domain_overlap) and (bool(title_domain_overlap) or len(domain_overlap) >= 2)
+        )
+        if not (prior_user_confirmed and overlap) and (len(overlap) < 2 or not domain_supported):
+            rejected_titles.append(str(item.get("title") or ""))
+            continue
+        copied = dict(item)
+        copied["lineage_previous_origin"] = str(item.get("reference_origin") or item.get("source") or "unknown")
+        copied["reference_origin"] = "parent_lineage_curated"
+        copied["selection_policy"] = "parent_lineage_topic_revalidated"
+        copied["lineage_source_project_id"] = parent_project_id
+        copied["lineage_asset_id"] = str(event.get("asset_id") or "")
+        copied["lineage_topic_overlap"] = overlap
+        copied["lineage_domain_overlap"] = domain_overlap
+        copied["lineage_title_domain_overlap"] = title_domain_overlap
+        copied["lineage_requires_current_citation_audit"] = True
+        copied["_lineage_runtime_verified"] = True
+        copied["prior_user_confirmed"] = prior_user_confirmed
+        copied["user_confirmed"] = False
+        accepted.append(copied)
+
+    report.update(
+        {
+            "status": "loaded",
+            "candidate_count": len(candidates),
+            "accepted_count": len(accepted),
+            "rejected_count": len(candidates) - len(accepted),
+            "rejected_titles": rejected_titles,
+            "source_project_id": parent_project_id,
+            "asset_id": str(event.get("asset_id") or ""),
+            "sha256": str(event.get("sha256") or ""),
+            "selection_policy": "domain_anchor_plus_two_topic_terms_or_prior_confirmation_plus_one_topic_term",
+        }
+    )
+    return accepted, report
+
+
 def search_literature_for_project(
     project: str | Path,
     *,
@@ -888,6 +1053,10 @@ def search_literature_for_project(
             if fallback_entries:
                 search_queries["fallback_query_plan"] = fallback_entries
         items, _manifest = enrich_with_paper_fetch(project, items)
+    lineage_seeds, lineage_report = _load_verified_lineage_reference_seeds(project)
+    if lineage_seeds:
+        items = [*lineage_seeds, *list(items or [])]
+    search_queries["lineage_reference_seeds"] = lineage_report
     result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
     manifest_path = state.path / "references" / "zotero_collection_manifest.json"
     if zotero_manifest is None:

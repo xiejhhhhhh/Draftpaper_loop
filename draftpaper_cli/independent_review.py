@@ -6,12 +6,14 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from .latex_assembly import _aux_requests_bibtex, _ensure_local_bibstyle_fallback, _find_latex_executable
 from .project_scaffold import utc_now
 from .project_state import load_project
 
@@ -124,10 +126,111 @@ def _pdf_contains_identity(pdf: Path, identities: list[str]) -> list[str]:
     return [name for name in identities if name.lower() in text]
 
 
+def _pdf_is_extractable(pdf: Path) -> bool:
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(str(pdf))
+        for page in reader.pages:
+            page.extract_text()
+    except Exception:
+        return False
+    return True
+
+
+def _anonymize_review_tex(tex: str) -> str:
+    tex = re.sub(
+        r"(?m)^\s*\\(?:author|affiliation|email|orcid)\{[^{}]*\}\s*\n?",
+        "",
+        tex,
+    )
+    title = re.search(r"\\title\{[^{}]*\}", tex)
+    author_block = (
+        "\n\\author{Anonymous Manuscript}"
+        "\n\\affiliation{Withheld for anonymous review}"
+        "\n\\email{withheld@anonymous.invalid}"
+    )
+    if title:
+        tex = tex[:title.end()] + author_block + tex[title.end():]
+    tex = re.sub(
+        r"\\begin\{acknowledgments\}.*?\\end\{acknowledgments\}",
+        "\\\\begin{acknowledgments}\nWithheld for anonymous review.\n\\\\end{acknowledgments}",
+        tex,
+        flags=re.S,
+    )
+    tex = re.sub(
+        r"\\section\*\{Related Links\}.*?(?=\\bibliographystyle|\\bibliography)",
+        "\\\\section*{Related Links}\nWithheld for anonymous review.\n\n",
+        tex,
+        flags=re.S,
+    )
+    tex = re.sub(r"https?://github\.com/xiej+h+/Draftpaper(?:\\?_loop)?", "withheld for anonymous review", tex, flags=re.I)
+    tex = re.sub(r"(?m)^% Commercial use requires prior written authorization:.*\n?", "", tex)
+    tex = tex.replace(r"\graphicspath{{../}}", r"\graphicspath{{../../../}}")
+    return tex
+
+
+def _compile_anonymous_review_pdf(root: Path) -> tuple[Path, list[Path]]:
+    source_dir = root / "latex"
+    build_dir = root / REVIEW_ROOT / "anonymous_build"
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+    (build_dir / "sections").mkdir(parents=True, exist_ok=True)
+    source_main = source_dir / "main.tex"
+    main = build_dir / "main.tex"
+    main.write_text(_anonymize_review_tex(source_main.read_text(encoding="utf-8-sig")), encoding="utf-8")
+    copied_sources = [main]
+    for source in (source_dir / "sections").glob("*.tex"):
+        target = build_dir / "sections" / source.name
+        shutil.copyfile(source, target)
+        copied_sources.append(target)
+    shutil.copyfile(source_dir / "library.bib", build_dir / "library.bib")
+
+    engine = _find_latex_executable(["xelatex", "xelatex.exe", "pdflatex", "pdflatex.exe"])
+    if not engine:
+        raise IndependentReviewError("A local LaTeX engine is required to build the anonymous review manuscript.")
+    bibtex = _find_latex_executable(["bibtex", "bibtex.exe"])
+    _ensure_local_bibstyle_fallback(build_dir, main)
+    latex_command = [engine, "-interaction=nonstopmode", "-halt-on-error", "main.tex"]
+    commands = [latex_command]
+    reports: list[str] = []
+    index = 0
+    while index < len(commands):
+        command = commands[index]
+        completed = subprocess.run(
+            command,
+            cwd=build_dir,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=120,
+            check=False,
+        )
+        reports.append(
+            f"$ {' '.join(command)}\nexit={completed.returncode}\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}"
+        )
+        if completed.returncode != 0:
+            log = build_dir / "main.compile.log"
+            log.write_text("\n\n".join(reports), encoding="utf-8")
+            raise IndependentReviewError(f"Anonymous review PDF compilation failed. See {log}.")
+        if index == 0:
+            if bibtex and _aux_requests_bibtex(build_dir / "main.aux"):
+                commands.append([bibtex, "main"])
+            commands.extend([latex_command, latex_command])
+        index += 1
+    (build_dir / "main.compile.log").write_text("\n\n".join(reports), encoding="utf-8")
+    pdf = build_dir / "main.pdf"
+    if not pdf.is_file():
+        raise IndependentReviewError("Anonymous review PDF compilation completed without producing main.pdf.")
+    return pdf, copied_sources
+
+
 def _review_reproducibility_files(root: Path, identities: list[str]) -> tuple[list[Path], list[dict[str, str]]]:
+    from .reproducibility_bundle import python_dependency_closure, selected_run_roots
+
     candidates = [root / relative for relative in REPRODUCIBILITY_ALLOWLIST]
-    for pattern in REPRODUCIBILITY_GLOBS:
-        candidates.extend(root.glob(pattern))
+    candidates.extend(python_dependency_closure(root, selected_run_roots(root)))
     accepted: list[Path] = []
     excluded: list[dict[str, str]] = []
     lowered_identities = [item.lower() for item in identities if item.strip()]
@@ -158,18 +261,29 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
     identities = _declared_identity(root)
     visible = _pdf_contains_identity(pdf, identities)
     if visible:
-        raise IndependentReviewError(
-            "The review PDF still contains declared author identity. Compile an anonymized manuscript before preparing the bundle: "
-            + ", ".join(visible)
-        )
+        if not _pdf_is_extractable(pdf):
+            raise IndependentReviewError(
+                "The review PDF still contains declared author identity. Compile an anonymized manuscript before preparing the bundle: "
+                + ", ".join(visible)
+            )
+        pdf, anonymous_sources = _compile_anonymous_review_pdf(root)
+        remaining = _pdf_contains_identity(pdf, identities)
+        if remaining:
+            raise IndependentReviewError("Anonymous review build still contains declared identity: " + ", ".join(remaining))
+    else:
+        anonymous_sources = [root / "latex" / "main.tex", *list((root / "latex" / "sections").glob("*.tex"))]
     latex_sections = list((root / "latex" / "sections").glob("*.tex"))
-    figures = list((root / "results" / "figures").rglob("*")) if (root / "results" / "figures").exists() else []
-    tables = list((root / "results" / "tables").rglob("*")) if (root / "results" / "tables").exists() else []
+    from .reproducibility_bundle import selected_result_assets, smoke_dependency_closure
+
+    figures, tables = selected_result_assets(root)
     references = [root / "references" / "reference_registry.json", root / "references" / "library.bib"]
     snapshots = [root / "results" / "promoted_evidence_snapshot.json", root / "core_evidence" / "core_evidence_report.json"]
     reproducibility, excluded_reproducibility = _review_reproducibility_files(root, identities)
+    reproducibility_smoke = smoke_dependency_closure(root, reproducibility)
+    if reproducibility_smoke.get("decision") != "pass":
+        raise IndependentReviewError("The selected-run reproducibility dependency closure failed its compile smoke test.")
     frozen = {
-        "manuscript": _relative_hashes(root, [pdf, root / "latex" / "main.tex", *latex_sections]),
+        "manuscript": _relative_hashes(root, [pdf, *anonymous_sources]),
         "figures": _relative_hashes(root, figures),
         "tables": _relative_hashes(root, tables),
         "references": _relative_hashes(root, references),
@@ -194,6 +308,8 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
             "reproducibility_supplement_is_anonymized_and_locator_safe": True,
         },
         "excluded_reproducibility_files": excluded_reproducibility,
+        "reproducibility_smoke_test": reproducibility_smoke,
+        "selected_run_asset_filtering": True,
     }
     bundle_hash = hashlib.sha256(json.dumps(core, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     manifest = {
@@ -204,6 +320,23 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
         "bundle_zip": BUNDLE_ZIP,
     }
     manifest_path = root / BUNDLE_MANIFEST
+    previous = _read(manifest_path)
+    previous_hash = str(previous.get("bundle_hash") or "")
+    if previous_hash and previous_hash != bundle_hash:
+        superseded_root = root / REVIEW_ROOT / "superseded" / previous_hash
+        superseded_root.mkdir(parents=True, exist_ok=True)
+        for slot in ("reviewer_01", "reviewer_02", "reviewer_03"):
+            source = root / REVIEW_ROOT / slot
+            if source.exists():
+                target = superseded_root / slot
+                if target.exists():
+                    shutil.rmtree(target)
+                shutil.move(str(source), str(target))
+        for relative in (AGGREGATE_JSON, AGGREGATE_MD, EVALUATION_JSON):
+            source = root / relative
+            if source.exists():
+                target = superseded_root / source.name
+                shutil.move(str(source), str(target))
     _write(manifest_path, manifest)
     zip_path = root / BUNDLE_ZIP
     zip_path.parent.mkdir(parents=True, exist_ok=True)
@@ -302,6 +435,15 @@ def record_independent_manuscript_review(project: str | Path, reviewer: str, inp
             raise IndependentReviewError(f"Finding {index} must be page/section/figure grounded with a required action.")
         item.setdefault("finding_id", f"{slot}:{index:03d}")
         item.setdefault("resolution_status", "open")
+        item.setdefault("finding_class", "prose_local")
+        if item["finding_class"] not in {"prose_local", "reproducibility", "render_only", "analysis_supplement", "claim_downgrade", "new_evidence"}:
+            raise IndependentReviewError(f"Finding {index} has invalid finding_class.")
+        item.setdefault("affected_claim_ids", [])
+        item.setdefault("affected_artifacts", [])
+        item.setdefault("requires_new_scientific_run", item["finding_class"] in {"analysis_supplement", "new_evidence"})
+        item.setdefault("allowed_repair_scope", item["finding_class"])
+        item.setdefault("supersedes_finding_id", None)
+        item.setdefault("resolution_evidence", [])
     normalized = {
         "schema_version": "dpl.independent_manuscript_review.v1",
         "reviewer_anonymous_id": slot,

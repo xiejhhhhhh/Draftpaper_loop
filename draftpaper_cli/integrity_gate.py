@@ -105,10 +105,15 @@ def _citation_keys(content: str) -> set[str]:
 
 
 def _read_citation_evidence(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        return []
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        return list(csv.DictReader(handle))
+    rows: list[dict[str, str]] = []
+    sources = [path]
+    if path.name == "citation_evidence.csv":
+        sources.append(path.with_name("supplemental_citation_evidence.csv"))
+    for source in sources:
+        if source.exists():
+            with source.open("r", encoding="utf-8-sig", newline="") as handle:
+                rows.extend(csv.DictReader(handle))
+    return rows
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:

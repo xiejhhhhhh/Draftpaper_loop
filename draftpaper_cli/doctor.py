@@ -193,7 +193,7 @@ def _runtime_source_diagnostics(
     }
 
 
-def doctor_project(project: str | Path | None = None) -> dict[str, Any]:
+def doctor_project(project: str | Path | None = None, *, explain: bool = False) -> dict[str, Any]:
     environment = _environment()
     environment["workflow_skill"] = skill_doctor()
     findings: list[dict[str, Any]] = []
@@ -283,7 +283,7 @@ def doctor_project(project: str | Path | None = None) -> dict[str, Any]:
         findings.append(_finding("revision_state", "info", "Author revision requests are pending preview or acceptance.", "The current PDF may not include the latest author intent.", artifacts=["writing/revision_workspace.json"], automatic_or_manual="manual", next_command=f'python -m draftpaper_cli.cli build-manuscript-source-map --project "{root}"'))
 
     findings.sort(key=lambda item: (item["severity"], item["category"], item["finding_id"]))
-    return {
+    report = {
         "schema_version": "dpl.doctor.v1",
         "status": "failed" if any(item["severity"] == "error" for item in findings) else "attention" if findings else "passed",
         "scope": "project",
@@ -299,6 +299,21 @@ def doctor_project(project: str | Path | None = None) -> dict[str, Any]:
         "finding_count": len(findings),
         "findings": findings,
     }
+    if explain:
+        from .artifact_dag import build_artifact_dag
+
+        report["artifact_dependency_dag"] = build_artifact_dag(root, write=False)
+        report["failure_routes"] = [
+            {
+                "finding_id": item.get("finding_id"),
+                "category": item.get("category"),
+                "affected_artifacts": item.get("affected_artifacts") or [],
+                "next_command": item.get("next_command"),
+                "stale_scope": item.get("stale_scope") or [],
+            }
+            for item in findings
+        ]
+    return report
 
 
 def rebuild_derived(project: str | Path, *, dry_run: bool = True) -> dict[str, Any]:

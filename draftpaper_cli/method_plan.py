@@ -24,6 +24,10 @@ METHOD_PLAN_INPUTS = [
 METHOD_PLAN_OUTPUTS = [
     "methods/method_plan.md",
     "methods/method_requirements.json",
+    "methods/executable_analysis_spec.json",
+    "methods/analysis_formula_ast.json",
+    "methods/run_selection_policy.json",
+    "methods/resampling_contract.json",
 ]
 
 
@@ -217,7 +221,7 @@ def collect_method_plan(
     project: str | Path,
     *,
     user_method: str = "",
-    primary_metric: str = "f1",
+    primary_metric: str | None = None,
     minimum_primary_metric: float | None = None,
 ) -> dict[str, Any]:
     """Collect user method intent and synthesize method requirements from literature."""
@@ -236,6 +240,7 @@ def collect_method_plan(
     structured_families, structured_features = _structured_blueprint_requirements(state.path)
     method_families = structured_families or _infer_method_families(combined_text)
     required_features = structured_features or _infer_required_features(combined_text)
+    resolved_primary_metric = _resolve_primary_metric(primary_metric, method_families)
     literature_methods = _extract_literature_methods(literature_items)
     requirements = {
         "project_id": state.metadata.get("project_id"),
@@ -243,7 +248,7 @@ def collect_method_plan(
         "method_families": method_families,
         "required_data_features": required_features,
         "requirement_source": "research_blueprint" if structured_families or structured_features else "prose_inference",
-        "primary_metric": re.sub(r"[^A-Za-z0-9_:-]+", "_", primary_metric.strip().lower()) or "f1",
+        "primary_metric": resolved_primary_metric,
         "minimum_primary_metric": minimum_primary_metric,
         "literature_method_count": len(literature_methods),
         "literature_methods": literature_methods,
@@ -267,6 +272,9 @@ def collect_method_plan(
         ),
         encoding="utf-8",
     )
+    from .executable_analysis import compile_executable_analysis_specs
+
+    analysis_contracts = compile_executable_analysis_specs(state.path)
     update_stage_status(state.path, "method_plan", "draft")
     _set_method_plan_manifest(state.path)
     return {
@@ -276,8 +284,48 @@ def collect_method_plan(
         "method_requirements": str(methods_dir / "method_requirements.json"),
         "method_data_fit": requirements["method_data_fit"],
         "literature_method_count": len(literature_methods),
+        "analysis_contracts": analysis_contracts,
         "outputs": METHOD_PLAN_OUTPUTS,
     }
+
+
+def _resolve_primary_metric(explicit_metric: str | None, method_families: list[str]) -> str:
+    if explicit_metric and explicit_metric.strip():
+        return re.sub(r"[^A-Za-z0-9_:-]+", "_", explicit_metric.strip().lower()) or "f1"
+    families = {
+        re.sub(r"[^a-z0-9]+", "_", str(item).lower()).strip("_")
+        for item in method_families
+        if str(item).strip()
+    }
+    if families.intersection({
+        "partition_concordance_metrics",
+        "partition_concordance",
+        "independent_partition_freeze",
+        "optimal_label_alignment",
+        "permutation_concordance_test",
+    }):
+        return "ari"
+    classification_tokens = {
+        "classification",
+        "classifier",
+        "confusion_matrix",
+        "class_conditional_metrics",
+        "macro_f1",
+        "balanced_accuracy",
+        "logistic_baseline",
+        "linear_probe",
+        "finetuning",
+        "fine_tuning",
+    }
+    if any(any(token in family for token in classification_tokens) for family in families):
+        return "macro_f1"
+    if any("regression" in family for family in families):
+        return "r2"
+    if any("survival" in family for family in families):
+        return "c_index"
+    if any("clustering" in family or "cluster" in family for family in families):
+        return "silhouette"
+    return "f1"
 
 
 def validate_method_plan_for_methods(project_path: Path) -> dict[str, Any]:

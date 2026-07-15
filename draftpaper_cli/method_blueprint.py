@@ -9,12 +9,14 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .data_contracts import assess_role_coverage, available_data_roles
 from .discipline import infer_discipline_profile
 from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
 from .method_plan import MethodPlanError, validate_method_plan_for_methods
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
+from .research_capabilities import is_derived_method_output_role
 from .review_rule_runtime import assess_review_rules, review_rule_validation_checks
 
 
@@ -33,17 +35,6 @@ METHOD_BLUEPRINT_OUTPUTS = [
     METHOD_FORMULA_PLAN_JSON,
     METHOD_REVIEW_RULE_GATE_JSON,
 ]
-
-DERIVED_METHOD_OUTPUT_ROLES = {
-    "predicted_label",
-    "prediction_score",
-    "prediction_probability",
-    "class_support",
-    "candidate_score",
-    "anomaly_score",
-    "residual",
-    "model_output",
-}
 
 DATA_ROLE_ALIASES = {
     "source_catalog": {"source_catalog"},
@@ -112,13 +103,8 @@ def _available_data_roles(inventory: dict[str, Any], acquisition: dict[str, Any]
 
 
 def _missing_roles(required: list[str], available: list[str]) -> list[str]:
-    concrete = {role for role in available if not role.startswith("missing:")}
-    missing = []
-    for role in required:
-        aliases = DATA_ROLE_ALIASES.get(role, {role})
-        if not (aliases & concrete) and f"missing:{role}" not in available:
-            missing.append(role)
-    return missing
+    concrete = [role for role in available if not role.startswith("missing:")]
+    return list(assess_role_coverage(required, concrete).get("missing_roles") or [])
 
 
 def _tokenize(text: Any) -> set[str]:
@@ -326,6 +312,9 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
     hints = module.method_blueprint_hints(context)
     review_rule_gate = assess_review_rules(state.path, stage="method_plan")
     available_roles = _available_data_roles(inventory, acquisition_plan)
+    for role in available_data_roles(inventory, acquisition_plan):
+        if role not in available_roles:
+            available_roles.append(role)
     for role in role_coverage.get("available_roles") or []:
         value = str(role).strip()
         if value and value not in available_roles:
@@ -351,7 +340,7 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         for task in method_tasks
         if isinstance(task, dict)
         for role in task.get("required_data") or []
-        if str(role).strip() and str(role).strip().lower() not in DERIVED_METHOD_OUTPUT_ROLES
+        if str(role).strip() and not is_derived_method_output_role(role)
     ))
     required_roles = (
         structured_required_roles

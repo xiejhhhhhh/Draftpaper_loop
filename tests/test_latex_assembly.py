@@ -193,6 +193,11 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertIn("\\usepackage{amsmath,amssymb}", content)
             self.assertIn("\\graphicspath{{../}}", content)
             self.assertIn("\\input{sections/introduction}", content)
+            introduction_section = (project_path / "latex" / "sections" / "introduction.tex").read_text(encoding="utf-8")
+            self.assertTrue(
+                "\\section{Introduction}\n\\input{sections/introduction}" in content
+                or introduction_section.lstrip().startswith("\\section{"),
+            )
             self.assertIn("\\input{sections/result_artifacts}", content)
             self.assertIn("\\input{sections/result_artifacts}\n\\clearpage\n\\input{sections/discussion}", content)
             self.assertIn("Draftpaper-loop", content)
@@ -222,6 +227,49 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertEqual(project_json["stages"]["latex"]["status"], "draft")
             self.assertEqual(project_json["stages"]["quality_checks"]["status"], "stale")
 
+    def test_assemble_latex_materializes_cited_supplemental_bibliography(self) -> None:
+        from draftpaper_cli.latex_assembly import assemble_latex
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_project(tmp)
+            (project_path / "references" / "supplemental_library.bib").write_text(
+                "@article{Comparison2020,author={Doe, Jane},title={Independent comparison},year={2020},"
+                "journal={Test Journal},doi={10.1234/comparison},url={https://doi.org/10.1234/comparison}}\n",
+                encoding="utf-8",
+            )
+            discussion = project_path / "discussion" / "discussion.tex"
+            discussion.write_text(
+                discussion.read_text(encoding="utf-8") + "\nIndependent comparison \\citep{Comparison2020}.\n",
+                encoding="utf-8",
+            )
+
+            assemble_latex(project_path)
+
+            materialized = (project_path / "latex" / "library.bib").read_text(encoding="utf-8")
+            self.assertIn("@article{Comparison2020", materialized)
+            merge = json.loads(
+                (project_path / "references" / "supplemental_bibliography_merge_report.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(merge["status"], "passed")
+
+    def test_section_input_wraps_prose_only_artifact(self) -> None:
+        from draftpaper_cli.latex_assembly import _section_input
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            section = project_path / "introduction" / "introduction.tex"
+            section.parent.mkdir(parents=True)
+            section.write_text("Opening scientific argument.\n", encoding="utf-8")
+
+            rendered = _section_input(project_path, "introduction")
+
+            self.assertEqual(rendered, "\\section{Introduction}\n\\input{sections/introduction}")
+
+    def test_result_labels_use_the_same_hyphenated_form_as_section_references(self) -> None:
+        from draftpaper_cli.latex_assembly import _safe_result_label
+
+        self.assertEqual(_safe_result_label("fig_1_fig_01"), "fig-1-fig-01")
+
     def test_assemble_latex_applies_manuscript_caption_override_without_changing_figure_metadata(self) -> None:
         from draftpaper_cli.latex_assembly import assemble_latex
 
@@ -247,6 +295,20 @@ class LatexAssemblyTests(unittest.TestCase):
             discussion.write_text(discussion.read_text(encoding="utf-8") + "\nMissing citation \\citep{Unknown2026}.\n", encoding="utf-8")
 
             with self.assertRaises(LatexCitationError):
+                assemble_latex(project_path)
+
+    def test_assemble_latex_rejects_abstract_with_stale_numeric_evidence(self) -> None:
+        from draftpaper_cli.latex_assembly import LatexAssemblyError, assemble_latex
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = prepared_project(tmp)
+            metadata = project_path / "writing" / "manuscript_metadata.yaml"
+            metadata.write_text(
+                "title: Current title\nabstract: The held-out model reached macro-F1=0.5.\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(LatexAssemblyError, "abstract is stale"):
                 assemble_latex(project_path)
 
     def test_assemble_latex_replaces_empty_aastex_author_without_control_character(self) -> None:

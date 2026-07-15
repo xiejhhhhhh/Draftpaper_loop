@@ -29,6 +29,21 @@ class ChangeImpactTests(unittest.TestCase):
             artifact_role_for_path("results/figure_quality_report.json"),
             ("result_manifest", "results"),
         )
+        self.assertEqual(
+            artifact_role_for_path("core_evidence/core_evidence_report.json"),
+            ("evidence_assessment", "core_evidence"),
+        )
+
+    def test_derived_core_evidence_report_does_not_invalidate_scientific_sources(self) -> None:
+        change = classify_change(
+            artifact_role="evidence_assessment",
+            before="old-report",
+            after="new-report",
+            source_stage="core_evidence",
+        )
+
+        self.assertEqual(change.change_class, "derived_assessment")
+        self.assertEqual(affected_stages(change), ["core_evidence"])
 
     def test_local_citation_repair_does_not_invalidate_empirical_pipeline(self) -> None:
         change = classify_change(

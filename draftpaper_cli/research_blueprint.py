@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -95,6 +96,7 @@ def _context_flags(project_meta: dict[str, Any], literature_synthesis: dict[str,
         str(project_meta.get("title") or ""),
         str(project_meta.get("idea") or ""),
         str(project_meta.get("field") or ""),
+        json.dumps(project_meta.get("research_objective") or {}, ensure_ascii=False),
         " ".join(literature_synthesis.get("key_methods") or []),
         " ".join(literature_synthesis.get("key_data_modalities") or []),
     ]).lower()
@@ -113,12 +115,21 @@ def _context_flags(project_meta: dict[str, Any], literature_synthesis: dict[str,
 
 
 def _claim_templates(project_meta: dict[str, Any], flags: dict[str, bool]) -> list[dict[str, str]]:
+    objective = project_meta.get("research_objective")
+    if isinstance(objective, dict):
+        questions = [
+            dict(item)
+            for item in objective.get("primary_scientific_questions") or []
+            if isinstance(item, dict) and item.get("research_question") and item.get("expected_finding")
+        ]
+        if questions:
+            return questions
     idea = str(project_meta.get("idea") or project_meta.get("title") or "the proposed study")
     if flags["scientific_image"]:
         return [
             {
                 "claim_id": "claim_1_data_support",
-                "research_question": f"What cohort, image coverage, label provenance, and missingness support {idea}?",
+                "research_question": "Which source, image-available, image-valid, and analysis cohorts support the proposed representation study, and how do label provenance and missingness constrain them?",
                 "expected_finding": "The sample flow should define distinct source, image-available, image-valid, and analysis cohorts before any representation claim is made.",
             },
             {
@@ -137,9 +148,14 @@ def _claim_templates(project_meta: dict[str, Any], flags: dict[str, bool]) -> li
                 "expected_finding": "Ablation should distinguish incremental visual information from redshift, brightness, color, acquisition, or label leakage.",
             },
             {
-                "claim_id": "claim_5_error_boundary",
-                "research_question": "Which classes, sample regimes, image-quality conditions, or anomaly candidates remain uncertain?",
-                "expected_finding": "Class-wise errors, stability, and candidate diagnostics should bound interpretation and identify cases requiring independent confirmation.",
+                "claim_id": "claim_5_error_calibration",
+                "research_question": "Which classes and sample regimes remain uncertain after accounting for imbalance and calibration?",
+                "expected_finding": "Class-wise errors, support, calibration, and uncertainty should identify where predictive interpretation is reliable and where it must be limited.",
+            },
+            {
+                "claim_id": "claim_6_anomaly_boundary",
+                "research_question": "Are high-scoring anomaly candidates stable under resampling and separable from image-quality failures?",
+                "expected_finding": "Only candidates stable across the declared perturbations and not explained by image-quality defects should be retained for independent scientific follow-up.",
             },
         ]
     if flags["classification"]:
@@ -234,6 +250,42 @@ def _storyboard_figures(
     literature_keys: list[str],
     flags: dict[str, bool],
 ) -> list[dict[str, Any]]:
+    objective_figures = []
+    for index, claim in enumerate(claims, start=1):
+        contract = claim.get("figure_contract") if isinstance(claim.get("figure_contract"), dict) else {}
+        if not contract:
+            objective_figures = []
+            break
+        title = str(contract.get("proposed_title") or f"Scientific evidence for {claim.get('claim_id')}")
+        boundary = str(
+            contract.get("scientific_claim_boundary")
+            or (project_meta.get("research_objective") or {}).get("claim_boundary")
+            or "Interpret this figure only within the verified data, method, and validation limits declared in the research blueprint."
+        )
+        objective_figures.append({
+            "figure_id": f"fig_{index}_{re.sub(r'[^a-z0-9]+', '_', title.lower()).strip('_')[:28]}",
+            "proposed_title": title,
+            "proposed_title_zh_cn": contract.get("proposed_title_zh_cn"),
+            "story_role": contract.get("story_role") or "direct_scientific_signal",
+            "research_question": claim["research_question"],
+            "research_question_zh_cn": claim.get("research_question_zh_cn"),
+            "expected_finding": claim["expected_finding"],
+            "expected_finding_zh_cn": claim.get("expected_finding_zh_cn"),
+            "scientific_claim_boundary": boundary,
+            "scientific_claim_boundary_zh_cn": contract.get("scientific_claim_boundary_zh_cn"),
+            "required_data": list(contract.get("required_data") or []),
+            "required_method": list(contract.get("required_method") or []),
+            "suggested_plot_type": contract.get("suggested_plot_type") or "scientific_comparison",
+            "validation_metric": contract.get("validation_metric") or "scientific_effect_with_uncertainty",
+            "supporting_literature_keys": literature_keys[:3],
+            "downstream_stage_dependency": ["method_plan", "figure_plan", "code", "results"],
+            "fallback_if_data_missing": "Downgrade the scientific claim or rescue the missing data/method before key-figure execution; never substitute a merely similar figure.",
+            "claim_id": claim.get("claim_id"),
+            "panels": list(contract.get("panels") or []),
+        })
+    if objective_figures and len(objective_figures) == len(claims):
+        return objective_figures
+
     method_prefix = ["data_alignment"]
     if flags["transformer"]:
         method_prefix.append("time_aware_transformer")
@@ -409,6 +461,7 @@ def build_research_blueprint(
     citation_rows: list[dict[str, str]],
     discipline_profile: dict[str, Any],
     anchor_papers: list[dict[str, Any]] | None = None,
+    data_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     synthesis = _literature_synthesis(literature_items, citation_rows)
     flags = _context_flags(project_meta, synthesis)
@@ -447,9 +500,11 @@ def build_research_blueprint(
         "idea": project_meta.get("idea"),
         "field": project_meta.get("field"),
         "target_journal": project_meta.get("target_journal"),
+        "research_objective": project_meta.get("research_objective") or {},
         "discipline_profile": discipline_profile,
         "literature_synthesis": synthesis,
         "target_journal_anchor_papers": anchor_papers or [],
+        "data_feasibility_context": data_context or {},
         "research_claims": claims,
         "figure_storyboard": storyboard,
         "method_plan": method_plan,

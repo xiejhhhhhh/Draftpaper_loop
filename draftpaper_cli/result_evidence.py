@@ -112,6 +112,16 @@ def _source_hash(path: Path) -> str:
 def _analysis_variant(relative: str) -> str:
     """Infer a conservative analysis layer from an auditable result filename."""
     stem = Path(relative).stem.lower()
+    if "multi_seed" in stem or "multiseed" in stem:
+        return "multi_seed_summary"
+    if "tile_grouped" in stem or "tile-grouped" in stem:
+        return "tile_grouped_validation"
+    if "transparent" in stem and "baseline" in stem:
+        return "transparent_baseline_comparison"
+    if "external_transfer" in stem or "external-transfer" in stem:
+        return "external_transfer"
+    if "calibration" in stem:
+        return "calibration_audit"
     if "quality_filtered" in stem or "quality-filtered" in stem:
         return "quality_filtered_sensitivity"
     if "repeated_group_partition" in stem or "repeated-group-partition" in stem:
@@ -281,14 +291,22 @@ def _select_primary_metric(
         item for item in metric_candidates
         if str(item.get("model") or "").strip() and item.get("source_artifact") in bound_sources
     ]
+    non_ablation_models = []
+    for item in directly_bound_models:
+        model = str(item.get("model") or "").lower()
+        tokens = {token for token in model.replace("-", "_").split("_") if token}
+        if not tokens & {"ablation", "without", "no", "sensitivity"}:
+            non_ablation_models.append(item)
     proposed = []
-    for item in directly_bound_models or metric_candidates:
+    for item in non_ablation_models or directly_bound_models or metric_candidates:
         model = str(item.get("model") or "").lower()
         tokens = {token for token in model.replace("-", "_").split("_") if token}
         if tokens & {"full", "main", "primary", "proposed"} and not tokens & {"baseline", "without", "no"}:
             proposed.append(item)
     if proposed:
         return max(proposed, key=_metric_rank), "inferred_full_or_proposed_model"
+    if non_ablation_models:
+        return max(non_ablation_models, key=_metric_rank), "highest_ranked_non_ablation_run_bound_model"
     if directly_bound_models:
         return max(directly_bound_models, key=_metric_rank), "highest_ranked_run_bound_model"
     summaries = [
@@ -392,8 +410,14 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         configured_model=configured_model,
         bound_sources=bound_sources,
     )
+    analysis_payload = _read_json(state.path / "methods" / "executable_analysis_spec.json")
+    analysis_specs = [item for item in analysis_payload.get("analysis_specs") or [] if isinstance(item, dict)]
+    specs_by_id = {str(item.get("analysis_spec_id")): item for item in analysis_specs if item.get("analysis_spec_id")}
+    run_spec = specs_by_id.get(str(run_manifest.get("analysis_spec_id") or ""))
+    default_spec = run_spec or (analysis_specs[0] if len(analysis_specs) == 1 else {})
     evidence_records = []
     for item in records:
+        item_spec = specs_by_id.get(str(item.get("analysis_spec_id") or "")) or default_spec
         evidence_records.append({
             "evidence_id": hashlib.sha256(
                 (
@@ -408,8 +432,12 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             "aggregation": item.get("aggregation") or "reported_value",
             "analysis_variant": item.get("analysis_variant") or "primary",
             "cohort_id": item.get("cohort_id") or run_manifest.get("cohort_id") or "main",
+            "cohort_view_id": item.get("cohort_view_id") or run_manifest.get("cohort_view_id") or item_spec.get("cohort_view_id"),
+            "estimand_id": item.get("estimand_id") or run_manifest.get("estimand_id") or item_spec.get("estimand_id"),
+            "analysis_spec_id": item.get("analysis_spec_id") or run_manifest.get("analysis_spec_id") or item_spec.get("analysis_spec_id"),
             "sample_unit": item.get("sample_unit") or run_manifest.get("sample_unit") or "model_evaluation",
             "split": item.get("split") or run_manifest.get("evaluation_split") or "run_summary",
+            "split_id": item.get("split_id") or run_manifest.get("split_id") or item_spec.get("split_id") or item.get("split") or run_manifest.get("evaluation_split") or "run_summary",
             "run_id": item.get("run_id") or run_id,
             "source_artifact": item.get("source_artifact"),
             "source_hash": item.get("source_hash"),
@@ -420,7 +448,7 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         })
     report = {
         "status": "resolved" if primary_metric else "no_primary_metric",
-        "schema_version": "v0.22.3",
+        "schema_version": "dpl.resolved_result_evidence.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "run_id": run_id,
@@ -431,7 +459,12 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         "primary_metric": primary_metric,
         "primary_metric_selection": primary_selection,
         "evidence_records": evidence_records,
-        "policy": "Model- and split-specific verified run outputs outrank generic scalar metric files.",
+        "analysis_spec_resolution": {
+            "candidate_count": len(analysis_specs),
+            "selected_analysis_spec_id": default_spec.get("analysis_spec_id"),
+            "ambiguous": len(analysis_specs) > 1 and not run_spec,
+        },
+        "policy": "Model- and split-specific verified run outputs outrank generic scalar metric files. Formal evidence also requires an explicit executable analysis spec; multiple candidate specs are never resolved by numeric value or prose wording.",
     }
     fingerprint_payload = {key: value for key, value in report.items() if key != "generated_at"}
     report["evidence_fingerprint"] = hashlib.sha256(

@@ -40,6 +40,12 @@ class DisciplineModuleTests(unittest.TestCase):
         self.assertIn("ablation_study", ml_template_ids)
         self.assertIn("train_validation_test_split_check", ml_template_ids)
 
+        astronomy = get_discipline_module({"discipline": "astronomy"})
+        astronomy_review_rules = {
+            item["rule_group_id"] for item in astronomy.method_blueprint_hints({})["review_rule_hints"]
+        }
+        self.assertIn("sky_partition_overlap_validation", astronomy_review_rules)
+
     def test_new_foundation_modules_have_minimum_data_method_and_review_specs(self) -> None:
         from draftpaper_cli.discipline_modules import get_discipline_module
 

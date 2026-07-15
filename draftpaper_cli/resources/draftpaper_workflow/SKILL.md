@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.26.0
+version: 0.28.0
 description: Use when Codex operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
