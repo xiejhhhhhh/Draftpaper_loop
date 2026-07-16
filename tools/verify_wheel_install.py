@@ -17,9 +17,9 @@ RESOURCE_PATTERNS = ("*.json", "*.csv", "*.md")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
 SOURCE_CAPABILITY_PACK_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "capability_packs"
-EXPECTED_ENTRY_COUNT = 209
+EXPECTED_ENTRY_COUNT = 210
 EXPECTED_FIXTURE_COUNT = 545
-EXPECTED_PACKAGE_VERSION = "0.26.0"
+EXPECTED_PACKAGE_VERSION = "0.28.0"
 EXPECTED_CLI_COMMANDS = (
     "review-research-plan",
     "confirm-research-plan",
