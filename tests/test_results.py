@@ -91,7 +91,7 @@ class ResultsManifestWriterTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["figures"][0]["path"], "results/figures/fig1.png")
             self.assertEqual(manifest["tables"][0]["path"], "results/tables/metrics.csv")
-            self.assertEqual(manifest["schema_version"], "v0.16.5")
+            self.assertEqual(manifest["schema_version"], "dpl.result_manifest.v2")
             self.assertIn("main_figures", manifest)
             self.assertIn("appendix_figures", manifest)
             self.assertIn("supporting_links", manifest)

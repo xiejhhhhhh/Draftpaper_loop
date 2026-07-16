@@ -1,0 +1,49 @@
+{
+  "schema_version": "dpl.release_manifest.v1",
+  "package_version": "0.30.0",
+  "workflow_skill_sha256": "ef6a69c9f454d0bf518a2c93d746c46aa8ca30d096afa4b62381dab086d350cf",
+  "workflow_contract_sha256": "2fb0079b1911225d960c90b3d5bc47b715713774f6cdfb1cdc5ebf20a9554b28",
+  "plugin_count": 210,
+  "fixture_count": 546,
+  "plugin_catalog_hash": "3a9f9e4dfc848b09511ee3fd0ad8845a79db1d04ca19cb889a54b78271c35627",
+  "command_count": 204,
+  "command_contract_status": "passed",
+  "required_cli_commands": [
+    "review-research-plan",
+    "confirm-research-plan",
+    "reopen-research-plan",
+    "path-budget-check",
+    "validate-confirmed-figure-alignment",
+    "apply-section-revision",
+    "review-final-manuscript",
+    "validate-command-contracts"
+  ],
+  "schema_registry_version": "dpl.schema_registry.v1",
+  "capability_pack_ids": [
+    "astronomy_time_domain_ml",
+    "clinical_survival_analysis",
+    "geospatial_predictive_modeling",
+    "omics_differential_analysis",
+    "scientific_image_representation",
+    "tabular_supervised_learning"
+  ],
+  "release_fixture_ids": [
+    "scientific_image_ml",
+    "geography_ml",
+    "astronomy_ml",
+    "bioinformatics_medicine",
+    "physics_quantum"
+  ],
+  "third_party_registry_sha256": "c4593603dc26630ab6dfedca2fbd05a4949de2fc6c5b142d5e4535a95aad9e7e",
+  "release_security": {
+    "license_identifier": "LicenseRef-Draftpaper-NonCommercial",
+    "license_files": [
+      "LICENSE",
+      "NOTICE"
+    ],
+    "github_actions_pinned": true,
+    "ci_constraints_sha256": "8ff2258050c6963b5902290254020d2940fd5d86cf0eaa54285da3f888f8c454",
+    "sbom_format": "CycloneDX JSON",
+    "dependency_audit_scope": "project_dependency_graph"
+  }
+}

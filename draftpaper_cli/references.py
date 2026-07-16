@@ -365,6 +365,18 @@ def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> N
         for entry in provenance
         if isinstance(entry, dict)
     }
+    for entry in source.get("query_provenance") or []:
+        if not isinstance(entry, dict):
+            continue
+        key = (
+            str(entry.get("query_id") or ""),
+            str(entry.get("context") or ""),
+            str(entry.get("query") or ""),
+        )
+        if key not in seen:
+            provenance.append(entry)
+            seen.add(key)
+    target["query_provenance"] = provenance
 
 
 _GENERIC_RESEARCH_TERMS = {
@@ -396,18 +408,6 @@ def domain_title_overlap(title: str, domain_terms: set[str]) -> set[str]:
     normalized_domain = {_DOMAIN_TOKEN_ALIASES.get(term, term) for term in domain_terms}
     title_terms = {_DOMAIN_TOKEN_ALIASES.get(term, term) for term in tokenize_for_relevance(title)}
     return normalized_domain & title_terms
-    for entry in source.get("query_provenance") or []:
-        if not isinstance(entry, dict):
-            continue
-        key = (
-            str(entry.get("query_id") or ""),
-            str(entry.get("context") or ""),
-            str(entry.get("query") or ""),
-        )
-        if key not in seen:
-            provenance.append(entry)
-            seen.add(key)
-    target["query_provenance"] = provenance
 
 
 def _year_int(item: dict[str, Any]) -> int | None:

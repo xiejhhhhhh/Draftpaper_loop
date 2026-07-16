@@ -201,6 +201,7 @@ def _write_stage_manifests(project_path: Path, metadata: dict[str, Any]) -> None
             "input_files": [],
             "output_files": [],
             "last_updated": metadata["created_at"] if stage == "idea" else None,
+            "state_revision": int(metadata.get("state_revision") or 1),
         }
         _write_json(stage_dir / "stage_manifest.json", manifest)
 
@@ -280,6 +281,7 @@ def create_project(
         "target_journal": (target_journal or "General Academic Journal").strip(),
         "created_at": now,
         "updated_at": now,
+        "state_revision": 1,
         "current_stage": "idea",
         "legacy_mvp_reference": "legacy MVP design notes",
         "stages": _build_stage_metadata(),

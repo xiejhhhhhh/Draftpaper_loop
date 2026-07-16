@@ -1,10 +1,10 @@
 recursive-include draftpaper_cli/discipline_modules *.json *.csv *.md
-recursive-include draftpaper_cli/capability_packs *.json *.jsonl *.md
+recursive-include draftpaper_cli/capability_packs *.json *.jsonl
 recursive-include draftpaper_cli/release_fixtures *.json
 include third_party/registry.json
 include third_party/THIRD_PARTY_NOTICES.md
 recursive-include third_party/academicforge *.json *.md *.snapshot
 recursive-include third_party/gbrain *.json *.md *.snapshot
-recursive-include third_party/upstream-skills *.json *.md *.snapshot
+recursive-include third_party/upstream-skills *.json *.snapshot
 include third_party/paper-fetch-skill/LICENSE
 include third_party/paper-fetch-skill/UPSTREAM.json

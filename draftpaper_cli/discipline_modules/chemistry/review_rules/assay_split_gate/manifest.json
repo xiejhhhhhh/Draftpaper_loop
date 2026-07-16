@@ -58,5 +58,40 @@
   "allowed_claim_strength": "exploratory",
   "repair_priority": [
     "human_checkpoint"
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "assay_split_gate",
+  "plugin_kind": "review",
+  "fixtures": {
+    "normal": [
+      "fixture_minimal.json"
+    ],
+    "failure": [
+      "fixture_failure.json"
+    ],
+    "boundary": [
+      "fixture_boundary.json"
+    ],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "sync",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "none",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

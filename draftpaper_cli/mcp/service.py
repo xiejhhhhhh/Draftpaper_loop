@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
+import secrets
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 from ..command_registry import COMMAND_SPECS, command_spec
+from ..command_contracts import command_input_schema
 from ..doctor import doctor_project, verify_next_action
 from ..execution_policy import ExecutionPolicy, command_allowed_via_mcp, redact_sensitive, sanitized_environment
 from ..jobs import job_status, submit_job
@@ -19,6 +24,8 @@ from ..write_set_guard import BoundaryViolation, resolve_confined_path
 
 MAX_ARTIFACT_BYTES = 128 * 1024
 READABLE_SUFFIXES = {".json", ".jsonl", ".yaml", ".yml", ".md", ".txt", ".csv", ".tex", ".bib", ".html"}
+_CAPABILITY_SECRET = secrets.token_bytes(32)
+_PATH_ARGUMENT_TOKENS = {"path", "input", "output", "report", "source", "destination", "baseline", "package", "before", "after"}
 
 
 def _safe(payload: Any) -> Any:
@@ -26,23 +33,7 @@ def _safe(payload: Any) -> Any:
 
 
 def _parser_schema(command: str) -> tuple[dict[str, Any], bool]:
-    from ..cli import build_parser
-
-    parser = build_parser()
-    subparsers = next(action for action in parser._actions if hasattr(action, "choices") and action.choices)
-    selected = subparsers.choices.get(command)
-    if selected is None:
-        return {"type": "object", "properties": {}, "additionalProperties": False}, False
-    properties: dict[str, Any] = {}
-    required = []
-    for action in selected._actions:
-        if action.dest == "help":
-            continue
-        value_type = "boolean" if action.const in {True, False} else "integer" if action.type is int else "number" if action.type is float else "array" if action.nargs in {"+", "*"} else "string"
-        properties[action.dest] = {"type": value_type}
-        if action.required:
-            required.append(action.dest)
-    return {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "project" in properties
+    return command_input_schema(command)
 
 
 def project_status(project: str) -> dict[str, Any]:
@@ -57,22 +48,72 @@ def next_action(project: str) -> dict[str, Any]:
     return _safe(verify_next_action(project))
 
 
-def plan_command(command: str) -> dict[str, Any]:
+def _capability_material(project: Path, command: str, arguments: dict[str, Any], bucket: int) -> bytes:
+    normalized = json.dumps(arguments, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return f"{project}|{command}|{normalized}|{bucket}".encode("utf-8")
+
+
+def _capability_token(project: Path, command: str, arguments: dict[str, Any], bucket: int | None = None) -> str:
+    value = int(time.time() // 300) if bucket is None else bucket
+    digest = hmac.new(_CAPABILITY_SECRET, _capability_material(project, command, arguments, value), hashlib.sha256).hexdigest()
+    return f"{value}.{digest}"
+
+
+def _valid_capability_token(token: str | None, project: Path, command: str, arguments: dict[str, Any]) -> bool:
+    if not token or "." not in token:
+        return False
+    raw_bucket, _separator, _digest = token.partition(".")
+    try:
+        bucket = int(raw_bucket)
+    except ValueError:
+        return False
+    current = int(time.time() // 300)
+    if bucket not in {current, current - 1}:
+        return False
+    return hmac.compare_digest(token, _capability_token(project, command, arguments, bucket))
+
+
+def _path_argument_violation(root: Path, arguments: dict[str, Any]) -> str | None:
+    for key, raw in arguments.items():
+        lowered = str(key).lower()
+        if not any(token in lowered for token in _PATH_ARGUMENT_TOKENS):
+            continue
+        values = raw if isinstance(raw, list) else [raw]
+        for value in values:
+            if not isinstance(value, str) or "://" in value:
+                continue
+            try:
+                resolve_confined_path(root, value, must_exist=False)
+            except BoundaryViolation:
+                return str(key)
+    return None
+
+
+def plan_command(command: str, project: str | None = None, arguments_json: str | None = None) -> dict[str, Any]:
     spec = command_spec(command)
     if spec is None:
         return {"status": "not_found", "command": command}
     allowed, reason = command_allowed_via_mcp(spec)
     parser_schema, project_scoped = _parser_schema(command)
-    return {
+    policy = ExecutionPolicy.from_spec(spec)
+    result = {
         "status": "planned" if allowed else "protected",
         "command": command,
         "mcp_allowed": allowed,
         "denial_reason": reason,
-        "policy": ExecutionPolicy.from_spec(spec).as_dict(),
+        "policy": policy.as_dict(),
         "input_schema": parser_schema,
         "output_schema": spec.output_schema,
         "project_scoped": project_scoped,
     }
+    if project and policy.risk_level in {"execute_science", "network_external"}:
+        root = Path(project).resolve(strict=True)
+        arguments = _arguments(arguments_json)
+        arguments["project"] = str(root)
+        result["confirmation_token"] = _capability_token(root, command, arguments)
+        result["confirmation_scope"] = {"project": str(root), "command": command, "arguments": arguments}
+        result["confirmation_expires_within_seconds"] = 600
+    return result
 
 
 def _arguments(value: str | None) -> dict[str, Any]:
@@ -97,7 +138,15 @@ def _argv(command: str, arguments: dict[str, Any]) -> list[str]:
     return result
 
 
-def execute_command(project: str, command: str, arguments_json: str | None = None, *, confirm_science_execution: bool = False) -> dict[str, Any]:
+def execute_command(
+    project: str,
+    command: str,
+    arguments_json: str | None = None,
+    *,
+    confirm_science_execution: bool = False,
+    capability_token: str | None = None,
+) -> dict[str, Any]:
+    _ = confirm_science_execution  # Retained in the transport signature for compatibility; tokens are authoritative.
     spec = command_spec(command)
     if spec is None:
         return {"status": "not_found", "command": command}
@@ -105,8 +154,6 @@ def execute_command(project: str, command: str, arguments_json: str | None = Non
     if not allowed:
         return {"status": "protected", "command": command, "reason": reason, "requires_human_action": True}
     policy = ExecutionPolicy.from_spec(spec)
-    if policy.risk_level in {"execute_science", "network_external"} and not confirm_science_execution:
-        return {"status": "confirmation_required", "command": command, "risk_level": policy.risk_level, "requires_human_action": False, "next_step": "Call again with confirm_science_execution=true after reviewing the command plan."}
     root = Path(project).resolve(strict=True)
     _, project_scoped = _parser_schema(command)
     if not project_scoped:
@@ -115,6 +162,20 @@ def execute_command(project: str, command: str, arguments_json: str | None = Non
     if arguments.get("project") and Path(str(arguments["project"])).resolve() != root:
         return {"status": "boundary_violation", "reason": "project_argument_mismatch"}
     arguments["project"] = str(root)
+    path_violation = _path_argument_violation(root, arguments)
+    if path_violation:
+        return {"status": "boundary_violation", "reason": "path_argument_outside_project", "argument": path_violation}
+    if policy.risk_level in {"execute_science", "network_external"} and not _valid_capability_token(
+        capability_token, root, command, arguments
+    ):
+        return {
+            "status": "confirmation_required",
+            "command": command,
+            "risk_level": policy.risk_level,
+            "requires_human_action": False,
+            "legacy_boolean_accepted": False,
+            "next_step": "Call draftpaper_plan_command with the same project and arguments, then provide its short-lived confirmation_token.",
+        }
     completed = subprocess.run(
         [sys.executable, "-m", "draftpaper_cli.cli", *_argv(command, arguments)],
         cwd=root,
@@ -141,8 +202,28 @@ def execute_command(project: str, command: str, arguments_json: str | None = Non
     })
 
 
-def job_submit(project: str, command: str, arguments_json: str | None = None, idempotency_key: str | None = None) -> dict[str, Any]:
-    return _safe(submit_job(project, command, arguments_json, idempotency_key))
+def job_submit(
+    project: str,
+    command: str,
+    arguments_json: str | None = None,
+    idempotency_key: str | None = None,
+    capability_token: str | None = None,
+) -> dict[str, Any]:
+    root = Path(project).resolve(strict=True)
+    spec = command_spec(command)
+    if spec is None:
+        return {"status": "not_found", "command": command}
+    arguments = _arguments(arguments_json)
+    arguments["project"] = str(root)
+    path_violation = _path_argument_violation(root, arguments)
+    if path_violation:
+        return {"status": "boundary_violation", "reason": "path_argument_outside_project", "argument": path_violation}
+    policy = ExecutionPolicy.from_spec(spec)
+    if policy.risk_level in {"execute_science", "network_external"} and not _valid_capability_token(
+        capability_token, root, command, arguments
+    ):
+        return {"status": "confirmation_required", "command": command, "risk_level": policy.risk_level}
+    return _safe(submit_job(root, command, json.dumps(arguments, ensure_ascii=False), idempotency_key))
 
 
 def job_get(project: str, job_id: str) -> dict[str, Any]:

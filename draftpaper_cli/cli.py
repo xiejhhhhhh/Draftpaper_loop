@@ -216,6 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate-project", help="Validate project metadata and stage manifests.")
     validate.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    subparsers.add_parser("validate-command-contracts", help="Validate the normalized CLI, handler, MCP, and execution-policy contracts.")
 
     path_budget = subparsers.add_parser("path-budget-check", help="Validate Windows-safe project and artifact path budgets.")
     path_budget.add_argument("--project", required=True)
@@ -2537,12 +2538,17 @@ def main(argv: list[str] | None = None) -> int:
         if write_guard is not None:
             assessment = write_guard.assess()
             if assessment.get("status") != "passed":
+                assessment["rollback"] = write_guard.rollback_violations(assessment)
                 try:
                     record_command_transaction(
                         project,
                         command=command,
                         scientific_exit_code=exit_code,
-                        transaction_status="boundary_violation",
+                        transaction_status=(
+                            "boundary_violation_rolled_back"
+                            if assessment["rollback"].get("status") == "rolled_back"
+                            else "boundary_violation_rollback_incomplete"
+                        ),
                         baseline_clean=not preexisting_drift,
                         message=json.dumps(assessment, ensure_ascii=False),
                     )
@@ -2550,8 +2556,16 @@ def main(argv: list[str] | None = None) -> int:
                     pass
                 print(json.dumps(assessment, ensure_ascii=False), file=sys.stderr)
                 if workflow_trace is not None:
-                    finish_workflow_trace(project, workflow_trace, process_status="completed", command_exit_code=4, transaction_status="boundary_violation", scientific_decision="not_committed", failure_class="write_boundary_violation")
-                return 4
+                    finish_workflow_trace(
+                        project,
+                        workflow_trace,
+                        process_status="completed",
+                        command_exit_code=4 if assessment["rollback"].get("status") == "rolled_back" else 5,
+                        transaction_status=assessment["rollback"].get("status"),
+                        scientific_decision="not_committed",
+                        failure_class="write_boundary_violation",
+                    )
+                return 4 if assessment["rollback"].get("status") == "rolled_back" else 5
         post_command_drift = True
         try:
             post_command_drift = detect_artifact_drift(project).get("status") == "drift_detected"

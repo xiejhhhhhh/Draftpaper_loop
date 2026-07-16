@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .scientific_plugin_runtime import apply_runnable_profile, runnable_profile
+from .plugin_runtime import inspect_static_runtime_level
 
 
 EXECUTION_MODES = {"sync", "job", "mock_only"}
@@ -137,7 +138,7 @@ def build_plugin_catalog_snapshot(*, root: str | Path | None = None, refresh: bo
             "template_sha256": _sha256_bytes(template.read_bytes()) if template.is_file() else None,
             "execution_contract": contract,
             "maturity": manifest.get("maturity") or "foundation",
-            "runtime_level": manifest.get("runtime_level") or "contract_only",
+            "runtime_level": inspect_static_runtime_level(manifest_path.parent, kind, manifest),
             "runnable_profile": runnable_profile(plugin_id),
         }
         material["plugin_contract_hash"] = _sha256_bytes(json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8"))

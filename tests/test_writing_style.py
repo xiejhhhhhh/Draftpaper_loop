@@ -30,7 +30,7 @@ class WritingStyleLearningTests(unittest.TestCase):
 
             self.assertEqual(result["status"], "written")
             profile = json.loads((project.path / "writing" / "style_profile.json").read_text(encoding="utf-8"))
-            self.assertEqual(profile["schema_version"], "v0.16.9")
+            self.assertEqual(profile["schema_version"], "dpl.writing_style_profile.v2")
             self.assertTrue(profile["results_style"]["uses_scientific_judgment"])
             self.assertIn("first establishes the main empirical pattern", profile["avoid_phrases"])
             self.assertNotIn("The model reached F1=0.81", json.dumps(profile))

@@ -113,7 +113,7 @@ def build_claim_contract_from_blueprint(blueprint: dict[str, Any]) -> dict[str, 
                 claim["required_evidence_roles"].append(value)
     return {
         "status": "written",
-        "schema_version": "v0.18.2",
+        "schema_version": "dpl.claim_contract.v2",
         "generated_at": utc_now(),
         "source": "research_blueprint",
         "project_id": blueprint.get("project_id"),
@@ -151,7 +151,7 @@ def _freeze_result_artifacts(project_path: Path, *, route: str) -> dict[str, Any
     archive_relative = f"results/evidence_snapshots/result_freeze_{freeze_id}.json"
     payload = {
         "status": "frozen",
-        "schema_version": "v0.18.4",
+        "schema_version": "dpl.result_evidence_freeze.v1",
         "freeze_id": freeze_id,
         "route": route,
         "frozen_at": utc_now(),
@@ -221,12 +221,12 @@ def apply_result_downgrade(project: str | Path, *, reason: str = "") -> dict[str
         raise ClaimContractError("No failed or partial claim was available to downgrade.")
     contract["route_state"] = "downgraded_to_current_results"
     contract["last_route_decision_at"] = utc_now()
-    contract["schema_version"] = "v0.18.4"
+    contract["schema_version"] = "dpl.claim_contract.v2"
     _write_json(contract_path, contract)
     freeze = _freeze_result_artifacts(project_path, route="downgrade_research_claim")
     decision = {
         "status": "applied",
-        "schema_version": "v0.18.4",
+        "schema_version": "dpl.claim_downgrade_decision.v1",
         "route": "downgrade_research_claim",
         "applied_at": utc_now(),
         "reason": reason,

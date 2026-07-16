@@ -100,7 +100,25 @@ def test_write_set_guard_preserves_dirty_baseline_and_detects_new_out_of_scope_w
     report = guard.assess()
     assert report["status"] == "boundary_violation"
     assert "methods/unexpected.py" in report["violations"]
+    rollback = guard.rollback_violations(report)
+    assert rollback["status"] == "rolled_back"
+    assert not (root / "methods" / "unexpected.py").exists()
     assert dirty.read_text(encoding="utf-8") == "user work"
+
+
+def test_write_set_guard_restores_modified_out_of_scope_file(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    (root / "data").mkdir(parents=True)
+    protected = root / "notes.txt"
+    protected.write_text("before", encoding="utf-8")
+    guard = WriteSetGuard(root, COMMAND_SPECS["inventory-data"])
+    protected.write_text("after", encoding="utf-8")
+
+    report = guard.assess()
+    rollback = guard.rollback_violations(report)
+
+    assert rollback["status"] == "rolled_back"
+    assert protected.read_text(encoding="utf-8") == "before"
 
 
 def test_sensitive_response_redaction() -> None:

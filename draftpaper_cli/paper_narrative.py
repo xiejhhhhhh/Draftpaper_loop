@@ -382,7 +382,7 @@ def build_paper_narrative(project: str | Path) -> dict[str, Any]:
     field = _text(state.metadata.get("field") or "the target discipline")
     central_claims = _dedupe([str(item.get("claim") or "") for item in arc])
     brief = {
-        "schema_version": "v0.21.1",
+        "schema_version": "dpl.paper_brief.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "title_or_idea": title,
@@ -397,7 +397,7 @@ def build_paper_narrative(project: str | Path) -> dict[str, Any]:
     }
     allocation = _section_claims(arc, records)
     argument_map = {
-        "schema_version": "v0.21.1",
+        "schema_version": "dpl.manuscript_argument_map.v2",
         "generated_at": utc_now(),
         "paper_pitch": brief["paper_pitch"],
         "research_question": _text(state.metadata.get("idea") or title),
@@ -407,9 +407,9 @@ def build_paper_narrative(project: str | Path) -> dict[str, Any]:
     }
     payload = {
         "paper_brief": brief,
-        "figure_story_arc": {"schema_version": "v0.21.1", "generated_at": utc_now(), "figure_groups": arc},
+        "figure_story_arc": {"schema_version": "dpl.figure_story_arc.v2", "generated_at": utc_now(), "figure_groups": arc},
         "manuscript_argument_map": argument_map,
-        "section_claim_allocation": {"schema_version": "v0.21.1", "generated_at": utc_now(), "sections": allocation},
+        "section_claim_allocation": {"schema_version": "dpl.section_claim_allocation.v2", "generated_at": utc_now(), "sections": allocation},
     }
     _write_json(state.path / PAPER_BRIEF, brief)
     _write_json(state.path / FIGURE_STORY_ARC, payload["figure_story_arc"])
@@ -545,7 +545,7 @@ def build_section_evidence_pack(project: str | Path, section: str) -> dict[str, 
         elif normalized == "data" and story.get("input_data_role"):
             relevant_stories.append(story)
     pack = {
-        "schema_version": "v0.21.2",
+        "schema_version": "dpl.section_evidence_pack.v2",
         "generated_at": utc_now(),
         "section": normalized,
         "paper_brief": narrative["paper_brief"],
@@ -789,7 +789,7 @@ def build_section_outline(project: str | Path, section: str) -> dict[str, Any]:
     normalized = str(section or "").strip().lower()
     pack = build_section_evidence_pack(state.path, normalized)
     outline = {
-        "schema_version": "v0.21.3",
+        "schema_version": "dpl.section_outline.v1",
         "generated_at": utc_now(),
         "section": normalized,
         "writing_mode": "outline_then_free_prose",
@@ -826,7 +826,7 @@ def build_results_synthesis_plan(project: str | Path) -> dict[str, Any]:
             "interpretation_requirement": "Explain what the empirical pattern means for the stated question without invoking literature citations.",
             "claim_boundary": story.get("claim_boundary") or "Limit interpretation to the represented cohort, method, and validation setting.",
         })
-    plan = {"schema_version": "v0.21.4", "generated_at": utc_now(), "finding_blocks": blocks}
+    plan = {"schema_version": "dpl.results_synthesis_plan.v1", "generated_at": utc_now(), "finding_blocks": blocks}
     _write_json(state.path / RESULTS_SYNTHESIS_PLAN, plan)
     return plan
 

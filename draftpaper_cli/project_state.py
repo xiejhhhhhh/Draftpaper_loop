@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from .project_scaffold import PROJECT_DIRECTORIES, _build_stage_metadata, _write_json, _write_simple_yaml, utc_now
-from .state_kernel import StateKernelError, read_json_object
+from .scoped_transaction import ScopedProjectTransaction
+from .state_kernel import StateKernelError, file_lock, read_json_object
 
 
 VALID_STAGE_STATUSES = {"pending", "draft", "approved", "stale", "failed", "completed"}
@@ -107,19 +108,28 @@ def migrate_project(project: str | Path) -> dict[str, Any]:
         else:
             updated["stages"][stage]["depends_on"] = list(default_meta.get("depends_on") or [])
     updated["updated_at"] = utc_now()
-    _write_json(project_path / "project.json", updated)
-    _write_simple_yaml(project_path / "project.yaml", updated)
-    state = ProjectState(path=project_path, metadata=updated)
-    for stage in defaults:
-        if not _manifest_path(project_path, stage).exists():
-            _write_stage_manifest(state, stage)
+    _save_project(ProjectState(path=project_path, metadata=updated), stage_names=list(defaults))
     return {**plan, "status": "migrated", "project_path": str(project_path)}
 
 
-def _save_project(state: ProjectState) -> ProjectState:
+def _save_project(state: ProjectState, *, stage_names: list[str] | None = None) -> ProjectState:
     state.metadata["updated_at"] = utc_now()
-    _write_json(state.path / "project.json", state.metadata)
-    _write_simple_yaml(state.path / "project.yaml", state.metadata)
+    state.metadata["state_revision"] = int(state.metadata.get("state_revision") or 0) + 1
+    # Every manifest records the same state revision, so one commit refreshes
+    # the complete state view even when only one stage changed.
+    selected = state.stage_names
+    patterns = [
+        "project.json",
+        "project.yaml",
+        *(_manifest_path(state.path, stage).relative_to(state.path).as_posix() for stage in selected),
+    ]
+    with file_lock(state.path):
+        with ScopedProjectTransaction(state.path, patterns) as transaction:
+            _write_json(state.path / "project.json", state.metadata)
+            _write_simple_yaml(state.path / "project.yaml", state.metadata)
+            for stage in selected:
+                _write_stage_manifest(state, stage)
+            transaction.commit()
     return load_project(state.path)
 
 
@@ -142,6 +152,7 @@ def _write_stage_manifest(state: ProjectState, stage: str) -> None:
         "input_files": existing.get("input_files", []),
         "output_files": existing.get("output_files", []),
         "last_updated": stage_meta.get("last_updated") or existing.get("last_updated"),
+        "state_revision": int(state.metadata.get("state_revision") or 0),
     }
     _write_json(manifest_path, manifest)
 
@@ -186,14 +197,15 @@ def update_stage_status(project: str | Path, stage: str, status: str) -> Project
     stage_meta["status"] = status
     stage_meta["stale"] = status == "stale"
     stage_meta["last_updated"] = now
-    _write_stage_manifest(state, stage)
-
-    saved = _save_project(state)
-    _write_stage_manifest(saved, stage)
+    selected = [stage]
     if status in {"draft", "failed"}:
-        mark_stage_stale(saved.path, stage)
-        return load_project(saved.path)
-    return saved
+        for dependent in _dependent_stages(state, stage):
+            dependent_meta = state.metadata["stages"][dependent]
+            dependent_meta["status"] = "stale"
+            dependent_meta["stale"] = True
+            dependent_meta["last_updated"] = now
+            selected.append(dependent)
+    return _save_project(state, stage_names=selected)
 
 
 def mark_stage_stale(project: str | Path, stage: str, *, include_self: bool = False) -> list[str]:
@@ -209,11 +221,7 @@ def mark_stage_stale(project: str | Path, stage: str, *, include_self: bool = Fa
         stage_meta["status"] = "stale"
         stage_meta["stale"] = True
         stage_meta["last_updated"] = now
-        _write_stage_manifest(state, stale_stage)
-
-    saved = _save_project(state)
-    for stale_stage in changed:
-        _write_stage_manifest(saved, stale_stage)
+    _save_project(state, stage_names=changed)
     return changed
 
 
@@ -230,11 +238,54 @@ def mark_stages_stale(project: str | Path, stages: list[str]) -> list[str]:
         stage_meta["stale"] = True
         stage_meta["last_updated"] = now
         changed.append(stage)
-        _write_stage_manifest(state, stage)
-    saved = _save_project(state)
-    for stage in changed:
-        _write_stage_manifest(saved, stage)
+    _save_project(state, stage_names=changed)
     return changed
+
+
+def mark_stage_roots_stale(project: str | Path, stages: list[str]) -> list[str]:
+    """Mark stage roots and every transitive dependent stale in one state update."""
+    state = load_project(project)
+    requested = list(dict.fromkeys(stages))
+    for stage in requested:
+        _require_stage(state, stage)
+    selected = set(requested)
+    for stage in requested:
+        selected.update(_dependent_stages(state, stage))
+    changed = [stage for stage in state.stage_names if stage in selected]
+    now = utc_now()
+    for stage in changed:
+        stage_meta = state.metadata["stages"][stage]
+        stage_meta["status"] = "stale"
+        stage_meta["stale"] = True
+        stage_meta["last_updated"] = now
+    _save_project(state, stage_names=changed)
+    return changed
+
+
+def update_project_state(
+    project: str | Path,
+    *,
+    metadata_updates: dict[str, Any] | None = None,
+    stage_updates: dict[str, str] | None = None,
+) -> ProjectState:
+    """Commit metadata and stage changes under one state revision."""
+    state = load_project(project)
+    for key, value in (metadata_updates or {}).items():
+        if key in {"project_id", "stages", "state_revision"}:
+            raise ProjectStateError(f"Protected project metadata cannot be replaced: {key}")
+        state.metadata[key] = value
+    now = utc_now()
+    selected: list[str] = []
+    for stage, status in (stage_updates or {}).items():
+        _require_stage(state, stage)
+        _require_status(status)
+        stage_meta = state.metadata["stages"][stage]
+        stage_meta["status"] = status
+        stage_meta["stale"] = status == "stale"
+        stage_meta["last_updated"] = now
+        state.metadata["current_stage"] = stage
+        selected.append(stage)
+    return _save_project(state, stage_names=selected)
 
 
 def validate_project(project: str | Path) -> dict[str, Any]:
@@ -299,6 +350,13 @@ def validate_project(project: str | Path) -> dict[str, Any]:
                 "severity": "warning",
                 "code": "stage_manifest_stale_drift",
                 "message": f"Stage {stage} manifest stale flag differs from project.json",
+            })
+        state_revision = int(state.metadata.get("state_revision") or 0)
+        if state_revision and int(manifest.get("state_revision") or 0) != state_revision:
+            issues.append({
+                "severity": "error",
+                "code": "stage_manifest_revision_drift",
+                "message": f"Stage {stage} manifest belongs to state revision {manifest.get('state_revision')}, expected {state_revision}",
             })
 
     error_count = sum(1 for issue in issues if issue["severity"] == "error")

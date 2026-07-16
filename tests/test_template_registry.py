@@ -36,6 +36,17 @@ class TemplateRegistryTests(unittest.TestCase):
         self.assertTrue(wrappers)
         self.assertTrue(all(item["runtime_level"] != "project_validated" for item in wrappers))
 
+    def test_plain_fixture_name_is_discovered_and_executed(self) -> None:
+        registry = discover_template_registry()
+        entry = next(item for item in registry["entries"] if item["plugin_id"] == "sky_partition_overlap_validation")
+        self.assertIn("fixture.json", entry["fixtures"])
+        self.assertNotEqual(entry["manifest_data"].get("deployment_state"), "live_runnable")
+        report = validate_template_registry()
+        self.assertFalse([
+            issue for issue in report["issues"]
+            if issue.get("plugin_id") == "sky_partition_overlap_validation"
+        ])
+
 
 if __name__ == "__main__":
     unittest.main()

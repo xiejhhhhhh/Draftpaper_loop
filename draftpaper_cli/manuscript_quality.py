@@ -142,7 +142,7 @@ def build_results_narrative_contract(project: str | Path) -> dict[str, Any]:
         })
     payload = {
         "status": "written",
-        "schema_version": "v0.21.0",
+        "schema_version": "dpl.manuscript_quality.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "minimum_quality_score": QUALITY_THRESHOLD,
@@ -240,7 +240,7 @@ def assess_results_manuscript_quality(
     score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
     report = {
         "status": "written",
-        "schema_version": "v0.21.0",
+        "schema_version": "dpl.manuscript_quality.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": score,

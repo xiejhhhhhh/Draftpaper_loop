@@ -35,6 +35,34 @@ def test_mcp_artifact_reader_is_confined_truncated_and_selective(tmp_path: Path)
     assert escaped["status"] == "boundary_violation"
 
 
+def test_execute_science_requires_command_hash_capability_token(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path, idea="MCP capability", field="engineering").path
+    denied = service.execute_command(str(project), "verify-methods", "{}", confirm_science_execution=True)
+    assert denied["status"] == "confirmation_required"
+    plan = service.plan_command("verify-methods", str(project), "{}")
+    assert plan["confirmation_token"]
+    executed = service.execute_command(
+        str(project),
+        "verify-methods",
+        "{}",
+        capability_token=plan["confirmation_token"],
+    )
+    assert executed["status"] in {"completed", "non_passing"}
+
+
+def test_mcp_rejects_non_project_path_arguments_before_execution(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path, idea="MCP path", field="engineering").path
+    outside = tmp_path / "outside.tex"
+    outside.write_text("outside", encoding="utf-8")
+    result = service.execute_command(
+        str(project),
+        "submit-section-draft",
+        json.dumps({"section": "methods", "input": str(outside)}),
+    )
+    assert result["status"] == "boundary_violation"
+    assert result["argument"] == "input"
+
+
 def test_runtime_trace_separates_process_science_and_transaction(tmp_path: Path) -> None:
     project = create_project(root=tmp_path, idea="Trace", field="engineering").path
     trace = begin_workflow_trace(project, "verify-methods", {"project": str(project)})

@@ -343,6 +343,24 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.28.1-v0.30.0（2026-07-17）-- 事务化证据架构与跨学科发布合同
+
+- `v0.28.1` 将章节修订升级为真正的多产物事务。通过审阅的修改写入章节权威源文件，重复组装 LaTeX 后仍会保留，并触发真实的下游 stale 状态；注入故障时 canonical、candidate 与项目状态会一起回滚。这一版本真正完成了 `v0.27.2` 最初提出的事务保证。
+- `v0.28.2` 将 210 个学科插件全部迁移到显式 manifest v2 合同。运行类型、验证等级、成熟度、部署状态、fixture 清单和执行策略不再静默推断；源码与 wheel registry 统一为 546 个 fixture，并明确区分 175 个 contract-only、25 个 code-generator 和 10 个 fixture-executed 记录。
+- `v0.28.3` 为 `project.json`、YAML 镜像和全部 stage manifest 增加统一 state revision、项目级锁与回滚。write-set 越界会尽可能恢复项目内改动；MCP 科研或网络执行必须使用绑定具体项目、命令和参数的短期 HMAC capability token。
+- `v0.29.0` 将 artifact dependency model 升级为包含真实路径、hash、owner、producer/consumer 边和 authoritative/derived 角色的依赖图。第一方 schema ID 不再混用产品版本号，统一进入独立的 schema family registry。
+- `v0.29.1` 为 204 个 CLI 命令建立统一的 normalized runtime command contract，并将其作为一致性校验、MCP schema 和 doctor 诊断的权威视图。迁移边界会明确报告为 80 个注册 handler 与 124 个兼容 dispatch，后续拆分进度不再被隐藏。
+- `v0.29.2` 新增针对性 Ruff 与 pyright、覆盖率、项目依赖图漏洞审计与 CycloneDX SBOM、敏感信息扫描、固定 GitHub Action commit SHA、可复现 CI 工具约束、源码/wheel 发布身份、SPDX 风格许可证元数据和无警告 wheel manifest。
+- `v0.30.0` 将 wheel 安装回归扩展到科学图像+机器学习、地理+机器学习、天文+机器学习、生物信息+医学和物理/量子五类项目。每个夹具的六组主图都必须追溯到 research claim、data plugin、method plugin、项目 run output、evidence ID 与 review rule；错误 cohort/run/unit/model/metric/dimension、空白图、插件冒充和引用语义反例仍必须被拒绝。
+
+发布检查：
+
+```powershell
+draftpaper validate-command-contracts
+python -m draftpaper_cli.release_contract
+python -m draftpaper_cli.release_regression --output tmp/release-v0300
+```
+
 ### v0.26.1-v0.28.0（2026-07-16）-- 可执行科研语义与精确恢复
 
 - `v0.26.1` 将失败明确分为产物 stale、引用支撑、正文语义、可复现包、渲染质量、科学分析、图表合同和人工审阅八类。引用或匿名包失败不再兜底返回 `plan-figures`；质量报告会给出真实失败 predicate、受影响产物和唯一合理命令。交互终端默认摘要输出，重定向/API 保留完整 JSON，也可用 `--compact` 与 `--json-full` 显式选择。

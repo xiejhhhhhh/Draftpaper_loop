@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .project_scaffold import _write_json, utc_now
+from .project_state import mark_stage_roots_stale
 
 
 ARTIFACT_DAG = "writing/artifact_dependency_dag.json"
@@ -49,21 +50,88 @@ DEFAULT_DEPENDENCIES = {
 }
 
 
+def stage_roots_for_change(change_class: str, *, section: str | None = None) -> list[str]:
+    """Translate one semantic change into authoritative project-stage roots."""
+    if change_class not in CHANGE_CLASS_ROOTS:
+        raise ValueError(f"Unsupported artifact change class: {change_class}")
+    normalized = str(section or "").strip().lower()
+    if change_class in {"presentation_only", "citation_local", "metadata_claim_change"}:
+        return ["latex"]
+    if change_class == "prose_semantic_no_evidence_change":
+        return ["discussion", "latex"] if normalized in {"data", "methods", "results", "introduction"} else ["latex"]
+    return {
+        "cohort_definition_change": ["data"],
+        "analysis_spec_change": ["method_plan"],
+        "run_output_change": ["methods"],
+        "figure_semantic_change": ["figure_plan"],
+        "claim_contract_change": ["research_plan"],
+    }[change_class]
+
+
 def build_artifact_dag(project: str | Path, *, write: bool = True) -> dict[str, Any]:
     root = Path(project)
-    nodes = []
-    for artifact_id, dependencies in DEFAULT_DEPENDENCIES.items():
-        nodes.append({"artifact_id": artifact_id, "depends_on": dependencies})
+    from .project_state import load_project
+    from .project_system_of_record import managed_artifact_contracts
+
+    state = load_project(root)
+    nodes: list[dict[str, Any]] = []
+    for stage, metadata in state.metadata.get("stages", {}).items():
+        nodes.append({
+            "artifact_id": f"stage:{stage}",
+            "node_type": "stage",
+            "stage": stage,
+            "state_revision": int(state.metadata.get("state_revision") or 0),
+            "status": metadata.get("status"),
+            "stale": bool(metadata.get("stale")),
+            "depends_on": [f"stage:{dependency}" for dependency in metadata.get("depends_on") or []],
+        })
+    for artifact in managed_artifact_contracts(root):
+        owner = str(artifact.get("owner_stage") or "project")
+        dependencies = list(artifact.get("input_artifact_ids") or [])
+        if owner in state.metadata.get("stages", {}):
+            dependencies.append(f"stage:{owner}")
+        nodes.append({
+            **artifact,
+            "node_type": "artifact",
+            "depends_on": list(dict.fromkeys(dependencies)),
+            "authoritative": artifact.get("category") in {"canonical_decision", "scientific_source", "approved_evidence"},
+        })
+    edges = [
+        {"source": dependency, "target": node["artifact_id"]}
+        for node in nodes
+        for dependency in node.get("depends_on") or []
+    ]
     payload = {
-        "schema_version": "dpl.artifact_dependency_dag.v1",
+        "schema_version": "dpl.artifact_dependency_dag.v2",
         "generated_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "state_revision": int(state.metadata.get("state_revision") or 0),
         "nodes": nodes,
+        "edges": edges,
         "change_classes": {key: sorted(value) for key, value in CHANGE_CLASS_ROOTS.items()},
-        "policy": "Stage status is a summary view. Artifact hashes and semantic dependencies own stale propagation.",
+        "policy": "Artifact hashes and producer/consumer edges own stale propagation; stage nodes are compatibility summaries.",
     }
     if write:
         _write_json(root / ARTIFACT_DAG, payload)
     return payload
+
+
+def downstream_artifact_ids(dag: dict[str, Any], roots: list[str]) -> list[str]:
+    """Traverse the executable dependency graph from stage or artifact roots."""
+    dependents: dict[str, list[str]] = {}
+    for edge in dag.get("edges") or []:
+        dependents.setdefault(str(edge.get("source")), []).append(str(edge.get("target")))
+    visited = set(roots)
+    frontier = list(roots)
+    while frontier:
+        current = frontier.pop(0)
+        for dependent in dependents.get(current, []):
+            if dependent in visited:
+                continue
+            visited.add(dependent)
+            frontier.append(dependent)
+    node_types = {str(node.get("artifact_id")): node.get("node_type") for node in dag.get("nodes") or []}
+    return sorted(node_id for node_id in visited if node_types.get(node_id) == "artifact")
 
 
 def stale_artifacts_for_change(change_class: str, *, section: str | None = None) -> list[str]:
@@ -90,6 +158,14 @@ def record_artifact_change(
     root = Path(project)
     dag = build_artifact_dag(root)
     stale = stale_artifacts_for_change(change_class, section=section)
+    stage_roots = stage_roots_for_change(change_class, section=section)
+    stale_artifact_ids = downstream_artifact_ids(dag, [f"stage:{stage}" for stage in stage_roots])
+    artifact_paths = {
+        str(node.get("artifact_id")): str(node.get("path"))
+        for node in dag.get("nodes") or []
+        if node.get("node_type") == "artifact" and node.get("path")
+    }
+    stale_stages = mark_stage_roots_stale(root, stage_roots)
     receipt_seed = f"{change_class}|{source_artifact}|{source_hash}|{section or ''}"
     report = {
         "schema_version": "dpl.artifact_stale_report.v1",
@@ -100,7 +176,15 @@ def record_artifact_change(
         "source_hash": source_hash,
         "section": section,
         "stale_artifacts": stale,
-        "preserved_artifacts": sorted(set(DEFAULT_DEPENDENCIES) - set(stale)),
+        "stale_artifact_ids": stale_artifact_ids,
+        "stale_artifact_paths": sorted(artifact_paths[item] for item in stale_artifact_ids if item in artifact_paths),
+        "stage_roots": stage_roots,
+        "stale_stages": stale_stages,
+        "preserved_artifacts": sorted(
+            artifact_paths[item]
+            for item in artifact_paths
+            if item not in set(stale_artifact_ids)
+        ),
         "dag_schema_version": dag["schema_version"],
     }
     _write_json(root / ARTIFACT_STALE_REPORT, report)

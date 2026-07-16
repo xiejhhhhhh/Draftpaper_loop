@@ -65,7 +65,7 @@ def prepare_results_semantic_repair(project: str | Path) -> dict[str, Any]:
         })
     payload = {
         "status": "written",
-        "schema_version": "v0.21.0",
+        "schema_version": "dpl.results_semantic_repair.v1",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "source_review": "review/result_discipline_review_report.json",

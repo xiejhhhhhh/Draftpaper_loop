@@ -3,9 +3,54 @@
   "display_name": "Gradient boosting regression pipeline",
   "discipline": "machine_learning",
   "method_family": "supervised_learning",
-  "input_roles": ["feature_matrix", "target_or_label"],
-  "packages": ["scikit-learn"],
-  "output_artifacts": ["methods/src/gradient_boosting_regression.py", "results/tables/gradient_boosting_metrics.csv"],
-  "figure_groups": ["baseline_vs_model_performance"],
-  "genericity_rules": ["Use as a classical ensemble baseline before complex models."]
+  "input_roles": [
+    "feature_matrix",
+    "target_or_label"
+  ],
+  "packages": [
+    "scikit-learn"
+  ],
+  "output_artifacts": [
+    "methods/src/gradient_boosting_regression.py",
+    "results/tables/gradient_boosting_metrics.csv"
+  ],
+  "figure_groups": [
+    "baseline_vs_model_performance"
+  ],
+  "genericity_rules": [
+    "Use as a classical ensemble baseline before complex models."
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "gradient_boosting_regression_pipeline",
+  "plugin_kind": "method",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

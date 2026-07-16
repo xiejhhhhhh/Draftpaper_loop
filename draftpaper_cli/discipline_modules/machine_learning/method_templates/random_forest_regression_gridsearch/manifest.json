@@ -3,10 +3,59 @@
   "display_name": "Random forest regression grid search",
   "discipline": "machine_learning",
   "method_family": "supervised_learning",
-  "input_roles": ["feature_matrix", "target_or_label"],
-  "optional_roles": ["sample_group", "train_validation_test_split"],
-  "packages": ["scikit-learn"],
-  "output_artifacts": ["methods/src/random_forest_regression.py", "results/tables/random_forest_metrics.csv"],
-  "figure_groups": ["baseline_vs_model_performance", "feature_importance_or_attention_summary"],
-  "genericity_rules": ["Parameterize target, features, groups, and hyperparameter grid."]
+  "input_roles": [
+    "feature_matrix",
+    "target_or_label"
+  ],
+  "optional_roles": [
+    "sample_group",
+    "train_validation_test_split"
+  ],
+  "packages": [
+    "scikit-learn"
+  ],
+  "output_artifacts": [
+    "methods/src/random_forest_regression.py",
+    "results/tables/random_forest_metrics.csv"
+  ],
+  "figure_groups": [
+    "baseline_vs_model_performance",
+    "feature_importance_or_attention_summary"
+  ],
+  "genericity_rules": [
+    "Parameterize target, features, groups, and hyperparameter grid."
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "random_forest_regression_gridsearch",
+  "plugin_kind": "method",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

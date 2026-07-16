@@ -169,7 +169,7 @@ def create_evidence_snapshot(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     artifacts = _artifact_hashes(state.path)
     payload = {
-        "schema_version": "v0.17.7",
+        "schema_version": "dpl.evidence_snapshot.v2",
         "snapshot_id": _snapshot_id(artifacts),
         "promoted_at": utc_now(),
         "status": "promoted",

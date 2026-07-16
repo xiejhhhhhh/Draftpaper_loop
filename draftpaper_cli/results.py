@@ -384,7 +384,7 @@ def inventory_results(project: str | Path) -> dict[str, Any]:
     main_figures = [item for item in figures if not _is_appendix_figure(item)]
     appendix_figures = [item for item in figures if _is_appendix_figure(item)]
     manifest = {
-        "schema_version": "v0.16.5",
+        "schema_version": "dpl.result_manifest.v2",
         "figures": figures,
         "tables": tables,
         "main_figures": main_figures,
@@ -734,7 +734,7 @@ def build_figure_interpretation_blueprint(entries: list[tuple[str, dict[str, Any
         })
     return {
         "status": "written",
-        "schema_version": "v0.17.0",
+        "schema_version": "dpl.results_narrative_contract.v1",
         "main_group_count": len(groups),
         "groups": groups,
     }

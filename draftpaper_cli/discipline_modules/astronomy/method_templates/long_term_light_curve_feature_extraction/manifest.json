@@ -2,6 +2,44 @@
   "template_id": "long_term_light_curve_feature_extraction",
   "display_name": "Long-term light-curve feature extraction",
   "method_family": "time_series_feature_extraction",
-  "figure_groups": ["time_series_or_feature_distribution"],
-  "fixture": "fixture_light_curve.csv"
+  "figure_groups": [
+    "time_series_or_feature_distribution"
+  ],
+  "fixture": "fixture_light_curve.csv",
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "long_term_light_curve_feature_extraction",
+  "plugin_kind": "method",
+  "discipline": "astronomy",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_light_curve.csv"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

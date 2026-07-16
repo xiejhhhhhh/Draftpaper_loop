@@ -465,7 +465,7 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
     if normalized in {"results", "discussion"} and resolved_evidence:
         figure_evidence = resolve_figure_evidence(state.path)
     packet = {
-        "schema_version": "v0.23.1",
+        "schema_version": "dpl.section_evidence_packet.v2",
         "generated_at": utc_now(),
         "section": normalized,
         "composition_mode": "outline_then_codex_free_writing_with_post_validation",
@@ -743,7 +743,7 @@ def accept_section_draft(project: str | Path, section: str) -> dict[str, Any]:
     ):
         raise SectionCompositionError(f"The {normalized} candidate has incomplete or stale quantitative evidence bindings.")
     report = {
-        "schema_version": "v0.22.2",
+        "schema_version": "dpl.section_acceptance.v2",
         "generated_at": utc_now(),
         "section": normalized,
         "status": "accepted",

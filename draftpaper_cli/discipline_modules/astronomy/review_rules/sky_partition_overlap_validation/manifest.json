@@ -1,23 +1,53 @@
 {
   "display_name": "Sky partition and cutout overlap validation",
   "discipline": "astronomy",
-  "packages": ["numpy", "scipy"],
-  "package_modules": ["numpy", "scipy"],
-  "maturity": "runnable",
+  "packages": [
+    "numpy",
+    "scipy"
+  ],
+  "package_modules": [
+    "numpy",
+    "scipy"
+  ],
+  "maturity": "foundation",
   "runtime_class": "local_optional_dependency",
   "validation_level": "fixture_runnable",
-  "aliases": ["spatial validation", "sky partition validation", "tile grouped validation", "cutout overlap audit"],
+  "aliases": [
+    "spatial validation",
+    "sky partition validation",
+    "tile grouped validation",
+    "cutout overlap audit"
+  ],
   "provenance_notes": "First-party astronomy validation rule using source coordinates, image support, and acquisition groups; no external source code is copied.",
   "rule_id": "sky_partition_overlap_validation",
   "rule_group_id": "sky_partition_overlap_validation",
   "rule_family": "spatial_validation",
   "criterion_type": "statistical_validity_gate",
-  "applicable_disciplines": ["astronomy"],
-  "evidence_roles": ["sample_definition", "method_output", "result_metric", "figure_metadata"],
+  "applicable_disciplines": [
+    "astronomy"
+  ],
+  "evidence_roles": [
+    "sample_definition",
+    "method_output",
+    "result_metric",
+    "figure_metadata"
+  ],
   "evidence_binding": {
-    "registry_record_types": ["sample_definition", "method_output", "result_metric", "figure_metadata"],
-    "required_fields": ["coordinate_definition", "partition_unit", "overlap_audit"],
-    "forbidden_conflicts": ["identifier_only_leakage_free_claim", "unreported_shared_acquisition_group"]
+    "registry_record_types": [
+      "sample_definition",
+      "method_output",
+      "result_metric",
+      "figure_metadata"
+    ],
+    "required_fields": [
+      "coordinate_definition",
+      "partition_unit",
+      "overlap_audit"
+    ],
+    "forbidden_conflicts": [
+      "identifier_only_leakage_free_claim",
+      "unreported_shared_acquisition_group"
+    ]
   },
   "checks": [
     "Declare the sky-coordinate frame and angular units used by the overlap audit.",
@@ -42,12 +72,58 @@
   "threshold_validation_status": "validated_by_fixture",
   "blocking_level": "warn_and_repair",
   "failure_route": "result_semantic_repair_or_method_supplement",
-  "pipeline_hooks": {"method_plan": "required", "result_support_checkpoint": "required", "post_results": "required"},
-  "deployment_state": "live_runnable",
+  "pipeline_hooks": {
+    "method_plan": "required",
+    "result_support_checkpoint": "required",
+    "post_results": "required"
+  },
+  "deployment_state": "review_rule_candidate",
   "human_confirmation_required": false,
   "review_question": "Do the declared source and sky partitions support the manuscript's leakage and generalization claims?",
   "scientific_risk": "Identifier-only checks can miss overlapping cutouts, nearby sources, and shared acquisition context across train and evaluation partitions.",
-  "minimum_evidence_required": ["coordinate_definition", "partition_unit", "cutout_or_image_support", "exact_source_overlap_count", "angular_overlap_audit", "shared_acquisition_group_count"],
+  "minimum_evidence_required": [
+    "coordinate_definition",
+    "partition_unit",
+    "cutout_or_image_support",
+    "exact_source_overlap_count",
+    "angular_overlap_audit",
+    "shared_acquisition_group_count"
+  ],
   "allowed_claim_strength": "bounded_to_tested_leakage_modes",
-  "repair_priority": ["narrow_leakage_wording", "add_angular_overlap_audit", "add_tile_or_field_grouped_validation"]
+  "repair_priority": [
+    "narrow_leakage_wording",
+    "add_angular_overlap_audit",
+    "add_tile_or_field_grouped_validation"
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "sky_partition_overlap_validation",
+  "plugin_kind": "review",
+  "fixtures": {
+    "normal": [
+      "fixture.json"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "sync",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "none",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

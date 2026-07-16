@@ -2,15 +2,64 @@
   "connector_id": "google_earth_engine_precip_export",
   "display_name": "Google Earth Engine precipitation export planner",
   "discipline": "geography",
-  "access_modes": ["api_access", "cloud_processing", "user_confirmed_export"],
-  "packages": ["earthengine-api", "geemap"],
-  "package_modules": ["ee", "geemap"],
-  "data_formats": ["GeoTIFF", "CSV zonal statistics", "export manifest JSON"],
+  "access_modes": [
+    "api_access",
+    "cloud_processing",
+    "user_confirmed_export"
+  ],
+  "packages": [
+    "earthengine-api",
+    "geemap"
+  ],
+  "package_modules": [
+    "ee",
+    "geemap"
+  ],
+  "data_formats": [
+    "GeoTIFF",
+    "CSV zonal statistics",
+    "export manifest JSON"
+  ],
   "requires_credentials": true,
-  "credential_env_vars": ["GOOGLE_APPLICATION_CREDENTIALS"],
+  "credential_env_vars": [
+    "GOOGLE_APPLICATION_CREDENTIALS"
+  ],
   "genericity_rules": [
     "Parameterize the image collection, region, reducer, date range, scale, and export target.",
     "Do not hard-code local paths, private assets, study regions, crop names, or date windows.",
     "Generate a confirmable export plan before starting cloud-side data access."
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "google_earth_engine_precip_export",
+  "plugin_kind": "data",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

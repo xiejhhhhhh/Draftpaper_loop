@@ -499,7 +499,7 @@ def build_review_evidence_bundle(project: str | Path, extra_context: dict[str, A
         if key not in {"active_plugin_ids", "available_evidence_roles", "compiled_claim_inputs"}
     }
     return {
-        "schema_version": "v0.22.5",
+        "schema_version": "dpl.review_rule_assessment.v2",
         "project_path": str(project_path),
         "roles": collect_review_rule_evidence_roles(project_path, extra_context),
         "records": records,

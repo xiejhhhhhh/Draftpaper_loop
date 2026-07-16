@@ -175,7 +175,7 @@ tables: []
             revised.write_text("\\section{Results}\n\nA short result paragraph with an observed pattern.", encoding="utf-8")
             revision = record_scientific_editor_revision(project.path, "results", candidate, revised, 1)
             self.assertTrue(matrices["discussion_finding_comparison_matrix"])
-            self.assertEqual(lifecycles["schema_version"], "v0.21.6")
+            self.assertEqual(lifecycles["schema_version"], "dpl.section_lifecycle.v1")
             self.assertEqual(panels["figure_groups"][0]["panels"][0]["repair_scope"], "this_panel_only")
             self.assertIn("panel_question", panels["figure_groups"][0]["panels"][0]["contract"])
             self.assertTrue((project.path / "writing" / "venue_writing_contract.json").exists())

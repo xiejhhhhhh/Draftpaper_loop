@@ -21,18 +21,13 @@ from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snaps
 from .journal_profile import JournalProfileError, validate_journal_profile_for_writing
 from .latex_utils import safe_latex_text
 from .metadata import GENERATOR_TEX_COMMENT
+from .manuscript_artifacts import SECTION_CANONICAL_ARTIFACTS, SECTION_ORDER
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
 from .section_contracts import validate_section_writing
 
 
-SECTION_INPUTS = [
-    ("introduction", "introduction/introduction.tex"),
-    ("data", "data/data.tex"),
-    ("methods", "methods/methods.tex"),
-    ("results", "results/results.tex"),
-    ("discussion", "discussion/discussion.tex"),
-]
+SECTION_INPUTS = [(section, SECTION_CANONICAL_ARTIFACTS[section]) for section in SECTION_ORDER]
 
 LATEX_INPUTS = [relative for _name, relative in SECTION_INPUTS] + [
     "references/library.bib",

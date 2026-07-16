@@ -2,6 +2,45 @@
   "template_id": "event_level_transformer_input_builder",
   "display_name": "Event-level transformer input builder",
   "method_family": "time_series_deep_learning_input",
-  "figure_groups": ["data_overview", "time_series_or_feature_distribution"],
-  "fixture": "fixture_event_manifest.csv"
+  "figure_groups": [
+    "data_overview",
+    "time_series_or_feature_distribution"
+  ],
+  "fixture": "fixture_event_manifest.csv",
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "event_level_transformer_input_builder",
+  "plugin_kind": "method",
+  "discipline": "astronomy",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_event_manifest.csv"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

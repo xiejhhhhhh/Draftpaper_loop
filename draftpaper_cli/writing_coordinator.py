@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_repository import ArtifactRepository
+from .manuscript_artifacts import SECTION_CANONICAL_ARTIFACTS
 from .project_state import load_project
 
 
@@ -19,13 +20,7 @@ SECTION_PRECONDITIONS = {
     "data": ("data/data_writing_context.json", "build-data-context"),
     "methods": ("methods/method_writing_context.json", "build-method-context"),
 }
-SECTION_ACTIVE_ARTIFACTS = {
-    "results": "results/results.tex",
-    "introduction": "introduction/introduction.tex",
-    "data": "data/data.tex",
-    "methods": "methods/methods.tex",
-    "discussion": "discussion/discussion.tex",
-}
+SECTION_ACTIVE_ARTIFACTS = SECTION_CANONICAL_ARTIFACTS
 SECTION_WRITER_COMMANDS = {
     "results": "write-results",
     "introduction": "write-introduction",

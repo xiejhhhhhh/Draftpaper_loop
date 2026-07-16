@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .project_scaffold import _write_json
-from .project_state import load_project, update_stage_status
+from .project_state import load_project, update_project_state
 
 
 OVERLEAF_TEMPLATE_SEARCH = "https://www.overleaf.com/latex/templates"
@@ -328,10 +328,11 @@ def resolve_journal_template(
     latex_template_dir.mkdir(parents=True, exist_ok=True)
     (latex_template_dir / "main.tex").write_text(template_tex, encoding="utf-8")
 
-    if state.metadata.get("target_journal") != journal:
-        state.metadata["target_journal"] = journal
-        _write_json(state.path / "project.json", state.metadata)
-    update_stage_status(state.path, "journal_profile", "draft")
+    update_project_state(
+        state.path,
+        metadata_updates={"target_journal": journal},
+        stage_updates={"journal_profile": "draft"},
+    )
     if (state.path / "references" / "library.bib").is_file():
         from .bibliography import build_reference_registry
 

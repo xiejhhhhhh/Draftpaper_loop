@@ -92,18 +92,9 @@ def _token_ledger_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _required_options(command: str) -> list[str]:
-    from .cli import build_parser
+    from .command_contracts import required_options
 
-    parser = build_parser()
-    subparsers = next(action for action in parser._actions if hasattr(action, "choices") and action.choices)
-    subparser = subparsers.choices.get(command)
-    if subparser is None:
-        return []
-    return [
-        action.option_strings[0]
-        for action in subparser._actions
-        if getattr(action, "required", False) and action.option_strings
-    ]
+    return required_options(command)
 
 
 def verify_next_action(project: str | Path) -> dict[str, Any]:
@@ -210,10 +201,10 @@ def doctor_project(project: str | Path | None = None, *, explain: bool = False) 
         ))
     if environment["optional_modules"].get("bibtexparser") is False:
         findings.append(_finding("environment", "error", "bibtexparser is unavailable", "Structured bibliography validation cannot run.", next_command="python -m pip install bibtexparser>=1.4"))
-    if project is None and environment["workflow_skill"].get("status") != "passed":
+    if environment["workflow_skill"].get("status") != "passed":
         findings.append(_finding(
             "workflow_skill_mismatch",
-            "warning",
+            "info",
             "The installed Draftpaper workflow skill does not match the canonical package resource.",
             "Codex may recommend a stale stage order even when the current CLI is correct.",
             artifacts=[str(environment["workflow_skill"].get("installed_path") or "")],
@@ -285,7 +276,13 @@ def doctor_project(project: str | Path | None = None, *, explain: bool = False) 
     findings.sort(key=lambda item: (item["severity"], item["category"], item["finding_id"]))
     report = {
         "schema_version": "dpl.doctor.v1",
-        "status": "failed" if any(item["severity"] == "error" for item in findings) else "attention" if findings else "passed",
+        "status": (
+            "failed"
+            if any(item["severity"] == "error" for item in findings)
+            else "attention"
+            if any(item["severity"] == "warning" for item in findings)
+            else "passed"
+        ),
         "scope": "project",
         "project_path": str(root),
         "project_id": state.metadata.get("project_id"),

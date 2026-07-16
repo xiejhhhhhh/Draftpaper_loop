@@ -8,6 +8,8 @@ projects/
 venv/
 dist/
 build/
+tmp/
+.coverage
 .env
 .env.*
 !.env.example

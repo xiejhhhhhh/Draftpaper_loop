@@ -98,7 +98,7 @@ def learn_writing_style_from_draft(project: str | Path, draft: str | Path) -> di
     discussion = _section(text, "Discussion")
     methods = _section(text, "Methods")
     profile = {
-        "schema_version": "v0.16.9",
+        "schema_version": "dpl.writing_style_profile.v2",
         "source": "derived_style_signals_only_no_verbatim_reuse",
         "results_style": {**_paragraph_stats(results), **_style_flags(results)},
         "discussion_style": {**_paragraph_stats(discussion), **_style_flags(discussion)},

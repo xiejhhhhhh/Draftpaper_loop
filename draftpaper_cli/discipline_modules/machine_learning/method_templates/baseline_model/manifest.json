@@ -3,8 +3,49 @@
   "plugin_type": "method_template",
   "discipline": "machine_learning",
   "method_family": "baseline_model",
-  "aliases": ["dummy baseline", "classical ml baseline"],
+  "aliases": [
+    "dummy baseline",
+    "classical ml baseline"
+  ],
   "template": "template.py",
-  "input_roles": ["feature_matrix", "target_or_label"],
-  "output_artifacts": ["results/tables/baseline_metrics.csv", "results/figures/baseline_vs_model_performance.png"]
+  "input_roles": [
+    "feature_matrix",
+    "target_or_label"
+  ],
+  "output_artifacts": [
+    "results/tables/baseline_metrics.csv",
+    "results/figures/baseline_vs_model_performance.png"
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_kind": "method",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

@@ -17,24 +17,13 @@ RESOURCE_PATTERNS = ("*.json", "*.csv", "*.md")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_MODULE_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "discipline_modules"
 SOURCE_CAPABILITY_PACK_ROOT = REPOSITORY_ROOT / "draftpaper_cli" / "capability_packs"
-EXPECTED_ENTRY_COUNT = 210
-EXPECTED_FIXTURE_COUNT = 545
-EXPECTED_PACKAGE_VERSION = "0.28.0"
-EXPECTED_CLI_COMMANDS = (
-    "review-research-plan",
-    "confirm-research-plan",
-    "reopen-research-plan",
-    "path-budget-check",
-    "validate-confirmed-figure-alignment",
-    "review-final-manuscript",
-)
-EXPECTED_RELEASE_FIXTURE_IDS = (
-    "scientific_image_ml",
-    "geography_ml",
-    "astronomy_ml",
-    "bioinformatics_medicine",
-    "physics_quantum",
-)
+SOURCE_RELEASE_MANIFEST_PATH = REPOSITORY_ROOT / "draftpaper_cli" / "resources" / "release_manifest.json"
+SOURCE_RELEASE_MANIFEST = json.loads(SOURCE_RELEASE_MANIFEST_PATH.read_text(encoding="utf-8"))
+EXPECTED_ENTRY_COUNT = int(SOURCE_RELEASE_MANIFEST["plugin_count"])
+EXPECTED_FIXTURE_COUNT = int(SOURCE_RELEASE_MANIFEST["fixture_count"])
+EXPECTED_PACKAGE_VERSION = str(SOURCE_RELEASE_MANIFEST["package_version"])
+EXPECTED_CLI_COMMANDS = tuple(SOURCE_RELEASE_MANIFEST["required_cli_commands"])
+EXPECTED_RELEASE_FIXTURE_IDS = tuple(SOURCE_RELEASE_MANIFEST["release_fixture_ids"])
 
 
 def _resource_counts(root: Path) -> dict[str, int]:
@@ -54,7 +43,7 @@ def _source_registry_summary() -> dict[str, object]:
         1
         for manifest in manifests
         for path in manifest.parent.iterdir()
-        if path.is_file() and path.name.startswith("fixture_")
+        if path.is_file() and path.name.startswith("fixture")
     )
     pyproject = (REPOSITORY_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     version_match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, flags=re.MULTILINE)
@@ -77,6 +66,7 @@ def _source_registry_summary() -> dict[str, object]:
         "vendored_paper_fetch_present": (REPOSITORY_ROOT / "draftpaper_cli" / "_vendor" / "paper_fetch_skill" / "paper_fetch").is_dir(),
         "third_party_provenance_status": "passed",
         "third_party_source_count": len(json.loads((REPOSITORY_ROOT / "third_party" / "registry.json").read_text(encoding="utf-8"))["sources"]),
+        "release_manifest": SOURCE_RELEASE_MANIFEST,
     }
 
 
@@ -139,9 +129,11 @@ with patch('draftpaper_cli.paper_fetch_adapter.shutil.which', return_value=None)
 provenance = validate_third_party_provenance()
 skill = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/SKILL.md')
 skill_contract = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/contract.json')
+release_manifest = files('draftpaper_cli').joinpath('resources/release_manifest.json')
 skill_bytes = skill.read_bytes()
 contract_bytes = skill_contract.read_bytes()
 contract_payload = json.loads(contract_bytes.decode('utf-8'))
+release_payload = json.loads(release_manifest.read_text(encoding='utf-8'))
 skill_text = skill_bytes.decode('utf-8')
 skill_version = next((line.split(':', 1)[1].strip() for line in skill_text.splitlines() if line.startswith('version:')), None)
 print(json.dumps({
@@ -162,6 +154,7 @@ print(json.dumps({
     ),
     'third_party_provenance_status': provenance['status'],
     'third_party_source_count': provenance['source_count'],
+    'release_manifest': release_payload,
 }))
 """
         completed = subprocess.run(

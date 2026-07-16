@@ -62,6 +62,23 @@ def atomic_write_text(path: str | Path, text: str, *, encoding: str = "utf-8") -
                 os.unlink(temp_name)
 
 
+def atomic_write_bytes(path: str | Path, content: bytes) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with file_lock(target):
+        short_id = hashlib.sha256(target.name.encode("utf-8")).hexdigest()[:10]
+        descriptor, temp_name = tempfile.mkstemp(prefix=f".dpl-{short_id}-", suffix=".tmp", dir=target.parent)
+        try:
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_name, target)
+        finally:
+            if os.path.exists(temp_name):
+                os.unlink(temp_name)
+
+
 def atomic_write_json(path: str | Path, payload: Any) -> None:
     """Atomically serialize any JSON value.
 

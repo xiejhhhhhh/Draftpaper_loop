@@ -108,7 +108,7 @@ def build_argument_matrices(project: str | Path) -> dict[str, Any]:
             "required_reasoning": "Explain why the current result agrees or differs; do not merely list prior work.",
         })
     payload = {
-        "schema_version": "v0.21.5",
+        "schema_version": "dpl.argument_matrix.v1",
         "generated_at": utc_now(),
         "introduction_gap_matrix": intro_rows,
         "discussion_finding_comparison_matrix": discussion_rows,
@@ -158,7 +158,7 @@ def build_section_lifecycles(project: str | Path) -> dict[str, Any]:
     deterministic_reason = _text(method_context.get("deterministic_no_formula_reason"))
     formula_status = "covered" if formula_contracts else ("deterministic_no_formula" if deterministic_reason else "missing_formula_or_reason")
     payload = {
-        "schema_version": "v0.21.6",
+        "schema_version": "dpl.section_lifecycle.v1",
         "generated_at": utc_now(),
         "data_lifecycle": {
             "stages": data_stages,
@@ -242,7 +242,7 @@ def build_panel_writing_contracts(project: str | Path) -> dict[str, Any]:
                 "no_weaker_substitute": True,
             })
         contracts.append({"figure_group_id": group_id, "panels": panel_contracts, "composite_review_required": True})
-    payload = {"schema_version": "v0.21.7", "generated_at": utc_now(), "figure_groups": contracts}
+    payload = {"schema_version": "dpl.panel_writing_contract.v1", "generated_at": utc_now(), "figure_groups": contracts}
     target = state.path / "results" / "panel_figure_contracts.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     _write_json(target, payload)
@@ -284,7 +284,7 @@ def prepare_panel_repair(project: str | Path) -> dict[str, Any]:
                     "forbidden_action": "Do not replace the failed panel with weaker or merely similar evidence.",
                 })
     payload = {
-        "schema_version": "v0.21.7",
+        "schema_version": "dpl.panel_repair_plan.v1",
         "generated_at": utc_now(),
         "decision": "repair_required" if tasks else "pass",
         "tasks": tasks,
@@ -313,14 +313,14 @@ def resolve_venue_style_adapter(project: str | Path) -> dict[str, Any]:
         "citation_style": profile.get("bibliography_style") or profile.get("citation_style"),
     }
     contract = {
-        "schema_version": "v0.21.8",
+        "schema_version": "dpl.venue_writing_contract.v1",
         "generated_at": utc_now(),
         "venue": profile.get("target_journal") or profile.get("journal") or "unspecified",
         "functional_preferences": functional,
         "hard_boundary": "Style guidance cannot override evidence, claim, citation, formula, figure, or snapshot contracts.",
     }
     style_profile = {
-        "schema_version": "v0.21.8",
+        "schema_version": "dpl.writing_style_function_profile.v1",
         "generated_at": utc_now(),
         "signals": functional,
         "allowed_learning": ["density", "voice preference", "numeric reporting", "definition policy", "interpretation density", "supplement usage"],
@@ -427,7 +427,7 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
                 "instruction": "Add only the missing paragraph job without rewriting accepted paragraphs.",
             })
     payload = {
-        "schema_version": "v0.21.9",
+        "schema_version": "dpl.scientific_editor.v2",
         "generated_at": utc_now(),
         "section": normalized,
         "iteration": 0,
@@ -473,7 +473,7 @@ def record_scientific_editor_revision(
     if before_paragraphs and len(changes) > max(2, (len(before_paragraphs) + 1) // 2):
         raise WritingArchitectureError("Editor revision changes too many paragraphs for a paragraph-local repair round.")
     payload = {
-        "schema_version": "v0.21.9",
+        "schema_version": "dpl.scientific_editor_revision.v1",
         "generated_at": utc_now(),
         "section": normalized,
         "iteration": iteration,
@@ -538,7 +538,7 @@ def assess_functional_quality_release(project: str | Path) -> dict[str, Any]:
         if report.get("evidence_snapshot_id")
     })
     payload = {
-        "schema_version": "v0.22.2",
+        "schema_version": "dpl.functional_quality_release.v1",
         "generated_at": utc_now(),
         "component_scores": component_scores,
         "functional_quality_score": round(score, 4),

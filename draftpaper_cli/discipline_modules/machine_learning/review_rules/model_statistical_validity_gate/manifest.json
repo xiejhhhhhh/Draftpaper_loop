@@ -2,9 +2,47 @@
   "rule_group_id": "model_statistical_validity_gate",
   "display_name": "Model statistical validity gate",
   "discipline": "machine_learning",
-  "checks": ["minimum_r2", "maximum_p_value", "minimum_sample_count", "generalization_gap"],
+  "checks": [
+    "minimum_r2",
+    "maximum_p_value",
+    "minimum_sample_count",
+    "generalization_gap"
+  ],
   "genericity_rules": [
     "Use p-value for statistical confidence and R2 or task metric for effect size/model fit.",
     "Apply only when the method reports the relevant metric."
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "model_statistical_validity_gate",
+  "plugin_kind": "review",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "review_rule_candidate",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "none",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

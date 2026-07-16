@@ -193,7 +193,7 @@ def build_scientific_fact_ledger(project: str | Path) -> dict[str, Any]:
         _extract_result_facts(facts, result_manifest)
     ledger = {
         "status": "written",
-        "schema_version": "v0.17.0",
+        "schema_version": "dpl.legacy_scientific_fact_ledger.v1",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "fact_count": len(facts),

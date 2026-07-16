@@ -188,7 +188,7 @@ def assess_paper_quality_parity(project: str | Path) -> dict[str, Any]:
     decision = "pass" if functional_score >= MINIMUM_SCORE and hard_correctness_passed else "repair_required"
     report = {
         "status": "written",
-        "schema_version": "v0.24.0",
+        "schema_version": "dpl.paper_quality_assessment.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": functional_score,

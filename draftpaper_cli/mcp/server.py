@@ -25,15 +25,16 @@ def create_server():
     def draftpaper_next_action(project: str) -> dict[str, Any]: return service.next_action(project)
 
     @server.tool()
-    def draftpaper_plan_command(command: str) -> dict[str, Any]: return service.plan_command(command)
+    def draftpaper_plan_command(command: str, project: str | None = None, arguments_json: str | None = None) -> dict[str, Any]:
+        return service.plan_command(command, project, arguments_json)
 
     @server.tool()
-    def draftpaper_execute_command(project: str, command: str, arguments_json: str | None = None, confirm_science_execution: bool = False) -> dict[str, Any]:
-        return service.execute_command(project, command, arguments_json, confirm_science_execution=confirm_science_execution)
+    def draftpaper_execute_command(project: str, command: str, arguments_json: str | None = None, confirm_science_execution: bool = False, capability_token: str | None = None) -> dict[str, Any]:
+        return service.execute_command(project, command, arguments_json, confirm_science_execution=confirm_science_execution, capability_token=capability_token)
 
     @server.tool()
-    def draftpaper_job_submit(project: str, command: str, arguments_json: str | None = None, idempotency_key: str | None = None) -> dict[str, Any]:
-        return service.job_submit(project, command, arguments_json, idempotency_key)
+    def draftpaper_job_submit(project: str, command: str, arguments_json: str | None = None, idempotency_key: str | None = None, capability_token: str | None = None) -> dict[str, Any]:
+        return service.job_submit(project, command, arguments_json, idempotency_key, capability_token)
 
     @server.tool()
     def draftpaper_job_status(project: str, job_id: str) -> dict[str, Any]: return service.job_get(project, job_id)

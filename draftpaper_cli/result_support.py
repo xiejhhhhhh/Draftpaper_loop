@@ -361,7 +361,7 @@ def assess_result_support(project: str | Path) -> dict[str, Any]:
     failed_claims = [item for item in claim_assessments if item.get("support_status") in {"not_supported", "partially_supported"}]
     report = {
         "status": "written",
-        "schema_version": "v0.18.5",
+        "schema_version": "dpl.result_support_checkpoint.v2",
         "project_id": state.metadata.get("project_id"),
         "generated_at": utc_now(),
         "decision": decision,

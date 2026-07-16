@@ -15,27 +15,72 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
       - name: Install Draftpaper-loop
-        run: python -m pip install -e .[dev]
+        run: python -m pip install -c requirements/ci-constraints.txt -e .[dev]
       - name: Run tests
         run: python -m pytest
 
   wheel-install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
           cache: "pip"
       - name: Install build dependencies
-        run: python -m pip install build
+        run: python -m pip install -c requirements/ci-constraints.txt build
       - name: Build wheel
         run: python -m build --wheel
       - name: Verify isolated wheel resources
         run: python tools/verify_wheel_install.py --wheel-dir dist
+
+  contracts-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install quality tools
+        run: python -m pip install -c requirements/ci-constraints.txt -e .[dev]
+      - name: Validate syntax and undefined names
+        run: ruff check draftpaper_cli tests tools --select E9,F63,F7,F82
+      - name: Validate typed transaction core
+        run: pyright
+      - name: Validate command, plugin, schema, provenance, and release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m draftpaper_cli.cli validate-command-contracts
+          python -m draftpaper_cli.cli validate-template-registry
+          python -m draftpaper_cli.cli validate-third-party-provenance
+          python -c "from draftpaper_cli.schema_registry import schema_registry_report; assert schema_registry_report()['status'] == 'passed'"
+          python -c "from draftpaper_cli.release_contract import validate_release_manifest; assert validate_release_manifest()['status'] == 'passed'"
+      - name: Scan first-party secrets
+        run: python tools/scan_secrets.py
+      - name: Audit installed dependencies
+        shell: bash
+        run: |
+          mkdir -p build/security
+          python -m pip_audit . --format cyclonedx-json --output build/security/sbom.json
+          python -c "import json; p=json.load(open('build/security/sbom.json', encoding='utf-8')); assert p.get('components')"
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install Draftpaper-loop
+        run: python -m pip install -c requirements/ci-constraints.txt -e .[dev]
+      - name: Measure first-party coverage
+        run: python -m pytest --cov=draftpaper_cli --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=45

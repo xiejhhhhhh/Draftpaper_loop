@@ -2,13 +2,62 @@
   "connector_id": "saved_model_loader",
   "display_name": "Saved model manifest writer",
   "discipline": "machine_learning",
-  "access_modes": ["local_model_artifact", "server_processed_files"],
-  "packages": ["joblib", "pickle", "torch"],
-  "package_modules": ["joblib", "pickle", "torch"],
-  "data_formats": ["PKL", "Joblib", "PyTorch checkpoint", "model manifest JSON"],
+  "access_modes": [
+    "local_model_artifact",
+    "server_processed_files"
+  ],
+  "packages": [
+    "joblib",
+    "pickle",
+    "torch"
+  ],
+  "package_modules": [
+    "joblib",
+    "pickle",
+    "torch"
+  ],
+  "data_formats": [
+    "PKL",
+    "Joblib",
+    "PyTorch checkpoint",
+    "model manifest JSON"
+  ],
   "requires_credentials": false,
   "genericity_rules": [
     "Record expected features and model family without uploading model binaries.",
     "Sanitize model paths in reusable manifests."
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "saved_model_loader",
+  "plugin_kind": "data",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

@@ -9,6 +9,7 @@ from typing import Any
 
 from .io_utils import read_json
 from .plugin_runtime import RUNTIME_LEVELS, inspect_static_runtime_level
+from .plugin_manifest_contract import fixture_files, manifest_issues, review_fixture_issues
 
 
 PLUGIN_KINDS = {
@@ -48,11 +49,7 @@ def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
         manifest = read_json(manifest_path, {})
         if not isinstance(manifest, dict):
             manifest = {}
-        fixtures = sorted(
-            path.name
-            for path in plugin_dir.iterdir()
-            if path.is_file() and path.name.startswith("fixture_")
-        )
+        fixtures = sorted(fixture_files(plugin_dir, manifest))
         kind = PLUGIN_KINDS.get(kind_dir, kind_dir)
         entries.append({
             "discipline": discipline,
@@ -84,6 +81,19 @@ def validate_template_registry(root: Path | None = None) -> dict[str, Any]:
     registry = discover_template_registry(root)
     issues: list[dict[str, str]] = []
     for entry in registry["entries"]:
+        plugin_dir = Path(registry["root"]) / str(entry["path"])
+        contract_issues = manifest_issues(entry["manifest_data"], plugin_dir)
+        contract_issues.extend(review_fixture_issues(entry["manifest_data"], plugin_dir))
+        if entry["manifest_data"].get("deployment_state") == "live_runnable" and entry["runtime_level"] != "live_validated":
+            contract_issues.append("live_deployment_without_live_validation")
+        for issue in contract_issues:
+            issues.append({
+                "severity": "error",
+                "code": issue.split(":", 1)[0],
+                "plugin_id": str(entry["plugin_id"]),
+                "path": str(entry["path"]),
+                "detail": issue,
+            })
         if entry["kind"] in {"connector", "method"} and not entry["has_template"]:
             issues.append({
                 "severity": "error",

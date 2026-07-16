@@ -3,10 +3,58 @@
   "display_name": "NDVI cluster statistical diagnostics",
   "discipline": "geography",
   "method_family": "environmental_driver_analysis",
-  "input_roles": ["analysis_ready_table", "target_or_response"],
-  "optional_roles": ["spatial_group_or_coordinates", "quality_flag"],
+  "input_roles": [
+    "analysis_ready_table",
+    "target_or_response"
+  ],
+  "optional_roles": [
+    "spatial_group_or_coordinates",
+    "quality_flag"
+  ],
   "packages": [],
-  "output_artifacts": ["results/tables/ndvi_cluster_statistical_diagnostics.json"],
-  "figure_groups": ["spatial_or_validation_summary", "environmental_driver_response"],
-  "genericity_rules": ["Separate descriptive diagnostics from formal tests that require scipy or statsmodels."]
+  "output_artifacts": [
+    "results/tables/ndvi_cluster_statistical_diagnostics.json"
+  ],
+  "figure_groups": [
+    "spatial_or_validation_summary",
+    "environmental_driver_response"
+  ],
+  "genericity_rules": [
+    "Separate descriptive diagnostics from formal tests that require scipy or statsmodels."
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "ndvi_cluster_statistical_diagnostics",
+  "plugin_kind": "method",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_cluster_values.csv"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

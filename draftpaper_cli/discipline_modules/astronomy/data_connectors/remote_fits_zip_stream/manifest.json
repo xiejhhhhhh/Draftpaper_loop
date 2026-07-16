@@ -1,10 +1,27 @@
 {
   "connector_id": "remote_fits_zip_stream",
   "display_name": "Remote FITS/ZIP streaming connector",
-  "access_modes": ["remote_server_ssh", "instrument_archive", "fits_zip_stream"],
-  "packages": ["astropy", "numpy", "pandas"],
-  "optional_packages": ["paramiko", "pyarrow"],
-  "data_formats": ["FITS", "ZIP", "CSV", "Parquet", "JSON provenance"],
+  "access_modes": [
+    "remote_server_ssh",
+    "instrument_archive",
+    "fits_zip_stream"
+  ],
+  "packages": [
+    "astropy",
+    "numpy",
+    "pandas"
+  ],
+  "optional_packages": [
+    "paramiko",
+    "pyarrow"
+  ],
+  "data_formats": [
+    "FITS",
+    "ZIP",
+    "CSV",
+    "Parquet",
+    "JSON provenance"
+  ],
   "requires_credentials": true,
   "credential_env_vars": [
     "DRAFTPAPER_REMOTE_HOST",
@@ -18,5 +35,41 @@
     "No hard-coded user name",
     "No password or token in tracked files",
     "Remote raw product paths are redacted in public reports"
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "remote_fits_zip_stream",
+  "plugin_kind": "data",
+  "discipline": "astronomy",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_event_manifest.csv"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

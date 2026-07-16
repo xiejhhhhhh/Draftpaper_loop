@@ -2,12 +2,54 @@
   "connector_id": "tabular_environment_dataset",
   "display_name": "Tabular crop/environment dataset profiler",
   "discipline": "machine_learning",
-  "access_modes": ["local_files", "server_processed_files"],
+  "access_modes": [
+    "local_files",
+    "server_processed_files"
+  ],
   "packages": [],
-  "data_formats": ["CSV", "Parquet metadata", "dataset profile JSON"],
+  "data_formats": [
+    "CSV",
+    "Parquet metadata",
+    "dataset profile JSON"
+  ],
   "requires_credentials": false,
   "genericity_rules": [
     "Parameterize target, feature, group, and split columns.",
     "Do not encode a crop, region, year, or local file path."
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "tabular_environment_dataset",
+  "plugin_kind": "data",
+  "runtime_class": "local_optional_dependency",
+  "validation_level": "plan_only",
+  "maturity": "foundation",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_environment_table.csv"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "local_cpu",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

@@ -115,7 +115,7 @@ class ManuscriptComposerTests(unittest.TestCase):
             self.assertEqual(selected["composition_mode"], "codex_free_candidate")
             self.assertIn("0.8667", selected["text"])
             self.assertEqual(packet["section"], "results")
-            self.assertEqual(packet["schema_version"], "v0.23.1")
+            self.assertEqual(packet["schema_version"], "dpl.section_evidence_packet.v2")
             self.assertIn("audit_sources", packet)
             self.assertNotIn("resolved_result_evidence", packet["result_manifest"])
             self.assertEqual(packet["section_lifecycles"], {})

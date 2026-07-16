@@ -427,6 +427,24 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.28.1-v0.30.0 (2026-07-17) -- Transactional Evidence Architecture and Cross-discipline Release Contracts
+
+- `v0.28.1` makes section revision a real multi-artifact transaction. Accepted edits are installed into canonical section sources, survive repeated LaTeX assembly, propagate real downstream stale state, and roll back canonical, candidate and project-state artifacts together on injected failure. This completes the transaction guarantee first introduced in `v0.27.2`.
+- `v0.28.2` migrates all 210 discipline plugins to explicit manifest v2 contracts. Runtime class, validation level, maturity, deployment state, fixture inventory and execution policy are no longer silently inferred; source and wheel registries now agree on 546 fixtures and 175 contract-only, 25 code-generator and 10 fixture-executed runtime records.
+- `v0.28.3` adds project-level state revisions, locking and rollback across `project.json`, its YAML mirror and every stage manifest. Write-set violations restore project-local changes where possible, and MCP science/network execution requires a short-lived HMAC capability token bound to the exact project, command and arguments.
+- `v0.29.0` upgrades the artifact dependency model to real paths, hashes, owners, producer/consumer edges and authoritative/derived roles. Product release numbers are removed from first-party schema IDs and replaced by a versioned schema-family registry.
+- `v0.29.1` introduces one normalized runtime command-contract view for all 204 CLI commands and makes it authoritative for consistency validation, MCP schemas and doctor diagnostics. The report exposes the migration boundary explicitly: 80 registered handlers and 124 compatibility dispatches remain, so future decomposition is measurable rather than hidden.
+- `v0.29.2` adds targeted Ruff and pyright gates, coverage, project-scoped dependency auditing with CycloneDX SBOM output, secret scanning, pinned GitHub Action SHAs, reproducible CI tool constraints, source/wheel release identity, SPDX-style license metadata and clean wheel manifest rules.
+- `v0.30.0` expands the wheel-installable release matrix across scientific-image+ML, geography+ML, astronomy+ML, bioinformatics+medicine and physics/quantum projects. Each fixture now carries six main figure groups through claim, data plugin, method plugin, project run output, evidence ID and review-rule trace, while adversarial cohort/run/unit/model/metric/dimension, blank-figure, plugin and citation cases must still be rejected.
+
+Release checks:
+
+```powershell
+draftpaper validate-command-contracts
+python -m draftpaper_cli.release_contract
+python -m draftpaper_cli.release_regression --output tmp/release-v0300
+```
+
 ### v0.26.1-v0.28.0 (2026-07-16) -- Executable Scientific Semantics and Precise Recovery
 
 - `v0.26.1` separates stale artifacts, citation support, manuscript semantics, reproducibility packages, render quality, scientific analysis, figure contracts, and human review into explicit failure domains. Citation or bundle failures no longer fall back to `plan-figures`; hard-check reports name the failed predicate, artifact, and valid next command. Interactive CLI output is compact, while redirected/API output preserves complete JSON; `--compact` and `--json-full` select either contract explicitly.

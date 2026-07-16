@@ -1,9 +1,10 @@
 [project]
 name = "draftpaper-cli"
-version = "0.28.0"
+version = "0.30.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
-license = { file = "LICENSE" }
+license = "LicenseRef-Draftpaper-NonCommercial"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10"
 authors = [
   { name = "xiejhhhhhh", email = "xiejinhui22@mails.ucas.ac.cn" }
@@ -64,6 +65,11 @@ fulltext = [
 ]
 dev = [
   "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.6",
+  "pyright>=1.1.390",
+  "pip-audit>=2.7",
+  "build>=1.2",
 ]
 
 [project.scripts]
@@ -94,3 +100,25 @@ exclude = ["codex_skills*", "third_party*", "tests*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 140
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+include = [
+  "draftpaper_cli/artifact_dag.py",
+  "draftpaper_cli/command_contracts.py",
+  "draftpaper_cli/manuscript_artifacts.py",
+  "draftpaper_cli/plugin_manifest_contract.py",
+  "draftpaper_cli/project_state.py",
+  "draftpaper_cli/release_contract.py",
+  "draftpaper_cli/revision_transaction.py",
+  "draftpaper_cli/schema_registry.py",
+  "draftpaper_cli/scoped_transaction.py",
+  "draftpaper_cli/state_kernel.py",
+]
+reportMissingImports = false
+reportMissingTypeStubs = false

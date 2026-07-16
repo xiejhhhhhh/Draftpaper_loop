@@ -222,7 +222,7 @@ COMMAND_SPECS = {
             "writing",
             "revision_transaction",
             "apply_section_revision",
-            (("project", "project"), ("section", "section"), ("input", "input_path"), ("change_class", "change_class")),
+            (("project", "project"), ("section", "section"), ("input_path", "input"), ("change_class", "change_class")),
         ),
         CommandSpec("confirm-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "confirm_final_manuscript", (("project", "project"), ("release_hash", "release_hash")), protected_action=True, manual_only=True),
         CommandSpec(
@@ -518,6 +518,7 @@ COMMAND_SPECS.update({
     "accept-revision": CommandSpec("accept-revision", "writing_coordinator", True, "writing", "manuscript_revision", "apply_manuscript_revision", (("project", "project"), ("request_id", "revision")), protected_action=True),
     "revise": CommandSpec("revise", "writing_coordinator", True, "writing", "manuscript_revision", "preview_manuscript_revision", (("project", "project"), ("instruction", "instruction"), ("at", "at"), ("paragraph", "paragraph"), ("content_file", "content_file"), ("operation", "operation"), ("mode", "mode"), ("change_class", "change_class"))),
     "eval": CommandSpec("eval", "release_coordinator", True, "quality_checks", "eval_runtime", "run_eval_command", (("action", "eval_action"), ("project", "project"), ("case", "case"), ("capture", "capture"), ("baseline", "baseline"), ("report", "report"), ("output", "output"))),
+    "validate-command-contracts": CommandSpec("validate-command-contracts", "state_kernel", False, "state", "command_contracts", "validate_command_contracts"),
 })
 
 

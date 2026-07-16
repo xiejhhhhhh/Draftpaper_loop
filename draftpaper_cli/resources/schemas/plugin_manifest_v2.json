@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.plugin_manifest.v2",
+  "title": "Draftpaper discipline plugin manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plugin_id",
+    "plugin_kind",
+    "discipline",
+    "runtime_class",
+    "validation_level",
+    "maturity",
+    "deployment_state",
+    "fixtures",
+    "execution_contract"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.plugin_manifest.v2"},
+    "plugin_id": {"type": "string", "minLength": 1},
+    "plugin_kind": {"enum": ["data", "method", "review"]},
+    "discipline": {"type": "string", "minLength": 1},
+    "runtime_class": {"type": "string", "minLength": 1},
+    "validation_level": {"type": "string", "minLength": 1},
+    "maturity": {"type": "string", "minLength": 1},
+    "deployment_state": {"type": "string", "minLength": 1},
+    "fixtures": {
+      "type": "object",
+      "required": ["normal", "failure", "boundary", "mock"],
+      "properties": {
+        "normal": {"type": "array", "items": {"type": "string"}},
+        "failure": {"type": "array", "items": {"type": "string"}},
+        "boundary": {"type": "array", "items": {"type": "string"}},
+        "mock": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "execution_contract": {"type": "object"}
+  },
+  "additionalProperties": true
+}

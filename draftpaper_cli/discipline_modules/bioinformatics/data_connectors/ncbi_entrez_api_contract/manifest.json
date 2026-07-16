@@ -41,5 +41,43 @@
   ],
   "credential_env_vars": [
     "NCBI_API_KEY"
-  ]
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "ncbi_entrez_api_contract",
+  "plugin_kind": "data",
+  "deployment_state": "foundation",
+  "fixtures": {
+    "normal": [
+      "fixture_minimal.json"
+    ],
+    "failure": [
+      "fixture_failure.json"
+    ],
+    "boundary": [
+      "fixture_boundary.json"
+    ],
+    "mock": [
+      "fixture_mock_request.json"
+    ]
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "mock_only",
+    "resource_class": "network_api",
+    "timeout_seconds": 300,
+    "max_attempts": 1,
+    "idempotency": "supported",
+    "side_effect_level": "network",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
 }

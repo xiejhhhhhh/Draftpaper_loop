@@ -243,7 +243,7 @@ def prepare_result_rescue(project: str | Path) -> dict[str, Any]:
     method_tasks = _method_tasks(project_path, failed_claims, list(hints.get("method_template_hints") or []))
     search_tasks = _open_source_search_tasks(profile, failed_claims, method_tasks)
     snapshot_policy: dict[str, Any] = {
-        "schema_version": "v0.18.4",
+        "schema_version": "dpl.result_rescue_snapshot.v1",
         "route": "supplement_data_and_method",
         "policy": "Supplement route reopens the evidence chain; any promoted evidence snapshot must be archived before new data, methods, figures, and manuscript text are produced.",
         "reopen_required": True,
@@ -267,7 +267,7 @@ def prepare_result_rescue(project: str | Path) -> dict[str, Any]:
     ]
     plan = {
         "status": "prepared",
-        "schema_version": "v0.18.3",
+        "schema_version": "dpl.result_rescue_plan.v2",
         "route": "supplement_data_and_method",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),

@@ -1,4 +1,4 @@
-"""Wheel-installable held-out scientific release regressions for v0.28.0."""
+"""Wheel-installable held-out scientific release regressions for v0.30.0."""
 
 from __future__ import annotations
 
@@ -30,6 +30,7 @@ from .writing_coordinator import formal_writing_release_action
 
 FIXTURE_ROOT = Path(__file__).resolve().parent / "release_fixtures"
 FIXTURE_NAMES = ("scientific_image_ml", "geography_ml", "astronomy_ml", "bioinformatics_medicine", "physics_quantum")
+FIGURE_IDS = ("fig_main", "fig_02", "fig_03", "fig_04", "fig_05", "fig_06")
 
 
 class ReleaseRegressionError(RuntimeError):
@@ -185,11 +186,14 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
         "secondary_disciplines": spec["secondary_disciplines"],
         "discipline_modules": list(dict.fromkeys(modules)),
     })
-    repo.write_json("research_plan/research_capability_contract.json", {"requirements": [
-        {"requirement_id": "data:fig_main", "kind": "data", "figure_id": "fig_main", "role": spec["data_plugin_id"], "discipline": spec["primary_discipline"], "core": True},
-        {"requirement_id": "method:fig_main", "kind": "method", "figure_id": "fig_main", "method_family": spec["method_plugin_id"], "discipline": spec["secondary_disciplines"][0], "core": True},
-        {"requirement_id": "figure:fig_main", "kind": "figure", "figure_id": "fig_main", "claim_ids": ["claim_main"], "core": True},
-    ]})
+    requirements = []
+    for figure_id in FIGURE_IDS:
+        requirements.extend([
+            {"requirement_id": f"data:{figure_id}", "kind": "data", "figure_id": figure_id, "role": spec["data_plugin_id"], "discipline": spec["primary_discipline"], "core": True},
+            {"requirement_id": f"method:{figure_id}", "kind": "method", "figure_id": figure_id, "method_family": spec["method_plugin_id"], "discipline": spec["secondary_disciplines"][0], "core": True},
+            {"requirement_id": f"figure:{figure_id}", "kind": "figure", "figure_id": figure_id, "claim_ids": ["claim_main"], "core": True},
+        ])
+    repo.write_json("research_plan/research_capability_contract.json", {"requirements": requirements})
     table = repo.resolve("results/tables/metrics.csv")
     table.parent.mkdir(parents=True, exist_ok=True)
     table.write_text(
@@ -202,14 +206,15 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     )
     table_hash = _sha256(table)
     output_hashes = {"results/tables/metrics.csv": table_hash}
-    repo.append_event("data/plugin_execution_ledger.jsonl", {
-        "event_id": f"{fixture_name}:data", "figure_id": "fig_main", "plugin_id": spec["data_plugin_id"],
-        "status": "project_executed", "scientific_evidence_status": "project_result", "output_hashes": output_hashes,
-    })
-    repo.append_event("methods/plugin_execution_ledger.jsonl", {
-        "event_id": f"{fixture_name}:method", "figure_id": "fig_main", "plugin_id": spec["method_plugin_id"],
-        "status": "project_executed", "scientific_evidence_status": "project_result", "output_hashes": output_hashes,
-    })
+    for figure_id in FIGURE_IDS:
+        repo.append_event("data/plugin_execution_ledger.jsonl", {
+            "event_id": f"{fixture_name}:data:{figure_id}", "figure_id": figure_id, "plugin_id": spec["data_plugin_id"],
+            "status": "project_executed", "scientific_evidence_status": "project_result", "output_hashes": output_hashes,
+        })
+        repo.append_event("methods/plugin_execution_ledger.jsonl", {
+            "event_id": f"{fixture_name}:method:{figure_id}", "figure_id": figure_id, "plugin_id": spec["method_plugin_id"],
+            "status": "project_executed", "scientific_evidence_status": "project_result", "output_hashes": output_hashes,
+        })
     records = _evidence_records(spec)
     repo.write_json("methods/run_manifest.yaml", {
         "status": "success", "run_id": "run-main", "cohort_id": spec["cohort_id"],
@@ -222,35 +227,53 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     sufficiency = assess_plugin_sufficiency(project)
     _assert(sufficiency["decision"] == "pass", f"{fixture_name}: project-validated plugin sufficiency did not pass")
     binding_plan = repo.read_mapping("research_plan/plugin_binding_plan.json")
-    binding_plan.setdefault("bindings", []).append({
-        "requirement_id": "review:fig_main", "figure_id": "fig_main", "kind": "review",
-        "plugin_id": spec["review_plugin_id"], "state": "covered",
-    })
+    for figure_id in FIGURE_IDS:
+        binding_plan.setdefault("bindings", []).append({
+            "requirement_id": f"review:{figure_id}", "figure_id": figure_id, "kind": "review",
+            "plugin_id": spec["review_plugin_id"], "state": "covered",
+        })
     repo.write_json("research_plan/plugin_binding_plan.json", binding_plan)
 
-    figure = repo.resolve("results/figures/main_comparison.png")
-    _draw_scientific_figure(figure, [float(spec["baseline_value"]), float(spec["ablation_value"]), float(spec["metric_value"])])
-    repo.write_json("results/figure_contracts.json", {"main_contracts": [{
-        "figure_id": "fig_main", "path": "results/figures/main_comparison.png", "manuscript_role": "main",
-        "scientific_question": "Does the held-out analysis support the bounded primary comparison?",
-        "required_data_roles": [spec["data_role"]], "required_method_outputs": [spec["metric_name"]],
-    }]})
-    repo.write_json("results/figure_metadata.json", {"figures": [{
-        "figure_id": "fig_main", "path": "results/figures/main_comparison.png",
-        "variable_roles": [spec["data_role"]], "method_outputs": [spec["metric_name"]],
-        "statistics": {spec["metric_name"]: spec["metric_value"]},
-        "interpretation_summary": "The held-out comparison is interpreted within the declared cohort and uncertainty boundary.",
-        "source_tables": ["results/tables/metrics.csv"],
-    }]})
+    figure_contracts = []
+    figure_metadata = []
+    result_figures = []
+    for index, figure_id in enumerate(FIGURE_IDS, start=1):
+        relative = f"results/figures/{figure_id}_comparison.png"
+        figure = repo.resolve(relative)
+        delta = (index - 1) * 0.005
+        _draw_scientific_figure(figure, [
+            max(0.0, float(spec["baseline_value"]) - delta),
+            max(0.0, float(spec["ablation_value"]) - delta),
+            max(0.0, float(spec["metric_value"]) - delta),
+        ])
+        figure_contracts.append({
+            "figure_id": figure_id, "path": relative, "manuscript_role": "main",
+            "scientific_question": f"Does held-out analysis panel {index} support the bounded primary comparison?",
+            "required_data_roles": [spec["data_role"]], "required_method_outputs": [spec["metric_name"]],
+        })
+        figure_metadata.append({
+            "figure_id": figure_id, "path": relative,
+            "variable_roles": [spec["data_role"]], "method_outputs": [spec["metric_name"]],
+            "statistics": {spec["metric_name"]: spec["metric_value"]},
+            "interpretation_summary": "The held-out comparison is interpreted within the declared cohort and uncertainty boundary.",
+            "source_tables": ["results/tables/metrics.csv"],
+        })
+        result_figures.append({
+            "id": figure_id, "path": relative, "manuscript_role": "main",
+            "evidence_ids": [records[0]["evidence_id"]], "run_id": "run-main",
+        })
+    repo.write_json("results/figure_contracts.json", {"main_contracts": figure_contracts})
+    repo.write_json("results/figure_metadata.json", {"figures": figure_metadata})
     trace = validate_figure_plugin_trace(project)
     _assert(trace["decision"] == "pass", f"{fixture_name}: figure plugin trace did not pass")
+    _assert(
+        len(trace["figure_checks"]) == len(FIGURE_IDS),
+        f"{fixture_name}: not every main figure group has a plugin trace",
+    )
     figure_quality = assess_scientific_figure_quality(project)
     _assert(figure_quality["decision"] == "pass", f"{fixture_name}: rendered scientific figure did not pass")
 
-    repo.write_json("results/result_manifest.yaml", {"figures": [{
-        "id": "fig_main", "path": "results/figures/main_comparison.png", "manuscript_role": "main",
-        "evidence_ids": [records[0]["evidence_id"]], "run_id": "run-main",
-    }]})
+    repo.write_json("results/result_manifest.yaml", {"figures": result_figures})
     registry = build_scientific_evidence_registry(project)
     _assert(registry["status"] == "ready" and registry["incomplete_binding_count"] == 0, f"{fixture_name}: evidence registry is incomplete")
     cohort_label = str(spec["cohort_id"]).replace("_", " ")
@@ -270,7 +293,10 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     blueprint = {
         "status": "written",
         "research_claims": [{"claim_id": "claim_main", "research_question": str(spec["idea"]), "expected_finding": "The held-out result should remain bounded by uncertainty."}],
-        "figure_storyboard": {"status": "written", "figures": [{"figure_id": "fig_main", "proposed_title": str(spec["metric_label"]), "research_question": str(spec["idea"]), "expected_finding": "The held-out result should remain bounded by uncertainty.", "required_data": [spec["data_role"]], "required_method": [spec["method_plugin_id"]], "supporting_literature_keys": [spec["citation_key"]], "validation_metric": spec["metric_name"]}]},
+        "figure_storyboard": {"status": "written", "figures": [
+            {"figure_id": figure_id, "proposed_title": f"{spec['metric_label']} evidence group {index}", "research_question": str(spec["idea"]), "expected_finding": "The held-out result should remain bounded by uncertainty.", "required_data": [spec["data_role"]], "required_method": [spec["method_plugin_id"]], "supporting_literature_keys": [spec["citation_key"]], "validation_metric": spec["metric_name"]}
+            for index, figure_id in enumerate(FIGURE_IDS, start=1)
+        ]},
         "method_plan": {"status": "written", "method_tasks": []},
     }
     repo.write_json("research_plan/research_blueprint.json", blueprint)
@@ -305,7 +331,7 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
     )
     _assert(review["decision"] == "pass", f"{fixture_name}: review-rule engine did not pass the complete evidence bundle")
 
-    repo.write_json("results/figure_plan.json", {"figure_groups": [{"id": "fig_main"}]})
+    repo.write_json("results/figure_plan.json", {"figure_groups": [{"id": figure_id} for figure_id in FIGURE_IDS]})
     repo.write_json("results/figure_semantic_validation_report.json", {"decision": "pass"})
     repo.write_json("results/result_validity_report.json", {"decision": "pass"})
     snapshot = create_evidence_snapshot(project)
@@ -350,6 +376,7 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
             "synthetic_95_percent_claim_rejected": True,
             "task_aware_statistical_contract": statistical["validation_count"] >= 3,
             "review_rule_gaps_explicit": coverage["decision"] in {"pass", "advisory_and_rescue_required"},
+            "six_main_figure_groups_traced": len(trace["figure_checks"]) == len(FIGURE_IDS),
         },
     }
 
@@ -384,7 +411,7 @@ def run_adversarial_regressions(output_root: str | Path, successful_project: str
     if blank_project.exists():
         shutil.rmtree(blank_project)
     shutil.copytree(Path(successful_project), blank_project)
-    figure = blank_project / "results" / "figures" / "main_comparison.png"
+    figure = blank_project / "results" / "figures" / "fig_main_comparison.png"
     Image.new("RGB", (1400, 900), "white").save(figure)
     blank_report = assess_scientific_figure_quality(blank_project)
 
@@ -462,9 +489,9 @@ def run_release_regressions(output_root: str | Path) -> dict[str, Any]:
             for item in validate_run_selection_policy({"selection_role": "primary", "aggregation_policy": "best_seed", "test_access_policy": "single_access", "locked_before_test_access": False})
         ),
     }
-    _assert(all(semantic_checks.values()), "One or more v0.28.0 scientific semantic regressions were not rejected")
+    _assert(all(semantic_checks.values()), "One or more v0.30.0 scientific semantic regressions were not rejected")
     report = {
-        "schema_version": "v0.28.0",
+        "schema_version": "dpl.release_regression.v3",
         "generated_at": utc_now(),
         "status": "passed" if all(item["status"] == "passed" for item in domains) and adversarial["status"] == "passed" else "failed",
         "domain_regressions": domains,
@@ -474,6 +501,7 @@ def run_release_regressions(output_root: str | Path) -> dict[str, Any]:
     }
     atomic_write_json(root / "v0260_release_regression_report.json", report)
     atomic_write_json(root / "v0280_release_regression_report.json", report)
+    atomic_write_json(root / "v0300_release_regression_report.json", report)
     atomic_write_json(root / "v0250_release_regression_report.json", report)
     return report
 
