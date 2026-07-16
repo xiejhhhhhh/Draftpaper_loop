@@ -30,7 +30,10 @@ def _version(root: Path) -> str:
 
 
 def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    value = path.read_bytes()
+    if path.suffix.lower() in {".json", ".py", ".md", ".yaml", ".yml", ".csv", ".txt"}:
+        value = value.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(value).hexdigest()
 
 
 def _project_license(root: Path) -> str:
