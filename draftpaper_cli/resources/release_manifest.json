@@ -5,7 +5,7 @@
   "workflow_contract_sha256": "2fb0079b1911225d960c90b3d5bc47b715713774f6cdfb1cdc5ebf20a9554b28",
   "plugin_count": 210,
   "fixture_count": 546,
-  "plugin_catalog_hash": "3a9f9e4dfc848b09511ee3fd0ad8845a79db1d04ca19cb889a54b78271c35627",
+  "plugin_catalog_hash": "dd6def2969d7ea6a6e758957804452b5761df836d160e4c1da5b90f3652e6226",
   "command_count": 204,
   "command_contract_status": "passed",
   "required_cli_commands": [

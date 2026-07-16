@@ -4,7 +4,9 @@ import json
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
+from draftpaper_cli.plugin_catalog import build_plugin_catalog_snapshot
 from draftpaper_cli.template_registry import discover_template_registry, validate_template_registry
 
 
@@ -46,6 +48,25 @@ class TemplateRegistryTests(unittest.TestCase):
             issue for issue in report["issues"]
             if issue.get("plugin_id") == "sky_partition_overlap_validation"
         ])
+
+    def test_plugin_catalog_hash_is_stable_across_text_line_endings(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            roots = [Path(directory) / "lf", Path(directory) / "crlf"]
+            for root, newline in zip(roots, ("\n", "\r\n"), strict=True):
+                plugin = root / "default" / "method_templates" / "line_endings"
+                plugin.mkdir(parents=True)
+                (plugin / "manifest.json").write_bytes(
+                    ("{\"template_id\": \"line_endings\", \"runtime_class\": \"local_pure_python\"}" + newline).encode("utf-8")
+                )
+                (plugin / "template.py").write_bytes(
+                    ("def run():" + newline + "    return 1" + newline).encode("utf-8")
+                )
+
+            left = build_plugin_catalog_snapshot(root=roots[0], refresh=True)
+            right = build_plugin_catalog_snapshot(root=roots[1], refresh=True)
+            self.assertEqual(left["catalog_hash"], right["catalog_hash"])
 
 
 if __name__ == "__main__":

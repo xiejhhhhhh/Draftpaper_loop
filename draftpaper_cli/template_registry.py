@@ -59,8 +59,8 @@ def discover_template_registry(root: Path | None = None) -> dict[str, Any]:
             or manifest.get("template_id")
             or manifest.get("rule_group_id")
             or plugin_dir.name,
-            "path": str(plugin_dir.relative_to(base)),
-            "manifest": str(manifest_path.relative_to(base)),
+            "path": plugin_dir.relative_to(base).as_posix(),
+            "manifest": manifest_path.relative_to(base).as_posix(),
             "has_template": (plugin_dir / "template.py").exists(),
             "fixtures": fixtures,
             "maturity": manifest.get("maturity") or manifest.get("status") or "foundation",

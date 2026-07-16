@@ -36,6 +36,13 @@ def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def _sha256_file(path: Path) -> str:
+    value = path.read_bytes()
+    if path.suffix.lower() in {".json", ".py", ".md", ".yaml", ".yml", ".csv"}:
+        value = value.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return _sha256_bytes(value)
+
+
 def _kind_from_path(path: Path) -> str:
     parts = set(path.parts)
     if "data_connectors" in parts:
@@ -134,8 +141,8 @@ def build_plugin_catalog_snapshot(*, root: str | Path | None = None, refresh: bo
             "discipline": manifest_path.relative_to(base).parts[0],
             "kind": kind,
             "plugin_id": plugin_id,
-            "manifest_sha256": _sha256_bytes(manifest_path.read_bytes()),
-            "template_sha256": _sha256_bytes(template.read_bytes()) if template.is_file() else None,
+            "manifest_sha256": _sha256_file(manifest_path),
+            "template_sha256": _sha256_file(template) if template.is_file() else None,
             "execution_contract": contract,
             "maturity": manifest.get("maturity") or "foundation",
             "runtime_level": inspect_static_runtime_level(manifest_path.parent, kind, manifest),
