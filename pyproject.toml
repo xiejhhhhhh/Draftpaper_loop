@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.30.1"
+version = "0.30.2"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
@@ -111,6 +111,8 @@ typeCheckingMode = "basic"
 include = [
   "draftpaper_cli/artifact_dag.py",
   "draftpaper_cli/command_contracts.py",
+  "draftpaper_cli/execution_policy.py",
+  "draftpaper_cli/gate_handlers.py",
   "draftpaper_cli/manuscript_artifacts.py",
   "draftpaper_cli/plugin_manifest_contract.py",
   "draftpaper_cli/project_state.py",
@@ -118,7 +120,9 @@ include = [
   "draftpaper_cli/revision_transaction.py",
   "draftpaper_cli/schema_registry.py",
   "draftpaper_cli/scoped_transaction.py",
+  "draftpaper_cli/safe_fetch.py",
   "draftpaper_cli/state_kernel.py",
+  "draftpaper_cli/write_set_guard.py",
 ]
 reportMissingImports = false
 reportMissingTypeStubs = false

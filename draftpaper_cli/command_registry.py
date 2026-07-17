@@ -245,7 +245,7 @@ COMMAND_SPECS = {
             "methods",
             "gate_handlers",
             "verify_methods_gate",
-            (("project", "project"), ("command", "method_command"), ("output_files", "output"), ("input_data", "input")),
+            (("project", "project"), ("command", "method_command"), ("output_files", "output"), ("input_data", "input"), ("allow_system_binary", "allow_system_binary")),
             "status_success",
         ),
         CommandSpec("review-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "review_final_manuscript", (("project", "project"),)),

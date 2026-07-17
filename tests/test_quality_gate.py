@@ -78,17 +78,23 @@ def prepared_assembled_project(tmp: str) -> Path:
     collect_method_plan(project.path, user_method="Use supervised multimodal classification.", primary_metric="f1", minimum_primary_metric=0.7)
     update_stage_status(project.path, "figure_plan", "draft")
     update_stage_status(project.path, "code", "draft")
-    output = project.path / "results" / "tables" / "metrics.csv"
-    figures = [project.path / "results" / "figures" / f"result_figure_{index}.png" for index in range(1, 6)]
-    figure_writes = "; ".join(f"Path(r'{figure}').write_bytes(b'fake image {index}')" for index, figure in enumerate(figures, start=1))
-    command = (
-        f"{sys.executable} -c \"from pathlib import Path; "
-        f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
-        f"{figure_writes}\""
+    runner = project.path / "methods" / "scripts" / "run_analysis.py"
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    runner.write_text(
+        "from pathlib import Path\n"
+        "root = Path(__file__).resolve().parents[2]\n"
+        "output = root / 'results/tables/metrics.csv'\n"
+        "output.parent.mkdir(parents=True, exist_ok=True)\n"
+        "output.write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\n"
+        "for index in range(1, 6):\n"
+        "    figure = root / f'results/figures/result_figure_{index}.png'\n"
+        "    figure.parent.mkdir(parents=True, exist_ok=True)\n"
+        "    figure.write_bytes(f'fake image {index}'.encode('utf-8'))\n",
+        encoding="utf-8",
     )
     verify_methods(
         project.path,
-        command=command,
+        command=f'"{sys.executable}" methods/scripts/run_analysis.py',
         output_files=["results/tables/metrics.csv"] + [f"results/figures/result_figure_{index}.png" for index in range(1, 6)],
     )
     assess_result_validity(project.path)

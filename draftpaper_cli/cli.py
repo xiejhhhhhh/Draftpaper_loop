@@ -515,6 +515,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--command", dest="method_command", help="Optional legacy string command override. Defaults to methods/method_code_manifest.json verify_command_argv, then legacy verify_command.")
     verify.add_argument("--output", action="append", default=None, help="Project-relative output file that must exist after the command.")
     verify.add_argument("--input", action="append", default=None, help="Project-relative input data file used by the method command.")
+    verify.add_argument("--allow-system-binary", action="store_true", help="Explicitly permit a non-project executable and record the elevated execution mode.")
 
     methods = subparsers.add_parser("write-methods", help="Write methods.tex after successful method verification.")
     methods.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1498,7 +1499,13 @@ def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
 
     if args.command == "verify-methods":
         try:
-            result = verify_methods(args.project, command=args.method_command, output_files=args.output, input_data=args.input)
+            result = verify_methods(
+                args.project,
+                command=args.method_command,
+                output_files=args.output,
+                input_data=args.input,
+                allow_system_binary=args.allow_system_binary,
+            )
         except MethodsGateError as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
@@ -2516,6 +2523,10 @@ def main(argv: list[str] | None = None) -> int:
             write_guard = WriteSetGuard(project, spec)
         except (BoundaryViolation, OSError) as exc:
             print(json.dumps({"status": "boundary_violation", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            return 4
+        preflight = write_guard.preflight()
+        if preflight.get("status") != "passed":
+            print(json.dumps(preflight, ensure_ascii=False), file=sys.stderr)
             return 4
         workflow_trace = begin_workflow_trace(project, command, vars(args))
 

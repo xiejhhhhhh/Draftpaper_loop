@@ -8,14 +8,17 @@ import ast
 import csv
 import hashlib
 import json
+import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from .data_feasibility import DataGateError, validate_data_feasibility_for_methods
+from .execution_policy import redact_sensitive, sanitized_environment
 from .html_utils import write_html_report
 from .io_utils import read_json, read_text
 from .latex_utils import safe_latex_text
@@ -28,6 +31,7 @@ from .reference_usage import ensure_reference_usage_plan, missing_entries_for_se
 from .evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry, ensure_registry_consistent
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .writing_brief import METHOD_WRITING_BRIEF_HTML, METHOD_WRITING_BRIEF_JSON, build_method_writing_brief
+from .write_set_guard import BoundaryViolation, resolve_confined_path
 
 
 METHOD_INPUTS = [
@@ -103,12 +107,24 @@ def _ensure_method_plan(project_path: Path) -> Path:
 
 
 def _project_relative_path(project_path: Path, relative: str) -> Path:
-    candidate = (project_path / relative).resolve()
     try:
-        candidate.relative_to(project_path.resolve())
-    except ValueError as exc:
+        return resolve_confined_path(project_path, relative, must_exist=False)
+    except BoundaryViolation as exc:
         raise MethodsGateError(f"Output path escapes project directory: {relative}") from exc
-    return candidate
+
+
+def _validate_project_paths(project_path: Path, values: list[str], *, role: str) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        relative = str(value).strip().replace("\\", "/")
+        if not relative:
+            continue
+        try:
+            resolve_confined_path(project_path, relative, must_exist=False)
+        except BoundaryViolation as exc:
+            raise MethodsGateError(f"{role.capitalize()} path escapes project directory: {relative}") from exc
+        normalized.append(relative)
+    return list(dict.fromkeys(normalized))
 
 
 def _missing_declared_outputs(project_path: Path, manifest: dict[str, Any]) -> list[str]:
@@ -192,6 +208,54 @@ def _reject_shell_runner(argv: list[str]) -> None:
         )
 
 
+def _validate_verify_argv(
+    project_path: Path,
+    argv: list[str],
+    *,
+    allow_inline_runner: bool,
+    allow_system_binary: bool = False,
+) -> tuple[list[str], str]:
+    """Validate a formal project runner and return normalized argv plus mode."""
+    normalized = _normalize_verify_argv(argv)
+    executable = Path(normalized[0]).expanduser()
+    executable_name = executable.name.lower()
+    if executable_name in SHELL_EXECUTABLE_NAMES:
+        raise MethodsGateError("Method verification executable is an interactive shell runner.")
+    if executable.resolve() == Path(sys.executable).resolve():
+        if len(normalized) >= 2 and normalized[1] == "-c":
+            if not allow_inline_runner:
+                raise MethodsGateError("Inline method verification code is not allowed for formal project runners.")
+            return normalized, "inline_compatibility_runner"
+        if len(normalized) < 2:
+            raise MethodsGateError("Python method verification must name a project-local runner script.")
+        script = _project_relative_path(project_path, normalized[1])
+        if script.suffix.lower() != ".py" or not script.is_file():
+            raise MethodsGateError("Method verification executable must be a project-local Python script.")
+        return normalized, "project_local_python_runner"
+    try:
+        resolved_executable = resolve_confined_path(project_path, executable, must_exist=True)
+        execution_mode = "project_local_executable"
+    except BoundaryViolation as exc:
+        if not allow_system_binary:
+            raise MethodsGateError(
+                "Method verification executable must be inside the project; use --allow-system-binary for an explicit external executable."
+            ) from exc
+        located = shutil.which(str(executable)) if not executable.is_absolute() else str(executable)
+        if not located:
+            raise MethodsGateError("Explicit system binary could not be resolved.") from exc
+        try:
+            resolved_executable = Path(located).expanduser().resolve(strict=True)
+        except OSError as path_exc:
+            raise MethodsGateError("Explicit system binary does not exist.") from path_exc
+        execution_mode = "explicit_system_binary"
+    except OSError as exc:
+        raise MethodsGateError("Method verification executable does not exist.") from exc
+    if not os.access(resolved_executable, os.X_OK):
+        raise MethodsGateError("Method verification executable is not runnable.")
+    normalized[0] = str(resolved_executable)
+    return normalized, execution_mode
+
+
 def _command_display(argv: list[str]) -> str:
     return subprocess.list2cmdline(argv)
 
@@ -246,18 +310,30 @@ def _resolve_verification_inputs(
     command: str | None,
     output_files: list[str] | None,
     input_data: list[str] | None,
+    *,
+    allow_system_binary: bool = False,
 ) -> tuple[list[str], str, str, list[str], list[str], dict[str, Any]]:
     manifest = _method_code_manifest(project_path)
     command_source = "cli_override" if command else "method_code_manifest"
+    allow_inline_runner = bool(manifest.get("allow_inline_runner"))
     if command:
         resolved_argv = _split_legacy_command(command)
+        resolved_argv, execution_mode = _validate_verify_argv(
+            project_path,
+            resolved_argv,
+            allow_inline_runner=False,
+            allow_system_binary=allow_system_binary,
+        )
+        execution_mode = f"cli_override_{execution_mode}"
     elif isinstance(manifest.get("verify_command_argv"), list):
         resolved_argv = _normalize_verify_argv(manifest.get("verify_command_argv") or [])
+        resolved_argv, execution_mode = _validate_verify_argv(project_path, resolved_argv, allow_inline_runner=allow_inline_runner)
     else:
         legacy_command = str(manifest.get("verify_command") or manifest.get("command") or "").strip()
         if legacy_command:
             resolved_argv = _split_legacy_command(legacy_command)
             command_source = "method_code_manifest_legacy_string"
+            resolved_argv, execution_mode = _validate_verify_argv(project_path, resolved_argv, allow_inline_runner=allow_inline_runner)
         else:
             inferred = _infer_verify_command_argv(project_path, manifest)
             if not inferred:
@@ -266,28 +342,39 @@ def _resolve_verification_inputs(
                     "or provide a project runner such as methods/scripts/run_analysis.py."
                 )
             resolved_argv, command_source, migration_note = inferred
+            resolved_argv, execution_mode = _validate_verify_argv(project_path, resolved_argv, allow_inline_runner=False)
             manifest.setdefault("migration_note", migration_note)
     if not resolved_argv:
         raise MethodsGateError(
             "No method verification command was provided. Pass --command or generate methods/method_code_manifest.json with verify_command_argv."
         )
-    resolved_outputs = output_files if output_files else _manifest_list(manifest, "declared_outputs", "output_files")
-    resolved_inputs = input_data if input_data else _manifest_list(manifest, "input_data", "input_files")
+    resolved_outputs = _validate_project_paths(
+        project_path,
+        output_files if output_files else _manifest_list(manifest, "declared_outputs", "output_files"),
+        role="output",
+    )
+    resolved_inputs = _validate_project_paths(
+        project_path,
+        input_data if input_data else _manifest_list(manifest, "input_data", "input_files"),
+        role="input",
+    )
     selected_input = manifest.get("selected_input_data")
     if selected_input and str(selected_input) not in resolved_inputs:
-        resolved_inputs.append(str(selected_input))
+        resolved_inputs.extend(_validate_project_paths(project_path, [str(selected_input)], role="input"))
+    manifest["execution_mode"] = execution_mode
     return resolved_argv, _command_display(resolved_argv), command_source, resolved_outputs, resolved_inputs, manifest
 
 
 def _write_process_log(log_dir: Path, name: str, text: str) -> dict[str, Any]:
     log_dir.mkdir(parents=True, exist_ok=True)
     path = log_dir / name
-    path.write_text(text or "", encoding="utf-8", errors="replace")
+    safe_text = str(redact_sensitive(text or ""))
+    path.write_text(safe_text, encoding="utf-8", errors="replace")
     return {
         "path": str(path.relative_to(log_dir.parents[1])),
-        "characters": len(text or ""),
-        "truncated_in_manifest": len(text or "") > VERIFY_LOG_LIMIT,
-        "excerpt": (text or "")[-VERIFY_LOG_LIMIT:],
+        "characters": len(safe_text),
+        "truncated_in_manifest": len(safe_text) > VERIFY_LOG_LIMIT,
+        "excerpt": safe_text[-VERIFY_LOG_LIMIT:],
     }
 
 
@@ -489,6 +576,7 @@ def verify_methods(
     command: str | None = None,
     output_files: list[str] | None = None,
     input_data: list[str] | None = None,
+    allow_system_binary: bool = False,
 ) -> dict[str, Any]:
     """Run a method verification command and write methods/run_manifest.yaml."""
     state = load_project(project)
@@ -510,10 +598,18 @@ def verify_methods(
         command,
         output_files,
         input_data,
+        allow_system_binary=allow_system_binary,
     )
 
     started_at = utc_now()
-    completed = subprocess.run(command_argv, cwd=state.path, shell=False, capture_output=True, text=True)
+    completed = subprocess.run(
+        command_argv,
+        cwd=state.path,
+        shell=False,
+        capture_output=True,
+        text=True,
+        env=sanitized_environment(),
+    )
     finished_at = utc_now()
     log_stamp = re.sub(r"[^0-9A-Za-z_-]", "", started_at)[:24] or "latest"
     run_log_dir = methods_dir / "run_logs"
@@ -548,6 +644,7 @@ def verify_methods(
         "command": command_display,
         "command_argv": command_argv,
         "command_source": command_source,
+        "execution_mode": method_code_manifest.get("execution_mode", "legacy_cli_override"),
         "shell_used": False,
         "returncode": completed.returncode,
         "run_id": run_id,

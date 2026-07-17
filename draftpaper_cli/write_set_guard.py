@@ -78,6 +78,17 @@ def _matches(path: str, patterns: tuple[str, ...]) -> bool:
     return any(fnmatch.fnmatchcase(path, pattern) or fnmatch.fnmatchcase(path, pattern.replace("/**", "/*")) for pattern in patterns)
 
 
+def _static_glob_prefix(pattern: str) -> str:
+    normalized = str(pattern).replace("\\", "/").strip()
+    parts = []
+    for part in normalized.split("/"):
+        if any(token in part for token in ("*", "?", "[")):
+            break
+        if part:
+            parts.append(part)
+    return "/".join(parts) or "."
+
+
 class WriteSetGuard:
     """Capture a project baseline and attribute only writes from one command."""
 
@@ -89,6 +100,35 @@ class WriteSetGuard:
             relative: (self.root / relative).read_bytes()
             for relative, stamp in self.baseline.items()
             if stamp.size <= 8 * 1024 * 1024
+        }
+
+    def preflight(self) -> dict[str, Any]:
+        """Validate declared write roots before a mutating handler is invoked."""
+        violations: list[str] = []
+        checked_prefixes: list[str] = []
+        for pattern in self.spec.allowed_write_globs:
+            raw = str(pattern).strip()
+            if not raw:
+                violations.append("empty allowed write glob")
+                continue
+            if _looks_unsafe_absolute(raw) or any(part == ".." for part in Path(raw).parts):
+                violations.append(f"unsafe allowed write glob: {raw}")
+                continue
+            prefix = _static_glob_prefix(raw)
+            try:
+                resolve_confined_path(self.root, prefix, must_exist=False)
+            except (BoundaryViolation, OSError) as exc:
+                violations.append(f"unsafe write prefix {prefix}: {exc}")
+                continue
+            if prefix not in checked_prefixes:
+                checked_prefixes.append(prefix)
+        return {
+            "schema_version": "dpl.write_set_preflight.v1",
+            "command": self.spec.name,
+            "status": "boundary_violation" if violations else "passed",
+            "allowed_write_globs": list(self.spec.allowed_write_globs),
+            "checked_prefixes": checked_prefixes,
+            "violations": violations,
         }
 
     def assess(self) -> dict[str, Any]:

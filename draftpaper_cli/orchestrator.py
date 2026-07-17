@@ -1093,6 +1093,9 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
 def status_project(project: str | Path) -> dict[str, Any]:
     """Return pipeline status, passport state, and the next CLI action."""
     state = load_project(project)
+    literature_provider_status = str(
+        _read_report(state.path, "references/literature_provider_report.json").get("status") or "not_run"
+    )
     result_support = _read_report(state.path, "results/result_support_checkpoint.json")
     result_support_action = _result_support_action(state.path, result_support) if result_support else None
     if result_support_action and result_support_action.get("command") == "choose-result-route":
@@ -1101,6 +1104,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
             "status": "reported",
             "project_path": str(state.path),
             "pipeline_state": "awaiting_result_route",
+            "literature_provider_status": literature_provider_status,
             "current_stage": state.metadata.get("current_stage"),
             "awaiting_checkpoint": None,
             "passport": str(state.path / PASSPORT_FILES["passport"]),
@@ -1113,6 +1117,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
             "status": "reported",
             "project_path": str(state.path),
             "pipeline_state": "drift_detected",
+            "literature_provider_status": literature_provider_status,
             "current_stage": state.metadata.get("current_stage"),
             "awaiting_checkpoint": None,
             "passport": str(state.path / PASSPORT_FILES["passport"]),
@@ -1131,6 +1136,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
             "status": "reported",
             "project_path": str(state.path),
             "pipeline_state": "awaiting_confirmation",
+            "literature_provider_status": literature_provider_status,
             "current_stage": state.metadata.get("current_stage"),
             "awaiting_checkpoint": awaiting,
             "passport": str(state.path / PASSPORT_FILES["passport"]),
@@ -1164,6 +1170,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "status": "reported",
                 "project_path": str(state.path),
                 "pipeline_state": "core_evidence_refresh_required",
+                "literature_provider_status": literature_provider_status,
                 "current_stage": state.metadata.get("current_stage"),
                 "awaiting_checkpoint": None,
                 "passport": str(state.path / PASSPORT_FILES["passport"]),
@@ -1187,6 +1194,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "status": "reported",
                 "project_path": str(state.path),
                 "pipeline_state": "confirmation_required",
+                "literature_provider_status": literature_provider_status,
                 "current_stage": state.metadata.get("current_stage"),
                 "awaiting_checkpoint": None,
                 "passport": str(state.path / PASSPORT_FILES["passport"]),
@@ -1248,6 +1256,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "status": "reported",
         "project_path": str(state.path),
         "pipeline_state": pipeline_state,
+        "literature_provider_status": literature_provider_status,
         "current_stage": state.metadata.get("current_stage"),
         "awaiting_checkpoint": None,
         "passport": str(state.path / PASSPORT_FILES["passport"]),

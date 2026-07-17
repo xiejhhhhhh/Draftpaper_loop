@@ -255,7 +255,6 @@ def artifact_get(project: str, path: str, selector: str | None = None, max_items
         return {"status": "boundary_violation", "message": str(exc)}
     relative = artifact.relative_to(root).as_posix()
     lowered_name = artifact.name.lower()
-    lowered_path = relative.lower()
     if lowered_name in _PRIVATE_ARTIFACT_NAMES or lowered_name.endswith(_PRIVATE_ARTIFACT_SUFFIXES) or any(token in lowered_name for token in _PRIVATE_ARTIFACT_TOKENS):
         return {"status": "forbidden_artifact", "reason_code": "private_locator" if "locator" in lowered_name else "sensitive_artifact"}
     if artifact.suffix.lower() not in READABLE_SUFFIXES or lowered_name in {".env", "jobs.sqlite3"}:

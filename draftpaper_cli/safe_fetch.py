@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Iterable
@@ -15,6 +16,11 @@ DEFAULT_ALLOWED_HOSTS = frozenset({"www.overleaf.com", "raw.githubusercontent.co
 
 class SafeFetchError(RuntimeError):
     """Raised before or during a metadata request that violates the fetch policy."""
+
+
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        raise SafeFetchError("Remote redirects are not allowed for metadata fetches.")
 
 
 def _is_forbidden_address(address: str) -> bool:
@@ -38,7 +44,7 @@ def _validate_host(host: str, allowed_hosts: Iterable[str]) -> None:
     if normalized not in allowed and not any(normalized.endswith("." + suffix) for suffix in allowed):
         raise SafeFetchError(f"Host is not allowlisted: {host}")
     try:
-        addresses = {result[4][0] for result in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
+        addresses = {str(result[4][0]) for result in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
     except OSError as exc:
         raise SafeFetchError(f"Host DNS resolution failed: {host}") from exc
     if not addresses or any(_is_forbidden_address(address) for address in addresses):
@@ -52,14 +58,23 @@ def fetch_text(
     timeout: int = 30,
     allowed_hosts: Iterable[str] = DEFAULT_ALLOWED_HOSTS,
     max_bytes: int = MAX_RESPONSE_BYTES,
+    allowed_content_types: Iterable[str] = ("text/", "application/json", "application/xml", "application/atom+xml"),
 ) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
         raise SafeFetchError("Only HTTPS URLs with a hostname are allowed.")
     _validate_host(parsed.hostname, allowed_hosts)
     request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+    opener = urllib.request.build_opener(_RejectRedirects())
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - URL policy validated above.
+        with opener.open(request, timeout=timeout) as response:  # nosec B310 - URL policy validated above.
+            final_url = urllib.parse.urlparse(response.geturl())
+            if final_url.scheme != "https" or final_url.hostname != parsed.hostname:
+                raise SafeFetchError("Remote response URL differs from the validated request URL.")
+            content_type = str(response.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+            allowed_types = tuple(str(item).lower() for item in allowed_content_types)
+            if content_type and not any(content_type == item or (item.endswith("/") and content_type.startswith(item)) for item in allowed_types):
+                raise SafeFetchError(f"Remote response content type is not allowed: {content_type}")
             content_length = response.headers.get("Content-Length")
             if content_length and int(content_length) > max_bytes:
                 raise SafeFetchError("Remote response exceeds the configured size limit.")

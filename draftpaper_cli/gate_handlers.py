@@ -38,8 +38,15 @@ def verify_methods_gate(
     command: str | None = None,
     output_files: list[str] | None = None,
     input_data: list[str] | None = None,
+    allow_system_binary: bool = False,
 ) -> dict[str, Any]:
-    result = methods.verify_methods(project=project, command=command, output_files=output_files, input_data=input_data)
+    result = methods.verify_methods(
+        project=project,
+        command=command,
+        output_files=output_files,
+        input_data=input_data,
+        allow_system_binary=allow_system_binary,
+    )
     result["decision"] = "pass" if result.get("status") == "success" else "revise_required"
     return result
 

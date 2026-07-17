@@ -305,13 +305,17 @@ class AnalysisRevisionTests(unittest.TestCase):
             prepare_analysis_revision(project.path)
             script = (
                 "from pathlib import Path\n"
-                "p=Path('results/tables'); p.mkdir(parents=True, exist_ok=True)\n"
+                "root=Path(__file__).resolve().parents[2]\n"
+                "p=root/'results/tables'; p.mkdir(parents=True, exist_ok=True)\n"
                 "(p/'metrics.csv').write_text('metric,value\\nr2,0.2\\n', encoding='utf-8')\n"
             )
+            runner = project.path / "methods" / "scripts" / "run_analysis.py"
+            runner.parent.mkdir(parents=True, exist_ok=True)
+            runner.write_text(script, encoding="utf-8")
 
             result = verify_methods(
                 project.path,
-                command=f'"{sys.executable}" -c "{script}"',
+                command=f'"{sys.executable}" methods/scripts/run_analysis.py',
                 output_files=["results/tables/metrics.csv"],
             )
 

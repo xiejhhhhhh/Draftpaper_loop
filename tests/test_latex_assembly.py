@@ -76,16 +76,22 @@ def prepared_project(tmp: str) -> Path:
     collect_method_plan(project.path, user_method="Use supervised multimodal classification.", primary_metric="f1", minimum_primary_metric=0.7)
     update_stage_status(project.path, "figure_plan", "draft")
     update_stage_status(project.path, "code", "draft")
-    output = project.path / "results" / "tables" / "metrics.csv"
-    figure = project.path / "results" / "figures" / "risk_curve.png"
-    command = (
-        f"{sys.executable} -c \"from pathlib import Path; "
-        f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
-        f"Path(r'{figure}').write_bytes(b'fake image')\""
+    runner = project.path / "methods" / "scripts" / "run_analysis.py"
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    runner.write_text(
+        "from pathlib import Path\n"
+        "root = Path(__file__).resolve().parents[2]\n"
+        "output = root / 'results/tables/metrics.csv'\n"
+        "figure = root / 'results/figures/risk_curve.png'\n"
+        "output.parent.mkdir(parents=True, exist_ok=True)\n"
+        "figure.parent.mkdir(parents=True, exist_ok=True)\n"
+        "output.write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\n"
+        "figure.write_bytes(b'fake image')\n",
+        encoding="utf-8",
     )
     verify_methods(
         project.path,
-        command=command,
+        command=f'"{sys.executable}" methods/scripts/run_analysis.py',
         output_files=["results/tables/metrics.csv", "results/figures/risk_curve.png"],
     )
     assess_result_validity(project.path)

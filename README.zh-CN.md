@@ -343,6 +343,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
+### v0.30.1-v0.30.2（2026-07-18）-- 发布门与本地执行边界
+
+- `v0.30.1` 在不公开实验性 manuscript completion 原型的前提下，对齐公开命令清单和 release manifest。core evidence、data quality、result validity、method verification 和 integrity gate 的非通过科学判定现在都会返回非零进程状态。MCP artifact 读取拒绝私有 locator 和凭证类文件；期刊及 registry metadata 抓取统一经过 HTTPS、host、DNS 与响应大小策略。
+- `v0.30.2` 让 manifest 和 CLI method verification 使用同一个项目内 runner 合同，拒绝 inline Python 与 shell runner，限制声明的输入/输出路径，记录显式 system binary 例外，只向子进程传递白名单科研环境变量并在日志落盘前脱敏。写入命令在 handler 运行前检查声明写入根，运行后仍核对真实写集。文献检索会在 stage manifest、`status` 和 `doctor` 中区分 `success_with_items`、`success_empty`、`provider_error`、`auth_required`、`rate_limited` 和 `offline_fallback`。
+
 ### v0.28.1-v0.30.0（2026-07-17）-- 事务化证据架构与跨学科发布合同
 
 - `v0.28.1` 将章节修订升级为真正的多产物事务。通过审阅的修改写入章节权威源文件，重复组装 LaTeX 后仍会保留，并触发真实的下游 stale 状态；注入故障时 canonical、candidate 与项目状态会一起回滚。这一版本真正完成了 `v0.27.2` 最初提出的事务保证。

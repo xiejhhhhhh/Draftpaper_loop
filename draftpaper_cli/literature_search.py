@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -363,7 +364,7 @@ def _domain_anchor(project_text: str, field: str, target_journal: str) -> str:
     return _compact_query(field_keywords or _keywords_from_text(project_text, limit=8), limit=140)
 
 
-def build_context_search_queries(project: str | Path, query: str | None = None) -> dict[str, str | list[str]]:
+def build_context_search_queries(project: str | Path, query: str | None = None) -> dict[str, Any]:
     state = load_project(project)
     idea_query = query or build_search_query(project)
     idea_terms = _idea_phrases(str(state.metadata.get("idea", "")), limit=5)
@@ -501,14 +502,11 @@ def search_semantic_scholar(query: str, limit: int = 30) -> list[dict[str, Any]]
     headers = {}
     if os.getenv("SEMANTIC_SCHOLAR_API_KEY"):
         headers["x-api-key"] = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
-    try:
-        payload = _get_json(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            {"query": query, "limit": min(limit, 100), "fields": fields},
-            headers=headers,
-        )
-    except Exception:
-        return []
+    payload = _get_json(
+        "https://api.semanticscholar.org/graph/v1/paper/search",
+        {"query": query, "limit": min(limit, 100), "fields": fields},
+        headers=headers,
+    )
 
     items = []
     for paper in payload.get("data", []):
@@ -555,11 +553,8 @@ def search_arxiv(query: str, limit: int = 30) -> list[dict[str, Any]]:
         "sortBy": "relevance",
         "sortOrder": "descending",
     })
-    try:
-        with urllib.request.urlopen(f"https://export.arxiv.org/api/query?{params}", timeout=12) as response:
-            root = ET.fromstring(response.read().decode("utf-8"))
-    except Exception:
-        return []
+    with urllib.request.urlopen(f"https://export.arxiv.org/api/query?{params}", timeout=12) as response:
+        root = ET.fromstring(response.read().decode("utf-8"))
 
     ns = {"atom": "http://www.w3.org/2005/Atom"}
     items = []
@@ -589,18 +584,15 @@ def search_arxiv(query: str, limit: int = 30) -> list[dict[str, Any]]:
 def search_crossref(query: str, limit: int = 30) -> list[dict[str, Any]]:
     if not query:
         return []
-    try:
-        payload = _get_json(
-            "https://api.crossref.org/works",
-            {
-                "query.bibliographic": query,
-                "rows": min(limit, 20),
-                "select": "DOI,title,author,container-title,published-print,published-online,issued,URL,is-referenced-by-count,abstract,volume,issue,page,article-number,publisher",
-            },
-            headers={"User-Agent": "Draftpaper-loop local workflow (mailto:local@example.com)"},
-        )
-    except Exception:
-        return []
+    payload = _get_json(
+        "https://api.crossref.org/works",
+        {
+            "query.bibliographic": query,
+            "rows": min(limit, 20),
+            "select": "DOI,title,author,container-title,published-print,published-online,issued,URL,is-referenced-by-count,abstract,volume,issue,page,article-number,publisher",
+        },
+        headers={"User-Agent": "Draftpaper-loop local workflow (mailto:local@example.com)"},
+    )
 
     items = []
     for work in (payload.get("message") or {}).get("items", []):
@@ -638,13 +630,10 @@ def search_serpapi(query: str, limit: int = 30) -> list[dict[str, Any]]:
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key or not query:
         return []
-    try:
-        payload = _get_json(
-            "https://serpapi.com/search.json",
-            {"engine": "google_scholar", "q": query, "api_key": api_key, "num": min(limit, 20)},
-        )
-    except Exception:
-        return []
+    payload = _get_json(
+        "https://serpapi.com/search.json",
+        {"engine": "google_scholar", "q": query, "api_key": api_key, "num": min(limit, 20)},
+    )
     items = []
     for index, paper in enumerate(payload.get("organic_results", [])[:limit]):
         publication_info = paper.get("publication_info") or {}
@@ -667,11 +656,83 @@ def dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return normalize_reference_items(items)
 
 
-def search_free_literature(query: str, limit: int = 30) -> list[dict[str, Any]]:
+class LiteratureSearchItems(list[dict[str, Any]]):
+    """List-compatible search result carrying provider diagnostics."""
+
+    def __init__(self, items: list[dict[str, Any]], provider_outcome: dict[str, Any]) -> None:
+        super().__init__(items)
+        self.provider_outcome = provider_outcome
+
+
+def _provider_failure_status(exc: Exception) -> str:
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.code in {401, 403}:
+            return "auth_required"
+        if exc.code == 429:
+            return "rate_limited"
+    return "provider_error"
+
+
+def _provider_search_outcome(
+    provider_name: str,
+    provider: Any,
+    query: str,
+    *,
+    limit: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if provider_name == "serpapi" and not os.getenv("SERPAPI_API_KEY"):
+        return [], {"provider": provider_name, "status": "auth_required", "item_count": 0, "reason_code": "api_key_missing"}
+    try:
+        items = list(provider(query, limit=limit))
+    except Exception as exc:
+        status = _provider_failure_status(exc)
+        return [], {
+            "provider": provider_name,
+            "status": status,
+            "item_count": 0,
+            "reason_code": type(exc).__name__,
+        }
+    return items, {
+        "provider": provider_name,
+        "status": "success_with_items" if items else "success_empty",
+        "item_count": len(items),
+        "reason_code": None,
+    }
+
+
+def _aggregate_provider_status(provider_rows: list[dict[str, Any]], *, item_count: int) -> str:
+    if item_count:
+        return "success_with_items"
+    statuses = {str(row.get("status") or "") for row in provider_rows}
+    if "provider_error" in statuses:
+        return "provider_error"
+    if "rate_limited" in statuses:
+        return "rate_limited"
+    non_auth = statuses - {"auth_required", ""}
+    if not non_auth and "auth_required" in statuses:
+        return "auth_required"
+    return "success_empty"
+
+
+def search_free_literature_with_outcome(query: str, limit: int = 30) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
+    provider_rows: list[dict[str, Any]] = []
     provider_limit = min(30, max(6, limit * 3))
-    for provider in (search_semantic_scholar, search_arxiv, search_crossref, search_serpapi):
-        results.extend(provider(query, limit=provider_limit))
+    providers = (
+        ("semantic_scholar", search_semantic_scholar),
+        ("arxiv", search_arxiv),
+        ("crossref", search_crossref),
+        ("serpapi", search_serpapi),
+    )
+    for provider_name, provider in providers:
+        provider_items, provider_row = _provider_search_outcome(
+            provider_name,
+            provider,
+            query,
+            limit=provider_limit,
+        )
+        results.extend(provider_items)
+        provider_rows.append(provider_row)
     results = dedupe_items(results)
     results.sort(
         key=lambda item: (
@@ -682,7 +743,36 @@ def search_free_literature(query: str, limit: int = 30) -> list[dict[str, Any]]:
         ),
         reverse=True,
     )
-    return results[:limit]
+    results = results[:limit]
+    return {
+        "schema_version": "dpl.literature_provider_outcome.v1",
+        "status": _aggregate_provider_status(provider_rows, item_count=len(results)),
+        "query": query,
+        "item_count": len(results),
+        "items": results,
+        "providers": provider_rows,
+    }
+
+
+def search_free_literature(query: str, limit: int = 30) -> list[dict[str, Any]]:
+    outcome = search_free_literature_with_outcome(query, limit=limit)
+    return LiteratureSearchItems(list(outcome["items"]), outcome)
+
+
+def _query_provider_outcome(items: list[dict[str, Any]], *, query: str, context: str) -> dict[str, Any]:
+    outcome = getattr(items, "provider_outcome", None)
+    if isinstance(outcome, dict):
+        row = {key: value for key, value in outcome.items() if key != "items"}
+    else:
+        row = {
+            "schema_version": "dpl.literature_provider_outcome.v1",
+            "status": "success_with_items" if items else "success_empty",
+            "query": query,
+            "item_count": len(items),
+            "providers": [{"provider": "legacy_or_injected", "status": "success_with_items" if items else "success_empty", "item_count": len(items)}],
+        }
+    row["context"] = context
+    return row
 
 
 def _normalized_title(text: str) -> str:
@@ -926,6 +1016,7 @@ def search_literature_for_project(
     search_queries = build_context_search_queries(project, query)
     state = load_project(project)
     zotero_manifest: dict[str, Any] | None = None
+    provider_queries: list[dict[str, Any]] = []
     if from_json and zotero_collection:
         raise ValueError("Use either --from-json or --zotero-collection, not both.")
     if zotero_collection:
@@ -940,6 +1031,7 @@ def search_literature_for_project(
         if zotero_supplement and len(items) < minimum:
             needed = minimum - len(items)
             supplemental = search_free_literature(final_query, limit=max(needed * 2, needed))
+            provider_queries.append(_query_provider_outcome(supplemental, query=final_query, context="zotero_supplement"))
             existing_keys = {
                 (str(item.get("doi") or "") or re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()).lower()
                 for item in items
@@ -995,6 +1087,7 @@ def search_literature_for_project(
                 if context == "target_journal_anchor":
                     per_query_limit = min(limit, 2)
                 context_items = search_free_literature(context_query, limit=per_query_limit)
+                provider_queries.append(_query_provider_outcome(context_items, query=context_query, context=context))
                 identity = plan_entry.get("canonical_identity") if isinstance(plan_entry.get("canonical_identity"), dict) else {}
                 if identity:
                     context_items = _canonical_candidates(context_items, identity)
@@ -1032,6 +1125,7 @@ def search_literature_for_project(
                 context = str(plan_entry.get("context") or "introduction")
                 fallback_limit = min(limit, 2) if context in {"data", "methods"} else min(limit, 6)
                 context_items = search_free_literature(context_query, limit=fallback_limit)
+                provider_queries.append(_query_provider_outcome(context_items, query=context_query, context=f"{context}_fallback"))
                 for item in context_items:
                     item["search_context"] = context
                     item["search_query"] = context_query
@@ -1053,11 +1147,48 @@ def search_literature_for_project(
             if fallback_entries:
                 search_queries["fallback_query_plan"] = fallback_entries
         items, _manifest = enrich_with_paper_fetch(project, items)
+    external_item_count = len(items or [])
     lineage_seeds, lineage_report = _load_verified_lineage_reference_seeds(project)
     if lineage_seeds:
         items = [*lineage_seeds, *list(items or [])]
     search_queries["lineage_reference_seeds"] = lineage_report
     result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
+    if from_json:
+        provider_status = "offline_fallback"
+        source_mode = "local_json"
+    elif zotero_collection:
+        provider_status = "success_with_items" if external_item_count else "success_empty"
+        source_mode = "zotero_collection"
+    elif external_item_count:
+        provider_status = "success_with_items"
+        source_mode = "live_providers"
+    elif lineage_seeds:
+        provider_status = "offline_fallback"
+        source_mode = "verified_lineage"
+    else:
+        provider_status = _aggregate_provider_status(provider_queries, item_count=0)
+        source_mode = "live_providers"
+    provider_report = {
+        "schema_version": "dpl.literature_provider_report.v1",
+        "status": provider_status,
+        "source_mode": source_mode,
+        "query_count": len(provider_queries),
+        "external_item_count": external_item_count,
+        "lineage_item_count": len(lineage_seeds),
+        "final_item_count": int(result.get("item_count") or 0),
+        "queries": provider_queries,
+    }
+    provider_report_path = state.path / "references" / "literature_provider_report.json"
+    _write_json(provider_report_path, provider_report)
+    stage_manifest_path = state.path / "references" / "stage_manifest.json"
+    stage_manifest = json.loads(stage_manifest_path.read_text(encoding="utf-8"))
+    stage_manifest["provider_status"] = provider_status
+    stage_manifest["provider_report"] = "references/literature_provider_report.json"
+    stage_manifest["output_files"] = list(dict.fromkeys([
+        *(stage_manifest.get("output_files") or []),
+        "references/literature_provider_report.json",
+    ]))
+    _write_json(stage_manifest_path, stage_manifest)
     manifest_path = state.path / "references" / "zotero_collection_manifest.json"
     if zotero_manifest is None:
         zotero_manifest = {"status": "not_used"}
@@ -1066,4 +1197,6 @@ def search_literature_for_project(
         result["zotero_collection_manifest"] = str(manifest_path)
         result["zotero_imported_count"] = zotero_manifest.get("usable_item_count", 0)
         result["zotero_supplemental_count"] = zotero_manifest.get("supplemental_item_count", 0)
+    result["provider_status"] = provider_status
+    result["literature_provider_report"] = str(provider_report_path)
     return result

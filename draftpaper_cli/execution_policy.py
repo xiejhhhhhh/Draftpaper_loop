@@ -113,5 +113,8 @@ def sanitized_environment(source: Mapping[str, str] | None = None) -> dict[str, 
     allowed = {
         "PATH", "PYTHONPATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "HOME", "USERPROFILE",
         "LANG", "LC_ALL", "MPLBACKEND", "CUDA_VISIBLE_DEVICES",
+        "SEMANTIC_SCHOLAR_API_KEY", "ZOTERO_LIBRARY_ID", "ZOTERO_LIBRARY_TYPE", "ZOTERO_API_KEY",
+        "SERPAPI_API_KEY", "DRAFTPAPER_REMOTE_HOST", "DRAFTPAPER_REMOTE_USER", "DRAFTPAPER_REMOTE_PORT",
+        "ASTRONOMY_ARCHIVE_TOKEN", "IBM_QUANTUM_TOKEN",
     }
     return {key: value for key, value in env.items() if key.upper() in allowed}

@@ -253,6 +253,22 @@ def doctor_project(project: str | Path | None = None, *, explain: bool = False) 
         findings.append(_finding("figure_run_binding", "error", "Figure semantic evidence resolution is blocked.", "A figure may use identifiers, the wrong run/model/cohort, or incomplete semantic metadata.", artifacts=["results/figure_evidence_resolution.json"], next_command=f'python -m draftpaper_cli.cli resolve-figure-evidence --project "{root}"'))
     bibliography = _read(root / "quality_checks" / "bibliography_quality_report.json")
     duplicate = _read(root / "references" / "reference_duplicate_report.json")
+    literature_provider = _read(root / "references" / "literature_provider_report.json")
+    literature_provider_status = str(literature_provider.get("status") or "not_run")
+    if literature_provider_status in {"provider_error", "auth_required", "rate_limited"}:
+        summary = {
+            "provider_error": "Literature provider execution failed.",
+            "auth_required": "Literature provider authentication is required.",
+            "rate_limited": "Literature provider rate limit was reached.",
+        }[literature_provider_status]
+        findings.append(_finding(
+            "literature_provider",
+            "warning",
+            summary,
+            "An empty candidate set cannot be interpreted as evidence that no relevant literature exists.",
+            artifacts=["references/literature_provider_report.json"],
+            next_command=f'python -m draftpaper_cli.cli search-literature --project "{root}"',
+        ))
     if duplicate.get("status") == "confirmation_required":
         findings.append(_finding("reference_metadata", "warning", "Related reference versions require a preferred citable version decision.", "The bibliography may render one work as multiple year-suffixed citations.", artifacts=["references/reference_duplicate_report.json"], automatic_or_manual="manual", next_command=f'python -m draftpaper_cli.cli inspect-reference-duplicates --project "{root}"'))
     if bibliography and bibliography.get("status") == "failed":
@@ -293,6 +309,7 @@ def doctor_project(project: str | Path | None = None, *, explain: bool = False) 
         "next_action_verification": next_check,
         "system_of_record": {key: system.get(key) for key in ("status", "category_count", "artifact_count", "violation_count")},
         "token_ledger": token_summary,
+        "literature_provider_status": literature_provider_status,
         "finding_count": len(findings),
         "findings": findings,
     }

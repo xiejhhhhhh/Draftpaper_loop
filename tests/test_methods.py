@@ -27,6 +27,32 @@ def prepare_passing_data_gate(project_path: Path) -> None:
     collect_method_plan(project_path, user_method="Use supervised classification with light-curve features.", primary_metric="f1", minimum_primary_metric=0.7)
 
 
+def write_method_runner(
+    project_path: Path,
+    *,
+    text_outputs: dict[str, str],
+    binary_outputs: dict[str, bytes] | None = None,
+) -> str:
+    runner = project_path / "methods" / "scripts" / "run_analysis.py"
+    runner.parent.mkdir(parents=True, exist_ok=True)
+    source = (
+        "from pathlib import Path\n"
+        "root = Path(__file__).resolve().parents[2]\n"
+        f"text_outputs = {text_outputs!r}\n"
+        f"binary_outputs = {(binary_outputs or {})!r}\n"
+        "for relative, content in text_outputs.items():\n"
+        "    path = root / relative\n"
+        "    path.parent.mkdir(parents=True, exist_ok=True)\n"
+        "    path.write_text(content, encoding='utf-8')\n"
+        "for relative, content in binary_outputs.items():\n"
+        "    path = root / relative\n"
+        "    path.parent.mkdir(parents=True, exist_ok=True)\n"
+        "    path.write_bytes(content)\n"
+    )
+    runner.write_text(source, encoding="utf-8")
+    return f'"{sys.executable}" methods/scripts/run_analysis.py'
+
+
 class MethodsHardGateTests(unittest.TestCase):
     def test_write_methods_requires_successful_run_manifest(self) -> None:
         from draftpaper_cli.methods import MethodsGateError, write_methods
@@ -70,8 +96,10 @@ class MethodsHardGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Transformer AGN prediction", field="machine learning astronomy")
             prepare_passing_data_gate(project.path)
-            output = project.path / "results" / "tables" / "metrics.csv"
-            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').write_text('metric,value\\naccuracy,0.91\\n', encoding='utf-8')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\naccuracy,0.91\n"},
+            )
 
             verify_result = verify_methods(project.path, command=command, output_files=["results/tables/metrics.csv"])
             self.assertEqual(verify_result["status"], "success")
@@ -111,15 +139,13 @@ class MethodsHardGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Manifest argv method verification", field="workflow engineering")
             prepare_passing_data_gate(project.path)
-            output = project.path / "results" / "tables" / "metrics.csv"
-            code = (
-                "from pathlib import Path; "
-                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
-                f"Path(r'{output}').write_text('metric,value\\naccuracy,0.93\\n', encoding='utf-8')"
+            write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\naccuracy,0.93\n"},
             )
             (project.path / "methods" / "method_code_manifest.json").write_text(
                 json.dumps({
-                    "verify_command_argv": ["{python}", "-c", code],
+                    "verify_command_argv": ["{python}", "methods/scripts/run_analysis.py"],
                     "verify_command": "cmd.exe /c exit 99",
                     "declared_outputs": ["results/tables/metrics.csv"],
                 }),
@@ -204,8 +230,10 @@ print(json.dumps({
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="CLI method gate", field="workflow engineering")
             prepare_passing_data_gate(project.path)
-            output = project.path / "results" / "tables" / "metrics.csv"
-            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"},
+            )
             refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
             verify_completed = subprocess.run(
@@ -261,14 +289,10 @@ print(json.dumps({
                 }),
                 encoding="utf-8",
             )
-            output = project.path / "results" / "tables" / "metrics.csv"
-            figure = project.path / "results" / "figures" / "generated.png"
-            command = (
-                f"{sys.executable} -c \"from pathlib import Path; "
-                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
-                f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
-                f"Path(r'{figure}').parent.mkdir(parents=True, exist_ok=True); "
-                f"Path(r'{figure}').write_bytes(b'fake image')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"},
+                binary_outputs={"results/figures/generated.png": b"fake image"},
             )
             refresh_project_passport(project.path, event="test_cli_fixture_prepared")
 
@@ -298,8 +322,10 @@ print(json.dumps({
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Manifest driven method gate", field="workflow engineering")
             prepare_passing_data_gate(project.path)
-            output = project.path / "results" / "tables" / "metrics.csv"
-            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"},
+            )
             (project.path / "methods" / "method_code_manifest.json").write_text(
                 json.dumps({
                     "status": "written",
@@ -333,8 +359,10 @@ print(json.dumps({
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Main figure contract gate", field="workflow engineering")
             prepare_passing_data_gate(project.path)
-            output = project.path / "results" / "tables" / "metrics.csv"
-            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"},
+            )
             (project.path / "results" / "figure_contracts.json").write_text(
                 json.dumps({
                     "contracts": [
@@ -414,8 +442,10 @@ print(json.dumps({
                 }),
                 encoding="utf-8",
             )
-            output = project.path / "results" / "tables" / "metrics.csv"
-            command = f"{sys.executable} -c \"from pathlib import Path; Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); Path(r'{output}').write_text('metric,value\\nf1_macro,0.82\\nroc_auc,0.91\\n', encoding='utf-8')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1_macro,0.82\nroc_auc,0.91\n"},
+            )
 
             verify_methods(project.path, command=command, output_files=["results/tables/metrics.csv"])
             write_methods(project.path)
@@ -590,14 +620,10 @@ print(json.dumps({
                 }),
                 encoding="utf-8",
             )
-            output = project.path / "results" / "tables" / "metrics.csv"
-            figure = project.path / "results" / "figures" / "generated.png"
-            command = (
-                f"{sys.executable} -c \"from pathlib import Path; "
-                f"Path(r'{output}').parent.mkdir(parents=True, exist_ok=True); "
-                f"Path(r'{output}').write_text('metric,value\\nf1,0.88\\n', encoding='utf-8'); "
-                f"Path(r'{figure}').parent.mkdir(parents=True, exist_ok=True); "
-                f"Path(r'{figure}').write_bytes(b'fake image')\""
+            command = write_method_runner(
+                project.path,
+                text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"},
+                binary_outputs={"results/figures/generated.png": b"fake image"},
             )
 
             result = verify_methods(
