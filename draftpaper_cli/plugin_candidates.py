@@ -20,6 +20,7 @@ from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
+from .safe_fetch import SafeFetchError, fetch_text
 
 
 class PluginCandidateError(RuntimeError):
@@ -1648,15 +1649,15 @@ def _academicforge_registry_url(source_url: str | None, source_ref: str | None) 
 def _read_registry_json(url_or_path: str) -> dict[str, Any]:
     parsed = urllib.parse.urlparse(url_or_path)
     try:
-        if parsed.scheme in {"http", "https"}:
-            request = urllib.request.Request(url_or_path, headers={"User-Agent": "Draftpaper-loop metadata adapter"})
-            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310 - user-controlled metadata source only.
-                payload = response.read().decode("utf-8-sig", errors="replace")
-        elif parsed.scheme == "file":
-            payload = Path(urllib.request.url2pathname(parsed.path)).read_text(encoding="utf-8-sig")
+        if parsed.scheme in {"http", "https", "file", "data"}:
+            payload = fetch_text(
+                url_or_path,
+                user_agent="Draftpaper-loop metadata adapter",
+                allowed_hosts={"raw.githubusercontent.com", "api.github.com"},
+            )
         else:
             payload = Path(url_or_path).read_text(encoding="utf-8-sig")
-    except (OSError, urllib.error.URLError) as exc:
+    except (OSError, SafeFetchError) as exc:
         raise PluginCandidateError(f"Unable to read skill registry metadata: {url_or_path}: {exc}") from exc
     try:
         data = json.loads(payload)

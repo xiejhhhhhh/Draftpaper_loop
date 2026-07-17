@@ -7,13 +7,13 @@ from __future__ import annotations
 import json
 import re
 import urllib.parse
-import urllib.request
 from html import unescape
 from pathlib import Path
 from typing import Any
 
 from .project_scaffold import _write_json
 from .project_state import load_project, update_project_state
+from .safe_fetch import SafeFetchError, fetch_text
 
 
 OVERLEAF_TEMPLATE_SEARCH = "https://www.overleaf.com/latex/templates"
@@ -38,9 +38,15 @@ class JournalProfileError(RuntimeError):
 
 
 def _fetch_text(url: str, timeout: int = 30) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "Draftpaper-loop local workflow"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read().decode("utf-8", errors="replace")
+    try:
+        return fetch_text(
+            url,
+            user_agent="Draftpaper-loop local workflow",
+            timeout=timeout,
+            allowed_hosts={"www.overleaf.com"},
+        )
+    except SafeFetchError as exc:
+        raise JournalProfileError(str(exc)) from exc
 
 
 def _target_to_overleaf_url(target_journal: str) -> str | None:

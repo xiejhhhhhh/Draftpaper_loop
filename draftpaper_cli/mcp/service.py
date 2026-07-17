@@ -26,6 +26,9 @@ MAX_ARTIFACT_BYTES = 128 * 1024
 READABLE_SUFFIXES = {".json", ".jsonl", ".yaml", ".yml", ".md", ".txt", ".csv", ".tex", ".bib", ".html"}
 _CAPABILITY_SECRET = secrets.token_bytes(32)
 _PATH_ARGUMENT_TOKENS = {"path", "input", "output", "report", "source", "destination", "baseline", "package", "before", "after"}
+_PRIVATE_ARTIFACT_NAMES = {"external_data_locators.private.json"}
+_PRIVATE_ARTIFACT_SUFFIXES = (".private.json",)
+_PRIVATE_ARTIFACT_TOKENS = ("credential", "secret", "password", "token", "api_key")
 
 
 def _safe(payload: Any) -> Any:
@@ -250,7 +253,12 @@ def artifact_get(project: str, path: str, selector: str | None = None, max_items
         artifact = resolve_confined_path(root, path, must_exist=True)
     except BoundaryViolation as exc:
         return {"status": "boundary_violation", "message": str(exc)}
-    if artifact.suffix.lower() not in READABLE_SUFFIXES or artifact.name.lower() in {".env", "jobs.sqlite3"}:
+    relative = artifact.relative_to(root).as_posix()
+    lowered_name = artifact.name.lower()
+    lowered_path = relative.lower()
+    if lowered_name in _PRIVATE_ARTIFACT_NAMES or lowered_name.endswith(_PRIVATE_ARTIFACT_SUFFIXES) or any(token in lowered_name for token in _PRIVATE_ARTIFACT_TOKENS):
+        return {"status": "forbidden_artifact", "reason_code": "private_locator" if "locator" in lowered_name else "sensitive_artifact"}
+    if artifact.suffix.lower() not in READABLE_SUFFIXES or lowered_name in {".env", "jobs.sqlite3"}:
         return {"status": "forbidden_artifact_type", "suffix": artifact.suffix.lower()}
     limit = min(max(1, int(max_bytes)), MAX_ARTIFACT_BYTES)
     raw = artifact.read_bytes()
@@ -265,7 +273,7 @@ def artifact_get(project: str, path: str, selector: str | None = None, max_items
     if isinstance(payload, list) and len(payload) > max_items:
         payload = payload[:max_items]
         truncated = True
-    return _safe({"status": "read", "path": Path(path).as_posix(), "selector": selector, "content": payload, "truncated": truncated, "max_bytes": limit})
+    return _safe({"status": "read", "path": relative, "selector": selector, "content": payload, "truncated": truncated, "max_bytes": limit})
 
 
 def review_summary(project: str) -> dict[str, Any]:

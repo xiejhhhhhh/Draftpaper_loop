@@ -205,6 +205,10 @@ COMMAND_SPECS = {
             "evidence_coordinator",
             True,
             "results",
+            "gate_handlers",
+            "assess_core_evidence_gate",
+            (("project", "project"),),
+            "decision_pass",
             allowed_write_globs=tuple(
                 dict.fromkeys(
                     (
@@ -213,6 +217,36 @@ COMMAND_SPECS = {
                     )
                 )
             ),
+        ),
+        CommandSpec(
+            "assess-data-quality",
+            "data_coordinator",
+            True,
+            "data",
+            "gate_handlers",
+            "assess_data_quality_gate",
+            (("project", "project"), ("required_columns", "required_column"), ("max_missing_ratio", "max_missing_ratio")),
+            "quality_pass",
+        ),
+        CommandSpec(
+            "assess-result-validity",
+            "evidence_coordinator",
+            True,
+            "results",
+            "gate_handlers",
+            "assess_result_validity_gate",
+            (("project", "project"), ("primary_metric", "primary_metric"), ("minimum_value", "minimum_value")),
+            "decision_pass",
+        ),
+        CommandSpec(
+            "verify-methods",
+            "method_coordinator",
+            True,
+            "methods",
+            "gate_handlers",
+            "verify_methods_gate",
+            (("project", "project"), ("command", "method_command"), ("output_files", "output"), ("input_data", "input")),
+            "status_success",
         ),
         CommandSpec("review-final-manuscript", "release_coordinator", True, "release", "final_manuscript_confirmation", "review_final_manuscript", (("project", "project"),)),
         CommandSpec(
@@ -519,6 +553,7 @@ COMMAND_SPECS.update({
     "revise": CommandSpec("revise", "writing_coordinator", True, "writing", "manuscript_revision", "preview_manuscript_revision", (("project", "project"), ("instruction", "instruction"), ("at", "at"), ("paragraph", "paragraph"), ("content_file", "content_file"), ("operation", "operation"), ("mode", "mode"), ("change_class", "change_class"))),
     "eval": CommandSpec("eval", "release_coordinator", True, "quality_checks", "eval_runtime", "run_eval_command", (("action", "eval_action"), ("project", "project"), ("case", "case"), ("capture", "capture"), ("baseline", "baseline"), ("report", "report"), ("output", "output"))),
     "validate-command-contracts": CommandSpec("validate-command-contracts", "state_kernel", False, "state", "command_contracts", "validate_command_contracts"),
+    "run-integrity-gate": CommandSpec("run-integrity-gate", "release_coordinator", True, "quality_checks", "gate_handlers", "run_integrity_gate", (("project", "project"),), "decision_pass"),
 })
 
 
@@ -539,6 +574,10 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         raise TypeError(f"Registered command {spec.name} returned a non-object payload.")
     if spec.exit_policy == "decision_pass":
         exit_code = 0 if payload.get("decision") == "pass" else 1
+    elif spec.exit_policy == "quality_pass":
+        exit_code = 0 if payload.get("decision") == "pass" else 1
+    elif spec.exit_policy == "status_success":
+        exit_code = 0 if payload.get("status") == "success" else 1
     elif spec.exit_policy == "status_passed":
         exit_code = 0 if payload.get("status") == "passed" else 1
     else:

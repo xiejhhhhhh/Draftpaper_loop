@@ -10,6 +10,17 @@ from typing import Any
 from .command_registry import COMMAND_SPECS, CommandSpec
 
 
+HARD_GATE_COMMANDS = frozenset({
+    "assess-core-evidence",
+    "assess-data-quality",
+    "assess-result-validity",
+    "verify-methods",
+    "audit-citations",
+    "run-integrity-gate",
+    "quality-check",
+})
+
+
 def _subparser_choices(parser: argparse.ArgumentParser) -> dict[str, argparse.ArgumentParser]:
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
@@ -128,6 +139,11 @@ def build_command_contracts() -> dict[str, Any]:
         schema, project_scoped = command_input_schema(name) if parser else ({"type": "object"}, False)
         if spec and parser:
             local_issues.extend(_handler_issues(spec, {action.dest for action in _actions(parser)}))
+        if spec and name in HARD_GATE_COMMANDS:
+            if not spec.handler_module or not spec.handler_name:
+                local_issues.append("hard_gate_handler_missing")
+            if spec.exit_policy == "always_success":
+                local_issues.append("hard_gate_exit_policy_missing")
         issues.extend(f"{name}:{issue}" for issue in local_issues)
         records.append({
             "command": name,
