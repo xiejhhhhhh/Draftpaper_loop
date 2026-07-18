@@ -892,6 +892,8 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--project", default=None)
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
     doctor.add_argument("--explain", action="store_true", help="Include artifact dependency and failure-route details.")
+    token_report = subparsers.add_parser("token-report", help="Summarize recorded and estimated project token usage without inventing provider prices.")
+    token_report.add_argument("--project", required=True)
     start = subparsers.add_parser("start", help="Create a project and report the first executable workflow action.")
     start.add_argument("--root", "--projects-root", dest="root", default=None)
     start.add_argument("--idea", required=True)

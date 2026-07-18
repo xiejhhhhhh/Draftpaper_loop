@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 from draftpaper_cli.command_registry import COMMAND_SPECS
 
 
 def test_readmes_are_start_pages_not_monolithic_references() -> None:
+    version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     for name in ("README.md", "README.zh-CN.md"):
         content = Path(name).read_text(encoding="utf-8")
         size = len(content.encode("utf-8"))
         assert 8 * 1024 <= size <= 12 * 1024, (name, size)
-        assert "v0.31.7" in content
+        assert f"v{version}" in content
         assert "prepare-manuscript-completion" in content
         assert "preview-manuscript-completion" in content
         assert "apply-manuscript-completion" in content
@@ -49,7 +51,7 @@ def test_generated_cli_reference_matches_command_registry() -> None:
 
     assert actual == expected
     assert expected.count("\n| `") == len(COMMAND_SPECS)
-    assert len(COMMAND_SPECS) == 209
+    assert len(COMMAND_SPECS) == 210
     assert "namespace adapter" in expected
     assert "human_checkpoint" in expected
 

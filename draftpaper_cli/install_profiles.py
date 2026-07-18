@@ -65,6 +65,26 @@ def inspect_install_profiles(
             "install_command": f'python -m pip install "{install_target}"',
             "runtime_fallback": "vendored_paper_fetch" if profile == "fulltext" else None,
         }
+    research_modules = tuple(dict.fromkeys(
+        module
+        for profile in ("plotting", "fulltext", "mcp")
+        for module in PROFILE_MODULES[profile]
+    ))
+    research_missing = [name for name in research_modules if not available(name)]
+    profiles["research"] = {
+        "status": "available" if not research_missing else "missing_dependencies",
+        "extra": "plotting,fulltext,mcp",
+        "required_modules": list(research_modules),
+        "missing_modules": research_missing,
+        "capabilities": sorted({
+            capability
+            for profile in ("plotting", "fulltext", "mcp")
+            for capability in PROFILE_CAPABILITIES[profile]
+        }),
+        "install_command": 'python -m pip install "draftpaper-cli[plotting,fulltext,mcp]"',
+        "runtime_fallback": "vendored_paper_fetch",
+        "composed_from": ["plotting", "fulltext", "mcp"],
+    }
     missing_optional = [name for name in ("plotting", "fulltext", "mcp") if profiles[name]["missing_modules"]]
     return {
         "schema_version": "dpl.install_profile_report.v1",

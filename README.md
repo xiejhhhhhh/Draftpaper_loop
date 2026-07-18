@@ -8,7 +8,7 @@ Draftpaper-loop is not a one-shot paper generator. It coordinates literature, re
 
 ## Current Release
 
-The current release is **v0.31.7**. The public CLI contains 209 commands under one `CommandSpec` control plane, 210 discipline-plugin contracts and five cross-discipline release fixtures. Fixtures prove workflow behavior, not scientific findings. A real paper still requires a live-runnable plugin or an audited project-local implementation, verified run outputs and human confirmation of the research blueprint, core evidence and final release hash.
+The current release is **v0.31.8**. The public CLI contains 210 commands under one `CommandSpec` control plane, 210 discipline-plugin contracts and five cross-discipline release fixtures. Fixtures prove workflow behavior, not scientific findings. A real paper still requires a live-runnable plugin or an audited project-local implementation, verified run outputs and human confirmation of the research blueprint, core evidence and final release hash.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -106,9 +106,10 @@ python3 -m venv .venv
 | Review current checkpoint | `draftpaper review --project <project>` | Builds a review packet without silently accepting it |
 | Request a precise revision | `draftpaper revise --project <project> ...` | Produces a candidate using stable text/hash location |
 | Diagnose environment/project | `draftpaper doctor --project <project> --json` | Read-only dependency, state and recovery report |
+| Inspect token/cost ledger | `draftpaper token-report --project <project>` | Reports actual/estimated tokens and only explicitly recorded currency cost |
 | Build a recovery plan | `draftpaper recover --project <project>` | Never accepts figures, downgrades claims, deletes references or promotes plugins |
 
-All 209 command contracts, risks, stages, handlers and exit policies are generated in [the CLI reference](docs/cli_reference.md). Internal commands remain available for debugging and automation, but researchers should follow `status` and these workflow macros instead of manually reconstructing stage order.
+All 210 command contracts, risks, stages, handlers and exit policies are generated in [the CLI reference](docs/cli_reference.md). Internal commands remain available for debugging and automation, but researchers should follow `status` and these workflow macros instead of manually reconstructing stage order.
 
 ## Final Author Workflow
 
@@ -129,10 +130,13 @@ LaTeX line numbers are display hints. Paragraph IDs, expected text and hashes id
 - [Workflow priority guide](docs/cli_workflow_priority_guide.md): full evidence-first stage behavior and recovery routes.
 - [CLI reference](docs/cli_reference.md): generated command, stage, risk, handler and exit-policy table.
 - [Install profiles](docs/install_profiles.md): minimal, plotting, fulltext and MCP boundaries.
+- [Token and cost reporting](docs/token_cost_reporting.md): ledger totals, active writing budget and recorded-price boundary.
+- [Command risk matrix](docs/command_risk_matrix.md): generated risk, side-effect and write-root inventory.
 - [Final manuscript completion](docs/manuscript_completion.md): metadata, dual locators, preview, apply and rollback.
 - [DPL schemas](docs/DPL_SCHEMA.md): artifact and contract schema families.
 - [Discipline module authoring](docs/discipline_modules/codex_authoring_guide.md): local plugin templates and promotion boundary.
 - [Third-party notices](third_party/THIRD_PARTY_NOTICES.md): provenance and license records for adapted or internalized ideas.
+- [Commercial overview](docs/commercial_overview.md): license, deployment and current hosted-service boundary.
 
 ## Release Summary
 
@@ -140,6 +144,7 @@ LaTeX line numbers are display hints. Paragraph IDs, expected text and hashes id
 - **v0.31.5:** registered hot-path resource schemas, 65% CI coverage floor and wider Pyright scope.
 - **v0.31.6:** true minimal wheel, explicit plotting/fulltext/MCP extras, Doctor install profiles and four-profile CI smoke.
 - **v0.31.7:** short bilingual start pages and generated CLI reference replace monolithic README command/history dumps.
+- **v0.31.8:** read-only token/cost reporting, combined research install profile, generated command risk matrix and explicit commercial boundary.
 
 Historical long-form material remains available in `docs/archive/`; Git history is the authoritative release history.
 

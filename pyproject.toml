@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.31.7"
+version = "0.31.8"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
@@ -111,6 +111,7 @@ include = [
   "draftpaper_cli/execution_policy.py",
   "draftpaper_cli/gate_handlers.py",
   "draftpaper_cli/install_profiles.py",
+  "draftpaper_cli/token_report.py",
   "draftpaper_cli/manuscript_artifacts.py",
   "draftpaper_cli/manuscript_completion.py",
   "draftpaper_cli/manuscript_revision.py",

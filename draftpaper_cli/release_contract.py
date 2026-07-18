@@ -76,6 +76,7 @@ def build_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
             "confirm-research-plan",
             "reopen-research-plan",
             "path-budget-check",
+            "token-report",
             "validate-confirmed-figure-alignment",
             "apply-section-revision",
             "review-final-manuscript",

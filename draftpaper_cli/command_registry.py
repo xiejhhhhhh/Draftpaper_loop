@@ -547,6 +547,7 @@ COMMAND_SPECS.update({
     "mcp-install": CommandSpec("mcp-install", "state_kernel", False, "state", "mcp_install", "mcp_install", (("output", "output"),), risk_level="write_project", mcp_exposed=False),
     "mcp-doctor": CommandSpec("mcp-doctor", "state_kernel", False, "state", "mcp_install", "mcp_doctor"),
     "doctor": CommandSpec("doctor", "state_kernel", False, "state", "doctor", "doctor_project", (("project", "project"), ("explain", "explain"))),
+    "token-report": CommandSpec("token-report", "state_kernel", False, "state", "token_report", "build_token_cost_report", (("project", "project"),)),
     "verify-next-action": CommandSpec("verify-next-action", "state_kernel", False, "state", "doctor", "verify_next_action", (("project", "project"),), "status_passed"),
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),
     "start": CommandSpec("start", "state_kernel", True, "state", "workflow_macros", "start_workflow", (("root", "root"), ("idea", "idea"), ("field", "field"), ("target_journal", "target_journal"))),
