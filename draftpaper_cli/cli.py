@@ -948,6 +948,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report final-author metadata readiness without changing the project.",
     )
     completion_status.add_argument("--project", required=True)
+    completion_preview = subparsers.add_parser(
+        "preview-manuscript-completion",
+        help="Build a batch metadata, reference, section, LaTeX and PDF overlay without changing canonical sources.",
+    )
+    completion_preview.add_argument("--project", required=True)
+    completion_preview.add_argument("--input", required=True)
+    completion_apply = subparsers.add_parser(
+        "apply-manuscript-completion",
+        help="Apply one human-accepted completion packet after packet-hash verification.",
+    )
+    completion_apply.add_argument("--project", required=True)
+    completion_apply.add_argument("--packet-id", required=True)
+    completion_apply.add_argument("--packet-hash", required=True)
+    completion_rollback = subparsers.add_parser(
+        "rollback-manuscript-completion",
+        help="Rollback an applied completion transaction while all after-hashes remain current.",
+    )
+    completion_rollback.add_argument("--project", required=True)
+    completion_rollback.add_argument("--transaction-id", required=True)
     preview_revision = subparsers.add_parser("preview-manuscript-revision", help="Preview a line- or paragraph-anchored manuscript revision without applying it.")
     preview_revision.add_argument("--project", required=True)
     preview_revision.add_argument("--at", default=None)

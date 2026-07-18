@@ -237,6 +237,13 @@ def _apply_manuscript_metadata(main_tex: str, metadata: dict[str, Any], *, aaste
             main_tex = re.sub(r"\\title\{[^{}]*\}", lambda _match: replacement, main_tex, count=1)
         else:
             main_tex = main_tex.replace("\\begin{document}", replacement + "\n\\begin{document}", 1)
+    short_title = metadata.get("short_title")
+    if short_title and aastex:
+        short_title_command = rf"\shorttitle{{{_safe_latex_text(str(short_title))}}}"
+        if re.search(r"\\shorttitle\{[^{}]*\}", main_tex):
+            main_tex = re.sub(r"\\shorttitle\{[^{}]*\}", lambda _match: short_title_command, main_tex, count=1)
+        else:
+            main_tex = main_tex.replace("\\begin{document}", short_title_command + "\n\\begin{document}", 1)
     abstract = metadata.get("abstract")
     if abstract:
         abstract_block = "\\begin{abstract}\n" + str(abstract).strip() + "\n\\end{abstract}"
@@ -250,6 +257,22 @@ def _apply_manuscript_metadata(main_tex: str, metadata: dict[str, Any], *, aaste
             )
         else:
             main_tex = main_tex.replace("\\begin{document}", "\\begin{document}\n\n" + abstract_block, 1)
+    keywords = metadata.get("keywords") or []
+    if isinstance(keywords, str):
+        keywords = [keywords]
+    if keywords:
+        rendered_keywords = "; ".join(_safe_latex_text(str(item)) for item in keywords if str(item).strip())
+        if aastex:
+            keyword_block = rf"\keywords{{{rendered_keywords}}}"
+            if re.search(r"\\keywords\{[^{}]*\}", main_tex):
+                main_tex = re.sub(r"\\keywords\{[^{}]*\}", lambda _match: keyword_block, main_tex, count=1)
+            else:
+                main_tex = main_tex.replace("\\begin{document}", keyword_block + "\n\\begin{document}", 1)
+        elif rendered_keywords and "\\textbf{Keywords:}" not in main_tex:
+            keyword_block = rf"\noindent\textbf{{Keywords:}} {rendered_keywords}"
+            abstract_end = "\\end{abstract}"
+            if abstract_end in main_tex:
+                main_tex = main_tex.replace(abstract_end, abstract_end + "\n\n" + keyword_block, 1)
     author_block = _metadata_author_block(metadata, aastex=aastex)
     if author_block:
         main_tex = re.sub(r"(?m)^\s*\\(?:author|affiliation|email|orcid)\{[^{}]*\}\s*\n?", "", main_tex)
@@ -438,7 +461,8 @@ def _render_result_artifacts(project_path: Path) -> tuple[str, list[str]]:
         for item in metadata_entries
     }
     manuscript_metadata = _read_manuscript_metadata(project_path)
-    caption_overrides = manuscript_metadata.get("figure_captions") if isinstance(manuscript_metadata.get("figure_captions"), dict) else {}
+    raw_caption_overrides = manuscript_metadata.get("figure_captions")
+    caption_overrides: dict[str, Any] = dict(raw_caption_overrides) if isinstance(raw_caption_overrides, dict) else {}
     blocks: list[str] = []
     labels: list[str] = []
     for entry in _result_figure_entries(project_path):

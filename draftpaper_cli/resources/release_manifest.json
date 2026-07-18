@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.30.5",
-  "workflow_skill_sha256": "1491e6f6e24acc61b86b23c884709dc92a13211c129121a43e36d308171f805a",
-  "workflow_contract_sha256": "edd5bd49c2c0fc9e4cbd7dc936069cdf89e9aca2a874cac8c182c2f4cf7ab4f4",
+  "package_version": "0.30.6",
+  "workflow_skill_sha256": "40da5c9c33aae3a185e64900a4370d6b62f57ffabafeb9ac562616b3c58c3770",
+  "workflow_contract_sha256": "75973f42540e3cb2da4772dce4be55d0c4283ed3f610e99b82cd237c8ee17a4f",
   "plugin_count": 210,
   "fixture_count": 546,
   "plugin_catalog_hash": "dd6def2969d7ea6a6e758957804452b5761df836d160e4c1da5b90f3652e6226",
-  "command_count": 206,
+  "command_count": 209,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "review-research-plan",
@@ -16,7 +16,12 @@
     "validate-confirmed-figure-alignment",
     "apply-section-revision",
     "review-final-manuscript",
-    "validate-command-contracts"
+    "validate-command-contracts",
+    "prepare-manuscript-completion",
+    "preview-manuscript-completion",
+    "apply-manuscript-completion",
+    "manuscript-completion-status",
+    "rollback-manuscript-completion"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "capability_pack_ids": [

@@ -756,7 +756,7 @@ def set_manuscript_metadata(project: str | Path, input_path: str | Path) -> dict
     if not isinstance(payload, dict):
         raise ManuscriptRevisionError("Manuscript metadata input must be a JSON/YAML object.")
     allowed = {
-        "title", "abstract", "authors", "affiliations", "corresponding_author", "email", "orcid",
+        "title", "short_title", "abstract", "keywords", "authors", "affiliations", "corresponding_author", "email", "orcid",
         "credit_contributions", "acknowledgments", "funding", "data_availability",
         "code_availability", "competing_interests", "ethics_consent", "supplementary_material",
         "repository_links", "doi_links", "figure_captions",

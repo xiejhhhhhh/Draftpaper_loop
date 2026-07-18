@@ -158,9 +158,6 @@ def test_completion_status_and_cli_expose_only_v0304_surface(tmp_path: Path) -> 
     parser = build_parser()
     assert parser.parse_args(["prepare-manuscript-completion", "--project", str(project)]).command == "prepare-manuscript-completion"
     assert parser.parse_args(["manuscript-completion-status", "--project", str(project)]).command == "manuscript-completion-status"
-    assert command_spec("preview-manuscript-completion") is None
-    assert command_spec("apply-manuscript-completion") is None
-    assert command_spec("rollback-manuscript-completion") is None
 
 
 @pytest.mark.parametrize(
