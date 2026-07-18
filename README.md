@@ -18,18 +18,48 @@
 
 </div>
 
-Draftpaper-loop is a local-first research paper loop engine. It is not just a one-shot draft generator and not merely a command-line utility. The CLI is the stable tool surface, while the product concept is a repeatable loop: read project state, retrieve evidence, plan the paper, run methods, validate results, assemble LaTeX, review failures, mark stale stages, and rerun only the necessary upstream work until the manuscript is scientifically auditable.
+Draftpaper-loop is a local-first, evidence-first research workflow. It confirms the research blueprint and executable scientific evidence before writing, lets Codex compose natural scientific prose from that evidence, and publishes a traceable `main.pdf` only after citation, discipline, integrity and independent-review checks.
 
-The project follows the loop-engineering shift from prompting an agent turn by turn to designing a system that prompts, observes, verifies, stores state, and decides the next action. For research writing, this matters because a paper draft is rarely correct after one generation. Literature, data, methods, results, journal constraints, and reviewer feedback change each other. Draftpaper-loop treats those changes as first-class loop events instead of ad hoc chat history.
+## Current Release
 
-Draftpaper-loop is also intended to become a learning research workflow rather than a fixed template library. The goal is to preserve paper revision experience, reviewer-response logic, data-analysis methods, and code implementation patterns as reusable discipline modules. It should not replace scientific judgment; it should structure accumulated methods and review experience so later researchers can enter a field faster, understand its basic research patterns, and judge whether cross-disciplinary combinations are scientifically plausible.
+The current release is v0.30.7. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
 
-Current manuscript generation separates evidence control from prose control. Draftpaper-loop builds the auditable research evidence first, generates section-level writing briefs for Data and Methods, lets Codex compose natural scientific prose from those briefs, and then applies integrity, citation, formula, and result-evidence gates after writing.
+## How a Paper Reaches `main.pdf`
 
-From v0.17.7 onward, manuscript writing is evidence-semantic free composition rather than rigid templating. Draftpaper-loop resolves facts from verified runs, validates each main figure against a scientific contract, freezes the human-confirmed evidence snapshot, and then leaves sentence-level scientific prose open enough for Codex to write naturally from that one verified evidence version.
-From v0.21.1 onward, that separation is organized by a Paper Narrative Engine. It converts the approved evidence snapshot, research plan, literature roles, plugin/run traces, and main/supporting figure relationships into a paper brief, figure story arc, argument matrices, section evidence packs, and paragraph jobs. Codex writes continuous scientific prose from those reasoning inputs; a bounded paragraph-local Scientific Editor repairs defects afterward without replacing the section with deterministic template text.
+```text
+idea and literature
+  -> bilingual research blueprint and human confirmation
+  -> data/method capability matching and real execution
+  -> main figure groups plus supporting/appendix evidence
+  -> result-support and claim-strength confirmation
+  -> Results
+  -> Introduction, Data, Methods and Discussion
+  -> discipline review and final citation audit
+  -> two independent blind reviewers
+  -> final author completion and precise revisions
+  -> compile, bind and confirm one release hash
+  -> latex/main.pdf
+```
 
-The current user experience is strongest for geography, environmental science, remote sensing, and agricultural-environment studies, because those are the first domains with deeper data/method/reviewer loops. Other fields such as biology, medicine, engineering, computer science, astronomy, finance, and materials science can already use the general loop and the foundation discipline modules, but deep use will improve as each discipline accumulates more data connectors, runnable method templates, reviewer gates, fixtures, and real project feedback. Contributions from researchers in different fields are expected to make each module progressively more useful.
+If the verified results do not support the planned claim, the loop stops. The user must either narrow the claim while freezing the accepted figures and metrics, or supplement data/methods and rerun the scientific evidence chain. Draftpaper-loop does not substitute a similar-looking figure and continue writing.
+
+## Guarantees and Human Control
+
+Deterministic contracts check project state, cohort/run identity, plugin provenance, figure semantics, formulas, citations, stale propagation, write boundaries and release hashes. Codex remains responsible for open-ended research reasoning and natural prose. Humans confirm the research blueprint, core evidence, result-support route, author completion packet and final release hash.
+
+## Completing and Revising the Final Manuscript
+
+One `manuscript_completion.yaml` can provide authors, affiliations, ORCID, funding, acknowledgments, data/code links, user-confirmed references and multiple paragraph revisions. Line numbers are hints; stable `paragraph_id`, expected text and SHA-256 are the write guards. The system first produces one diff and candidate PDF, then applies the accepted packet atomically.
+
+```powershell
+draftpaper prepare-manuscript-completion --project <project>
+draftpaper preview-manuscript-completion --project <project> --input manuscript_completion.yaml
+draftpaper apply-manuscript-completion --project <project> --packet-id <id> --packet-hash <sha256>
+draftpaper review-final-manuscript --project <project>
+draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
+```
+
+See [Final Manuscript Completion](docs/manuscript_completion.md) for the complete locator, preview, rollback and release-ordering contract.
 
 ## What It Does
 
@@ -427,7 +457,7 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
-### v0.30.1-v0.30.6 (2026-07-18) -- Release Gates, Precise Stale Propagation and Author Completion Transactions
+### v0.30.1-v0.30.7 (2026-07-18) -- Release Gates, Precise Stale Propagation and Author Completion Transactions
 
 - `v0.30.1` reconciles the public command inventory and release manifest without exposing the experimental manuscript-completion prototype. Core evidence, data quality, result validity, method verification and integrity gates now return nonzero process status for non-passing scientific decisions. MCP artifact reads reject private locators and credential-like files, and journal/registry metadata fetching is routed through an HTTPS, host, DNS and response-size policy.
 - `v0.30.2` applies one project-local runner contract to manifest and CLI method verification, rejects inline Python and shell runners, confines declared inputs/outputs, records explicit system-binary opt-in, passes only allowlisted scientific environment variables and redacts process logs. Mutating commands now validate declared write roots before running and still verify the actual write set afterward. Literature retrieval distinguishes `success_with_items`, `success_empty`, `provider_error`, `auth_required`, `rate_limited` and `offline_fallback` in stage manifests, `status` and `doctor`.
@@ -435,6 +465,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - `v0.30.4` registers `dpl.manuscript_completion.v1` and adds `prepare-manuscript-completion` plus the read-only `manuscript-completion-status`. The generated author template covers structured metadata, funding, availability statements, short title, keywords and user-confirmed references; its journal report separates required, recommended, missing, placeholder and not-applicable fields. Completion input cannot directly replace scientific evidence, metrics, claims or figures, and later preview/apply commands remain unpublished until their own transaction gates pass.
 - `v0.30.5` resolves author edits through stable paragraph ID, expected text/hash and optional occurrence while treating LaTeX line numbers as non-authoritative hints. Line drift is reported and re-anchored only when stable anchors still agree; stale, ambiguous, duplicate-key and duplicate-target packets are rejected as a whole. One packet can resolve multiple sections and user-confirmed references against one source-map/project revision, and project revision files can no longer read content from outside the project boundary.
 - `v0.30.6` adds completion preview, apply and rollback as one hash-bound transaction flow. Preview produces a unified metadata/section/BibTeX diff, candidate LaTeX and candidate PDF without touching canonical sources. Apply rechecks the packet, project revision, source map, evidence snapshot and before hashes, then atomically writes metadata, references, sections, stale state, ledgers and exact-text user locks. Repeated apply is idempotent, injected failures restore the full write set, and rollback refuses to overwrite any artifact changed after completion. `compile_required`, unresolved Codex instructions and scientific evidence changes are explicitly non-passing.
+- `v0.30.7` binds the applied completion manifest, manuscript metadata, every canonical section, BibTeX/reference registry, promoted evidence, result/figure manifests, final citation-audit snapshot, integrity/quality reports, two independent blind reviews and `main.pdf` into one release hash. Non-passing or stale bound artifacts block review and confirmation. The README opening now presents the current evidence-first path and final-author checkpoint directly, with complete English and Chinese completion guides under `docs/`.
 
 ### v0.28.1-v0.30.0 (2026-07-17) -- Transactional Evidence Architecture and Cross-discipline Release Contracts
 

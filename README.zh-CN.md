@@ -18,16 +18,48 @@
 
 </div>
 
-Draftpaper-loop 是一个本地优先的科研论文 loop 引擎。它不是一次性 draft 生成器，也不仅仅是命令行工具。CLI 是稳定的工具调用面，而产品概念是一个可重复执行的 loop：读取项目状态、检索证据、规划论文、运行方法、验证结果、组装 LaTeX、诊断失败、标记 stale 阶段，并只回退重跑必要的上游工作，直到论文初稿具备可审阅和可追溯性。
+Draftpaper-loop 是本地优先、证据优先的科研论文工作流。系统先确认研究蓝图和可执行的科学证据，再让 Codex 基于同一证据版本自然撰写正文；只有引用、学科规范、完整性和独立审稿全部通过后，才发布可追溯的 `main.pdf`。
 
-这个项目更接近 loop engineering，而不是传统 CLI workflow。对于科研论文而言，文献、数据、方法、结果、目标期刊和审稿意见会互相改变。Draftpaper-loop 把这些改变视为项目状态事件，而不是依赖一次聊天上下文或一次性生成。
+## 当前版本
 
-Draftpaper-loop 不只是帮用户写论文，也希望把“论文修改经验”“审稿应对逻辑”“数据分析方法”“代码实现流程”沉淀下来，变成某个学科可以反复复用、不断进化的科研模块。它的目标不是让 AI 替代科研判断，而是把不同学科已经积累下来的方法、经验和审稿逻辑结构化地保存下来，让后来的人可以更快进入一个新领域，更快判断交叉方向是否可行，并进一步推进真正有价值的研究。
+当前版本为 v0.30.7。跨学科 fixture 只验证通用流程合同，不代表真实科研结果。真实论文仍必须使用 live-runnable 学科插件或可审计的 project-local 代码，产生经过验证的 run output，并由用户确认研究蓝图、核心证据、最终作者补全 packet 和发布 hash。Mock 与 fixture 不能冒充论文证据。
 
-当前正文生成逻辑把“证据控制”和“文字控制”拆开：Draftpaper-loop 先构建可审计的研究证据，再为 Data 和 Methods 生成章节级 writing brief，让 Codex 在 brief 约束下写出更自然的科研正文，最后再通过完整性检查、引用核查、公式解释和结果证据 gate 进行硬性审查。
-从 v0.21.1 开始，这套分离逻辑由 Paper Narrative Engine 统一组织。系统会把已确认的证据快照、research plan、文献角色、插件与运行追溯、主图和附录图关系，转成论文简报、图表故事线、论证矩阵、章节证据包和段落任务。Codex 根据这些推理输入自由撰写连续科研正文；后续 Scientific Editor 只修复存在问题的段落，不再用确定性模板重写整章。
+## 论文如何到达 `main.pdf`
 
-目前由于项目最早围绕地理、环境科学、遥感与农业环境方向持续打磨，这些方向的使用体验会更完整、更顺畅。对于生物、医学、工程、计算机、天文、金融、材料等其他方向，当前版本已经可以使用通用 loop 和基础学科模块，但更适合先做探索性体验；随着对应学科的数据获取、方法模板、审稿 gate、fixture 和真实项目反馈逐步补充，这些学科的深度体验会继续增强。随着不同学科使用者不断增加，每个人都可以把自己学科中的专业方法、审稿经验、数据分析流程和代码方案沉淀为候选模块，再经过泛化、脱敏、测试和确认后逐步合并进正式模块。
+```text
+idea 与文献
+  -> 中英文研究蓝图和人工确认
+  -> 数据/方法能力匹配与真实执行
+  -> 主图组和支撑/附录证据
+  -> 结果支撑与论断强度确认
+  -> Results
+  -> Introduction、Data、Methods、Discussion
+  -> 学科审查与最终 citation audit
+  -> 两位独立盲评者
+  -> 最终作者信息补全与定点修订
+  -> 编译、绑定并确认同一个 release hash
+  -> latex/main.pdf
+```
+
+如果已验证结果不能支撑研究计划中的论断，流程必须停止。用户需要选择冻结已确认图表和指标并收窄论断，或者补充数据/方法后重新运行科学证据链。Draftpaper-loop 不会生成一张相似图片后继续写作。
+
+## 系统保证与人工控制
+
+确定性合同负责检查项目状态、cohort/run 身份、插件来源、图表语义、公式、引用、stale 传播、写入边界和发布 hash。Codex 负责开放性的科研推理与自然行文。研究蓝图、核心证据、结果支撑路线、作者补全 packet 和最终 release hash 均由用户确认。
+
+## 补全与修订最终稿
+
+用户可以通过一个 `manuscript_completion.yaml` 一次补充作者、单位、ORCID、基金、致谢、数据/代码链接、人工确认的新文献和多处段落修订。行号只用于提示；稳定 `paragraph_id`、原文和 SHA-256 才是写入校验。系统先生成统一 diff 与候选 PDF，用户接受后才原子写入。
+
+```powershell
+draftpaper prepare-manuscript-completion --project <project>
+draftpaper preview-manuscript-completion --project <project> --input manuscript_completion.yaml
+draftpaper apply-manuscript-completion --project <project> --packet-id <id> --packet-hash <sha256>
+draftpaper review-final-manuscript --project <project>
+draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
+```
+
+完整定位、预览、回滚和发布顺序见[最终论文信息补全与精确修订](docs/manuscript_completion.zh-CN.md)。
 
 ## 功能概览
 
@@ -343,7 +375,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
-### v0.30.1-v0.30.6（2026-07-18）-- 发布门、精确 stale 传播与作者补全事务
+### v0.30.1-v0.30.7（2026-07-18）-- 发布门、精确 stale 传播与作者补全事务
 
 - `v0.30.1` 在不公开实验性 manuscript completion 原型的前提下，对齐公开命令清单和 release manifest。core evidence、data quality、result validity、method verification 和 integrity gate 的非通过科学判定现在都会返回非零进程状态。MCP artifact 读取拒绝私有 locator 和凭证类文件；期刊及 registry metadata 抓取统一经过 HTTPS、host、DNS 与响应大小策略。
 - `v0.30.2` 让 manifest 和 CLI method verification 使用同一个项目内 runner 合同，拒绝 inline Python 与 shell runner，限制声明的输入/输出路径，记录显式 system binary 例外，只向子进程传递白名单科研环境变量并在日志落盘前脱敏。写入命令在 handler 运行前检查声明写入根，运行后仍核对真实写集。文献检索会在 stage manifest、`status` 和 `doctor` 中区分 `success_with_items`、`success_empty`、`provider_error`、`auth_required`、`rate_limited` 和 `offline_fallback`。
@@ -351,6 +383,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - `v0.30.4` 注册 `dpl.manuscript_completion.v1`，并新增 `prepare-manuscript-completion` 和只读的 `manuscript-completion-status`。生成的作者模板覆盖结构化 metadata、基金、数据/代码可用性、短标题、关键词和用户确认文献；期刊报告明确区分 required、recommended、missing、placeholder 与 not-applicable。Completion 输入不能直接替换科学证据、指标、论断或图表，后续 preview/apply 命令在事务门通过前仍不公开。
 - `v0.30.5` 使用稳定 paragraph ID、expected text/hash 和可选 occurrence 定位作者修改，LaTeX 行号只作为非权威提示。只有稳定锚点仍一致时才允许报告并重新定位行号漂移；stale、歧义、重复 revision key 和重复目标会让整个 packet 被拒绝。一个 packet 可以在同一 source-map/project revision 上解析多章节与用户确认文献，项目修订命令也不再允许读取项目目录外的内容文件。
 - `v0.30.6` 将 completion preview、apply 与 rollback 串成同一个 hash 绑定事务。Preview 在不触碰 canonical source 的情况下生成 metadata/section/BibTeX 统一 diff、候选 LaTeX 与候选 PDF。Apply 会重新核对 packet、project revision、source map、evidence snapshot 和 before hash，再原子写入 metadata、文献、章节、stale 状态、ledger 与 exact-text user lock。重复 apply 保持幂等，注入故障会恢复完整写集，rollback 不会覆盖 completion 后又被修改的产物；`compile_required`、未生成的 Codex patch 和科学证据变更均明确为非通过状态。
+- `v0.30.7` 将已应用的 completion manifest、论文 metadata、全部 canonical section、BibTeX/reference registry、promoted evidence、result/figure manifest、最终 citation-audit snapshot、integrity/quality 报告、两份独立盲审和 `main.pdf` 绑定为同一个 release hash。任何非通过或 stale 的绑定产物都会阻止 review 与 confirmation。README 开头现已直接说明当前 evidence-first 路径和最终作者确认点，并在 `docs/` 中提供完整中英文 completion 指南。
 
 ### v0.28.1-v0.30.0（2026-07-17）-- 事务化证据架构与跨学科发布合同
 
