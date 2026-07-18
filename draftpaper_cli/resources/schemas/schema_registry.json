@@ -7,6 +7,7 @@
     "plugin_execution_contract": {"current": "dpl.plugin_execution_contract.v2", "accepted": []},
     "artifact_dependency_dag": {"current": "dpl.artifact_dependency_dag.v2", "accepted": ["dpl.artifact_dependency_dag.v1"]},
     "section_revision_transaction": {"current": "dpl.section_revision_transaction.v2", "accepted": ["dpl.section_revision_transaction.v1"]},
+    "manuscript_completion": {"current": "dpl.manuscript_completion.v1", "accepted": []},
     "claim_contract": {"current": "dpl.claim_contract.v2", "accepted": [], "adapters": {"v0.18.2": "legacy_claim_contract_adapter", "v0.18.4": "legacy_claim_contract_adapter"}},
     "evidence_snapshot": {"current": "dpl.evidence_snapshot.v2", "accepted": [], "adapters": {"v0.17.7": "legacy_evidence_snapshot_adapter"}},
     "result_manifest": {"current": "dpl.result_manifest.v2", "accepted": ["dpl.result_manifest.v1"], "adapters": {"v0.16.5": "legacy_result_manifest_adapter"}},

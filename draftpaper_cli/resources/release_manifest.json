@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.30.3",
-  "workflow_skill_sha256": "427b0720e772f37e63af4d4ab3771f89bdc1f90ffd7bef32044d36e7dba5a081",
-  "workflow_contract_sha256": "445d877495c181416d0fdebff104b85ac7ad7873f95bdc142c0d42aca8890539",
+  "package_version": "0.30.4",
+  "workflow_skill_sha256": "21a40fdd6ce1fccd84fd26fab249ca2d0e62d0e6af2cdcea2cbb572c9f1c3e2d",
+  "workflow_contract_sha256": "d20154090cab632ca3078068fd9d9df5a14c975846e4b31b52e8e9a494200198",
   "plugin_count": 210,
   "fixture_count": 546,
   "plugin_catalog_hash": "dd6def2969d7ea6a6e758957804452b5761df836d160e4c1da5b90f3652e6226",
-  "command_count": 204,
+  "command_count": 206,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "review-research-plan",

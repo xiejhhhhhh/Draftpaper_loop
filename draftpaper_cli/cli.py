@@ -934,6 +934,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     source_map = subparsers.add_parser("build-manuscript-source-map", help="Build stable paragraph and LaTeX line anchors for author revisions.")
     source_map.add_argument("--project", required=True)
+    completion_template = subparsers.add_parser(
+        "prepare-manuscript-completion",
+        help="Write a structured final-author completion template and journal missing-field report.",
+    )
+    completion_template.add_argument("--project", required=True)
+    completion_status = subparsers.add_parser(
+        "manuscript-completion-status",
+        help="Report final-author metadata readiness without changing the project.",
+    )
+    completion_status.add_argument("--project", required=True)
     preview_revision = subparsers.add_parser("preview-manuscript-revision", help="Preview a line- or paragraph-anchored manuscript revision without applying it.")
     preview_revision.add_argument("--project", required=True)
     preview_revision.add_argument("--at", default=None)
