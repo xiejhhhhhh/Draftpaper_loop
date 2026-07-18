@@ -343,12 +343,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 打赏只支持项目维护，不代表商业授权。
 
 ## 最近更新
-### v0.30.1-v0.30.4（2026-07-18）-- 发布门、精确 stale 传播与作者补全 Schema
+### v0.30.1-v0.30.5（2026-07-18）-- 发布门、精确 stale 传播与作者补全 Schema
 
 - `v0.30.1` 在不公开实验性 manuscript completion 原型的前提下，对齐公开命令清单和 release manifest。core evidence、data quality、result validity、method verification 和 integrity gate 的非通过科学判定现在都会返回非零进程状态。MCP artifact 读取拒绝私有 locator 和凭证类文件；期刊及 registry metadata 抓取统一经过 HTTPS、host、DNS 与响应大小策略。
 - `v0.30.2` 让 manifest 和 CLI method verification 使用同一个项目内 runner 合同，拒绝 inline Python 与 shell runner，限制声明的输入/输出路径，记录显式 system binary 例外，只向子进程传递白名单科研环境变量并在日志落盘前脱敏。写入命令在 handler 运行前检查声明写入根，运行后仍核对真实写集。文献检索会在 stage manifest、`status` 和 `doctor` 中区分 `success_with_items`、`success_empty`、`provider_error`、`auth_required`、`rate_limited` 和 `offline_fallback`。
 - `v0.30.3` 用唯一的 13 类 change taxonomy 取代三套相互冲突的 revision/stale 词表。artifact DAG、外部漂移同步、章节修订、作者修订和审稿修复现在统一输出 canonical 名称，并从同一个合同推导 stale 范围。Methods 与 Discussion 修改会从真实章节阶段开始，证据变化必须重新打开科学链；revision preview/apply 还会绑定同一个 promoted evidence snapshot。
 - `v0.30.4` 注册 `dpl.manuscript_completion.v1`，并新增 `prepare-manuscript-completion` 和只读的 `manuscript-completion-status`。生成的作者模板覆盖结构化 metadata、基金、数据/代码可用性、短标题、关键词和用户确认文献；期刊报告明确区分 required、recommended、missing、placeholder 与 not-applicable。Completion 输入不能直接替换科学证据、指标、论断或图表，后续 preview/apply 命令在事务门通过前仍不公开。
+- `v0.30.5` 使用稳定 paragraph ID、expected text/hash 和可选 occurrence 定位作者修改，LaTeX 行号只作为非权威提示。只有稳定锚点仍一致时才允许报告并重新定位行号漂移；stale、歧义、重复 revision key 和重复目标会让整个 packet 被拒绝。一个 packet 可以在同一 source-map/project revision 上解析多章节与用户确认文献，项目修订命令也不再允许读取项目目录外的内容文件。
 
 ### v0.28.1-v0.30.0（2026-07-17）-- 事务化证据架构与跨学科发布合同
 

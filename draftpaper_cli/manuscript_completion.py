@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,13 @@ import yaml
 
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .manuscript_revision import (
+    SOURCE_MAP,
+    build_manuscript_source_map,
+    resolve_manuscript_revision_target as _resolve_manuscript_revision_target,
+)
 from .state_kernel import atomic_write_text
+from .write_set_guard import BoundaryViolation, resolve_confined_path
 
 
 COMPLETION_ROOT = "writing/manuscript_completion"
@@ -280,6 +287,147 @@ def validate_manuscript_completion_payload(project: str | Path, payload: Any) ->
     }
 
 
+def _read_completion_input(path: str | Path) -> tuple[Path, dict[str, Any]]:
+    source = Path(path).expanduser().resolve()
+    if not source.is_file():
+        raise ManuscriptCompletionError(f"Completion input does not exist: {source}")
+    try:
+        text = source.read_text(encoding="utf-8-sig")
+        value = json.loads(text) if source.suffix.lower() == ".json" else yaml.safe_load(text)
+    except (OSError, json.JSONDecodeError, yaml.YAMLError) as exc:
+        raise ManuscriptCompletionError(f"Cannot parse completion input: {source}") from exc
+    if not isinstance(value, dict):
+        raise ManuscriptCompletionError("Completion input must be a YAML/JSON object.")
+    return source, value
+
+
+def resolve_manuscript_revision_target(project: str | Path, locator: dict[str, Any]) -> dict[str, Any]:
+    """Expose completion locator diagnostics with completion-specific errors."""
+    try:
+        return _resolve_manuscript_revision_target(project, locator)
+    except Exception as exc:
+        from .manuscript_revision import ManuscriptRevisionError
+
+        if isinstance(exc, ManuscriptRevisionError):
+            raise ManuscriptCompletionError(str(exc)) from exc
+        raise
+
+
+def _stable_hash(payload: Any) -> str:
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _normalize_revision(
+    project: Path,
+    input_dir: Path,
+    raw: Any,
+    index: int,
+) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise ManuscriptCompletionError(f"section_revisions[{index}] must be a mapping.")
+    allowed = {
+        "revision_key",
+        "target",
+        "operation",
+        "mode",
+        "content",
+        "content_file",
+        "instruction",
+        "change_class",
+    }
+    unknown = sorted(set(raw) - allowed)
+    if unknown:
+        raise ManuscriptCompletionError(
+            f"Unsupported section_revisions[{index}] fields: " + ", ".join(unknown)
+        )
+    revision_key = str(raw.get("revision_key") or "").strip()
+    if not revision_key:
+        raise ManuscriptCompletionError(f"section_revisions[{index}] requires revision_key.")
+    target = raw.get("target")
+    if not isinstance(target, dict):
+        raise ManuscriptCompletionError(f"section_revisions[{index}].target must be a mapping.")
+    operation = str(raw.get("operation") or "replace")
+    if operation not in {"insert_before", "insert_after", "replace", "delete"}:
+        raise ManuscriptCompletionError(f"section_revisions[{index}].operation is invalid.")
+    mode = str(raw.get("mode") or "instruction_to_codex")
+    if mode not in {"exact_text", "instruction_to_codex"}:
+        raise ManuscriptCompletionError(f"section_revisions[{index}].mode is invalid.")
+    if raw.get("content") is not None and raw.get("content_file") is not None:
+        raise ManuscriptCompletionError(f"section_revisions[{index}] cannot use content and content_file together.")
+    content = str(raw.get("content") or "")
+    if raw.get("content_file") is not None:
+        try:
+            content_path = resolve_confined_path(input_dir, str(raw["content_file"]), must_exist=True)
+        except BoundaryViolation as exc:
+            raise ManuscriptCompletionError(
+                f"section_revisions[{index}].content_file must stay inside the completion input directory."
+            ) from exc
+        content = content_path.read_text(encoding="utf-8-sig")
+    instruction = str(raw.get("instruction") or "").strip()
+    if mode == "exact_text" and operation != "delete" and not content:
+        raise ManuscriptCompletionError(f"section_revisions[{index}] exact_text requires content.")
+    if mode == "instruction_to_codex" and not instruction:
+        raise ManuscriptCompletionError(f"section_revisions[{index}] instruction_to_codex requires instruction.")
+    try:
+        resolution = _resolve_manuscript_revision_target(project, target, refresh_source_map=False)
+    except Exception as exc:
+        from .manuscript_revision import ManuscriptRevisionError
+
+        if isinstance(exc, ManuscriptRevisionError):
+            raise ManuscriptCompletionError(str(exc)) from exc
+        raise
+    return {
+        "revision_key": revision_key,
+        "target": dict(target),
+        "resolved_target": resolution,
+        "operation": operation,
+        "mode": mode,
+        "content": content,
+        "instruction": instruction,
+        "change_class": raw.get("change_class"),
+    }
+
+
+def parse_manuscript_completion_packet(project: str | Path, input_path: str | Path) -> dict[str, Any]:
+    """Resolve one batch packet against one source-map and project revision without applying it."""
+    state = load_project(project)
+    source, raw = _read_completion_input(input_path)
+    normalized = validate_manuscript_completion_payload(state.path, raw)
+    build_manuscript_source_map(state.path)
+    source_map_path = state.path / SOURCE_MAP
+    source_map_sha256 = hashlib.sha256(source_map_path.read_bytes()).hexdigest()
+    project_revision = int(load_project(state.path).metadata.get("state_revision") or 0)
+    resolved = [
+        _normalize_revision(state.path, source.parent, item, index)
+        for index, item in enumerate(normalized["section_revisions"])
+    ]
+    revision_keys = [str(item["revision_key"]) for item in resolved]
+    if len(revision_keys) != len(set(revision_keys)):
+        raise ManuscriptCompletionError("duplicate_revision_key: revision_key values must be unique within a packet.")
+    paragraph_ids = [str(item["resolved_target"].get("paragraph_id") or "") for item in resolved]
+    duplicates = sorted({item for item in paragraph_ids if paragraph_ids.count(item) > 1})
+    if duplicates:
+        raise ManuscriptCompletionError(
+            "conflicting_target: multiple revisions target the same paragraph: " + ", ".join(duplicates)
+        )
+    packet_core = {
+        "schema_version": COMPLETION_SCHEMA,
+        "project_id": normalized["project_id"],
+        "target_journal": normalized["target_journal"],
+        "project_revision": project_revision,
+        "source_map_sha256": source_map_sha256,
+        "metadata": normalized["metadata"],
+        "custom_references": normalized["custom_references"],
+        "resolved_revisions": resolved,
+    }
+    return {
+        "status": "resolved",
+        **packet_core,
+        "packet_hash": _stable_hash(packet_core),
+    }
+
+
 def _journal_contract(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     profile = _read_json(root / "journal_profile" / "journal_profile.json")
     raw_rules = profile.get("rules")
@@ -412,6 +560,8 @@ __all__ = [
     "COMPLETION_SCHEMA",
     "ManuscriptCompletionError",
     "manuscript_completion_status",
+    "parse_manuscript_completion_packet",
     "prepare_manuscript_completion",
+    "resolve_manuscript_revision_target",
     "validate_manuscript_completion_payload",
 ]

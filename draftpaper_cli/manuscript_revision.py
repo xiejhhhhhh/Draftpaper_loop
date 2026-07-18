@@ -22,6 +22,7 @@ from .project_state import load_project, mark_stages_stale, update_stage_status
 from .references import citation_evidence_rows, write_literature_html_summaries
 from .section_contracts import validate_section_writing
 from .state_kernel import append_jsonl_locked
+from .write_set_guard import BoundaryViolation, resolve_confined_path
 
 
 SOURCE_MAP = "latex/manuscript_source_map.json"
@@ -249,33 +250,143 @@ def assert_writer_may_replace_section(project: str | Path, section: str) -> None
         )
 
 
-def _target_from_locator(root: Path, at: str | None, paragraph: str | None) -> dict[str, Any]:
-    source_map = _read_json(root / SOURCE_MAP)
-    if not source_map:
+def _source_map_rows(root: Path, *, refresh: bool) -> list[dict[str, Any]]:
+    if refresh or not (root / SOURCE_MAP).is_file():
         build_manuscript_source_map(root)
-        source_map = _read_json(root / SOURCE_MAP)
-    rows = [item for item in source_map.get("paragraphs") or [] if isinstance(item, dict)]
-    if paragraph:
-        matches = [item for item in rows if item.get("paragraph_id") == paragraph]
-        if len(matches) != 1:
-            raise ManuscriptRevisionError("Stable paragraph ID is missing or ambiguous; rebuild the source map and reselect the target.")
-        return matches[0]
-    if not at:
-        raise ManuscriptRevisionError("Provide --at file:start-end or --paragraph stable_id.")
-    match = re.fullmatch(r"(.+):(\d+)(?:-(\d+))?", at.strip())
-    if not match:
-        raise ManuscriptRevisionError("Line target must use file:start-end.")
-    requested_file = match.group(1).replace("\\", "/")
-    start, end = int(match.group(2)), int(match.group(3) or match.group(2))
-    matches = [
-        item for item in rows
-        if item.get("file") == requested_file
-        and int(item.get("line_start") or 0) <= end
-        and int(item.get("line_end") or 0) >= start
-    ]
-    if len(matches) != 1:
-        raise ManuscriptRevisionError("Line range does not resolve to exactly one paragraph; use a stable paragraph ID.")
-    return matches[0]
+    source_map = _read_json(root / SOURCE_MAP)
+    return [dict(item) for item in source_map.get("paragraphs") or [] if isinstance(item, dict)]
+
+
+def _source_row_text(root: Path, row: dict[str, Any]) -> str:
+    source = root / str(row.get("canonical_file") or row.get("file") or "")
+    if not source.is_file():
+        return ""
+    text = source.read_text(encoding="utf-8-sig")
+    for block in _paragraphs(text):
+        if int(block["line_start"]) == int(row.get("line_start") or 0) and int(block["line_end"]) == int(row.get("line_end") or 0):
+            return str(block["text"])
+    return ""
+
+
+def resolve_manuscript_revision_target(
+    project: str | Path,
+    locator: dict[str, Any],
+    *,
+    refresh_source_map: bool = True,
+) -> dict[str, Any]:
+    """Resolve stable paragraph anchors while treating line numbers as hints only."""
+    state = load_project(project)
+    if not isinstance(locator, dict):
+        raise ManuscriptRevisionError("Revision locator must be a mapping.")
+    rows = _source_map_rows(state.path, refresh=refresh_source_map)
+    section = str(locator.get("section") or "").strip().lower()
+    requested_file = str(locator.get("file") or "").replace("\\", "/").strip()
+    if section:
+        rows = [row for row in rows if str(row.get("section") or "") == section]
+    if requested_file:
+        rows = [
+            row
+            for row in rows
+            if requested_file in {str(row.get("file") or ""), str(row.get("canonical_file") or "")}
+        ]
+    paragraph_id = str(locator.get("paragraph_id") or "").strip()
+    expected_sha256 = str(locator.get("expected_sha256") or locator.get("expected_hash") or "").strip().lower()
+    expected_text = str(locator.get("expected_text") or "")
+    if not any((paragraph_id, expected_sha256, expected_text.strip())):
+        raise ManuscriptRevisionError(
+            "Provide a stable locator: paragraph_id, expected_sha256, or expected_text; line hints alone are not writable anchors."
+        )
+
+    candidates = rows
+    matched_by: list[str] = []
+    if paragraph_id:
+        candidates = [row for row in candidates if str(row.get("paragraph_id") or "") == paragraph_id]
+        matched_by.append("paragraph_id")
+        if not candidates:
+            raise ManuscriptRevisionError("stale_target: paragraph_id is absent from the current source map.")
+    if expected_sha256:
+        candidates = [row for row in candidates if str(row.get("before_hash") or "").lower() == expected_sha256]
+        matched_by.append("expected_sha256")
+        if not candidates:
+            raise ManuscriptRevisionError("stale_target: expected_sha256 does not match the selected paragraph.")
+    if expected_text.strip():
+        normalized = _normalized_context(expected_text)
+        candidates = [row for row in candidates if _normalized_context(_source_row_text(state.path, row)) == normalized]
+        matched_by.append("expected_text")
+        if not candidates:
+            raise ManuscriptRevisionError("stale_target: expected_text does not match the selected paragraph.")
+
+    candidates.sort(key=lambda row: (str(row.get("file") or ""), int(row.get("line_start") or 0)))
+    start_hint = int(locator.get("line_start_hint") or 0)
+    end_hint = int(locator.get("line_end_hint") or start_hint or 0)
+    if len(candidates) > 1 and start_hint:
+        narrowed = [
+            row
+            for row in candidates
+            if int(row.get("line_start") or 0) <= end_hint and int(row.get("line_end") or 0) >= start_hint
+        ]
+        if narrowed:
+            candidates = narrowed
+            matched_by.append("line_hint")
+    occurrence = locator.get("occurrence")
+    if occurrence is not None:
+        try:
+            occurrence_index = int(occurrence)
+        except (TypeError, ValueError) as exc:
+            raise ManuscriptRevisionError("occurrence must be a positive integer.") from exc
+        if occurrence_index < 1 or occurrence_index > len(candidates):
+            raise ManuscriptRevisionError("stale_target: occurrence is outside the current candidate set.")
+        candidates = [candidates[occurrence_index - 1]]
+        matched_by.append("occurrence")
+    if len(candidates) != 1:
+        raise ManuscriptRevisionError(
+            "ambiguous_target: stable locator resolves to multiple paragraphs; add paragraph_id, expected_sha256, or occurrence."
+        )
+    target = dict(candidates[0])
+    target.update(
+        {
+            "status": "resolved",
+            "matched_by": matched_by,
+            "line_drift": bool(
+                start_hint
+                and (
+                    int(target.get("line_start") or 0) != start_hint
+                    or int(target.get("line_end") or 0) != end_hint
+                )
+            ),
+            "text": _source_row_text(state.path, target),
+        }
+    )
+    return target
+
+
+def _target_from_locator(
+    root: Path,
+    at: str | None,
+    paragraph: str | None,
+    *,
+    expected_text: str | None = None,
+    expected_sha256: str | None = None,
+    occurrence: int | None = None,
+) -> dict[str, Any]:
+    locator: dict[str, Any] = {
+        "paragraph_id": paragraph,
+        "expected_text": expected_text,
+        "expected_sha256": expected_sha256,
+        "occurrence": occurrence,
+    }
+    if at:
+        match = re.fullmatch(r"(.+):(\d+)(?:-(\d+))?", at.strip())
+        if not match:
+            raise ManuscriptRevisionError("Line target must use file:start-end.")
+        locator.update(
+            {
+                "file": match.group(1).replace("\\", "/"),
+                "line_start_hint": int(match.group(2)),
+                "line_end_hint": int(match.group(3) or match.group(2)),
+            }
+        )
+    return resolve_manuscript_revision_target(root, locator, refresh_source_map=False)
 
 
 def _classify(section: str, instruction: str, content: str, explicit: str | None = None) -> tuple[str, list[str], bool]:
@@ -412,10 +523,29 @@ def preview_manuscript_revision(
     operation: str = "replace",
     mode: str = "instruction_to_codex",
     change_class: str | None = None,
+    expected_text: str | None = None,
+    expected_text_file: str | Path | None = None,
+    expected_sha256: str | None = None,
+    occurrence: int | None = None,
 ) -> dict[str, Any]:
     state = load_project(project)
     evidence_snapshot_id = _validated_evidence_snapshot_id(state.path)
-    target = _target_from_locator(state.path, at, paragraph)
+    if expected_text and expected_text_file:
+        raise ManuscriptRevisionError("Use either expected_text or expected_text_file, not both.")
+    if expected_text_file:
+        try:
+            expected_path = resolve_confined_path(state.path, expected_text_file, must_exist=True)
+        except BoundaryViolation as exc:
+            raise ManuscriptRevisionError("Expected-text file must stay inside the project directory.") from exc
+        expected_text = expected_path.read_text(encoding="utf-8-sig")
+    target = _target_from_locator(
+        state.path,
+        at,
+        paragraph,
+        expected_text=expected_text,
+        expected_sha256=expected_sha256,
+        occurrence=occurrence,
+    )
     canonical = state.path / str(target["canonical_file"])
     current = canonical.read_text(encoding="utf-8-sig")
     block = next((item for item in _paragraphs(current) if item["line_start"] == target["line_start"] and item["line_end"] == target["line_end"]), None)
@@ -423,7 +553,11 @@ def preview_manuscript_revision(
         raise ManuscriptRevisionError("Target paragraph changed after source-map generation; rebuild and preview again.")
     content = ""
     if content_file:
-        content = Path(content_file).expanduser().resolve().read_text(encoding="utf-8-sig")
+        try:
+            content_path = resolve_confined_path(state.path, content_file, must_exist=True)
+        except BoundaryViolation as exc:
+            raise ManuscriptRevisionError("Revision content file must stay inside the project directory.") from exc
+        content = content_path.read_text(encoding="utf-8-sig")
     if mode == "exact_text" and not content_file:
         raise ManuscriptRevisionError("exact_text mode requires --content-file.")
     classification, stale_scope, citation_bearing = _classify(str(target["section"]), instruction, content, change_class)

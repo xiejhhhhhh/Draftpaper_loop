@@ -46,6 +46,13 @@ def _project(tmp_path: Path) -> Path:
     return project
 
 
+def _project_input(project: Path, name: str, text: str) -> Path:
+    path = project / "writing" / "author_input" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def test_source_map_supports_paragraph_and_line_targets_and_detects_drift(tmp_path: Path) -> None:
     project = _project(tmp_path)
     report = build_manuscript_source_map(project)
@@ -53,8 +60,7 @@ def test_source_map_supports_paragraph_and_line_targets_and_detects_drift(tmp_pa
     source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
     target = next(item for item in source_map["paragraphs"] if item["section"] == "discussion")
 
-    content = tmp_path / "replacement.tex"
-    content.write_text("A precise replacement paragraph.\n", encoding="utf-8")
+    content = _project_input(project, "replacement.tex", "A precise replacement paragraph.\n")
     by_paragraph = preview_manuscript_revision(
         project,
         "Replace this paragraph",
@@ -68,6 +74,7 @@ def test_source_map_supports_paragraph_and_line_targets_and_detects_drift(tmp_pa
         project,
         "Replace by current line anchor",
         at=f"{target['file']}:{target['line_start']}-{target['line_end']}",
+        expected_sha256=target["before_hash"],
         content_file=content,
     )
     assert by_line["status"] == "ready"
@@ -95,8 +102,7 @@ def test_exact_text_is_locked_applied_and_rollback_is_hash_guarded(tmp_path: Pat
     build_manuscript_source_map(project)
     source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
     target = next(item for item in source_map["paragraphs"] if item["section"] == "discussion")
-    content = tmp_path / "exact.tex"
-    content.write_text("Author-approved exact wording with \\citep{Existing2026}.\n", encoding="utf-8")
+    content = _project_input(project, "exact.tex", "Author-approved exact wording with \\citep{Existing2026}.\n")
 
     preview = preview_manuscript_revision(
         project,
@@ -138,8 +144,7 @@ def test_scientific_change_cannot_be_applied_as_prose_patch(tmp_path: Path) -> N
     build_manuscript_source_map(project)
     source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
     target = next(item for item in source_map["paragraphs"] if item["section"] == "results")
-    content = tmp_path / "scientific.tex"
-    content.write_text("The replacement run yielded F1=0.91.\n", encoding="utf-8")
+    content = _project_input(project, "scientific.tex", "The replacement run yielded F1=0.91.\n")
     preview = preview_manuscript_revision(
         project,
         "Replace the model run and figure",
@@ -156,8 +161,7 @@ def test_revision_apply_rejects_evidence_snapshot_changed_after_preview(tmp_path
     build_manuscript_source_map(project)
     source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
     target = next(item for item in source_map["paragraphs"] if item["section"] == "discussion")
-    content = tmp_path / "snapshot_bound.tex"
-    content.write_text("Snapshot-bound wording.\n", encoding="utf-8")
+    content = _project_input(project, "snapshot_bound.tex", "Snapshot-bound wording.\n")
 
     with patch(
         "draftpaper_cli.manuscript_revision.validate_promoted_snapshot_for_writing",
