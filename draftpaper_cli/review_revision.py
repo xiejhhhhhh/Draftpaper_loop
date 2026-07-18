@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .change_impact import ChangeClassification, affected_stages
+from .change_impact import ChangeClassification, affected_stages, change_class_spec, normalize_change_class
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stages_stale
@@ -1381,31 +1381,33 @@ def apply_revision(project: str | Path, *, issue_ids: list[str] | None = None, d
     for issue in issues:
         stage = str(issue.get("target_stage") or "research_plan")
         declared_class = str(issue.get("change_class") or "")
-        inferred_class = declared_class or {
-            "references": "citation_local",
-            "discussion": "prose_semantic",
+        inferred_class = normalize_change_class(declared_class) if declared_class else {
+            "references": "citation_change",
+            "discussion": "claim_boundary_change",
             "latex": "presentation_only",
             "quality_checks": "presentation_only",
-            "results": "scientific_result",
-            "result_validity": "scientific_result",
-            "methods": "method_semantic",
-            "method_plan": "method_semantic",
-            "data": "data_semantic",
-        }.get(stage, "research_design")
+            "results": "result_interpretation_change",
+            "result_validity": "metrics_change",
+            "methods": "method_change",
+            "method_plan": "method_change",
+            "data": "data_change",
+        }.get(stage, "research_plan_change")
         role = {
-            "citation_local": "citation_repair",
+            "citation_change": "citation_repair",
             "presentation_only": "latex_style",
-            "prose_semantic": "section_prose",
-            "scientific_result": "result_metric",
-            "method_semantic": "method_code",
-            "data_semantic": "processed_data",
+            "claim_boundary_change": "section_prose",
+            "result_interpretation_change": "section_prose",
+            "metrics_change": "result_metric",
+            "method_change": "method_code",
+            "data_change": "processed_data",
         }.get(inferred_class, "research_plan")
+        spec = change_class_spec(inferred_class)
         change = ChangeClassification(
             inferred_class,
             role,
             stage,
-            inferred_class not in {"citation_local", "presentation_only"},
-            inferred_class in {"citation_local", "presentation_only", "prose_semantic", "scientific_result"},
+            spec.reopen_evidence or spec.rerun_science or inferred_class in {"claim_boundary_change", "result_interpretation_change"},
+            inferred_class in {"metadata_only", "presentation_only", "prose_only", "citation_change", "claim_boundary_change", "result_interpretation_change", "figure_change"},
             f"Revision issue targets {stage}.",
             {"issue_id": issue.get("issue_id")},
         )

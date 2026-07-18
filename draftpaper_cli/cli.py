@@ -31,6 +31,7 @@ from .code_ownership import (
 )
 from .claim_contract import ClaimContractError, apply_result_downgrade
 from .capability_packs import discover_capability_packs, evaluate_capability_routing
+from .change_impact import CANONICAL_CHANGE_CLASSES
 from .command_transaction import record_command_transaction
 from .write_set_guard import BoundaryViolation, WriteSetGuard
 from .workflow_trace import begin_workflow_trace, finish_workflow_trace
@@ -619,7 +620,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply_section_revision_parser.add_argument("--project", required=True)
     apply_section_revision_parser.add_argument("--section", required=True, choices=["introduction", "data", "methods", "results", "discussion"])
     apply_section_revision_parser.add_argument("--input", required=True)
-    apply_section_revision_parser.add_argument("--change-class", choices=["presentation_only", "citation_local", "prose_semantic_no_evidence_change", "metadata_claim_change", "cohort_definition_change", "analysis_spec_change", "run_output_change", "figure_semantic_change", "claim_contract_change"])
+    apply_section_revision_parser.add_argument("--change-class", choices=list(CANONICAL_CHANGE_CLASSES))
 
     accept_section = subparsers.add_parser("accept-section-draft", help="Accept an editor-cleared free-prose section for formal manuscript writing.")
     accept_section.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -911,7 +912,7 @@ def build_parser() -> argparse.ArgumentParser:
     revise_macro.add_argument("--content-file", default=None)
     revise_macro.add_argument("--operation", choices=["insert_before", "insert_after", "replace", "delete"], default="replace")
     revise_macro.add_argument("--mode", choices=["exact_text", "instruction_to_codex"], default="instruction_to_codex")
-    revise_macro.add_argument("--change-class", choices=["language_only", "citation_edit", "new_reference", "claim_narrowing", "result_interpretation", "scientific_evidence_change"], default=None)
+    revise_macro.add_argument("--change-class", choices=list(CANONICAL_CHANGE_CLASSES), default=None)
     verify_action = subparsers.add_parser("verify-next-action", help="Verify that status recommends a registered command with satisfiable CLI preconditions.")
     verify_action.add_argument("--project", required=True)
     rebuild = subparsers.add_parser("rebuild-derived", help="Plan rebuilds for current derived artifacts without touching canonical scientific sources.")
@@ -941,7 +942,7 @@ def build_parser() -> argparse.ArgumentParser:
     preview_revision.add_argument("--content-file", default=None)
     preview_revision.add_argument("--operation", choices=["insert_before", "insert_after", "replace", "delete"], default="replace")
     preview_revision.add_argument("--mode", choices=["exact_text", "instruction_to_codex"], default="instruction_to_codex")
-    preview_revision.add_argument("--change-class", choices=["language_only", "citation_edit", "new_reference", "claim_narrowing", "result_interpretation", "scientific_evidence_change"], default=None)
+    preview_revision.add_argument("--change-class", choices=list(CANONICAL_CHANGE_CLASSES), default=None)
     apply_manuscript = subparsers.add_parser("apply-manuscript-revision", help="Apply a previously previewed revision after hash and anchor verification.")
     apply_manuscript.add_argument("--project", required=True)
     apply_manuscript.add_argument("--request-id", required=True)

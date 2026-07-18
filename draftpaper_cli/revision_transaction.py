@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_dag import record_artifact_change
+from .change_impact import normalize_change_class
 from .manuscript_artifacts import SECTION_CANONICAL_ARTIFACTS, SECTION_DERIVED_ARTIFACTS
 from .manuscript_composer import SectionCompositionError, accept_section_draft, submit_section_draft
 from .project_scaffold import _write_json, utc_now
@@ -23,7 +24,7 @@ class SectionRevisionTransactionError(RuntimeError):
 
 def _classify(before: str, after: str, explicit: str | None) -> str:
     if explicit:
-        return explicit
+        return normalize_change_class(explicit)
     compact_before = " ".join(before.split())
     compact_after = " ".join(after.split())
     if compact_before == compact_after:
@@ -32,8 +33,8 @@ def _classify(before: str, after: str, explicit: str | None) -> str:
     before_cites = sorted(key.strip() for group in citation_pattern.findall(before) for key in group.split(","))
     after_cites = sorted(key.strip() for group in citation_pattern.findall(after) for key in group.split(","))
     if before_cites != after_cites:
-        return "citation_local"
-    return "prose_semantic_no_evidence_change"
+        return "citation_change"
+    return "prose_only"
 
 
 def apply_section_revision(

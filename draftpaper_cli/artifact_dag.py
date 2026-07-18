@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .change_impact import CANONICAL_CHANGE_CLASSES, normalize_change_class
 from .project_scaffold import _write_json, utc_now
 from .project_state import mark_stage_roots_stale
 
@@ -16,16 +17,23 @@ ARTIFACT_STALE_REPORT = "writing/artifact_stale_report.json"
 
 
 CHANGE_CLASS_ROOTS = {
+    "metadata_only": {"manuscript_metadata", "latex_assembly", "quality_release"},
     "presentation_only": {"latex_render", "independent_reviews", "quality_release"},
-    "citation_local": {"affected_section", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "prose_semantic_no_evidence_change": {"affected_section", "dependent_discussion_claims", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "metadata_claim_change": {"manuscript_metadata", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "cohort_definition_change": {"data_semantics", "analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "analysis_spec_change": {"analysis_execution", "figures", "core_evidence", "results", "methods", "discussion", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "run_output_change": {"figures", "core_evidence", "results", "methods", "discussion", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "figure_semantic_change": {"core_evidence", "results", "discussion", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
-    "claim_contract_change": {"research_plan", "data_semantics", "analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "prose_only": {"affected_section", "dependent_discussion_claims", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "citation_change": {"affected_section", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "claim_boundary_change": {"affected_section", "dependent_discussion_claims", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "result_interpretation_change": {"results", "discussion", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "figure_change": {"core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "metrics_change": {"core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "run_change": {"figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "method_change": {"analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "data_change": {"data_semantics", "analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "cohort_change": {"data_semantics", "analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
+    "research_plan_change": {"research_plan", "data_semantics", "analysis_execution", "figures", "core_evidence", "all_sections", "latex_assembly", "citation_audit", "independent_reviews", "quality_release"},
 }
+
+if tuple(CHANGE_CLASS_ROOTS) != CANONICAL_CHANGE_CLASSES:
+    raise RuntimeError("Artifact DAG change classes diverge from the authoritative change taxonomy.")
 
 
 DEFAULT_DEPENDENCIES = {
@@ -52,20 +60,25 @@ DEFAULT_DEPENDENCIES = {
 
 def stage_roots_for_change(change_class: str, *, section: str | None = None) -> list[str]:
     """Translate one semantic change into authoritative project-stage roots."""
-    if change_class not in CHANGE_CLASS_ROOTS:
-        raise ValueError(f"Unsupported artifact change class: {change_class}")
+    canonical = normalize_change_class(change_class)
     normalized = str(section or "").strip().lower()
-    if change_class in {"presentation_only", "citation_local", "metadata_claim_change"}:
+    section_stage = {"data": "data_writing", "methods": "methods_writing"}.get(normalized, normalized)
+    if canonical in {"metadata_only", "presentation_only"}:
         return ["latex"]
-    if change_class == "prose_semantic_no_evidence_change":
-        return ["discussion", "latex"] if normalized in {"data", "methods", "results", "introduction"} else ["latex"]
+    if canonical == "claim_boundary_change":
+        return [section_stage] if section_stage else ["results"]
+    if canonical in {"prose_only", "citation_change"}:
+        return [section_stage] if section_stage else ["latex"]
     return {
-        "cohort_definition_change": ["data"],
-        "analysis_spec_change": ["method_plan"],
-        "run_output_change": ["methods"],
-        "figure_semantic_change": ["figure_plan"],
-        "claim_contract_change": ["research_plan"],
-    }[change_class]
+        "result_interpretation_change": ["results"],
+        "figure_change": ["result_validity"],
+        "metrics_change": ["result_validity"],
+        "run_change": ["methods"],
+        "method_change": ["method_plan"],
+        "data_change": ["data"],
+        "cohort_change": ["data"],
+        "research_plan_change": ["research_plan"],
+    }[canonical]
 
 
 def build_artifact_dag(project: str | Path, *, write: bool = True) -> dict[str, Any]:
@@ -135,9 +148,8 @@ def downstream_artifact_ids(dag: dict[str, Any], roots: list[str]) -> list[str]:
 
 
 def stale_artifacts_for_change(change_class: str, *, section: str | None = None) -> list[str]:
-    if change_class not in CHANGE_CLASS_ROOTS:
-        raise ValueError(f"Unsupported artifact change class: {change_class}")
-    stale = set(CHANGE_CLASS_ROOTS[change_class])
+    canonical = normalize_change_class(change_class)
+    stale = set(CHANGE_CLASS_ROOTS[canonical])
     if "affected_section" in stale and section:
         stale.remove("affected_section")
         stale.add(section)
@@ -156,9 +168,10 @@ def record_artifact_change(
     section: str | None = None,
 ) -> dict[str, Any]:
     root = Path(project)
+    canonical_change_class = normalize_change_class(change_class)
     dag = build_artifact_dag(root)
-    stale = stale_artifacts_for_change(change_class, section=section)
-    stage_roots = stage_roots_for_change(change_class, section=section)
+    stale = stale_artifacts_for_change(canonical_change_class, section=section)
+    stage_roots = stage_roots_for_change(canonical_change_class, section=section)
     stale_artifact_ids = downstream_artifact_ids(dag, [f"stage:{stage}" for stage in stage_roots])
     artifact_paths = {
         str(node.get("artifact_id")): str(node.get("path"))
@@ -166,12 +179,12 @@ def record_artifact_change(
         if node.get("node_type") == "artifact" and node.get("path")
     }
     stale_stages = mark_stage_roots_stale(root, stage_roots)
-    receipt_seed = f"{change_class}|{source_artifact}|{source_hash}|{section or ''}"
+    receipt_seed = f"{canonical_change_class}|{source_artifact}|{source_hash}|{section or ''}"
     report = {
         "schema_version": "dpl.artifact_stale_report.v1",
         "generated_at": utc_now(),
         "change_id": "change:" + hashlib.sha256(receipt_seed.encode("utf-8")).hexdigest()[:16],
-        "change_class": change_class,
+        "change_class": canonical_change_class,
         "source_artifact": source_artifact,
         "source_hash": source_hash,
         "section": section,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -148,6 +149,34 @@ def test_scientific_change_cannot_be_applied_as_prose_patch(tmp_path: Path) -> N
     )
     with pytest.raises(ManuscriptRevisionError, match="cannot apply a data/method/run/core-figure change"):
         apply_manuscript_revision(project, preview["revision_id"])
+
+
+def test_revision_apply_rejects_evidence_snapshot_changed_after_preview(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    build_manuscript_source_map(project)
+    source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
+    target = next(item for item in source_map["paragraphs"] if item["section"] == "discussion")
+    content = tmp_path / "snapshot_bound.tex"
+    content.write_text("Snapshot-bound wording.\n", encoding="utf-8")
+
+    with patch(
+        "draftpaper_cli.manuscript_revision.validate_promoted_snapshot_for_writing",
+        return_value={"snapshot_id": "snapshot-v1"},
+    ):
+        preview = preview_manuscript_revision(
+            project,
+            "Clarify wording without changing evidence",
+            paragraph=target["paragraph_id"],
+            content_file=content,
+            change_class="prose_only",
+        )
+
+    with patch(
+        "draftpaper_cli.manuscript_revision.validate_promoted_snapshot_for_writing",
+        return_value={"snapshot_id": "snapshot-v2"},
+    ):
+        with pytest.raises(ManuscriptRevisionError, match="evidence snapshot changed"):
+            apply_manuscript_revision(project, preview["revision_id"])
 
 
 def test_metadata_replaces_placeholders_and_default_acknowledgment(tmp_path: Path) -> None:

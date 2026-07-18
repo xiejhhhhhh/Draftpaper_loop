@@ -15,6 +15,8 @@ from typing import Any
 import yaml
 
 from .bibliography import build_reference_registry
+from .change_impact import affected_stages_for_class, change_class_spec, normalize_change_class
+from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .passport import utc_now
 from .project_state import load_project, mark_stages_stale, update_stage_status
 from .references import citation_evidence_rows, write_literature_html_summaries
@@ -48,6 +50,14 @@ SECTION_STAGES = {
 
 class ManuscriptRevisionError(RuntimeError):
     """Raised when a revision cannot be located, previewed, or applied safely."""
+
+
+def _validated_evidence_snapshot_id(project_path: Path) -> str:
+    try:
+        snapshot = validate_promoted_snapshot_for_writing(project_path)
+    except EvidenceSnapshotMismatch as exc:
+        raise ManuscriptRevisionError(str(exc)) from exc
+    return str(snapshot.get("snapshot_id") or "")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -270,28 +280,38 @@ def _target_from_locator(root: Path, at: str | None, paragraph: str | None) -> d
 
 def _classify(section: str, instruction: str, content: str, explicit: str | None = None) -> tuple[str, list[str], bool]:
     if explicit:
-        change_class = explicit
+        change_class = normalize_change_class(explicit)
     else:
         text = f"{instruction} {content}".lower()
-        if any(token in text for token in ("replace data", "new dataset", "rerun", "new method", "replace figure", "new run")):
-            change_class = "scientific_evidence_change"
+        if any(token in text for token in ("replace data", "new dataset")):
+            change_class = "data_change"
+        elif "new method" in text:
+            change_class = "method_change"
+        elif any(token in text for token in ("rerun", "new run")):
+            change_class = "run_change"
+        elif "replace figure" in text:
+            change_class = "figure_change"
         elif re.search(r"\\cite\w*\{", content) or "citation" in text or "reference" in text:
-            change_class = "citation_edit"
-        elif section == "results" and (re.search(r"\b\d+(?:\.\d+)?\b", content) or "figure" in text):
-            change_class = "result_interpretation"
+            change_class = "citation_change"
         elif any(token in text for token in ("narrow", "weaken", "收紧", "降低结论", "limited to")):
-            change_class = "claim_narrowing"
+            change_class = "claim_boundary_change"
+        elif section == "results" and (re.search(r"\b\d+(?:\.\d+)?\b", content) or "figure" in text):
+            change_class = "result_interpretation_change"
         else:
-            change_class = "language_only"
-    stale = {
-        "language_only": ["latex", "quality_checks"],
-        "citation_edit": ["latex", "quality_checks"],
-        "new_reference": ["references", "latex", "quality_checks"],
-        "claim_narrowing": ["discussion", "latex", "quality_checks"] if section == "results" else ["latex", "quality_checks"],
-        "result_interpretation": ["discussion", "latex", "quality_checks"],
-        "scientific_evidence_change": ["result_validity", "result_support", "core_evidence", "results", "introduction", "data_writing", "methods_writing", "discussion", "latex", "quality_checks"],
-    }.get(change_class, ["latex", "quality_checks"])
-    citation_bearing = change_class in {"citation_edit", "new_reference", "claim_narrowing", "result_interpretation", "scientific_evidence_change"} or bool(re.search(r"\\cite\w*\{", content))
+            change_class = "prose_only"
+    stale = affected_stages_for_class(change_class, source_stage=SECTION_STAGES.get(section, section))
+    citation_bearing = change_class in {
+        "citation_change",
+        "claim_boundary_change",
+        "result_interpretation_change",
+        "figure_change",
+        "metrics_change",
+        "run_change",
+        "method_change",
+        "data_change",
+        "cohort_change",
+        "research_plan_change",
+    } or bool(re.search(r"\\cite\w*\{", content))
     return change_class, stale, citation_bearing
 
 
@@ -394,6 +414,7 @@ def preview_manuscript_revision(
     change_class: str | None = None,
 ) -> dict[str, Any]:
     state = load_project(project)
+    evidence_snapshot_id = _validated_evidence_snapshot_id(state.path)
     target = _target_from_locator(state.path, at, paragraph)
     canonical = state.path / str(target["canonical_file"])
     current = canonical.read_text(encoding="utf-8-sig")
@@ -434,6 +455,7 @@ def preview_manuscript_revision(
         "expected_before_hash": target["before_hash"],
         "expected_file_hash": _sha_text(current),
         "change_class": classification,
+        "evidence_snapshot_id": evidence_snapshot_id,
         "required_gates": stale_scope,
         "citation_bearing": citation_bearing,
         "preview_status": "ready" if content_file else "codex_patch_required",
@@ -510,7 +532,14 @@ def apply_manuscript_revision(project: str | Path, request_id: str) -> dict[str,
     request_path, request = _request(state.path, request_id)
     if request.get("preview_status") != "ready" or request.get("replacement_content") is None:
         raise ManuscriptRevisionError("Revision requires a complete preview before acceptance.")
-    if request.get("change_class") == "scientific_evidence_change":
+    current_snapshot_id = _validated_evidence_snapshot_id(state.path)
+    expected_snapshot_id = str(request.get("evidence_snapshot_id") or "")
+    if current_snapshot_id != expected_snapshot_id:
+        raise ManuscriptRevisionError(
+            "The promoted evidence snapshot changed after revision preview; rebuild the source map and preview against the current evidence version."
+        )
+    change_spec = change_class_spec(str(request.get("change_class") or "prose_only"))
+    if change_spec.reopen_evidence or change_spec.rerun_science:
         raise ManuscriptRevisionError("A prose patch cannot apply a data/method/run/core-figure change. Reopen evidence or create a clean project version.")
     build_manuscript_source_map(state.path)
     target = _target_from_locator(state.path, None, str(request["paragraph_id"]))
@@ -533,7 +562,7 @@ def apply_manuscript_revision(project: str | Path, request_id: str) -> dict[str,
     stale = mark_stages_stale(state.path, [item for item in request.get("required_gates") or [] if item in load_project(state.path).metadata.get("stages", {}) and item != stage])
     if request.get("citation_bearing"):
         _write_json(state.path / "citation_audit" / "stale_marker.json", {"revision_id": request_id, "after_hash": after_hash, "reason": "citation-bearing manuscript revision must be audited after acceptance"})
-    if request.get("change_class") in {"claim_narrowing", "result_interpretation"}:
+    if change_spec.rerun_review:
         _write_json(state.path / "quality_checks" / "blind_reviews" / "stale_marker.json", {"revision_id": request_id, "after_hash": after_hash, "reason": "scientific interpretation changed"})
     if request.get("mode") == "exact_text":
         locks = _read_json(state.path / LOCKS_PATH)

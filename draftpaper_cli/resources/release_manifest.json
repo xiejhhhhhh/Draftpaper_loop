@@ -1,8 +1,8 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.30.2",
-  "workflow_skill_sha256": "83d21bd59f5c2f730118dadb562f3aaca19699bb4c665bde45ddb55dd93847cf",
-  "workflow_contract_sha256": "2936832a63e21c68557ec9c1f75c9a686c2f021cce23f8e36f506b2af61abcc7",
+  "package_version": "0.30.3",
+  "workflow_skill_sha256": "427b0720e772f37e63af4d4ab3771f89bdc1f90ffd7bef32044d36e7dba5a081",
+  "workflow_contract_sha256": "445d877495c181416d0fdebff104b85ac7ad7873f95bdc142c0d42aca8890539",
   "plugin_count": 210,
   "fixture_count": 546,
   "plugin_catalog_hash": "dd6def2969d7ea6a6e758957804452b5761df836d160e4c1da5b90f3652e6226",

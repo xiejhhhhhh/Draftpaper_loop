@@ -427,10 +427,11 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
-### v0.30.1-v0.30.2 (2026-07-18) -- Release Gates and Local Execution Boundaries
+### v0.30.1-v0.30.3 (2026-07-18) -- Release Gates, Execution Boundaries and Precise Stale Propagation
 
 - `v0.30.1` reconciles the public command inventory and release manifest without exposing the experimental manuscript-completion prototype. Core evidence, data quality, result validity, method verification and integrity gates now return nonzero process status for non-passing scientific decisions. MCP artifact reads reject private locators and credential-like files, and journal/registry metadata fetching is routed through an HTTPS, host, DNS and response-size policy.
 - `v0.30.2` applies one project-local runner contract to manifest and CLI method verification, rejects inline Python and shell runners, confines declared inputs/outputs, records explicit system-binary opt-in, passes only allowlisted scientific environment variables and redacts process logs. Mutating commands now validate declared write roots before running and still verify the actual write set afterward. Literature retrieval distinguishes `success_with_items`, `success_empty`, `provider_error`, `auth_required`, `rate_limited` and `offline_fallback` in stage manifests, `status` and `doctor`.
+- `v0.30.3` replaces the three competing revision/stale vocabularies with one 13-class change taxonomy. Artifact DAG, external drift sync, section revision, author revision and reviewer repair now emit the same canonical names and derive stale impact from the same contract. Methods and Discussion edits start from their actual section stages, evidence-changing patches reopen the scientific chain, and revision preview/apply is bound to one promoted evidence snapshot.
 
 ### v0.28.1-v0.30.0 (2026-07-17) -- Transactional Evidence Architecture and Cross-discipline Release Contracts
 

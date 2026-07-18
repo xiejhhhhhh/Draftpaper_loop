@@ -29,10 +29,121 @@ RESEARCH_DESIGN_STAGES = [
     "code",
     "methods",
     "result_validity",
+    "result_support",
     "core_evidence",
     *MANUSCRIPT_STAGES,
     *FINAL_STAGES,
 ]
+
+
+@dataclass(frozen=True)
+class ChangeClassSpec:
+    change_class: str
+    affected_stages: tuple[str, ...]
+    reopen_evidence: bool
+    rerun_science: bool
+    rerun_review: bool
+    release_only: bool
+
+
+_RESULT_CONSUMERS = (
+    "result_validity",
+    "result_support",
+    "core_evidence",
+    *MANUSCRIPT_STAGES,
+    *FINAL_STAGES,
+)
+
+CHANGE_CLASS_SPECS: dict[str, ChangeClassSpec] = {
+    "metadata_only": ChangeClassSpec("metadata_only", ("latex", "quality_checks"), False, False, False, True),
+    "presentation_only": ChangeClassSpec("presentation_only", ("latex", "quality_checks"), False, False, False, True),
+    "prose_only": ChangeClassSpec("prose_only", ("citation_audit", "latex", "quality_checks"), False, False, False, False),
+    "citation_change": ChangeClassSpec("citation_change", ("citation_audit", "latex", "quality_checks"), False, False, False, False),
+    "claim_boundary_change": ChangeClassSpec(
+        "claim_boundary_change",
+        ("results", "discussion", "citation_audit", "latex", "quality_checks"),
+        False,
+        False,
+        True,
+        False,
+    ),
+    "result_interpretation_change": ChangeClassSpec(
+        "result_interpretation_change",
+        ("results", "discussion", "citation_audit", "latex", "quality_checks"),
+        False,
+        False,
+        True,
+        False,
+    ),
+    "figure_change": ChangeClassSpec("figure_change", ("figure_contracts", *_RESULT_CONSUMERS), True, False, True, False),
+    "metrics_change": ChangeClassSpec("metrics_change", _RESULT_CONSUMERS, True, True, True, False),
+    "run_change": ChangeClassSpec("run_change", ("methods", *_RESULT_CONSUMERS), True, True, True, False),
+    "method_change": ChangeClassSpec(
+        "method_change",
+        ("method_plan", "method_feasibility", "figure_plan", "figure_contracts", "code", "methods", *_RESULT_CONSUMERS),
+        True,
+        True,
+        True,
+        False,
+    ),
+    "data_change": ChangeClassSpec(
+        "data_change",
+        ("data", "method_plan", "method_feasibility", "figure_plan", "figure_contracts", "code", "methods", *_RESULT_CONSUMERS),
+        True,
+        True,
+        True,
+        False,
+    ),
+    "cohort_change": ChangeClassSpec(
+        "cohort_change",
+        ("data", "method_plan", "method_feasibility", "figure_plan", "figure_contracts", "code", "methods", *_RESULT_CONSUMERS),
+        True,
+        True,
+        True,
+        False,
+    ),
+    "research_plan_change": ChangeClassSpec("research_plan_change", tuple(RESEARCH_DESIGN_STAGES), True, True, True, False),
+}
+
+CANONICAL_CHANGE_CLASSES = tuple(CHANGE_CLASS_SPECS)
+
+CHANGE_CLASS_ALIASES = {
+    "citation_local": "citation_change",
+    "prose_semantic_no_evidence_change": "prose_only",
+    "metadata_claim_change": "claim_boundary_change",
+    "cohort_definition_change": "cohort_change",
+    "analysis_spec_change": "method_change",
+    "run_output_change": "run_change",
+    "figure_semantic_change": "figure_change",
+    "claim_contract_change": "research_plan_change",
+    "reference_metadata_only": "metadata_only",
+    "derived_assessment": "presentation_only",
+    "scientific_result": "metrics_change",
+    "method_semantic": "method_change",
+    "data_semantic": "data_change",
+    "research_design": "research_plan_change",
+    "prose_semantic": "claim_boundary_change",
+    "citation_edit": "citation_change",
+    "new_reference": "citation_change",
+    "claim_narrowing": "claim_boundary_change",
+    "result_interpretation": "result_interpretation_change",
+    "scientific_evidence_change": "research_plan_change",
+    "language_only": "prose_only",
+}
+
+
+def normalize_change_class(value: str, *, allow_no_change: bool = False) -> str:
+    normalized = str(value or "").strip().lower()
+    if allow_no_change and normalized == "no_change":
+        return normalized
+    canonical = CHANGE_CLASS_ALIASES.get(normalized, normalized)
+    if canonical not in CHANGE_CLASS_SPECS:
+        raise ValueError(f"Unsupported change class: {value}")
+    return canonical
+
+
+def change_class_spec(value: str) -> ChangeClassSpec:
+    return CHANGE_CLASS_SPECS[normalize_change_class(value)]
 
 
 def artifact_role_for_path(path: str) -> tuple[str, str]:
@@ -148,7 +259,7 @@ def classify_change(
         )
     if role == "citation_repair" and declaration.get("claim_semantics_changed") is False:
         return ChangeClassification(
-            "citation_local",
+            "citation_change",
             role,
             source_stage,
             False,
@@ -165,7 +276,7 @@ def classify_change(
         )
         if same_reference_set:
             return ChangeClassification(
-                "reference_metadata_only",
+                "metadata_only",
                 role,
                 source_stage,
                 False,
@@ -174,7 +285,7 @@ def classify_change(
                 declaration,
             )
         return ChangeClassification(
-            "research_design",
+            "research_plan_change",
             role,
             source_stage,
             True,
@@ -194,7 +305,7 @@ def classify_change(
         )
     if role == "evidence_assessment":
         return ChangeClassification(
-            "derived_assessment",
+            "presentation_only",
             role,
             source_stage,
             False,
@@ -214,7 +325,7 @@ def classify_change(
                 declaration,
             )
         return ChangeClassification(
-            "scientific_result",
+            "figure_change",
             role,
             source_stage,
             True,
@@ -224,7 +335,7 @@ def classify_change(
         )
     if role in {"result_metric", "result_table", "result_manifest"}:
         return ChangeClassification(
-            "scientific_result",
+            "metrics_change",
             role,
             source_stage,
             True,
@@ -234,7 +345,7 @@ def classify_change(
         )
     if role in {"method_code", "method_config", "validation_split"}:
         return ChangeClassification(
-            "method_semantic",
+            "method_change",
             role,
             source_stage,
             True,
@@ -244,7 +355,7 @@ def classify_change(
         )
     if role in {"processed_data", "data_schema", "data_code", "labels"}:
         return ChangeClassification(
-            "data_semantic",
+            "data_change",
             role,
             source_stage,
             True,
@@ -254,7 +365,7 @@ def classify_change(
         )
     if role in {"research_plan", "idea", "figure_storyboard", "method_plan"}:
         return ChangeClassification(
-            "research_design",
+            "research_plan_change",
             role,
             source_stage,
             True,
@@ -275,7 +386,13 @@ def classify_change(
     if role in {"section_prose", "abstract"}:
         semantics_changed = declaration.get("claim_semantics_changed") is not False
         return ChangeClassification(
-            "prose_semantic" if semantics_changed else "presentation_only",
+            (
+                "result_interpretation_change"
+                if semantics_changed and source_stage == "results"
+                else "claim_boundary_change"
+                if semantics_changed
+                else "prose_only"
+            ),
             role,
             source_stage,
             semantics_changed,
@@ -284,7 +401,7 @@ def classify_change(
             declaration,
         )
     return ChangeClassification(
-        "research_design",
+        "research_plan_change",
         role,
         source_stage,
         True,
@@ -294,58 +411,43 @@ def classify_change(
     )
 
 
+def affected_stages_for_class(
+    change_class: str,
+    *,
+    source_stage: str | None = None,
+    artifact_role: str | None = None,
+) -> list[str]:
+    """Resolve precise stage impact from the authoritative change-class contract."""
+    if str(change_class).strip().lower() == "no_change":
+        return []
+    canonical = normalize_change_class(change_class)
+    source = str(source_stage or "").strip()
+    role = str(artifact_role or "").strip().lower()
+    if canonical == "metadata_only" and role == "reference_library":
+        return ["references", "citation_audit", "latex", "quality_checks"]
+    if canonical == "presentation_only":
+        if role == "evidence_assessment" and source:
+            return [source]
+        if role == "figure":
+            return ["results", "latex", "quality_checks"]
+        if role == "citation_report":
+            return ["citation_audit", "quality_checks"]
+    stages = list(CHANGE_CLASS_SPECS[canonical].affected_stages)
+    if canonical == "claim_boundary_change" and source and source != "results":
+        stages = [source, "citation_audit", "latex", "quality_checks"]
+    if canonical in {"prose_only", "citation_change", "claim_boundary_change"} and source:
+        stages.insert(0, source)
+        if canonical == "prose_only" and source == "results":
+            stages.insert(1, "discussion")
+    if canonical == "research_plan_change" and source == "idea":
+        stages = ["idea", "references", "journal_profile", *stages]
+    return list(dict.fromkeys(stages))
+
+
 def affected_stages(change: ChangeClassification) -> list[str]:
     """Return the exact stages invalidated by a classified change."""
-    if change.change_class == "no_change":
-        return []
-    if change.change_class == "citation_local":
-        return list(dict.fromkeys([change.source_stage, *FINAL_STAGES]))
-    if change.change_class == "reference_metadata_only":
-        return list(dict.fromkeys(["references", "citation_audit", "latex", "quality_checks"]))
-    if change.change_class == "derived_assessment":
-        return [change.source_stage]
-    if change.change_class == "presentation_only":
-        if change.artifact_role == "figure":
-            return ["results", "latex", "quality_checks"]
-        if change.artifact_role == "citation_report":
-            return ["citation_audit", "quality_checks"]
-        if change.source_stage == "latex":
-            return ["latex", "quality_checks"]
-        return list(dict.fromkeys([change.source_stage, "citation_audit", "latex", "quality_checks"]))
-    if change.change_class == "scientific_result":
-        return [
-            "result_validity",
-            "core_evidence",
-            *MANUSCRIPT_STAGES,
-            *FINAL_STAGES,
-        ]
-    if change.change_class == "method_semantic":
-        return [
-            "methods",
-            "result_validity",
-            "core_evidence",
-            *MANUSCRIPT_STAGES,
-            *FINAL_STAGES,
-        ]
-    if change.change_class == "data_semantic":
-        return [
-            "data",
-            "method_plan",
-            "method_feasibility",
-            "figure_plan",
-            "figure_contracts",
-            "code",
-            "methods",
-            "result_validity",
-            "core_evidence",
-            *MANUSCRIPT_STAGES,
-            *FINAL_STAGES,
-        ]
-    if change.change_class == "prose_semantic":
-        downstream = [change.source_stage]
-        if change.source_stage == "results":
-            downstream.extend(["discussion"])
-        downstream.extend(FINAL_STAGES)
-        return list(dict.fromkeys(downstream))
-    upstream = ["references", "journal_profile"] if change.source_stage == "idea" else []
-    return list(dict.fromkeys([change.source_stage, *upstream, *RESEARCH_DESIGN_STAGES]))
+    return affected_stages_for_class(
+        change.change_class,
+        source_stage=change.source_stage,
+        artifact_role=change.artifact_role,
+    )

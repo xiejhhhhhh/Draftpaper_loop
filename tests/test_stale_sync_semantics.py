@@ -56,7 +56,7 @@ class SemanticStaleSyncTests(unittest.TestCase):
             bib.write_text("@article{Key2026,\n title={Stable Work},\n doi={10.1234/stable},\n year={2026},\n volume={12},\n pages={44}\n}\n", encoding="utf-8")
             report = sync_artifact_stale(project.path)
 
-            self.assertEqual(report["classified_changes"][0]["change_class"], "reference_metadata_only")
+            self.assertEqual(report["classified_changes"][0]["change_class"], "metadata_only")
             self.assertNotIn("research_plan", report["stale_stages"])
             self.assertNotIn("data", report["stale_stages"])
             self.assertNotIn("methods", report["stale_stages"])

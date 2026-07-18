@@ -64,7 +64,7 @@ def test_revision_installs_canonical_source_and_survives_assembly(tmp_path: Path
     state = load_project(project)
     assert state.metadata["stages"]["latex"]["stale"] is True
     assert state.metadata["stages"]["quality_checks"]["stale"] is True
-    assert state.metadata["stages"]["methods_writing"]["stale"] is False
+    assert state.metadata["stages"]["methods_writing"]["stale"] is True
 
     _copy_sections(project, _read_sections(project))
     assert (project / "latex" / "sections" / "methods.tex").read_text(encoding="utf-8") == "Revised canonical methods.\n"
@@ -123,5 +123,5 @@ def test_change_classifier_compares_citation_keys_not_surrounding_prose() -> Non
     after = "Narrower prose with the same source \\citep{Alpha2020}."
     changed_citation = "Narrower prose \\citep{Beta2021}."
 
-    assert revision_transaction._classify(before, after, None) == "prose_semantic_no_evidence_change"
-    assert revision_transaction._classify(before, changed_citation, None) == "citation_local"
+    assert revision_transaction._classify(before, after, None) == "prose_only"
+    assert revision_transaction._classify(before, changed_citation, None) == "citation_change"

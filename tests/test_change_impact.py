@@ -42,7 +42,7 @@ class ChangeImpactTests(unittest.TestCase):
             source_stage="core_evidence",
         )
 
-        self.assertEqual(change.change_class, "derived_assessment")
+        self.assertEqual(change.change_class, "presentation_only")
         self.assertEqual(affected_stages(change), ["core_evidence"])
 
     def test_local_citation_repair_does_not_invalidate_empirical_pipeline(self) -> None:
@@ -54,7 +54,7 @@ class ChangeImpactTests(unittest.TestCase):
             declaration={"claim_semantics_changed": False},
         )
 
-        self.assertEqual(change.change_class, "citation_local")
+        self.assertEqual(change.change_class, "citation_change")
         self.assertEqual(
             affected_stages(change),
             ["discussion", "citation_audit", "latex", "quality_checks"],
@@ -97,7 +97,7 @@ class ChangeImpactTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(change.change_class, "reference_metadata_only")
+        self.assertEqual(change.change_class, "metadata_only")
         self.assertEqual(affected_stages(change), ["references", "citation_audit", "latex", "quality_checks"])
 
     def test_scientific_figure_change_invalidates_all_manuscript_consumers(self) -> None:
@@ -108,11 +108,13 @@ class ChangeImpactTests(unittest.TestCase):
             source_stage="results",
         )
 
-        self.assertEqual(change.change_class, "scientific_result")
+        self.assertEqual(change.change_class, "figure_change")
         self.assertEqual(
             affected_stages(change),
             [
+                "figure_contracts",
                 "result_validity",
+                "result_support",
                 "core_evidence",
                 "results",
                 "introduction",
@@ -133,7 +135,7 @@ class ChangeImpactTests(unittest.TestCase):
             source_stage="methods",
         )
 
-        self.assertEqual(change.change_class, "method_semantic")
+        self.assertEqual(change.change_class, "method_change")
         self.assertIn("methods", affected_stages(change))
         self.assertIn("core_evidence", affected_stages(change))
         self.assertIn("citation_audit", affected_stages(change))
@@ -147,7 +149,7 @@ class ChangeImpactTests(unittest.TestCase):
         )
 
         impacted = affected_stages(change)
-        self.assertEqual(change.change_class, "research_design")
+        self.assertEqual(change.change_class, "research_plan_change")
         self.assertEqual(impacted[0], "research_plan")
         self.assertIn("data", impacted)
         self.assertIn("methods", impacted)
