@@ -1,0 +1,38 @@
+name: tag-build-verify
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Exact release tag such as v0.31.9
+        required: true
+        type: string
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install release verification tools
+        run: python -m pip install -c requirements/ci-constraints.txt -e .[dev,plotting]
+      - name: Verify tag and source release identity
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+        run: python tools/verify_release_tag.py --tag "$RELEASE_TAG"
+      - name: Run release contracts and security checks
+        run: |
+          python -m draftpaper_cli.cli validate-command-contracts
+          python -m draftpaper_cli.cli validate-template-registry
+          python -m draftpaper_cli.cli validate-third-party-provenance
+          python tools/scan_secrets.py
+      - name: Build and verify wheel
+        run: |
+          python -m build --wheel
+          python tools/verify_install_matrix.py --wheel-dir dist
+          python tools/verify_wheel_install.py --wheel-dir dist

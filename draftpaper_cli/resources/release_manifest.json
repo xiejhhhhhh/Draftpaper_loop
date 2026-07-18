@@ -1,8 +1,8 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.31.8",
-  "workflow_skill_sha256": "ea90acb094c2ac8a124aef20ad791dbd6ab628edcb16d0435e04c3b74f2151bc",
-  "workflow_contract_sha256": "663d7dd5a52c2c00f75dbca3b4905178206d6de0f24799d7577c85752e92e85b",
+  "package_version": "0.31.9",
+  "workflow_skill_sha256": "83c3e3b474556dc2610dbe480c46c274d73b088f258dc612ade61d39a222e2d6",
+  "workflow_contract_sha256": "285d17e718a89061fd794da7d800c06de740f04921a69f71dd89d879fc641230",
   "plugin_count": 210,
   "fixture_count": 546,
   "plugin_catalog_hash": "dd6def2969d7ea6a6e758957804452b5761df836d160e4c1da5b90f3652e6226",
@@ -52,6 +52,13 @@
     "github_actions_pinned": true,
     "ci_constraints_sha256": "8ff2258050c6963b5902290254020d2940fd5d86cf0eaa54285da3f888f8c454",
     "sbom_format": "CycloneDX JSON",
-    "dependency_audit_scope": "project_dependency_graph"
+    "dependency_audit_scope": "project_dependency_graph",
+    "ci_platforms": [
+      "ubuntu",
+      "windows",
+      "macos_smoke"
+    ],
+    "tag_build_verify": true,
+    "public_pypi_publish": false
   }
 }

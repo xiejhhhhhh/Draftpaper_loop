@@ -100,6 +100,9 @@ def build_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
             "ci_constraints_sha256": _sha(constraints) if constraints.is_file() else "",
             "sbom_format": "CycloneDX JSON",
             "dependency_audit_scope": "project_dependency_graph",
+            "ci_platforms": ["ubuntu", "windows", "macos_smoke"],
+            "tag_build_verify": True,
+            "public_pypi_publish": False,
         },
     }
 

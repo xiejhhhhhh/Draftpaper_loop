@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.31.8"
+version = "0.31.9"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
