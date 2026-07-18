@@ -22,7 +22,7 @@ Draftpaper-loop is a local-first, evidence-first research workflow. It confirms 
 
 ## Current Release
 
-The current release is v0.30.7. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
+The current release is v0.31.0. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -457,7 +457,7 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
-### v0.30.1-v0.30.7 (2026-07-18) -- Release Gates, Precise Stale Propagation and Author Completion Transactions
+### v0.30.1-v0.31.0 (2026-07-18) -- Release Gates, Precise Stale Propagation and Author Completion Transactions
 
 - `v0.30.1` reconciles the public command inventory and release manifest without exposing the experimental manuscript-completion prototype. Core evidence, data quality, result validity, method verification and integrity gates now return nonzero process status for non-passing scientific decisions. MCP artifact reads reject private locators and credential-like files, and journal/registry metadata fetching is routed through an HTTPS, host, DNS and response-size policy.
 - `v0.30.2` applies one project-local runner contract to manifest and CLI method verification, rejects inline Python and shell runners, confines declared inputs/outputs, records explicit system-binary opt-in, passes only allowlisted scientific environment variables and redacts process logs. Mutating commands now validate declared write roots before running and still verify the actual write set afterward. Literature retrieval distinguishes `success_with_items`, `success_empty`, `provider_error`, `auth_required`, `rate_limited` and `offline_fallback` in stage manifests, `status` and `doctor`.
@@ -466,6 +466,7 @@ Donation supports maintenance only and does not grant commercial use rights.
 - `v0.30.5` resolves author edits through stable paragraph ID, expected text/hash and optional occurrence while treating LaTeX line numbers as non-authoritative hints. Line drift is reported and re-anchored only when stable anchors still agree; stale, ambiguous, duplicate-key and duplicate-target packets are rejected as a whole. One packet can resolve multiple sections and user-confirmed references against one source-map/project revision, and project revision files can no longer read content from outside the project boundary.
 - `v0.30.6` adds completion preview, apply and rollback as one hash-bound transaction flow. Preview produces a unified metadata/section/BibTeX diff, candidate LaTeX and candidate PDF without touching canonical sources. Apply rechecks the packet, project revision, source map, evidence snapshot and before hashes, then atomically writes metadata, references, sections, stale state, ledgers and exact-text user locks. Repeated apply is idempotent, injected failures restore the full write set, and rollback refuses to overwrite any artifact changed after completion. `compile_required`, unresolved Codex instructions and scientific evidence changes are explicitly non-passing.
 - `v0.30.7` binds the applied completion manifest, manuscript metadata, every canonical section, BibTeX/reference registry, promoted evidence, result/figure manifests, final citation-audit snapshot, integrity/quality reports, two independent blind reviews and `main.pdf` into one release hash. Non-passing or stale bound artifacts block review and confirmation. The README opening now presents the current evidence-first path and final-author checkpoint directly, with complete English and Chinese completion guides under `docs/`.
+- `v0.31.0` completes multi-journal author-workspace regression with general article, AAS and MNRAS frontmatter semantics and real XeLaTeX candidate compilation. The release tests single and multiple authors and affiliations, ORCID, corresponding-author metadata, funding and repository links, user-confirmed references, multi-paragraph atomic edits, rollback, user locks and final release binding in both source checkout and isolated wheel installations.
 
 ### v0.28.1-v0.30.0 (2026-07-17) -- Transactional Evidence Architecture and Cross-discipline Release Contracts
 

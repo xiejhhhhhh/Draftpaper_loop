@@ -635,7 +635,7 @@ def _write_candidate_overlay(
             continue
         relative = f"{section}/{section}.tex"
         text = proposed_sections.get(relative, source.read_text(encoding="utf-8-sig"))
-        atomic_write_text(sections_dir / f"{section}.tex", text)
+        (sections_dir / f"{section}.tex").write_text(text, encoding="utf-8", newline="")
     main_source = root / "latex" / "main.tex"
     if main_source.is_file():
         main_text = main_source.read_text(encoding="utf-8-sig")
@@ -655,8 +655,16 @@ def _write_candidate_overlay(
         + "results/}}"
     )
     if "\\graphicspath" not in main_text:
+        if not re.search(r"\\usepackage(?:\[[^]]*\])?\{graphicx\}", main_text):
+            documentclass_match = re.search(r"\\documentclass(?:\[[^]]*\])?\{[^}]+\}", main_text)
+            if documentclass_match:
+                main_text = (
+                    main_text[: documentclass_match.end()]
+                    + "\n\\usepackage{graphicx}"
+                    + main_text[documentclass_match.end() :]
+                )
         main_text = main_text.replace("\\begin{document}", graphicspath + "\n\\begin{document}", 1)
-    atomic_write_text(candidate_latex / "main.tex", main_text)
+    (candidate_latex / "main.tex").write_text(main_text, encoding="utf-8", newline="")
     bib_path = root / "latex" / "library.bib"
     if not bib_path.is_file():
         bib_path = root / "references" / "library.bib"
@@ -666,7 +674,7 @@ def _write_candidate_overlay(
     bib += "\n".join(_bibtex_entry(item).rstrip() for item in new_references)
     if bib and not bib.endswith("\n"):
         bib += "\n"
-    atomic_write_text(candidate_latex / "library.bib", bib)
+    (candidate_latex / "library.bib").write_text(bib, encoding="utf-8", newline="")
     for directory in (root / "latex", root / "journal_profile", root / "latex" / "template"):
         if not directory.is_dir():
             continue

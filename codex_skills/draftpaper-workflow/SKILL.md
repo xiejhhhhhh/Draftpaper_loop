@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.28.0
+version: 0.31.0
 description: Use when Codex operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -11,6 +11,39 @@ reimplement stage ordering, write project state directly, or infer stale stages
 from memory.
 
 Do not directly edit project.json. Do not directly edit stage_manifest files.
+
+## Authoritative artifacts and transactions
+
+- Manuscript sections are authoritative in their stage directories, such as
+  `methods/methods.tex`; `latex/sections/*.tex` is rebuildable output. Apply a
+  user revision only with `apply-section-revision`, then inspect its transaction
+  receipt and the computed stale artifacts.
+- Project metadata, YAML mirrors, stage manifests, passports, evidence
+  snapshots, and revision candidates must change through CLI transactions. If
+  a command reports `rollback_incomplete`, stop and run `doctor`/`recover`.
+- Use artifact IDs, paths, hashes, schema families, and producer/consumer edges
+  from the artifact DAG. Stage labels are a summary, not a second truth source.
+
+## Plugin and execution truth
+
+- Read the normalized plugin manifest and execution contract. A plan-only,
+  mock-only, contract-only, or candidate plugin cannot be reported as a live
+  project execution.
+- Fixture execution proves a plugin contract, not a paper result. Core evidence
+  requires a project run event and matching output hashes.
+- Data and method capability bindings gate executable analysis. Discipline
+  review rules evaluate the generated Results and their evidence after Results
+  exist; they do not fabricate or silently replace figures.
+
+## MCP and release boundaries
+
+- MCP science or network execution requires the short-lived capability token
+  issued for the exact project, command, arguments, and time window. A boolean
+  confirmation is not authorization.
+- Before a release, validate command contracts, plugin manifests, schema and
+  third-party registries, the generated release manifest, secret scan,
+  project-scoped dependency audit, wheel installation, and cross-discipline
+  regressions. Synthetic fixtures validate contracts, not manuscript quality.
 
 ## Required control loop
 
