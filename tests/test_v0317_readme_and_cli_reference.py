@@ -8,18 +8,52 @@ from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.toml_compat import tomllib
 
 
-def test_readmes_are_start_pages_not_monolithic_references() -> None:
+def test_readmes_preserve_the_detailed_project_guide_and_current_release() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-    for name in ("README.md", "README.zh-CN.md"):
+    required_sections = {
+        "README.md": {
+            "## What It Does",
+            "## Loop Model",
+            "## Key Features",
+            "## Project Layout",
+            "## Quick Start",
+            "## Implementation Status",
+            "## Recent Updates",
+        },
+        "README.zh-CN.md": {
+            "## 功能概览",
+            "## Loop 模型",
+            "## 核心特性",
+            "## 项目结构",
+            "## 快速开始",
+            "## 当前实现状态",
+            "## 最近更新",
+        },
+    }
+    for name, sections in required_sections.items():
         content = Path(name).read_text(encoding="utf-8")
         size = len(content.encode("utf-8"))
-        assert 8 * 1024 <= size <= 12 * 1024, (name, size)
+        assert size >= 64 * 1024, (name, size)
+        assert sections <= set(content.splitlines())
         assert f"v{version}" in content
         assert "prepare-manuscript-completion" in content
         assert "preview-manuscript-completion" in content
         assert "apply-manuscript-completion" in content
         assert "docs/cli_reference.md" in content
-        assert "python -m unittest" not in content
+        assert "docs/command_risk_matrix.md" in content
+        assert "docs/token_cost_reporting" in content
+        assert 'pip install -e ".[fulltext]"' in content
+        assert "pip install -e third_party\\paper-fetch-skill" not in content
+        assert "python -m pytest\n```" in content
+        lines = content.splitlines()
+        assert any(line.startswith("### v0.31.1-v0.32.0") for line in lines)
+        for patch_version in range(1, 10):
+            standalone_prefixes = (
+                f"### v0.31.{patch_version} ",
+                f"### v0.31.{patch_version}(",
+                f"### v0.31.{patch_version}（",
+            )
+            assert not any(line.startswith(standalone_prefixes) for line in lines)
 
 
 def test_readme_commands_are_registered() -> None:
