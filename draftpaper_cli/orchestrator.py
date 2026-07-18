@@ -28,6 +28,7 @@ from .project_scaffold import STAGE_ORDER
 from .project_state import ProjectStateError, load_project
 from .stale_sync import detect_artifact_drift
 from .artifact_repository import ArtifactRepository
+from .command_registry import pipeline_stage_commands
 from .writing_coordinator import (
     SECTION_STAGE_MAP as COORDINATED_SECTION_STAGE_MAP,
     formal_writing_release_action as coordinated_formal_release_action,
@@ -38,30 +39,7 @@ from .writing_coordinator import (
 COMPLETE_STATUSES = {"draft", "approved", "completed"}
 BACKFILL_COMPATIBLE_STAGES = {"research_feasibility", "research_plan_feasibility", "method_feasibility", "figure_contracts"}
 
-STAGE_COMMANDS = {
-    "references": "search-literature",
-    "journal_profile": "resolve-journal-template",
-    "research_feasibility": "preflight-research-feasibility",
-    "research_plan": "generate-plan",
-    "research_plan_feasibility": "assess-research-plan-feasibility",
-    "data": "inventory-data",
-    "method_plan": "collect-method-plan",
-    "method_feasibility": "assess-method-feasibility",
-    "figure_plan": "plan-figures",
-    "figure_contracts": "assess-figure-contracts",
-    "code": "generate-analysis-code",
-    "methods": "verify-methods",
-    "result_validity": "assess-result-validity",
-    "result_support": "assess-result-support",
-    "core_evidence": "assess-core-evidence",
-    "results": "inventory-results",
-    "introduction": "write-introduction",
-    "data_writing": "build-data-context",
-    "methods_writing": "build-method-context",
-    "discussion": "write-discussion",
-    "latex": "assemble-latex",
-    "quality_checks": "quality-check",
-}
+STAGE_COMMANDS = pipeline_stage_commands()
 
 MINIMUM_STAGE_OUTPUTS = {
     "research_feasibility": [

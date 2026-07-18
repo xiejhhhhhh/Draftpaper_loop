@@ -104,6 +104,8 @@ def _handler_issues(spec: CommandSpec, parser_destinations: set[str]) -> list[st
     if not callable(handler):
         issues.append("handler_not_callable")
         return issues
+    if spec.namespace_handler:
+        return issues
     signature = inspect.signature(handler)
     accepted = set(signature.parameters)
     missing_parameters = sorted(bound_parameters - accepted)
@@ -149,6 +151,7 @@ def build_command_contracts() -> dict[str, Any]:
             "command": name,
             "coordinator": spec.coordinator if spec else None,
             "handler": f"{spec.handler_module}.{spec.handler_name}" if spec and spec.handler_module else "legacy_cli_dispatch",
+            "namespace_adapter": bool(spec and spec.namespace_handler),
             "input_schema": schema,
             "output_schema": spec.output_schema if spec else {},
             "project_scoped": project_scoped,
@@ -162,6 +165,7 @@ def build_command_contracts() -> dict[str, Any]:
         "command_count": len(records),
         "registered_handler_count": sum(1 for record in records if record["handler"] != "legacy_cli_dispatch"),
         "legacy_dispatch_count": sum(1 for record in records if record["handler"] == "legacy_cli_dispatch"),
+        "namespace_adapter_count": sum(1 for record in records if record["namespace_adapter"]),
         "commands": records,
         "issues": issues,
     }

@@ -22,7 +22,7 @@ Draftpaper-loop is a local-first, evidence-first research workflow. It confirms 
 
 ## Current Release
 
-The current release is v0.31.3. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
+The current release is v0.31.4. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -457,6 +457,10 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.31.4 (2026-07-18) -- Single Command Control Plane
+
+- All 209 CLI commands now enter through `CommandSpec`; `legacy_dispatch_count` is zero and `cli.py` no longer contains a command-specific fallback chain. Commands awaiting direct typed handlers use an explicit namespace compatibility adapter whose count remains visible rather than being reported as completed migration. Pipeline-stage commands are generated from registry metadata, and `assess-figure-contracts` now uses the unified figure façade.
+
 ### v0.31.3 (2026-07-18) -- Method Responsibilities and Figure Contract Façade
 
 - Method execution verification, formula extraction and manuscript writing now live in separate responsibility modules behind the stable `draftpaper_cli.methods` API. A new figure-contract façade normalizes gate, semantic, confirmed-blueprint and caption findings into one deterministic `{source, code, severity, message}` issue list; existing run-manifest strings remain available for compatibility while new consumers use `normalized_issues`.

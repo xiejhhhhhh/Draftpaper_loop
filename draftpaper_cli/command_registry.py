@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import contextlib
+import io
+import json
+from dataclasses import dataclass, field, replace
 from importlib import import_module
 from typing import Any
 
@@ -41,6 +44,8 @@ class CommandSpec:
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
     mcp_exposed: bool | None = None
+    namespace_handler: bool = False
+    pipeline_stage: str | None = None
 
     def __post_init__(self) -> None:
         risk = self.risk_level or _infer_risk_level(self.name, self.mutates_project, self.protected_action)
@@ -475,6 +480,8 @@ for _name in sorted(DECLARED_COMMAND_NAMES):
         _coordinator,
         _name not in READ_ONLY_COMMANDS,
         _stage,
+        "cli_compat",
+        "dispatch_compat_command",
         protected_action=_name in {
             "checkpoint",
             "resume",
@@ -487,9 +494,20 @@ for _name in sorted(DECLARED_COMMAND_NAMES):
             "rebase-project-passport",
         },
         manual_only=_name in {"checkpoint", "resume", "promote-plugin-candidate", "resolve-reference-version"},
+        namespace_handler=True,
     )
 
 COMMAND_SPECS.update({
+    "assess-figure-contracts": CommandSpec(
+        "assess-figure-contracts",
+        "evidence_coordinator",
+        True,
+        "results",
+        "figure_contracts",
+        "assess_project_figure_contracts",
+        (("project", "project"),),
+        "decision_pass",
+    ),
     "reopen-core-evidence": CommandSpec(
         "reopen-core-evidence",
         "evidence_coordinator",
@@ -611,6 +629,54 @@ COMMAND_SPECS.update({
 })
 
 
+for _name, _spec in tuple(COMMAND_SPECS.items()):
+    if _spec.handler_module and _spec.handler_name:
+        continue
+    COMMAND_SPECS[_name] = replace(
+        _spec,
+        handler_module="cli_compat",
+        handler_name="dispatch_compat_command",
+        namespace_handler=True,
+    )
+
+
+_PIPELINE_STAGE_COMMAND_NAMES = {
+    "references": "search-literature",
+    "journal_profile": "resolve-journal-template",
+    "research_feasibility": "preflight-research-feasibility",
+    "research_plan": "generate-plan",
+    "research_plan_feasibility": "assess-research-plan-feasibility",
+    "data": "inventory-data",
+    "method_plan": "collect-method-plan",
+    "method_feasibility": "assess-method-feasibility",
+    "figure_plan": "plan-figures",
+    "figure_contracts": "assess-figure-contracts",
+    "code": "generate-analysis-code",
+    "methods": "verify-methods",
+    "result_validity": "assess-result-validity",
+    "result_support": "assess-result-support",
+    "core_evidence": "assess-core-evidence",
+    "results": "inventory-results",
+    "introduction": "write-introduction",
+    "data_writing": "build-data-context",
+    "methods_writing": "build-method-context",
+    "discussion": "write-discussion",
+    "latex": "assemble-latex",
+    "quality_checks": "quality-check",
+}
+
+for _pipeline_stage, _command_name in _PIPELINE_STAGE_COMMAND_NAMES.items():
+    COMMAND_SPECS[_command_name] = replace(COMMAND_SPECS[_command_name], pipeline_stage=_pipeline_stage)
+
+
+def pipeline_stage_commands() -> dict[str, str]:
+    return {
+        str(spec.pipeline_stage): name
+        for name, spec in COMMAND_SPECS.items()
+        if spec.pipeline_stage
+    }
+
+
 def command_spec(name: str) -> CommandSpec | None:
     return COMMAND_SPECS.get(name)
 
@@ -622,6 +688,20 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         return None
     module = import_module(f".{spec.handler_module}", package=__package__)
     handler = getattr(module, spec.handler_name)
+    if spec.namespace_handler:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = int(handler(args))
+        lines = [line for line in (*stdout.getvalue().splitlines(), *stderr.getvalue().splitlines()) if line.strip()]
+        for line in reversed(lines):
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                return payload, exit_code
+        raise TypeError(f"Namespace handler for {spec.name} did not emit a JSON object payload.")
     kwargs = {parameter: getattr(args, attribute, None) for parameter, attribute in spec.argument_bindings}
     payload = handler(**kwargs)
     if not isinstance(payload, dict):
