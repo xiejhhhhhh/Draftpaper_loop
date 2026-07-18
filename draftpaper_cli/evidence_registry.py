@@ -9,8 +9,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .io_utils import read_json_object
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
+from .loop_contract import stable_evidence_id
 
 
 EVIDENCE_REGISTRY_JSON = "writing/scientific_evidence_registry.json"
@@ -25,13 +27,7 @@ class EvidenceConflictError(RuntimeError):
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return read_json_object(path)
 
 
 def _sha256(path: Path) -> str:
@@ -217,7 +213,7 @@ def _records_from_payload(path: Path, project_path: Path) -> list[dict[str, Any]
             continue
         if not item["evidence_id"]:
             scope = f"{item['entity_role']}|{item['cohort']}|{item['sample_unit']}|{item['split']}|{item['run_id']}|{item['model']}|{index}"
-            item["evidence_id"] = hashlib.sha256(scope.encode("utf-8")).hexdigest()[:16]
+            item["evidence_id"] = stable_evidence_id("structured_evidence", title=scope, sequence=index)
         _finalize_binding(item)
         normalized.append(item)
     return normalized
@@ -324,9 +320,11 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                 source_hash=source_hash,
             )
             if record:
-                record["evidence_id"] = hashlib.sha256(
-                    f"{figure_id}|{metric_name}|{numeric}|{source_hash}".encode("utf-8")
-                ).hexdigest()[:16]
+                record["evidence_id"] = stable_evidence_id(
+                    "result_metric",
+                    title=f"{figure_id}|{metric_name}|{numeric}|{source_hash}",
+                    sequence=len(records) + 1,
+                )
                 _finalize_binding(record)
                 records.append(record)
     return records

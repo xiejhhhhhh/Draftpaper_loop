@@ -10,14 +10,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .citation_utils import bibtex_keys_in_text
+from .citation_utils import bibtex_keys_in_text, citation_keys_in_text
 from .project_scaffold import _write_json, utc_now
 
-
-CITATION_PATTERN = re.compile(
-    r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{([^{}]+)\}",
-    re.IGNORECASE,
-)
 
 SECTION_PRIORITY = ["data", "methods", "discussion", "introduction"]
 CITATION_ROLES = {
@@ -197,13 +192,6 @@ def ensure_reference_usage_plan(project: str | Path) -> dict[str, Any]:
     ):
         return payload
     return build_reference_usage_plan(project_path)
-
-
-def citation_keys_in_text(text: str) -> set[str]:
-    keys: set[str] = set()
-    for match in CITATION_PATTERN.finditer(text or ""):
-        keys.update(key.strip() for key in match.group(1).split(",") if key.strip())
-    return keys
 
 
 def entries_for_section(project: str | Path, section: str) -> list[dict[str, Any]]:

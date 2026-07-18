@@ -22,7 +22,7 @@ Draftpaper-loop is a local-first, evidence-first research workflow. It confirms 
 
 ## Current Release
 
-The current release is v0.31.0. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
+The current release is v0.31.1. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -457,6 +457,10 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.31.1 (2026-07-18) -- Shared Utilities and Production Identifier Contract
+
+- Stable DPL claim and evidence IDs now participate in the real claim-contract and Scientific Evidence Registry fallback paths instead of existing only in a test helper. Explicit project IDs remain authoritative. Shared JSON/text IO, citation parsing and LaTeX escaping are consolidated for the active claim, evidence, reference and Data-writing paths, while the unused parallel dependency map has been removed from the artifact DAG.
+
 ### v0.30.1-v0.31.0 (2026-07-18) -- Release Gates, Precise Stale Propagation and Author Completion Transactions
 
 - `v0.30.1` reconciles the public command inventory and release manifest without exposing the experimental manuscript-completion prototype. Core evidence, data quality, result validity, method verification and integrity gates now return nonzero process status for non-passing scientific decisions. MCP artifact reads reject private locators and credential-like files, and journal/registry metadata fetching is routed through an HTTPS, host, DNS and response-size policy.

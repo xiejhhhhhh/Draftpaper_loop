@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from .html_utils import write_html_report
+from .io_utils import read_json
+from .loop_contract import stable_claim_id
 from .passport import utc_now
 from .project_scaffold import _write_json
 from .project_state import load_project, mark_stages_stale, update_stage_status
@@ -36,12 +38,7 @@ class ClaimContractError(RuntimeError):
 
 
 def _read_json(path: Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return default
+    return read_json(path, default)
 
 
 def _compact(text: Any, limit: int = 320) -> str:
@@ -61,8 +58,8 @@ def _claim_strength(text: str) -> str:
 
 
 def _claim_from_blueprint_claim(item: dict[str, Any], index: int) -> dict[str, Any]:
-    claim_id = str(item.get("claim_id") or f"claim_{index}")
     planned = _compact(item.get("expected_finding") or item.get("claim_text") or item.get("research_question"))
+    claim_id = str(item.get("claim_id") or stable_claim_id("research_plan", planned, sequence=index))
     return {
         "claim_id": claim_id,
         "planned_claim": planned,

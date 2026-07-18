@@ -12,6 +12,7 @@ from typing import Any
 
 from .data_contracts import DATA_CONTRACT_FULFILLMENT_JSON, DATA_DEGRADATION_RECOMMENDATIONS_JSON, DATA_ROLE_COVERAGE_HTML, DATA_ROLE_COVERAGE_JSON, write_data_contract_reports
 from .html_utils import write_html_report
+from .latex_utils import safe_latex_text
 from .manuscript_composer import SectionCompositionError, select_validated_section_draft
 from .observations import load_observations
 from .project_scaffold import _write_json
@@ -340,19 +341,7 @@ def _render_feasibility_md(report: dict[str, Any]) -> str:
 
 
 def _safe_latex_text(text: Any) -> str:
-    replacements = {
-        "\\": r"\textbackslash{}",
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in str(text or ""))
+    return safe_latex_text(text)
 
 
 def _clean_sentence(text: Any) -> str:

@@ -36,28 +36,6 @@ if tuple(CHANGE_CLASS_ROOTS) != CANONICAL_CHANGE_CLASSES:
     raise RuntimeError("Artifact DAG change classes diverge from the authoritative change taxonomy.")
 
 
-DEFAULT_DEPENDENCIES = {
-    "data_semantics": ["research_plan"],
-    "analysis_execution": ["research_plan", "data_semantics"],
-    "figures": ["analysis_execution"],
-    "core_evidence": ["figures"],
-    "results": ["core_evidence"],
-    "introduction": ["results"],
-    "data_section": ["data_semantics", "results"],
-    "methods": ["analysis_execution", "results"],
-    "discussion": ["results"],
-    "all_sections": ["results", "introduction", "data_section", "methods", "discussion"],
-    "affected_section": [],
-    "dependent_discussion_claims": ["affected_section"],
-    "manuscript_metadata": [],
-    "latex_assembly": ["all_sections", "manuscript_metadata"],
-    "latex_render": ["latex_assembly"],
-    "citation_audit": ["latex_assembly"],
-    "independent_reviews": ["latex_render", "citation_audit"],
-    "quality_release": ["independent_reviews"],
-}
-
-
 def stage_roots_for_change(change_class: str, *, section: str | None = None) -> list[str]:
     """Translate one semantic change into authoritative project-stage roots."""
     canonical = normalize_change_class(change_class)
