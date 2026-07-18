@@ -222,9 +222,25 @@ def _literature_index(root: Path) -> dict[str, dict[str, Any]]:
 def _bst_record(root: Path, style: str) -> dict[str, Any]:
     candidates = list((root / "latex" / "template").glob(f"{style}.bst")) + list((root / "journal_profile").glob(f"{style}.bst"))
     path = candidates[0] if candidates else None
-    if path is None and shutil.which("kpsewhich"):
-        completed = subprocess.run(["kpsewhich", f"{style}.bst"], capture_output=True, text=True, timeout=10)
-        candidate = Path(completed.stdout.strip()) if completed.returncode == 0 and completed.stdout.strip() else None
+    kpsewhich = shutil.which("kpsewhich")
+    if path is None and kpsewhich:
+        try:
+            completed = subprocess.run(
+                [kpsewhich, f"{style}.bst"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=10,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            completed = None
+        candidate = (
+            Path(completed.stdout.strip())
+            if completed is not None and completed.returncode == 0 and completed.stdout.strip()
+            else None
+        )
         path = candidate if candidate and candidate.is_file() else None
     return {
         "style": style,

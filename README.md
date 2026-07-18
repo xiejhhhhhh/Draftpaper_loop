@@ -8,7 +8,7 @@ Draftpaper-loop is not a one-shot paper generator. It coordinates literature, re
 
 ## Current Release
 
-The current release is **v0.31.9**. The public CLI contains 210 commands under one `CommandSpec` control plane, 210 discipline-plugin contracts and five cross-discipline release fixtures. Fixtures prove workflow behavior, not scientific findings. A real paper still requires a live-runnable plugin or an audited project-local implementation, verified run outputs and human confirmation of the research blueprint, core evidence and final release hash.
+The current release is **v0.32.0**. The public CLI contains 210 commands under one `CommandSpec` control plane, 210 discipline-plugin contracts and five cross-discipline release fixtures. Fixtures prove workflow behavior, not scientific findings. A real paper still requires a live-runnable plugin or an audited project-local implementation, verified run outputs and human confirmation of the research blueprint, core evidence and final release hash.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -147,6 +147,7 @@ LaTeX line numbers are display hints. Paragraph IDs, expected text and hashes id
 - **v0.31.7:** short bilingual start pages and generated CLI reference replace monolithic README command/history dumps.
 - **v0.31.8:** read-only token/cost reporting, combined research install profile, generated command risk matrix and explicit commercial boundary.
 - **v0.31.9:** macOS control-plane smoke and tag-to-wheel identity verification without enabling public package distribution.
+- **v0.32.0:** integrated completion, security, stale, schema, installation and release audit with an explicit sandbox/container boundary assessment.
 
 Historical long-form material remains available in `docs/archive/`; Git history is the authoritative release history.
 

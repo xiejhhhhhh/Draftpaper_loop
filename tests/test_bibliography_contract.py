@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
+import draftpaper_cli.bibliography as bibliography_module
 from draftpaper_cli.bibliography import (
     BibliographyError,
     build_reference_registry,
@@ -127,6 +129,26 @@ def test_bibliography_validation_separates_format_failure_from_citation_support(
     assert report["status"] == "failed"
     assert any(item["kind"] == "missing_publication_locator" for item in report["issues"])
     assert report["citation_support_audit"].startswith("separate:")
+
+
+def test_reference_registry_tolerates_kpsewhich_timeout(tmp_path: Path, monkeypatch) -> None:
+    project = _project(tmp_path)
+
+    monkeypatch.setattr(bibliography_module.shutil, "which", lambda _name: "kpsewhich")
+
+    def _timeout(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(["kpsewhich", "aasjournalv7.bst"], timeout=10)
+
+    monkeypatch.setattr(bibliography_module.subprocess, "run", _timeout)
+
+    build_reference_registry(project)
+    contract = json.loads((project / "references" / "bibliography_contract.json").read_text(encoding="utf-8"))
+
+    assert contract["bst"] == {
+        "style": "aasjournalv7",
+        "source": "tex_distribution_or_unresolved",
+        "sha256": None,
+    }
 
 
 def test_continuous_publication_journal_accepts_url_without_volume_or_pages(tmp_path: Path) -> None:
