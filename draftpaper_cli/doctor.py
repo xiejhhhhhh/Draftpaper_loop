@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
-import importlib.util
 import json
 import re
 import shutil
@@ -13,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .command_registry import command_spec
+from .install_profiles import inspect_install_profiles
 from .orchestrator import status_project
 from .passport import read_jsonl
 from .project_state import load_project
@@ -131,9 +131,11 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
 
 def _environment() -> dict[str, Any]:
     runtime_source = _runtime_source_diagnostics()
+    install_profiles = inspect_install_profiles()
     return {
         "python": sys.version.split()[0],
         "runtime_source": runtime_source,
+        "install_profiles": install_profiles,
         "executables": {
             "latex": shutil.which("xelatex") or shutil.which("pdflatex"),
             "bibtex": shutil.which("bibtex"),
@@ -141,7 +143,7 @@ def _environment() -> dict[str, Any]:
             "gh": shutil.which("gh"),
         },
         "optional_modules": {
-            name: importlib.util.find_spec(name) is not None
+            name: not any(name in item["missing_modules"] for item in install_profiles["profiles"].values())
             for name in ("bibtexparser", "matplotlib", "numpy", "pandas", "yaml")
         },
     }

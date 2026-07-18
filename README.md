@@ -22,7 +22,7 @@ Draftpaper-loop is a local-first, evidence-first research workflow. It confirms 
 
 ## Current Release
 
-The current release is v0.31.5. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
+The current release is v0.31.6. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -278,7 +278,7 @@ Run tests:
 python -m unittest discover -s tests
 ```
 
-For lightweight CI or metadata-only testing, `python -m pip install -e .` still installs the minimal CLI. Real paper projects should use `.[plotting]` so Matplotlib, SciencePlots, pandas, scipy, seaborn, and scikit-learn are available for publication-grade figure generation. `.[plotting-full]` additionally installs Marsilea, reportlab, and scikit-plot for complex figure layouts and optional reporting workflows.
+`python -m pip install -e .` installs the minimal control plane without NumPy, pandas or Matplotlib. Real paper projects should use `.[plotting]`; add `.[fulltext]` and `.[mcp]` only when those capabilities are needed. `draftpaper doctor --json` reports each profile, missing modules and the exact recovery command. See [Install Profiles](docs/install_profiles.md) for the minimal/plotting/fulltext/MCP matrix and `.[plotting-full]` advanced figure backends.
 
 ### Zotero Collection Import Through Codex
 
@@ -457,6 +457,10 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.31.6 (2026-07-18) -- Explicit Install Profiles
+
+- The default wheel now contains the minimal workflow, bibliography and PDF/image-inspection runtime without silently installing NumPy, pandas or Matplotlib. Plotting, enhanced full-text extraction and MCP use explicit extras; scientific plugin NumPy imports are lazy, Doctor reports profile availability and recovery commands, and CI installs minimal/plotting/fulltext/MCP environments independently. A wheel metadata verifier prevents optional stacks from drifting back into core dependencies, while the packaged paper-fetch fallback remains available in minimal installs.
+
 ### v0.31.5 (2026-07-18) -- Registered Resource Schemas and Stronger Quality Gates
 
 - Release fixtures, capability packs, command contracts, release manifests, method run/formula manifests and figure assessments now use registered schema families. Release validation checks packaged resource schemas instead of trusting structurally plausible JSON. CI raises first-party coverage from 45% to 65%, and Pyright now includes the command control plane, completion/stale paths, figure façade and split Methods modules.

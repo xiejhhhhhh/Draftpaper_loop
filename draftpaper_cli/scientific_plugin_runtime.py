@@ -9,7 +9,16 @@ from pathlib import Path
 from statistics import mean, median, pstdev
 from typing import Any
 
-import numpy as np
+
+def _numpy() -> Any:
+    try:
+        import numpy
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            'This scientific plugin operation requires NumPy. Install the plotting profile with '
+            '`python -m pip install "draftpaper-cli[plotting]"`.'
+        ) from exc
+    return numpy
 
 
 def runnable_profiles() -> dict[str, dict[str, Any]]:
@@ -61,6 +70,7 @@ def _tabular_profile(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _matrix_profile(data: dict[str, Any]) -> dict[str, Any]:
+    np = _numpy()
     matrix = np.asarray(data.get("matrix") or [], dtype=float)
     if matrix.ndim != 2 or not matrix.size:
         raise ValueError("A non-empty two-dimensional matrix is required.")
@@ -75,6 +85,7 @@ def _numeric_summary(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _two_group(data: dict[str, Any]) -> dict[str, Any]:
+    np = _numpy()
     a = np.asarray(data.get("group_a") or [], dtype=float)
     b = np.asarray(data.get("group_b") or [], dtype=float)
     if min(a.size, b.size) < 2:
@@ -119,6 +130,7 @@ def _classification(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _linear(data: dict[str, Any]) -> dict[str, Any]:
+    np = _numpy()
     x = np.asarray(data.get("x") or [], dtype=float); y = np.asarray(data.get("y") or [], dtype=float)
     if x.size < 3 or x.size != y.size:
         raise ValueError("Regression requires at least three paired observations.")
@@ -137,6 +149,7 @@ def _execute(operation: str, data: dict[str, Any]) -> dict[str, Any]:
     if operation == "classification_metrics": return _classification(data)
     if operation == "linear_regression": return _linear(data)
     if operation == "coordinate_profile":
+        np = _numpy()
         points = np.asarray(data.get("coordinates") or [], dtype=float)
         if points.ndim != 2 or points.shape[1] != 2: raise ValueError("Coordinates must be an N x 2 array.")
         return {"crs": data.get("crs"), "count": int(points.shape[0]), "bounds": [float(points[:,0].min()), float(points[:,1].min()), float(points[:,0].max()), float(points[:,1].max())]}
@@ -153,10 +166,12 @@ def _execute(operation: str, data: dict[str, Any]) -> dict[str, Any]:
         if not full or not ablated: raise ValueError("Full and ablated repeated metrics are required.")
         return {"full_mean": mean(full), "ablated_mean": mean(ablated), "effect": mean(full) - mean(ablated)}
     if operation == "uncertainty_propagation":
+        np = _numpy()
         s = np.asarray(data.get("sensitivities") or [], dtype=float); u = np.asarray(data.get("uncertainties") or [], dtype=float)
         if not s.size or s.size != u.size: raise ValueError("Sensitivities and uncertainties must have equal non-zero length.")
         return {"combined_standard_uncertainty": float(np.sqrt(np.sum((s * u) ** 2))), "component_count": int(s.size)}
     if operation == "differential_expression":
+        np = _numpy()
         control = np.asarray(data.get("control") or [], dtype=float); treatment = np.asarray(data.get("treatment") or [], dtype=float)
         if control.ndim != 2 or treatment.shape != control.shape: raise ValueError("Control and treatment matrices must share feature x replicate shape.")
         features = data.get("features") or [f"feature_{i}" for i in range(control.shape[0])]

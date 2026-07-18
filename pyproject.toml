@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.31.5"
+version = "0.31.6"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
@@ -11,15 +11,10 @@ authors = [
 ]
 keywords = ["research", "latex", "paper-writing", "cli", "codex-skills"]
 dependencies = [
-  "matplotlib>=3.8",
   "Pillow>=10",
-  "SciencePlots>=2.1",
-  "numpy>=1.24",
-  "pandas>=2.0",
   "PyYAML>=6.0",
   "bibtexparser>=1.4",
   "pypdf>=4",
-  "seaborn>=0.13",
 ]
 
 [project.optional-dependencies]
@@ -28,25 +23,25 @@ mcp = [
   "pydantic>=2.7",
 ]
 plotting = [
-  "numpy",
-  "pandas",
-  "matplotlib",
-  "SciencePlots",
-  "scipy",
-  "seaborn",
-  "scikit-learn",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "matplotlib>=3.8",
+  "SciencePlots>=2.1",
+  "scipy>=1.11",
+  "seaborn>=0.13",
+  "scikit-learn>=1.4",
 ]
 plotting-full = [
-  "numpy",
-  "pandas",
-  "matplotlib",
-  "SciencePlots",
-  "scipy",
-  "seaborn",
-  "scikit-learn",
-  "marsilea",
-  "reportlab",
-  "scikit-plot",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "matplotlib>=3.8",
+  "SciencePlots>=2.1",
+  "scipy>=1.11",
+  "seaborn>=0.13",
+  "scikit-learn>=1.4",
+  "marsilea>=0.5",
+  "reportlab>=4",
+  "scikit-plot>=0.3.7",
 ]
 fulltext = [
   "beautifulsoup4",
@@ -115,6 +110,7 @@ include = [
   "draftpaper_cli/change_impact.py",
   "draftpaper_cli/execution_policy.py",
   "draftpaper_cli/gate_handlers.py",
+  "draftpaper_cli/install_profiles.py",
   "draftpaper_cli/manuscript_artifacts.py",
   "draftpaper_cli/manuscript_completion.py",
   "draftpaper_cli/manuscript_revision.py",
