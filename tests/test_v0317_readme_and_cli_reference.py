@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 from draftpaper_cli.command_registry import COMMAND_SPECS
+from draftpaper_cli.toml_compat import tomllib
 
 
 def test_readmes_are_start_pages_not_monolithic_references() -> None:

@@ -5,12 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import tomllib
+import sys
 from pathlib import Path
 from typing import Any
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from draftpaper_cli.toml_compat import tomllib  # noqa: E402
 
 
 def _normalized_tag(tag: str) -> str:

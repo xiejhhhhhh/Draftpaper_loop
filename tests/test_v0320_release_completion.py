@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
 
 from draftpaper_cli.release_contract import build_release_manifest
+from draftpaper_cli.toml_compat import tomllib
 
 
 PLAN = Path("docs/superpowers/plans/2026-07-18-draftpaper-loop-integrated-completion-and-code-audit-optimization.md")

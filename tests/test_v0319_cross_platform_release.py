@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
-import tomllib
 from pathlib import Path
 
 from draftpaper_cli.release_contract import build_release_manifest
+from draftpaper_cli.toml_compat import tomllib
 
 
 def _version() -> str:

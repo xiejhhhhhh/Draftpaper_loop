@@ -3,13 +3,13 @@ from __future__ import annotations
 import builtins
 import importlib
 import sys
-import tomllib
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
 from draftpaper_cli.doctor import doctor_project
 from draftpaper_cli.schema_registry import schema_family
+from draftpaper_cli.toml_compat import tomllib
 
 
 HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn"}

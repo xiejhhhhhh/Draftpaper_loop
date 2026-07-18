@@ -113,6 +113,8 @@ The English and Chinese README openings explain evidence-first ordering, human c
 
 Source checkout, editable installation and isolated wheel use the same release manifest, schemas, command inventory, plugin catalog and vendored fulltext fallback. CI covers Windows and Linux, plus macOS control-plane smoke. Tag verification binds Git tag, package, README, workflow contract, manifest and wheel. Evidence: v0.31.6, v0.31.9 and wheel/tag verification.
 
+The supported Python 3.10 path uses `draftpaper_cli.toml_compat` with an explicit conditional `tomli` development dependency; release tests and tag tooling do not import the Python 3.11-only `tomllib` module directly.
+
 ## 6. Required release regressions
 
 The **three-journal completion** regression covers General, AAS and MNRAS profiles with journal-specific metadata projection, completion preview/apply and final release binding. It is a workflow regression, not a claim that every publisher template is visually identical.
@@ -142,6 +144,7 @@ Template/plugin registry: passed; 210 entries; 0 issues
 Third-party provenance: passed; 6 sources; 210 formal plugins; notices present
 Secret scan: no likely first-party credentials detected
 Tag identity preflight for v0.32.0: passed
+Python 3.10 compatibility: centralized tomllib/tomli parser; release tests and source tag tool use the compatibility layer
 ```
 
 Distribution verification started from an empty `dist/` directory:
