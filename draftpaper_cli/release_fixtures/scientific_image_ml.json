@@ -1,4 +1,5 @@
 {
+  "schema_version": "dpl.release_fixture.v1",
   "fixture_id": "scientific_image_ml",
   "idea": "Fixed scientific image representations for morphology classification and anomaly candidate stability",
   "field": "astronomy machine learning scientific image representation",

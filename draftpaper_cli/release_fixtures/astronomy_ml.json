@@ -1,4 +1,5 @@
 {
+  "schema_version": "dpl.release_fixture.v1",
   "fixture_id": "astronomy_ml",
   "idea": "Source-held-out classification from time-resolved astronomical observations",
   "field": "astronomy machine learning time-domain classification",

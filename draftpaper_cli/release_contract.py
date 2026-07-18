@@ -11,7 +11,7 @@ from typing import Any
 
 from .command_contracts import build_command_contracts
 from .plugin_catalog import build_plugin_catalog_snapshot
-from .schema_registry import load_schema_registry
+from .schema_registry import load_schema_registry, validate_packaged_resource_schemas
 from .template_registry import discover_template_registry
 from .release_regression import FIXTURE_NAMES
 
@@ -60,6 +60,7 @@ def build_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
     release_fixtures = [fixture_id for fixture_id in FIXTURE_NAMES if fixture_id in available_release_fixtures]
     third_party = repository / "third_party" / "registry.json"
     constraints = repository / CI_CONSTRAINTS
+    resource_schemas = validate_packaged_resource_schemas()
     return {
         "schema_version": "dpl.release_manifest.v1",
         "package_version": _version(repository),
@@ -86,6 +87,8 @@ def build_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
             "rollback-manuscript-completion",
         ],
         "schema_registry_version": load_schema_registry()["schema_version"],
+        "resource_schema_status": resource_schemas["status"],
+        "resource_schema_issue_count": len(resource_schemas["issues"]),
         "capability_pack_ids": sorted(path.parent.name for path in (repository / "draftpaper_cli" / "capability_packs").glob("*/manifest.json")),
         "release_fixture_ids": release_fixtures,
         "third_party_registry_sha256": _sha(third_party),
@@ -114,6 +117,8 @@ def validate_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
         security_issues.append("github_action_not_pinned_to_commit")
     if not security.get("ci_constraints_sha256"):
         security_issues.append("missing_ci_constraints")
+    if current.get("resource_schema_status") != "passed" or current.get("resource_schema_issue_count"):
+        security_issues.append("packaged_resource_schema_validation_failed")
     changed_fields = sorted(key for key in set(expected) | set(current) if expected.get(key) != current.get(key))
     return {
         "schema_version": "dpl.release_manifest_validation.v1",

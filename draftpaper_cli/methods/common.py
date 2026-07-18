@@ -177,7 +177,7 @@ def _strip_forbidden_paths(text: str) -> str:
     return text.strip()
 
 
-def _drop_internal_method_sentences(text: str) -> str:
+def _drop_internal_method_sentences(text: Any) -> str:
     cleaned = _strip_forbidden_paths(_clean_sentence(text))
     if not cleaned:
         return ""

@@ -83,4 +83,4 @@ jobs:
       - name: Install Draftpaper-loop
         run: python -m pip install -c requirements/ci-constraints.txt -e .[dev]
       - name: Measure first-party coverage
-        run: python -m pytest --cov=draftpaper_cli --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=45
+        run: python -m pytest --cov=draftpaper_cli --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=65

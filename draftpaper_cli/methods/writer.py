@@ -556,8 +556,10 @@ def _validate_successful_manifest(project_path: Path) -> dict[str, Any]:
 
 
 def _render_methods_tex(project_meta: dict[str, Any], manifest: dict[str, Any], context: dict[str, Any]) -> str:
-    brief = context.get("writing_brief") if isinstance(context.get("writing_brief"), dict) else {}
-    stage_briefs = brief.get("stage_briefs") if isinstance(brief.get("stage_briefs"), list) else []
+    brief_value = context.get("writing_brief")
+    brief: dict[str, Any] = brief_value if isinstance(brief_value, dict) else {}
+    stage_briefs_value = brief.get("stage_briefs")
+    stage_briefs: list[Any] = stage_briefs_value if isinstance(stage_briefs_value, list) else []
     stage_goals = [
         _drop_internal_method_sentences(item.get("writing_goal"))
         for item in stage_briefs[:6]

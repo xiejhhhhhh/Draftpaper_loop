@@ -1,4 +1,5 @@
 {
+  "schema_version": "dpl.release_fixture.v1",
   "fixture_id": "bioinformatics_medicine",
   "idea": "Patient-held-out outcome prediction from molecular and clinical measurements",
   "field": "bioinformatics medicine clinical machine learning",

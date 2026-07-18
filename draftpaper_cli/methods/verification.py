@@ -555,6 +555,7 @@ def verify_methods(
         if _project_relative_path(state.path, relative).is_file()
     }
     manifest = {
+        "schema_version": "dpl.method_run_manifest.v1",
         "status": status,
         "command": command_display,
         "command_argv": command_argv,

@@ -62,3 +62,49 @@ def schema_registry_report() -> dict[str, Any]:
         "issues": issues,
         "registry_version": registry.get("schema_version"),
     }
+
+
+def validate_packaged_resource_schemas() -> dict[str, Any]:
+    root = files("draftpaper_cli")
+    checks: list[dict[str, str]] = []
+    issues: list[str] = []
+
+    release_root = root.joinpath("release_fixtures")
+    release_files = sorted(
+        (item for item in release_root.iterdir() if item.name.endswith(".json")),
+        key=lambda item: item.name,
+    )
+    for item in release_files:
+        payload = json.loads(item.read_text(encoding="utf-8"))
+        schema_id = str(payload.get("schema_version") or "") if isinstance(payload, dict) else ""
+        family = schema_family(schema_id) if schema_id else None
+        checks.append({"resource": f"release_fixtures/{item.name}", "schema_id": schema_id, "family": str(family or "")})
+        if family != "release_fixture":
+            issues.append(f"release_fixtures/{item.name}:unregistered_or_wrong_schema:{schema_id or 'missing'}")
+
+    capability_root = root.joinpath("capability_packs")
+    capability_files = sorted(
+        (
+            (directory.name, directory.joinpath("manifest.json"))
+            for directory in capability_root.iterdir()
+            if directory.is_dir()
+        ),
+        key=lambda item: item[0],
+    )
+    capability_files = [(pack_id, item) for pack_id, item in capability_files if item.is_file()]
+    for pack_id, item in capability_files:
+        payload = json.loads(item.read_text(encoding="utf-8"))
+        schema_id = str(payload.get("schema_version") or "") if isinstance(payload, dict) else ""
+        family = schema_family(schema_id) if schema_id else None
+        checks.append({"resource": f"capability_packs/{pack_id}/manifest.json", "schema_id": schema_id, "family": str(family or "")})
+        if family != "research_capability_pack":
+            issues.append(f"capability_packs/{pack_id}/manifest.json:unregistered_or_wrong_schema:{schema_id or 'missing'}")
+
+    return {
+        "schema_version": "dpl.packaged_resource_schema_report.v1",
+        "status": "passed" if not issues else "failed",
+        "release_fixture_count": len(release_files),
+        "capability_pack_count": len(capability_files),
+        "checks": checks,
+        "issues": issues,
+    }

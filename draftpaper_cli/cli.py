@@ -1080,7 +1080,8 @@ def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
         return 1
     if registered is not None:
         result, exit_code = registered
-        print(json.dumps(result, ensure_ascii=False))
+        output_stream = result.pop("_dpl_output_stream", "stdout")
+        print(json.dumps(result, ensure_ascii=False), file=sys.stderr if output_stream == "stderr" else sys.stdout)
         return exit_code
 
     print(json.dumps({"status": "error", "message": f"Registered handler missing for {args.command}."}, ensure_ascii=False), file=sys.stderr)

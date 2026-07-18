@@ -693,13 +693,17 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         stderr = io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             exit_code = int(handler(args))
-        lines = [line for line in (*stdout.getvalue().splitlines(), *stderr.getvalue().splitlines()) if line.strip()]
-        for line in reversed(lines):
+        lines = [
+            *(('stdout', line) for line in stdout.getvalue().splitlines() if line.strip()),
+            *(('stderr', line) for line in stderr.getvalue().splitlines() if line.strip()),
+        ]
+        for output_stream, line in reversed(lines):
             try:
                 payload = json.loads(line)
             except json.JSONDecodeError:
                 continue
             if isinstance(payload, dict):
+                payload["_dpl_output_stream"] = output_stream
                 return payload, exit_code
         raise TypeError(f"Namespace handler for {spec.name} did not emit a JSON object payload.")
     kwargs = {parameter: getattr(args, attribute, None) for parameter, attribute in spec.argument_bindings}

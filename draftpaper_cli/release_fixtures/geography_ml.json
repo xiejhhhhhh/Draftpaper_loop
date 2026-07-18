@@ -1,4 +1,5 @@
 {
+  "schema_version": "dpl.release_fixture.v1",
   "fixture_id": "geography_ml",
   "idea": "Held-out galaxy morphology analysis from harmonized Euclid imaging and spectroscopic catalog observations",
   "field": "astronomical geography machine learning morphology analysis",

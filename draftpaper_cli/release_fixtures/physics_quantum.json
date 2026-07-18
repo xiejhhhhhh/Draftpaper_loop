@@ -1,4 +1,5 @@
 {
+  "schema_version": "dpl.release_fixture.v1",
   "fixture_id": "physics_quantum",
   "idea": "Held-out uncertainty-aware comparison of simulated physical and quantum-system responses",
   "field": "physics quantum science uncertainty analysis",

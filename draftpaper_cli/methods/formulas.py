@@ -180,7 +180,8 @@ def _formula_entries(manifest: dict[str, Any], figure_metadata: dict[str, Any], 
     method_context = method_context or {}
     project_path = Path(str(method_context.get("project_path") or ""))
     blueprint = _read_json(project_path / "methods" / "method_blueprint.json", {}) if str(project_path) else {}
-    formula_plan = blueprint.get("method_formula_plan") if isinstance(blueprint.get("method_formula_plan"), dict) else {}
+    formula_plan_value = blueprint.get("method_formula_plan")
+    formula_plan: dict[str, Any] = formula_plan_value if isinstance(formula_plan_value, dict) else {}
     planned_families = [str(item) for item in formula_plan.get("formula_families") or [] if str(item)]
     if planned_families:
         return _planned_formula_entries(planned_families, figure_metadata)
@@ -314,6 +315,7 @@ def _write_method_formulas(project_path: Path, manifest: dict[str, Any]) -> None
     figure_metadata = _read_json(project_path / "results" / "figure_metadata.json", {})
     entries = _formula_entries(manifest, figure_metadata, {"project_path": str(project_path)})
     payload = {
+        "schema_version": "dpl.method_formula_manifest.v1",
         "status": "written",
         "generated_at": utc_now(),
         "formula_count": len(entries),
@@ -343,7 +345,8 @@ def _latex_formula_entries(context: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(entries, list):
         entries = []
     normalized = [entry for entry in entries if isinstance(entry, dict) and str(entry.get("latex") or "").strip()]
-    ast_payload = context.get("analysis_formula_ast") if isinstance(context.get("analysis_formula_ast"), dict) else {}
+    ast_payload_value = context.get("analysis_formula_ast")
+    ast_payload: dict[str, Any] = ast_payload_value if isinstance(ast_payload_value, dict) else {}
     seen = {str(item.get("formula_id") or item.get("name") or item.get("latex")) for item in normalized}
     for formula in ast_payload.get("formulas") or []:
         if not isinstance(formula, dict) or not formula.get("latex"):
