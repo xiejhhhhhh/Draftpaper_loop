@@ -410,8 +410,9 @@ def _classify(section: str, instruction: str, content: str, explicit: str | None
     classification = _classify_detailed(section, instruction, content, explicit)
     change_class = classification.effective_change_class
     if classification.decision in {"classification_refinement_required", "classification_mismatch"}:
-        if str(explicit or "").strip().lower() == "scientific_evidence_change":
-            change_class = normalize_change_class(explicit)
+        explicit_change_class = str(explicit or "").strip().lower()
+        if explicit_change_class == "scientific_evidence_change":
+            change_class = normalize_change_class(explicit_change_class)
         else:
             change_class = classification.inferred_change_class
     stale = affected_stages_for_class(change_class, source_stage=SECTION_STAGES.get(section, section))
