@@ -77,6 +77,12 @@ python -m draftpaper_cli.cli verify-methods --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\my_project
 python -m draftpaper_cli.cli resolve-figure-evidence --project <repo>\projects\my_project
 python -m draftpaper_cli.cli assess-result-support --project <repo>\projects\my_project
+# When Result Support requests a route, either old argv prints the current checkpoint hash and complete command.
+python -m draftpaper_cli.cli apply-result-downgrade --project <repo>\projects\my_project
+python -m draftpaper_cli.cli prepare-result-rescue --project <repo>\projects\my_project
+# Submit exactly one route for the whole checkpoint with the returned hash.
+python -m draftpaper_cli.cli apply-result-downgrade --project <repo>\projects\my_project --checkpoint-hash <checkpoint_sha256>
+python -m draftpaper_cli.cli prepare-result-rescue --project <repo>\projects\my_project --checkpoint-hash <checkpoint_sha256>
 python -m draftpaper_cli.cli assess-core-evidence --project <repo>\projects\my_project
 python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage core_evidence --note "User approved core figures and evidence"
 python -m draftpaper_cli.cli inventory-results --project <repo>\projects\my_project

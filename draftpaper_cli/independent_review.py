@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import shutil
 import subprocess
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -63,14 +64,19 @@ class IndependentReviewError(RuntimeError):
     """Raised when a review bundle or independent report violates the contract."""
 
 
-def _read(path: Path) -> dict[str, Any]:
+def _read_snapshot(path: Path) -> tuple[dict[str, Any], bytes]:
     if not path.is_file():
-        return {}
+        return {}, b""
     try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+        content = path.read_bytes()
+        payload = json.loads(content.decode("utf-8-sig"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}, b""
+    return (payload if isinstance(payload, dict) else {}), content
+
+
+def _read(path: Path) -> dict[str, Any]:
+    return _read_snapshot(path)[0]
 
 
 def _write(path: Path, payload: dict[str, Any]) -> None:
@@ -89,8 +95,47 @@ def _relative_hashes(root: Path, paths: list[Path]) -> list[dict[str, Any]]:
             relative = path.relative_to(root.resolve()).as_posix()
         except ValueError:
             continue
-        result.append({"path": relative, "sha256": _sha(path), "size_bytes": path.stat().st_size})
+        content = path.read_bytes()
+        result.append({"path": relative, "sha256": hashlib.sha256(content).hexdigest(), "size_bytes": len(content)})
     return result
+
+
+def _frozen_archive_payloads(
+    root: Path,
+    frozen: dict[str, list[dict[str, Any]]],
+) -> list[tuple[str, bytes]]:
+    root_resolved = root.resolve()
+    payloads: list[tuple[str, bytes]] = []
+    seen: set[str] = set()
+    for group in frozen.values():
+        for record in group:
+            relative = str(record["path"])
+            posix_path = PurePosixPath(relative)
+            if (
+                not relative
+                or relative == "bundle_manifest.json"
+                or "\\" in relative
+                or Path(relative).is_absolute()
+                or posix_path.is_absolute()
+                or posix_path.as_posix() != relative
+                or any(part in {"", ".", ".."} for part in posix_path.parts)
+            ):
+                raise IndependentReviewError(f"Frozen review artifact path is not a canonical project-relative path: {relative!r}")
+            if relative in seen:
+                raise IndependentReviewError(f"Frozen review artifact path is declared more than once: {relative}")
+            seen.add(relative)
+            try:
+                path = (root_resolved / Path(*posix_path.parts)).resolve(strict=True)
+                path.relative_to(root_resolved)
+            except (OSError, RuntimeError, ValueError) as exc:
+                raise IndependentReviewError(f"Frozen review artifact path escapes the project or is missing: {relative}") from exc
+            if not path.is_file():
+                raise IndependentReviewError(f"Frozen review artifact is not a regular file: {relative}")
+            content = path.read_bytes()
+            if hashlib.sha256(content).hexdigest() != record["sha256"] or len(content) != record["size_bytes"]:
+                raise IndependentReviewError(f"Frozen review artifact changed while preparing the bundle: {relative}")
+            payloads.append((relative, content))
+    return payloads
 
 
 def _declared_identity(root: Path) -> list[str]:
@@ -272,7 +317,6 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
             raise IndependentReviewError("Anonymous review build still contains declared identity: " + ", ".join(remaining))
     else:
         anonymous_sources = [root / "latex" / "main.tex", *list((root / "latex" / "sections").glob("*.tex"))]
-    latex_sections = list((root / "latex" / "sections").glob("*.tex"))
     from .reproducibility_bundle import selected_result_assets, smoke_dependency_closure
 
     figures, tables = selected_result_assets(root)
@@ -341,16 +385,9 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
     zip_path = root / BUNDLE_ZIP
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.write(pdf, "manuscript.pdf")
         archive.writestr("bundle_manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
-        for path in figures:
-            if path.is_file():
-                archive.write(path, "figures/" + path.relative_to(root / "results" / "figures").as_posix())
-        for path in tables:
-            if path.is_file():
-                archive.write(path, "tables/" + path.relative_to(root / "results" / "tables").as_posix())
-        for path in reproducibility:
-            archive.write(path, "reproducibility/" + path.relative_to(root).as_posix())
+        for relative, content in _frozen_archive_payloads(root, frozen):
+            archive.writestr(relative, content)
     return {
         "status": "prepared",
         "project_path": str(root),
@@ -375,6 +412,92 @@ def _forbidden_comparison_keys(payload: Any, prefix: str = "") -> list[str]:
         for index, value in enumerate(payload):
             found.extend(_forbidden_comparison_keys(value, f"{prefix}[{index}]"))
     return found
+
+
+def validate_independent_review_content(
+    report: dict[str, Any],
+) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+    recommendation = str(report.get("overall_recommendation") or "")
+    if recommendation not in RECOMMENDATION_ORDER:
+        raise IndependentReviewError("Invalid overall_recommendation.")
+    scores = report.get("scores")
+    if not isinstance(scores, dict):
+        raise IndependentReviewError("Review scores must be a structured object.")
+    missing_scores = sorted(SCORE_DIMENSIONS - set(scores))
+    if missing_scores:
+        raise IndependentReviewError("Review is missing required score dimensions: " + ", ".join(missing_scores))
+    for name, value in scores.items():
+        if isinstance(value, bool):
+            raise IndependentReviewError(f"Review score is not numeric: {name}")
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise IndependentReviewError(f"Review score is not numeric: {name}") from exc
+        if not math.isfinite(numeric) or numeric < 0 or numeric > 1:
+            raise IndependentReviewError(f"Review score must be in [0,1]: {name}")
+
+    raw_findings = report.get("findings")
+    if not isinstance(raw_findings, list) or not raw_findings:
+        raise IndependentReviewError("Review must include at least one grounded finding.")
+    findings: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_findings, start=1):
+        if not isinstance(item, dict):
+            raise IndependentReviewError(f"Review grounded finding {index} must be a structured object.")
+        if item.get("severity") not in {"critical", "major", "minor", "advisory"}:
+            raise IndependentReviewError(f"Finding {index} has invalid severity.")
+        grounding = [item.get(field) for field in ("locator", "detail", "required_action")]
+        if any(not isinstance(value, str) or not value.strip() for value in grounding):
+            raise IndependentReviewError(f"Finding {index} must be page/section/figure grounded with a required action.")
+        findings.append(item)
+    return recommendation, scores, findings
+
+
+def derive_independent_review_decision(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive release status exclusively from two complete review report payloads."""
+    if len(reports) != 2:
+        raise IndependentReviewError("Exactly two complete independent reports are required for release assessment.")
+    validated = [validate_independent_review_content(report) for report in reports]
+    findings = [
+        {**item, "reviewer": report.get("reviewer_anonymous_id")}
+        for report, (_, _, report_findings) in zip(reports, validated)
+        for item in report_findings
+    ]
+    critical = [
+        item
+        for item in findings
+        if item.get("severity") == "critical" and item.get("resolution_status") != "resolved"
+    ]
+    major = [
+        item
+        for item in findings
+        if item.get("severity") == "major" and item.get("resolution_status") != "resolved"
+    ]
+    recommendations = [RECOMMENDATION_ORDER[recommendation] for recommendation, _, _ in validated]
+    recommendation_gap = abs(recommendations[0] - recommendations[1])
+    scientific_scores = [float(scores["scientific_correctness"]) for _, scores, _ in validated]
+    scientific_score_gap = abs(scientific_scores[0] - scientific_scores[1])
+    adjudication = bool(critical or recommendation_gap >= 2 or scientific_score_gap >= 0.25)
+    release_ready = not critical and not major and not adjudication and min(scientific_scores) >= 0.9
+    return {
+        "status": "passed" if release_ready else "adjudication_required" if adjudication else "revision_required",
+        "release_review_status": "pass" if release_ready else "blocked",
+        "critical_open_count": len(critical),
+        "major_open_count": len(major),
+        "adjudication_required": adjudication,
+        "recommendations": {
+            str(report.get("reviewer_anonymous_id") or ""): recommendation
+            for report, (recommendation, _, _) in zip(reports, validated)
+        },
+        "score_means": {
+            dimension: sum(float(scores[dimension]) for _, scores, _ in validated) / 2
+            for dimension in sorted(SCORE_DIMENSIONS)
+        },
+        "reviewer_agreement": {
+            "recommendation_gap": recommendation_gap,
+            "scientific_score_gap": scientific_score_gap,
+        },
+        "revision_queue": findings,
+    }
 
 
 def _review_markdown(report: dict[str, Any]) -> str:
@@ -409,30 +532,12 @@ def record_independent_manuscript_review(project: str | Path, reviewer: str, inp
     forbidden = _forbidden_comparison_keys(report)
     if forbidden:
         raise IndependentReviewError("Independent review contains prohibited original/A-B comparison fields: " + ", ".join(forbidden))
-    recommendation = str(report.get("overall_recommendation") or "")
-    if recommendation not in RECOMMENDATION_ORDER:
-        raise IndependentReviewError("Invalid overall_recommendation.")
     if report.get("frozen_submission_bundle_hash") != manifest.get("bundle_hash"):
         raise IndependentReviewError("Review report does not bind the current frozen submission bundle hash.")
-    scores = report.get("scores") if isinstance(report.get("scores"), dict) else {}
-    missing_scores = sorted(SCORE_DIMENSIONS - set(scores))
-    if missing_scores:
-        raise IndependentReviewError("Review is missing required score dimensions: " + ", ".join(missing_scores))
-    for name, value in scores.items():
-        try:
-            numeric = float(value)
-        except (TypeError, ValueError) as exc:
-            raise IndependentReviewError(f"Review score is not numeric: {name}") from exc
-        if numeric < 0 or numeric > 1:
-            raise IndependentReviewError(f"Review score must be in [0,1]: {name}")
+    recommendation, scores, findings = validate_independent_review_content(report)
     if report.get("checked_real_figures") is not True or report.get("full_manuscript_reviewed") is not True:
         raise IndependentReviewError("Reviewer must confirm the full manuscript and real figures were checked.")
-    findings = [item for item in report.get("findings") or [] if isinstance(item, dict)]
     for index, item in enumerate(findings, start=1):
-        if item.get("severity") not in {"critical", "major", "minor", "advisory"}:
-            raise IndependentReviewError(f"Finding {index} has invalid severity.")
-        if not item.get("locator") or not item.get("detail") or not item.get("required_action"):
-            raise IndependentReviewError(f"Finding {index} must be page/section/figure grounded with a required action.")
         item.setdefault("finding_id", f"{slot}:{index:03d}")
         item.setdefault("resolution_status", "open")
         item.setdefault("finding_class", "prose_local")
@@ -472,50 +577,40 @@ def assess_manuscript_quality_release(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     manifest = _read(state.path / BUNDLE_MANIFEST)
     reports = []
+    report_bytes: dict[str, bytes] = {}
     for slot in ("reviewer_01", "reviewer_02"):
-        report = _read(state.path / REVIEW_ROOT / slot / "report.json")
+        report_path = state.path / REVIEW_ROOT / slot / "report.json"
+        report, content = _read_snapshot(report_path)
         if not report:
             raise IndependentReviewError(f"Missing independent report: {slot}")
         if report.get("frozen_submission_bundle_hash") != manifest.get("bundle_hash"):
             raise IndependentReviewError(f"Reviewer report is stale against the current bundle: {slot}")
+        validate_independent_review_content(report)
         reports.append(report)
+        report_bytes[slot] = content
     session_hashes = {str(item.get("independent_session_provider_id_hash")) for item in reports}
     if len(session_hashes) != 2:
         raise IndependentReviewError("The two reports must come from distinct independent session/provider IDs.")
-    findings = [
-        {**item, "reviewer": report["reviewer_anonymous_id"]}
-        for report in reports
-        for item in report.get("findings") or []
-        if isinstance(item, dict)
-    ]
-    critical = [item for item in findings if item.get("severity") == "critical" and item.get("resolution_status") != "resolved"]
-    major = [item for item in findings if item.get("severity") == "major" and item.get("resolution_status") != "resolved"]
-    recommendations = [RECOMMENDATION_ORDER[item["overall_recommendation"]] for item in reports]
-    recommendation_gap = abs(recommendations[0] - recommendations[1])
-    scientific_scores = [float(item["scores"]["scientific_correctness"]) for item in reports]
-    adjudication = bool(critical or recommendation_gap >= 2 or abs(scientific_scores[0] - scientific_scores[1]) >= 0.25)
-    release_ready = not critical and not major and not adjudication and min(scientific_scores) >= 0.9
+    decision = derive_independent_review_decision(reports)
     aggregate = {
         "schema_version": "dpl.independent_review_aggregate.v1",
-        "status": "passed" if release_ready else "adjudication_required" if adjudication else "revision_required",
         "generated_at": utc_now(),
         "frozen_submission_bundle_hash": manifest.get("bundle_hash"),
         "reviewer_count": 2,
         "reviewer_reports": [f"{REVIEW_ROOT}/{item['reviewer_anonymous_id']}/report.json" for item in reports],
-        "recommendations": {item["reviewer_anonymous_id"]: item["overall_recommendation"] for item in reports},
-        "score_means": {dimension: sum(float(item["scores"][dimension]) for item in reports) / 2 for dimension in sorted(SCORE_DIMENSIONS)},
-        "critical_open_count": len(critical),
-        "major_open_count": len(major),
-        "reviewer_agreement": {"recommendation_gap": recommendation_gap, "scientific_score_gap": abs(scientific_scores[0] - scientific_scores[1])},
-        "adjudication_required": adjudication,
-        "release_review_status": "pass" if release_ready else "blocked",
-        "revision_queue": findings,
+        "reviewer_report_sha256": {
+            f"{REVIEW_ROOT}/{item['reviewer_anonymous_id']}/report.json": hashlib.sha256(
+                report_bytes[item["reviewer_anonymous_id"]]
+            ).hexdigest()
+            for item in reports
+        },
+        **decision,
         "relative_quality_ratio_prohibited": True,
         "policy": "This is an absolute audit of one frozen generated manuscript; no original manuscript, A/B mapping, unblinding or relative quality ratio is used.",
     }
     _write(state.path / AGGREGATE_JSON, aggregate)
     _write(state.path / EVALUATION_JSON, aggregate)
-    lines = ["# Independent Manuscript Review Aggregate", "", f"Status: **{aggregate['status']}**", "", f"Critical open: {len(critical)}", f"Major open: {len(major)}", "", "## Revision Queue", ""]
-    lines.extend(f"- **{item.get('severity')}** [{item.get('reviewer')}] {item.get('locator')}: {item.get('detail')}" for item in findings)
+    lines = ["# Independent Manuscript Review Aggregate", "", f"Status: **{aggregate['status']}**", "", f"Critical open: {aggregate['critical_open_count']}", f"Major open: {aggregate['major_open_count']}", "", "## Revision Queue", ""]
+    lines.extend(f"- **{item.get('severity')}** [{item.get('reviewer')}] {item.get('locator')}: {item.get('detail')}" for item in decision["revision_queue"])
     (state.path / AGGREGATE_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return aggregate

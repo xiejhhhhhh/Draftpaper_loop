@@ -35,6 +35,21 @@ section_revisions:
 
 Line numbers are display hints. `paragraph_id`, `expected_sha256`, normalized expected text and optional occurrence are the write guards. A stale, ambiguous, overlapping or conflicting target rejects the whole packet.
 
+## Evidence-backed Data and Methods details
+
+If a revision states that a processing, training, or analysis step was executed, add an `evidence_refs` entry from the current project manifests. Preview reads only the fixed local evidence allowlist and reports `suggested_evidence_refs`; copy only the candidate that identifies the same run, cohort, and snapshot.
+
+```yaml
+evidence_refs:
+  - artifact: methods/run_manifest.yaml
+    json_pointer: /steps/feature_construction
+    expected_sha256: <sha256 from suggested_evidence_refs>
+    run_id: <current run id>
+    cohort_id: <current cohort id>
+```
+
+Missing, expired, cross-run, cross-cohort, or cross-snapshot refs produce `classification_refinement_required`. Apply repeats the ref validation after preview, so a changed manifest requires a fresh preview.
+
 ## Preview and acceptance
 
 Preview creates a unified metadata/section/BibTeX diff, locator report, stale-impact report, candidate LaTeX and candidate PDF. It does not change canonical manuscript sources. `compile_required`, an unresolved Codex instruction or a requested data/method/run/evidence change is non-passing.
@@ -46,4 +61,3 @@ Rollback is allowed only while all after hashes still match the transaction rece
 ## Final release ordering
 
 After completion, rebuild and compile `latex/main.pdf`, run the final citation audit, final integrity and quality gates, and two independent blind reviews. `review-final-manuscript` binds the active completion manifest, canonical manuscript, reference registry, evidence snapshot, citation audit, review reports, quality reports and PDF into one release hash.
-

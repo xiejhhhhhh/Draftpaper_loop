@@ -16,6 +16,14 @@ from .loop_contract import stable_claim_id
 from .passport import utc_now
 from .project_scaffold import _write_json
 from .project_state import load_project, mark_stages_stale, update_stage_status
+from .scoped_transaction import ScopedProjectTransaction
+from .state_kernel import file_lock
+from .result_support import (
+    RESULT_SUPPORT_ROUTE_LOCK,
+    ResultSupportError,
+    bind_result_route_receipt,
+    result_route_preflight,
+)
 
 
 CLAIM_CONTRACT_JSON = "research_plan/claim_contract.json"
@@ -181,72 +189,103 @@ def _assessment_by_claim(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
-def apply_result_downgrade(project: str | Path, *, reason: str = "") -> dict[str, Any]:
+def apply_result_downgrade(
+    project: str | Path,
+    *,
+    reason: str = "",
+    checkpoint_hash: str | None = None,
+) -> dict[str, Any]:
     """Choose the downgrade route: keep evidence fixed and lower manuscript claims."""
     state = load_project(project)
     project_path = state.path
-    report = _read_json(project_path / "results" / "result_support_checkpoint.json", {})
-    if not isinstance(report, dict) or not report:
-        raise ClaimContractError("Run assess-result-support before apply-result-downgrade.")
-    if report.get("decision") == "pass" and not report.get("requires_user_decision"):
-        raise ClaimContractError("Result support already passes; no downgrade route is required.")
-    contract_path = project_path / CLAIM_CONTRACT_JSON
-    contract = _read_json(contract_path, {})
-    if not isinstance(contract, dict) or not contract.get("claims"):
-        raise ClaimContractError("research_plan/claim_contract.json is required before apply-result-downgrade.")
-    assessments = _assessment_by_claim(report)
-    changed_claims: list[dict[str, Any]] = []
-    for claim in contract.get("claims") or []:
-        if not isinstance(claim, dict):
-            continue
-        assessment = assessments.get(str(claim.get("claim_id") or ""))
-        if assessment and assessment.get("support_status") in {"not_supported", "partially_supported"}:
-            previous = dict(claim)
-            claim["pre_downgrade_claim"] = previous.get("active_claim") or previous.get("planned_claim")
-            claim["active_claim"] = _downgrade_text(claim, assessment)
-            claim["active_strength"] = "exploratory"
-            claim["claim_boundary"] = "Downgraded to fit current verified result evidence; do not imply improvement, causality, robustness, or generality beyond the frozen figures and metrics."
-            claim["status"] = "downgraded_to_current_evidence"
-            claim["downgrade_reason"] = assessment.get("diagnosis") or reason or "Result support checkpoint required claim downgrade."
-            changed_claims.append({
-                "claim_id": claim.get("claim_id"),
-                "previous_active_claim": previous.get("active_claim") or previous.get("planned_claim"),
-                "new_active_claim": claim.get("active_claim"),
-                "diagnosis": assessment.get("diagnosis"),
-            })
-    if not changed_claims:
-        raise ClaimContractError("No failed or partial claim was available to downgrade.")
-    contract["route_state"] = "downgraded_to_current_results"
-    contract["last_route_decision_at"] = utc_now()
-    contract["schema_version"] = "dpl.claim_contract.v2"
-    _write_json(contract_path, contract)
-    freeze = _freeze_result_artifacts(project_path, route="downgrade_research_claim")
-    decision = {
-        "status": "applied",
-        "schema_version": "dpl.claim_downgrade_decision.v1",
-        "route": "downgrade_research_claim",
-        "applied_at": utc_now(),
-        "reason": reason,
-        "changed_claims": changed_claims,
-        "result_evidence_freeze": RESULT_EVIDENCE_FREEZE_JSON,
-        "versioned_result_evidence_freeze": freeze.get("versioned_snapshot"),
-        "frozen_artifact_count": freeze.get("artifact_count", 0),
-        "stale_policy": "Only manuscript and claim-boundary consumers are stale; data, methods, result validity, and figures remain current.",
-    }
-    _write_json(project_path / CLAIM_DOWNGRADE_DECISION_JSON, decision)
-    report["decision"] = "pass"
-    report["support_level"] = "downgraded_supported"
-    report["requires_user_decision"] = False
-    report["selected_route"] = "downgrade_research_claim"
-    report["manuscript_may_proceed"] = True
-    report["claim_contract"] = CLAIM_CONTRACT_JSON
-    report["result_evidence_freeze"] = RESULT_EVIDENCE_FREEZE_JSON
-    _write_json(project_path / "results" / "result_support_checkpoint.json", report)
-    markdown = _render_downgrade_markdown(decision, changed_claims)
-    (project_path / "results" / "result_support_checkpoint.md").write_text(markdown, encoding="utf-8")
-    write_html_report(project_path / "results" / "result_support_checkpoint.html", markdown, title="Result Support Checkpoint")
-    stale = mark_stages_stale(project_path, DOWNGRADE_STALE_STAGES)
-    update_stage_status(project_path, "result_support", "approved")
+    checkpoint_path = project_path / "results" / "result_support_checkpoint.json"
+    route_lock_target = project_path / RESULT_SUPPORT_ROUTE_LOCK
+    transaction_patterns = (
+        "project.json",
+        "project.yaml",
+        "**/stage_manifest.json",
+        CLAIM_CONTRACT_JSON,
+        CLAIM_DOWNGRADE_DECISION_JSON,
+        RESULT_EVIDENCE_FREEZE_JSON,
+        "results/evidence_snapshots/**",
+        "results/result_support_checkpoint.*",
+    )
+    with file_lock(route_lock_target):
+        report = _read_json(checkpoint_path, {})
+        if not isinstance(report, dict) or not report:
+            raise ClaimContractError("Run assess-result-support before apply-result-downgrade.")
+        try:
+            preflight = result_route_preflight(
+                project_path,
+                report,
+                route="downgrade_research_claim",
+                checkpoint_hash=checkpoint_hash,
+            )
+        except ResultSupportError as exc:
+            raise ClaimContractError(str(exc)) from exc
+        if preflight:
+            return preflight
+        if report.get("decision") == "pass" and not report.get("requires_user_decision"):
+            raise ClaimContractError("Result support already passes; no downgrade route is required.")
+        contract_path = project_path / CLAIM_CONTRACT_JSON
+        contract = _read_json(contract_path, {})
+        if not isinstance(contract, dict) or not contract.get("claims"):
+            raise ClaimContractError("research_plan/claim_contract.json is required before apply-result-downgrade.")
+        with ScopedProjectTransaction(project_path, transaction_patterns) as transaction:
+            assessments = _assessment_by_claim(report)
+            changed_claims: list[dict[str, Any]] = []
+            for claim in contract.get("claims") or []:
+                if not isinstance(claim, dict):
+                    continue
+                assessment = assessments.get(str(claim.get("claim_id") or ""))
+                if assessment and assessment.get("support_status") in {"not_supported", "partially_supported"}:
+                    previous = dict(claim)
+                    claim["pre_downgrade_claim"] = previous.get("active_claim") or previous.get("planned_claim")
+                    claim["active_claim"] = _downgrade_text(claim, assessment)
+                    claim["active_strength"] = "exploratory"
+                    claim["claim_boundary"] = "Downgraded to fit current verified result evidence; do not imply improvement, causality, robustness, or generality beyond the frozen figures and metrics."
+                    claim["status"] = "downgraded_to_current_evidence"
+                    claim["downgrade_reason"] = assessment.get("diagnosis") or reason or "Result support checkpoint required claim downgrade."
+                    changed_claims.append({
+                        "claim_id": claim.get("claim_id"),
+                        "previous_active_claim": previous.get("active_claim") or previous.get("planned_claim"),
+                        "new_active_claim": claim.get("active_claim"),
+                        "diagnosis": assessment.get("diagnosis"),
+                    })
+            if not changed_claims:
+                raise ClaimContractError("No failed or partial claim was available to downgrade.")
+            contract["route_state"] = "downgraded_to_current_results"
+            contract["last_route_decision_at"] = utc_now()
+            contract["schema_version"] = "dpl.claim_contract.v2"
+            _write_json(contract_path, contract)
+            freeze = _freeze_result_artifacts(project_path, route="downgrade_research_claim")
+            decision = {
+                "status": "applied",
+                "schema_version": "dpl.claim_downgrade_decision.v1",
+                "route": "downgrade_research_claim",
+                "applied_at": utc_now(),
+                "reason": reason,
+                "changed_claims": changed_claims,
+                "result_evidence_freeze": RESULT_EVIDENCE_FREEZE_JSON,
+                "versioned_result_evidence_freeze": freeze.get("versioned_snapshot"),
+                "frozen_artifact_count": freeze.get("artifact_count", 0),
+                "stale_policy": "Only manuscript and claim-boundary consumers are stale; data, methods, result validity, and figures remain current.",
+            }
+            _write_json(project_path / CLAIM_DOWNGRADE_DECISION_JSON, decision)
+            report["decision"] = "pass"
+            report["support_level"] = "downgraded_supported"
+            report["requires_user_decision"] = False
+            report["manuscript_may_proceed"] = True
+            report["claim_contract"] = CLAIM_CONTRACT_JSON
+            report["result_evidence_freeze"] = RESULT_EVIDENCE_FREEZE_JSON
+            markdown = _render_downgrade_markdown(decision, changed_claims)
+            (project_path / "results" / "result_support_checkpoint.md").write_text(markdown, encoding="utf-8")
+            write_html_report(project_path / "results" / "result_support_checkpoint.html", markdown, title="Result Support Checkpoint")
+            stale = mark_stages_stale(project_path, DOWNGRADE_STALE_STAGES)
+            update_stage_status(project_path, "result_support", "approved")
+            receipt = bind_result_route_receipt(report, route="downgrade_research_claim")
+            _write_json(checkpoint_path, report)
+            transaction.commit()
     return {
         "status": "applied",
         "project_path": str(project_path),
@@ -255,6 +294,8 @@ def apply_result_downgrade(project: str | Path, *, reason: str = "") -> dict[str
         "stale_stages": stale,
         "claim_contract": str(contract_path),
         "result_evidence_freeze": str(project_path / RESULT_EVIDENCE_FREEZE_JSON),
+        "checkpoint_sha256": report["checkpoint_sha256"],
+        "route_receipt": receipt,
     }
 
 

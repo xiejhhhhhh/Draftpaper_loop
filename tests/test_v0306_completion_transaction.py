@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from draftpaper_cli.change_impact import affected_stages_for_class
 from draftpaper_cli.cli import build_parser
 from draftpaper_cli.command_registry import command_spec
 from draftpaper_cli.manuscript_completion import (
@@ -15,6 +16,7 @@ from draftpaper_cli.manuscript_completion import (
     manuscript_completion_status,
     preview_manuscript_completion,
     rollback_manuscript_completion,
+    validate_manuscript_completion_payload,
 )
 from draftpaper_cli.manuscript_revision import active_user_locks, build_manuscript_source_map
 from draftpaper_cli.project_scaffold import create_project
@@ -143,6 +145,68 @@ def _passing_pdf(_root: Path, packet_dir: Path, **_kwargs: object) -> dict[str, 
     return {"status": "passed", "pdf": "preview.pdf", "engine": "fixture"}
 
 
+@pytest.mark.parametrize(
+    "evidence_refs,field_path",
+    [
+        ({"artifact": "methods/run_manifest.yaml"}, r"section_revisions\[0\]\.evidence_refs"),
+        (None, r"section_revisions\[0\]\.evidence_refs"),
+        (["methods/run_manifest.yaml"], r"section_revisions\[0\]\.evidence_refs\[0\]"),
+        ([{"artifact": "methods/run_manifest.yaml"}, 7], r"section_revisions\[0\]\.evidence_refs\[1\]"),
+    ],
+)
+def test_completion_packet_validates_evidence_ref_shape_before_coercion(
+    tmp_path: Path,
+    evidence_refs: object,
+    field_path: str,
+) -> None:
+    project = _project(tmp_path)
+    packet = _packet(project)
+    payload = yaml.safe_load(packet.read_text(encoding="utf-8"))
+    payload["section_revisions"][0]["evidence_refs"] = evidence_refs
+
+    with pytest.raises(ManuscriptCompletionError, match=field_path):
+        validate_manuscript_completion_payload(project, payload)
+
+
+def test_completion_payload_rejects_mixed_evidence_ref_keys_and_preserves_valid_refs(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    packet = _packet(project)
+    payload = yaml.safe_load(packet.read_text(encoding="utf-8"))
+    valid_ref = {
+        "artifact": "methods/run_manifest.yaml",
+        "json_pointer": "/run_id",
+        "expected_sha256": "a" * 64,
+    }
+    payload["section_revisions"][0]["evidence_refs"] = [valid_ref]
+
+    normalized = validate_manuscript_completion_payload(project, payload)
+
+    assert normalized["section_revisions"][0]["evidence_refs"] == [valid_ref]
+    payload["section_revisions"][0]["evidence_refs"] = [{**valid_ref, 7: "invalid"}]
+    with pytest.raises(
+        ManuscriptCompletionError,
+        match=r"section_revisions\[0\]\.evidence_refs\[0\]\.<key>",
+    ):
+        validate_manuscript_completion_payload(project, payload)
+
+
+def test_completion_yaml_rejects_mixed_evidence_ref_keys_before_hashing(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    packet = _packet(project)
+    payload = yaml.safe_load(packet.read_text(encoding="utf-8"))
+    payload["section_revisions"][0]["evidence_refs"] = [{
+        "artifact": "methods/run_manifest.yaml",
+        7: "invalid",
+    }]
+    packet.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(
+        ManuscriptCompletionError,
+        match=r"section_revisions\[0\]\.evidence_refs\[0\]\.<key>",
+    ):
+        preview_manuscript_completion(project, packet)
+
+
 def test_preview_apply_idempotency_and_hash_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     project = _project(tmp_path)
     packet = _packet(project)
@@ -174,6 +238,50 @@ def test_preview_apply_idempotency_and_hash_guard(tmp_path: Path, monkeypatch: p
     assert (project / "methods" / "methods.tex").read_text(encoding="utf-8").count("Author-approved bounded method note") == 1
     assert (project / "references" / "library.bib").read_text(encoding="utf-8").count("Custom2026") == 1
     assert manuscript_completion_status(project)["status"] == "applied"
+
+
+def test_change_report_preserves_legacy_class_and_computed_stale_scope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _project(tmp_path)
+    packet = _packet(project, change_class="prose_only")
+    payload = yaml.safe_load(packet.read_text(encoding="utf-8"))
+    payload["section_revisions"][0]["content"] = "A new Transformer architecture changed the validation split."
+    packet.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    monkeypatch.setattr("draftpaper_cli.manuscript_completion._build_completion_preview_pdf", _passing_pdf)
+
+    preview = preview_manuscript_completion(project, packet)
+    report = json.loads((project / preview["packet"] / "change_stale_report.json").read_text(encoding="utf-8"))
+    change = report["changes"][0]
+    assert change["legacy_change_class"] == "prose_only"
+    assert change["effective_change_class"] == "prose_only"
+    assert change["inferred_change_class"] == "method_change"
+    assert change["classification_decision"] == "classification_mismatch"
+    assert change["computed_stale_scope"] == affected_stages_for_class(
+        "method_change", source_stage="methods_writing"
+    )
+
+
+def test_apply_rejects_evidence_ref_changed_after_preview(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = _project(tmp_path)
+    run_manifest = project / "methods" / "run_manifest.yaml"
+    run_manifest.write_text(json.dumps({"run_id": "run:current", "step": "masked pooling"}), encoding="utf-8")
+    packet = _packet(project)
+    payload = yaml.safe_load(packet.read_text(encoding="utf-8"))
+    payload["section_revisions"][0]["content"] = "The run used the declared masked pooling step."
+    payload["section_revisions"][0]["evidence_refs"] = [{
+        "artifact": "methods/run_manifest.yaml",
+        "json_pointer": "/step",
+        "expected_sha256": __import__("hashlib").sha256(run_manifest.read_bytes()).hexdigest(),
+        "run_id": "run:current",
+    }]
+    packet.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    monkeypatch.setattr("draftpaper_cli.manuscript_completion._build_completion_preview_pdf", _passing_pdf)
+
+    preview = preview_manuscript_completion(project, packet)
+    assert preview["status"] == "ready_for_human_review"
+    run_manifest.write_text(json.dumps({"run_id": "run:changed", "step": "different"}), encoding="utf-8")
+
+    with pytest.raises(ManuscriptCompletionError, match="evidence ref"):
+        apply_manuscript_completion(project, preview["packet_id"], preview["packet_hash"])
 
 
 def test_apply_failure_rolls_back_every_canonical_artifact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

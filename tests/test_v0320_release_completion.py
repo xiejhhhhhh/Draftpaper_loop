@@ -16,14 +16,14 @@ def test_v0320_release_identity_and_scope() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     manifest = build_release_manifest()
 
-    assert version == "0.32.0"
+    assert version == "0.33.0"
     assert manifest["package_version"] == version
     assert manifest["command_count"] == 210
     assert len(manifest["release_fixture_ids"]) == 5
     assert manifest["resource_schema_status"] == "passed"
     assert manifest["release_security"]["public_pypi_publish"] is False
-    assert "v0.32.0" in Path("README.md").read_text(encoding="utf-8")
-    assert "v0.32.0" in Path("README.zh-CN.md").read_text(encoding="utf-8")
+    assert "v0.33.0" in Path("README.md").read_text(encoding="utf-8")
+    assert "v0.33.0" in Path("README.zh-CN.md").read_text(encoding="utf-8")
 
 
 def test_integrated_plan_and_requirement_audit_are_versioned() -> None:

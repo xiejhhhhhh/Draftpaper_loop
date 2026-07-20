@@ -16,6 +16,14 @@ from .html_utils import write_html_report
 from .passport import utc_now
 from .project_scaffold import _write_json
 from .project_state import load_project, mark_stages_stale, update_stage_status
+from .scoped_transaction import ScopedProjectTransaction
+from .state_kernel import file_lock
+from .result_support import (
+    RESULT_SUPPORT_ROUTE_LOCK,
+    ResultSupportError,
+    bind_result_route_receipt,
+    result_route_preflight,
+)
 
 
 RESULT_RESCUE_PLAN_JSON = "review/result_rescue_plan.json"
@@ -226,75 +234,103 @@ def _render_markdown(plan: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def prepare_result_rescue(project: str | Path) -> dict[str, Any]:
+def prepare_result_rescue(project: str | Path, *, checkpoint_hash: str | None = None) -> dict[str, Any]:
     """Choose the supplement route and prepare data/method rescue tasks."""
     state = load_project(project)
     project_path = state.path
-    support = _read_json(project_path / "results" / "result_support_checkpoint.json", {})
-    if not isinstance(support, dict) or not support:
-        raise ResultRescueError("Run assess-result-support before prepare-result-rescue.")
-    failed_claims = [item for item in support.get("failed_claims") or support.get("claim_assessments") or [] if isinstance(item, dict) and item.get("support_status") in {"not_supported", "partially_supported"}]
-    if not failed_claims and support.get("decision") == "pass":
-        raise ResultRescueError("Result support already passes; no supplement route is required.")
-    profile = infer_discipline_profile(project_path, extra_text=_claim_blob(failed_claims))
-    module = get_discipline_module(profile)
-    hints = module.method_blueprint_hints({"profile": profile, "failed_claims": failed_claims})
-    data_tasks = _data_tasks(project_path, failed_claims, list(hints.get("data_acquisition_hints") or []))
-    method_tasks = _method_tasks(project_path, failed_claims, list(hints.get("method_template_hints") or []))
-    search_tasks = _open_source_search_tasks(profile, failed_claims, method_tasks)
-    snapshot_policy: dict[str, Any] = {
-        "schema_version": "dpl.result_rescue_snapshot.v1",
-        "route": "supplement_data_and_method",
-        "policy": "Supplement route reopens the evidence chain; any promoted evidence snapshot must be archived before new data, methods, figures, and manuscript text are produced.",
-        "reopen_required": True,
-        "archived_snapshot": None,
-    }
-    if (project_path / PROMOTED_EVIDENCE_SNAPSHOT_JSON).exists():
+    checkpoint_path = project_path / "results" / "result_support_checkpoint.json"
+    route_lock_target = project_path / RESULT_SUPPORT_ROUTE_LOCK
+    transaction_patterns = (
+        "project.json",
+        "project.yaml",
+        "**/stage_manifest.json",
+        RESULT_RESCUE_PLAN_JSON,
+        RESULT_RESCUE_PLAN_MD,
+        RESULT_RESCUE_PLAN_HTML,
+        PROMOTED_EVIDENCE_SNAPSHOT_JSON,
+        "results/evidence_snapshots/**",
+        "results/evidence_snapshot_reopen_report.json",
+        "results/result_support_checkpoint.json",
+    )
+    with file_lock(route_lock_target):
+        support = _read_json(checkpoint_path, {})
+        if not isinstance(support, dict) or not support:
+            raise ResultRescueError("Run assess-result-support before prepare-result-rescue.")
         try:
-            reopened = reopen_evidence_snapshot(project_path, reason="Result support supplement route selected.")
-            snapshot_policy["archived_snapshot"] = reopened.get("archived_snapshot")
-            snapshot_policy["archived_snapshot_id"] = reopened.get("archived_snapshot_id")
-        except EvidenceSnapshotMismatch as exc:
-            snapshot_policy["archive_warning"] = str(exc)
-    recommended = [
-        f'python -m draftpaper_cli.cli prepare-data-acquisition --project "{project_path}"',
-        f'python -m draftpaper_cli.cli collect-method-plan --project "{project_path}"',
-        f'python -m draftpaper_cli.cli plan-figures --project "{project_path}"',
-        f'python -m draftpaper_cli.cli generate-analysis-code --project "{project_path}"',
-        f'python -m draftpaper_cli.cli verify-methods --project "{project_path}"',
-        f'python -m draftpaper_cli.cli assess-result-validity --project "{project_path}"',
-        f'python -m draftpaper_cli.cli assess-result-support --project "{project_path}"',
-    ]
-    plan = {
-        "status": "prepared",
-        "schema_version": "dpl.result_rescue_plan.v2",
-        "route": "supplement_data_and_method",
-        "generated_at": utc_now(),
-        "project_id": state.metadata.get("project_id"),
-        "discipline_profile": profile,
-        "discipline_module": module.spec.module_id,
-        "failed_claims": failed_claims,
-        "data_supplement_tasks": data_tasks,
-        "method_supplement_tasks": method_tasks,
-        "open_source_code_search_tasks": search_tasks,
-        "recommended_next_commands": recommended,
-        "evidence_snapshot_policy": snapshot_policy,
-        "stale_policy": "Supplement route reopens data/method/figure/evidence/manuscript chain because new evidence must be generated and revalidated.",
-    }
-    review_dir = project_path / "review"
-    review_dir.mkdir(parents=True, exist_ok=True)
-    _write_json(project_path / RESULT_RESCUE_PLAN_JSON, plan)
-    markdown = _render_markdown(plan)
-    (project_path / RESULT_RESCUE_PLAN_MD).write_text(markdown, encoding="utf-8")
-    write_html_report(project_path / RESULT_RESCUE_PLAN_HTML, markdown, title="Result Rescue Plan")
-    support["selected_route"] = "supplement_data_and_method"
-    support["result_rescue_plan"] = RESULT_RESCUE_PLAN_JSON
-    support["requires_user_decision"] = False
-    support["decision"] = "supplement_prepared"
-    support["evidence_snapshot_policy"] = snapshot_policy
-    _write_json(project_path / "results" / "result_support_checkpoint.json", support)
-    stale = mark_stages_stale(project_path, SUPPLEMENT_STALE_STAGES)
-    update_stage_status(project_path, "result_support", "failed")
+            preflight = result_route_preflight(
+                project_path,
+                support,
+                route="supplement_data_and_method",
+                checkpoint_hash=checkpoint_hash,
+            )
+        except ResultSupportError as exc:
+            raise ResultRescueError(str(exc)) from exc
+        if preflight:
+            return preflight
+        failed_claims = [item for item in support.get("failed_claims") or support.get("claim_assessments") or [] if isinstance(item, dict) and item.get("support_status") in {"not_supported", "partially_supported"}]
+        if not failed_claims and support.get("decision") == "pass":
+            raise ResultRescueError("Result support already passes; no supplement route is required.")
+        with ScopedProjectTransaction(project_path, transaction_patterns) as transaction:
+            profile = infer_discipline_profile(project_path, extra_text=_claim_blob(failed_claims))
+            module = get_discipline_module(profile)
+            hints = module.method_blueprint_hints({"profile": profile, "failed_claims": failed_claims})
+            data_tasks = _data_tasks(project_path, failed_claims, list(hints.get("data_acquisition_hints") or []))
+            method_tasks = _method_tasks(project_path, failed_claims, list(hints.get("method_template_hints") or []))
+            search_tasks = _open_source_search_tasks(profile, failed_claims, method_tasks)
+            snapshot_policy: dict[str, Any] = {
+                "schema_version": "dpl.result_rescue_snapshot.v1",
+                "route": "supplement_data_and_method",
+                "policy": "Supplement route reopens the evidence chain; any promoted evidence snapshot must be archived before new data, methods, figures, and manuscript text are produced.",
+                "reopen_required": True,
+                "archived_snapshot": None,
+            }
+            if (project_path / PROMOTED_EVIDENCE_SNAPSHOT_JSON).exists():
+                try:
+                    reopened = reopen_evidence_snapshot(project_path, reason="Result support supplement route selected.")
+                    snapshot_policy["archived_snapshot"] = reopened.get("archived_snapshot")
+                    snapshot_policy["archived_snapshot_id"] = reopened.get("archived_snapshot_id")
+                except EvidenceSnapshotMismatch as exc:
+                    snapshot_policy["archive_warning"] = str(exc)
+            recommended = [
+                f'python -m draftpaper_cli.cli prepare-data-acquisition --project "{project_path}"',
+                f'python -m draftpaper_cli.cli collect-method-plan --project "{project_path}"',
+                f'python -m draftpaper_cli.cli plan-figures --project "{project_path}"',
+                f'python -m draftpaper_cli.cli generate-analysis-code --project "{project_path}"',
+                f'python -m draftpaper_cli.cli verify-methods --project "{project_path}"',
+                f'python -m draftpaper_cli.cli assess-result-validity --project "{project_path}"',
+                f'python -m draftpaper_cli.cli assess-result-support --project "{project_path}"',
+            ]
+            plan = {
+                "status": "prepared",
+                "schema_version": "dpl.result_rescue_plan.v2",
+                "route": "supplement_data_and_method",
+                "generated_at": utc_now(),
+                "project_id": state.metadata.get("project_id"),
+                "discipline_profile": profile,
+                "discipline_module": module.spec.module_id,
+                "failed_claims": failed_claims,
+                "data_supplement_tasks": data_tasks,
+                "method_supplement_tasks": method_tasks,
+                "open_source_code_search_tasks": search_tasks,
+                "recommended_next_commands": recommended,
+                "evidence_snapshot_policy": snapshot_policy,
+                "stale_policy": "Supplement route reopens data/method/figure/evidence/manuscript chain because new evidence must be generated and revalidated.",
+            }
+            review_dir = project_path / "review"
+            review_dir.mkdir(parents=True, exist_ok=True)
+            _write_json(project_path / RESULT_RESCUE_PLAN_JSON, plan)
+            markdown = _render_markdown(plan)
+            (project_path / RESULT_RESCUE_PLAN_MD).write_text(markdown, encoding="utf-8")
+            write_html_report(project_path / RESULT_RESCUE_PLAN_HTML, markdown, title="Result Rescue Plan")
+            support["result_rescue_plan"] = RESULT_RESCUE_PLAN_JSON
+            support["requires_user_decision"] = False
+            support["decision"] = "supplement_prepared"
+            support["evidence_snapshot_policy"] = snapshot_policy
+            stale = mark_stages_stale(project_path, SUPPLEMENT_STALE_STAGES)
+            update_stage_status(project_path, "result_support", "failed")
+            receipt = bind_result_route_receipt(support, route="supplement_data_and_method")
+            _write_json(checkpoint_path, support)
+            transaction.commit()
     return {
         "status": "prepared",
         "project_path": str(project_path),
@@ -305,6 +341,8 @@ def prepare_result_rescue(project: str | Path) -> dict[str, Any]:
         "open_source_search_task_count": len(search_tasks),
         "stale_stages": stale,
         "recommended_next_commands": recommended,
+        "checkpoint_sha256": support["checkpoint_sha256"],
+        "route_receipt": receipt,
     }
 
 

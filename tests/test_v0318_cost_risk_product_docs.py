@@ -90,8 +90,12 @@ def test_generated_risk_matrix_and_product_boundaries_are_current() -> None:
     command_table = risk.read_text(encoding="utf-8").split("## Commands", 1)[1]
     assert sum(1 for line in command_table.splitlines() if line.startswith("| `")) == len(COMMAND_SPECS)
 
+
+def test_product_boundary_stubs_are_minimal_and_point_to_readmes() -> None:
     for path in (Path("docs/commercial_overview.md"), Path("docs/commercial_overview.zh-CN.md")):
         text = path.read_text(encoding="utf-8").lower()
+        assert len(text.splitlines()) <= 12
         assert "licenseref-draftpaper-noncommercial" in text
         assert "local" in text or "本地" in text
         assert "public hosted api" in text or "公网托管 api" in text
+        assert "readme" in text

@@ -40,6 +40,7 @@ _MUTABLE_CONFIRMATION_FIELDS = {
     "promoted_evidence_snapshot_id",
 }
 MANUSCRIPT_ARTIFACTS = [
+    "latex/main.pdf",
     "writing/manuscript_metadata.yaml",
     "introduction/introduction.tex",
     "data/data.tex",
