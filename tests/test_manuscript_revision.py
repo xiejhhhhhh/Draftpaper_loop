@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
+from draftpaper_cli.change_impact import affected_stages_for_class
 from draftpaper_cli.latex_assembly import _render_main
 from draftpaper_cli.manuscript_revision import (
     ManuscriptRevisionError,
@@ -153,6 +154,31 @@ def test_scientific_change_cannot_be_applied_as_prose_patch(tmp_path: Path) -> N
         change_class="scientific_evidence_change",
     )
     with pytest.raises(ManuscriptRevisionError, match="cannot apply a data/method/run/core-figure change"):
+        apply_manuscript_revision(project, preview["revision_id"])
+
+
+def test_single_revision_exposes_classification_mismatch_before_apply(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    build_manuscript_source_map(project)
+    source_map = json.loads((project / "latex" / "manuscript_source_map.json").read_text(encoding="utf-8"))
+    target = next(item for item in source_map["paragraphs"] if item["section"] == "methods")
+    content = _project_input(project, "mislabeled.tex", "A new Transformer architecture changed the validation split.\n")
+
+    preview = preview_manuscript_revision(
+        project,
+        "Clarify the method implementation.",
+        paragraph=target["paragraph_id"],
+        content_file=content,
+        change_class="prose_only",
+    )
+
+    assert preview["status"] == "classification_mismatch"
+    request = json.loads((project / preview["request"]).read_text(encoding="utf-8"))
+    assert request["classification_decision"] == "classification_mismatch"
+    assert request["legacy_change_class"] == "prose_only"
+    assert request["effective_change_class"] == "prose_only"
+    assert request["computed_stale_scope"] == affected_stages_for_class("method_change", source_stage="methods_writing")
+    with pytest.raises(ManuscriptRevisionError, match="classification"):
         apply_manuscript_revision(project, preview["revision_id"])
 
 

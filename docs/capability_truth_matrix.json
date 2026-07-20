@@ -1,0 +1,246 @@
+{
+  "schema_version": "dpl.capability_truth_matrix.v1",
+  "purpose": "README fact binding for the current public release; runtime behavior remains owned by source contracts.",
+  "capabilities": [
+    {
+      "capability_id": "scientific_gates_and_artifact_dag",
+      "status": "implemented",
+      "since": "0.30",
+      "readme_anchor": "capability:scientific_gates_and_artifact_dag",
+      "claim_zh": "科学门控、非零退出码、canonical taxonomy 和 artifact DAG 共同约束可继续的工作流状态。",
+      "claim_en": "Scientific gates, non-zero exit status, canonical taxonomy, and the artifact DAG constrain the workflow states that may continue.",
+      "commands": [
+        "detect-artifact-drift",
+        "sync-artifact-stale"
+      ],
+      "source_files": [
+        "draftpaper_cli/change_impact.py",
+        "draftpaper_cli/artifact_dag.py",
+        "draftpaper_cli/stale_sync.py"
+      ],
+      "tests": [
+        "tests/test_change_impact.py",
+        "tests/test_artifact_dag.py",
+        "tests/test_artifact_drift.py"
+      ],
+      "artifacts": [
+        "integrity_ledger.jsonl"
+      ],
+      "boundary_zh": "运行时 stale 传播仍由 change-impact 和 artifact-DAG 合同负责。",
+      "boundary_en": "Runtime stale propagation remains owned by change-impact and artifact-DAG contracts."
+    },
+    {
+      "capability_id": "manuscript_completion_transaction",
+      "status": "implemented",
+      "since": "0.30",
+      "readme_anchor": "capability:manuscript_completion_transaction",
+      "claim_zh": "作者补全 packet 通过稳定定位、统一 diff/PDF 预览以及原子 apply/rollback 绑定到发布证据。",
+      "claim_en": "Author-completion packets use stable locators, unified diff/PDF previews, and atomic apply/rollback bound to release evidence.",
+      "commands": [
+        "prepare-manuscript-completion",
+        "preview-manuscript-completion",
+        "apply-manuscript-completion",
+        "rollback-manuscript-completion"
+      ],
+      "source_files": [
+        "draftpaper_cli/manuscript_completion.py",
+        "draftpaper_cli/release_contract.py"
+      ],
+      "tests": [
+        "tests/test_v0306_completion_transaction.py",
+        "tests/test_v0307_final_release_binding.py"
+      ],
+      "artifacts": [
+        "writing/manuscript_completion/packets/<packet_id>/preview.diff",
+        "writing/manuscript_completion/active_completion_manifest.json"
+      ],
+      "boundary_zh": "Completion packet 只补全作者输入，不替代科学证据。",
+      "boundary_en": "Completion packets add author input without replacing scientific evidence."
+    },
+    {
+      "capability_id": "command_schema_quality_contracts",
+      "status": "implemented",
+      "since": "0.31",
+      "readme_anchor": "capability:command_schema_quality_contracts",
+      "claim_zh": "CommandSpec、schema registry 和质量合同为命令风险、输入输出与发布检查提供同一控制面。",
+      "claim_en": "CommandSpec, the schema registry, and quality contracts provide one control plane for command risk, inputs/outputs, and release checks.",
+      "commands": [
+        "validate-command-contracts"
+      ],
+      "source_files": [
+        "draftpaper_cli/command_registry.py",
+        "draftpaper_cli/schema_registry.py",
+        "tools/generate_cli_reference.py",
+        "tools/generate_product_docs.py"
+      ],
+      "tests": [
+        "tests/test_v0314_single_command_control_plane.py",
+        "tests/test_v0315_schema_and_quality_gates.py"
+      ],
+      "artifacts": [
+        "docs/cli_reference.md",
+        "docs/command_risk_matrix.md"
+      ],
+      "boundary_zh": "自动生成的 reference 仍是完整命令清单。",
+      "boundary_en": "Generated references remain the full command inventory."
+    },
+    {
+      "capability_id": "minimal_install_cost_risk_release",
+      "status": "implemented",
+      "since": "0.31",
+      "readme_anchor": "capability:minimal_install_cost_risk_release",
+      "claim_zh": "minimal-first 安装档位、token/cost receipt、命令风险矩阵和跨平台发布检查共同公开运行边界。",
+      "claim_en": "Minimal-first install profiles, token/cost receipts, the command risk matrix, and cross-platform release checks expose the runtime boundary.",
+      "commands": [
+        "doctor",
+        "token-report"
+      ],
+      "source_files": [
+        "draftpaper_cli/install_profiles.py",
+        "draftpaper_cli/token_report.py",
+        "tools/generate_product_docs.py"
+      ],
+      "tests": [
+        "tests/test_v0316_install_profiles.py",
+        "tests/test_v0318_cost_risk_product_docs.py",
+        "tests/test_v0319_cross_platform_release.py"
+      ],
+      "artifacts": [
+        "token_ledger.jsonl",
+        "docs/command_risk_matrix.md"
+      ],
+      "boundary_zh": "缺少价格 receipt 时不推测费用；optional extra 由 doctor 选择。",
+      "boundary_en": "Missing price receipts are not inferred; doctor selects optional extras."
+    },
+    {
+      "capability_id": "completion_audit_and_readme_framework",
+      "status": "implemented",
+      "since": "0.32",
+      "readme_anchor": "capability:completion_audit_and_readme_framework",
+      "claim_zh": "completion 审计、跨期刊回归和完整 README 框架恢复当前公开 release 的文档边界。",
+      "claim_en": "Completion auditing, cross-journal regression, and the restored detailed README framework define the current public release boundary.",
+      "commands": [
+        "review-final-manuscript",
+        "confirm-final-manuscript"
+      ],
+      "source_files": [
+        "draftpaper_cli/final_manuscript_confirmation.py",
+        "draftpaper_cli/independent_review.py"
+      ],
+      "tests": [
+        "tests/test_v0320_release_completion.py",
+        "tests/test_v0310_completion_multi_journal.py",
+        "tests/test_independent_review.py"
+      ],
+      "artifacts": [
+        "review/final_manuscript_confirmation.json",
+        "quality_checks/blind_reviews/submission_bundle_manifest.json"
+      ],
+      "boundary_zh": "Fixture 验证流程合同，不代表科研结论。",
+      "boundary_en": "Fixtures validate workflow contracts rather than scientific conclusions."
+    },
+    {
+      "capability_id": "result_support_two_routes",
+      "status": "implemented",
+      "since": "0.18",
+      "readme_anchor": "capability:result_support_two_routes",
+      "claim_zh": "结果不足时提供论断收窄或数据/方法补强路线。",
+      "claim_en": "Insufficient results expose claim narrowing or data/method supplementation.",
+      "commands": [
+        "assess-result-support",
+        "apply-result-downgrade",
+        "prepare-result-rescue"
+      ],
+      "source_files": [
+        "draftpaper_cli/result_support.py",
+        "draftpaper_cli/result_rescue.py"
+      ],
+      "tests": [
+        "tests/test_result_support.py"
+      ],
+      "artifacts": [
+        "results/result_support_checkpoint.json"
+      ],
+      "boundary_zh": "当前按整单 checkpoint 选择一条路线，多 claim 分治属于后续工作。",
+      "boundary_en": "The current checkpoint selects one route for the whole paper; per-claim routing is later work."
+    },
+    {
+      "capability_id": "stable_locator",
+      "status": "implemented",
+      "since": "0.30",
+      "readme_anchor": "capability:stable_locator",
+      "claim_zh": "行号只用于提示；稳定 `paragraph_id`、原文和 SHA-256 才是写入校验。",
+      "claim_en": "Line numbers are hints; stable `paragraph_id`, expected text, and SHA-256 are the write guards.",
+      "commands": [
+        "preview-manuscript-completion",
+        "apply-manuscript-completion"
+      ],
+      "source_files": [
+        "draftpaper_cli/manuscript_completion.py"
+      ],
+      "tests": [
+        "tests/test_v0305_completion_locators.py"
+      ],
+      "artifacts": [
+        "writing/manuscript_completion/packets/<packet_id>/preview.diff"
+      ],
+      "boundary_zh": "定位歧义、重复目标或 stale hash 会拒绝整份 packet。",
+      "boundary_en": "Ambiguous locators, duplicate targets, or stale hashes reject the whole packet."
+    },
+    {
+      "capability_id": "completion_change_classification",
+      "status": "implemented",
+      "since": "0.32",
+      "readme_anchor": "capability:completion_change_classification",
+      "claim_zh": "作者补全 preview 使用 canonical change class、证据引用和精确 stale 范围核验科学修改。",
+      "claim_en": "Author-completion preview validates scientific edits with canonical change classes, evidence refs, and exact stale scopes.",
+      "commands": [
+        "preview-manuscript-completion",
+        "apply-manuscript-completion"
+      ],
+      "source_files": [
+        "draftpaper_cli/completion_change_classifier.py",
+        "draftpaper_cli/manuscript_completion.py",
+        "draftpaper_cli/manuscript_revision.py"
+      ],
+      "tests": [
+        "tests/test_v0322_completion_change_classification.py",
+        "tests/test_v0306_completion_transaction.py",
+        "tests/test_manuscript_revision.py"
+      ],
+      "artifacts": [
+        "writing/manuscript_completion/packets/<packet_id>/change_stale_report.json"
+      ],
+      "boundary_zh": "v0.33.0 默认 strict；已执行的 Data/Methods 细节需要当前 evidence refs。",
+      "boundary_en": "v0.33.0 defaults to strict mode; executed Data/Methods details require current evidence refs."
+    },
+    {
+      "capability_id": "result_support_checkpoint_v3",
+      "status": "implemented",
+      "since": "0.32",
+      "readme_anchor": "capability:result_support_checkpoint_v3",
+      "claim_zh": "Result Support v3 按当前 run 和证据来源解析指标，用 checkpoint hash 绑定整单二选一路线。",
+      "claim_en": "Result Support v3 resolves metrics by current run and evidence source, then hash-binds one whole-checkpoint route.",
+      "commands": [
+        "assess-result-support",
+        "apply-result-downgrade",
+        "prepare-result-rescue"
+      ],
+      "source_files": [
+        "draftpaper_cli/result_support.py",
+        "draftpaper_cli/result_support_signals.py",
+        "draftpaper_cli/result_discipline_review.py"
+      ],
+      "tests": [
+        "tests/test_result_support.py",
+        "tests/test_result_support_signals.py",
+        "tests/test_result_discipline_review.py"
+      ],
+      "artifacts": [
+        "results/result_support_checkpoint.json"
+      ],
+      "boundary_zh": "当前整单 checkpoint 选择一条路线；post-Results 证据问题回流到同一 checkpoint。",
+      "boundary_en": "The whole checkpoint selects one route; post-Results evidence problems reopen the same checkpoint."
+    }
+  ]
+}

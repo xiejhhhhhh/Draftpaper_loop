@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.32.0
+version: 0.33.0
 description: Use when Codex operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -84,6 +84,19 @@ manuscript, or accept a manuscript revision on the user's behalf.
   capability audit records its inputs, outputs, hashes, and execution scope.
 - A scientific failure is not a command failure. Follow the structured rescue
   route instead of fabricating a substitute figure or weakening a gate.
+- Result Support v3 uses fixed signal adapters. Metric authority is current
+  resolved evidence, then the selected run manifest, then result tables bound
+  to that run. A pending task affects routing only when it is current and its
+  input hashes match; an unbound required data role creates an
+  `unbound_required_data_task` and routes the whole checkpoint to one route.
+- Treat `results/result_support_checkpoint.json` as a hash-bound decision
+  packet. Run either route command once without `--checkpoint-hash` to obtain
+  the current hash and complete command, then submit exactly that hash. Do not
+  mix downgrade and supplement routes within one checkpoint.
+- After Results writing, prose-only findings use
+  `prepare-results-semantic-repair`. Evidence findings write
+  `review/result_support_reopen_request.json` and return to
+  `assess-result-support` before further manuscript repair.
 - Citation repair narrows or rewrites claims while retaining curated
   references. It must run after the final assembled manuscript.
 - Use `doctor` and `recover` for diagnosis. Do not edit `project.json`, stage

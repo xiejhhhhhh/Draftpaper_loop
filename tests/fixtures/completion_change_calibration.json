@@ -1,0 +1,1136 @@
+[
+  {
+    "case_id": "astronomy:scientific:survey_release_substitution",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Describe the revised sky-survey source as a prose clarification.",
+    "content": "The analysis substitutes the original Gaia DR3 parallax table with the expanded 2026 release.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:quasar_cohort_cut",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the quasar selection sentence without reopening evidence.",
+    "content": "The quasar cohort now excludes sources with broad-absorption-line flags.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:photometric_estimator_switch",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Present the photometric-redshift update as wording only.",
+    "content": "The redshift estimator is switched from template fitting to a gradient-boosted system.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:telescope_fold_reassignment",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Clarify cross-validation prose for the telescope analysis.",
+    "content": "Training folds are reassigned by observatory rather than by individual exposure.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:endpoint_redefinition",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Edit the principal performance sentence as low-impact prose.",
+    "content": "The primary endpoint is redshift outlier fraction rather than normalized median absolute deviation.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:seed_recomputation",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tidy the reproducibility sentence while retaining the prose-only label.",
+    "content": "The stellar classifier is rerun with a new random seed for every survey field.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:hr_panel_semantics",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Revise the Hertzsprung-Russell figure description editorially.",
+    "content": "Panel C now displays extinction-corrected luminosity instead of apparent magnitude.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:causal_agn_claim",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Smooth the active-galactic-nucleus conclusion without changing its class.",
+    "content": "The conclusion now extends from association to a causal effect of mergers on nuclear activity.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:variability_feature_addition",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Add one sentence about inputs as a manuscript-only completion.",
+    "content": "The feature set now includes cadence-aware color variability statistics.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:mass_estimate_change",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Correct the reported cluster-mass wording as prose.",
+    "content": "The reported halo-mass estimate changes from 1.8 to 2.6 trillion solar masses.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:southern_sources_added",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Clarify the footprint description without declaring a data revision.",
+    "content": "Southern-sky records are added to the analysis population after the footprint expansion.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:objective_retargeted",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Refine the objective sentence as an editorial completion.",
+    "content": "The study objective now evaluates exoplanet occurrence under a different scientific hypothesis about metallicity.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:archive_word_choice",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Use the observatory's preferred archival terminology.",
+    "content": "In the data-access note, replace the phrase 'new dataset' with 'archival catalog'; scientific content is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:survey_proper_name",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Standardize the official survey name.",
+    "content": "The proper name 'New Model All-Sky Survey' is capitalized consistently throughout the introduction.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:reviewer_phrase_quote",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Repair punctuation in the response-to-reviewers quotation.",
+    "content": "The referee's phrase 'stronger claim' is retained in quotation marks without altering the manuscript claim.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:figure_of_merit_typo",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Fix a caption transcription error.",
+    "content": "The caption's typo 'new metric' is corrected to 'merit statistic' while all plotted values remain fixed.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:negative_run_statement",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Make the provenance note grammatically complete.",
+    "content": "The observation log now states that no rerun was performed after the telescope identifier was corrected.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:bibliography_title_case",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Normalize capitalization of a cited article title.",
+    "content": "The bibliography entry 'A New Figure for Stellar Streams' receives title-case formatting only.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:archive_link_label",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Rename the visible archive hyperlink.",
+    "content": "The URL label 'data locator' is changed to 'Gaia archive record' while the destination remains identical.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:cohort_compound",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Apply the journal's compound-modifier style.",
+    "content": "The astronomical term cohort-level is hyphenated consistently in the limitations paragraph.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:citation_sentence_order",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Improve paragraph flow around the survey citation.",
+    "content": "The reference sentence is moved ahead of the caveat without changing the stated sky coverage.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:deleted_referee_quote",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Remove an obsolete referee aside.",
+    "content": "The words 'changed validation split' occur solely in a quoted reviewer comment that was removed from the response appendix.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:initiative_capitalization",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Correct the collaboration's registered name.",
+    "content": "We correct capitalization in the project name 'New Dataset for Time-Domain Astronomy Initiative'.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:editorial_sample_note",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Delete an internal copyediting annotation.",
+    "content": "The phrase 'sample now excludes faint stars' is deleted from an editorial note; eligibility is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:registry_substitution",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Treat the registry-source revision as a prose clarification.",
+    "content": "The survival analysis substitutes the original SEER extract with the expanded 2026 release.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:renal_cohort_cut",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the participant description while keeping a prose-only declaration.",
+    "content": "The dialysis cohort now excludes patients with fewer than ninety days of follow-up.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:risk_estimator_switch",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Rephrase the risk-model sentence without reopening methods.",
+    "content": "The mortality estimator is switched from Cox regression to a gradient-boosted system.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:hospital_fold_reassignment",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Clarify validation wording as an editorial adjustment.",
+    "content": "Training folds are reassigned by hospital rather than by individual patient.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:clinical_endpoint_redefinition",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Edit the endpoint sentence as low-impact completion prose.",
+    "content": "The primary endpoint is thirty-day readmission rather than in-hospital mortality.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:imaging_seed_rerun",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tidy the imaging reproducibility note without changing its declaration.",
+    "content": "The lesion detector is rerun with a new seed after weight initialization was revised.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:survival_panel_semantics",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Update the survival-figure description editorially.",
+    "content": "Panel B now displays cumulative incidence instead of Kaplan-Meier survival.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:causal_treatment_claim",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Smooth the treatment-effect conclusion as ordinary prose.",
+    "content": "The conclusion now extends from association to a causal effect of early rehabilitation on recovery.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:medication_feature_addition",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Complete the covariate sentence without declaring a method change.",
+    "content": "The feature set now includes longitudinal corticosteroid exposure and dose timing.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:hazard_estimate_change",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Correct the hazard-ratio sentence as prose only.",
+    "content": "The reported hazard estimate changes from 0.74 to 0.58 after adjudication.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:clinic_records_added",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Clarify recruitment coverage without reopening the cohort.",
+    "content": "Southern-clinic records are added to the analysis population for the final efficacy model.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:objective_retargeted",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Refine the clinical objective as an editorial completion.",
+    "content": "The study objective now evaluates treatment response under a different scientific hypothesis about immune phenotype.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:repository_word_choice",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Adopt the biobank's preferred data-access wording.",
+    "content": "In the availability statement, replace 'new dataset' with 'curated registry extract'; scientific content is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:trial_proper_name",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Standardize capitalization of the trial acronym expansion.",
+    "content": "The official name 'New Model Oncology Trial' is capitalized consistently in the abstract and introduction.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:reviewer_claim_quote",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Correct punctuation around a peer-review quotation.",
+    "content": "A reviewer called the conclusion a 'stronger claim'; the phrase is quoted without altering the manuscript claim.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:metric_typo_caption",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Repair a caption typo in the diagnostic table.",
+    "content": "The table note's typo 'new metric' is corrected to 'diagnostic measure' with no numerical edit.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:negative_reanalysis_note",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Complete the audit-trail sentence.",
+    "content": "The protocol note now confirms that no rerun was performed after the drug name spelling was fixed.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:article_title_case",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Apply journal capitalization to the cited review.",
+    "content": "The reference title 'A New Figure of Merit in Oncology' receives title-case formatting only.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:registry_link_label",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Improve the visible registry hyperlink text.",
+    "content": "The URL label 'data locator' is changed to 'clinical registry accession' without changing the accession URL.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:cohort_modifier",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Follow AMA style for a compound modifier.",
+    "content": "The phrase cohort-level mortality is hyphenated consistently in the sensitivity-analysis paragraph.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:guideline_citation_move",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Move the guideline citation to improve readability.",
+    "content": "The reference sentence is moved before the parenthetical definition while its clinical recommendation remains the same.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:removed_review_quote",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Delete a superseded peer-review quotation.",
+    "content": "The text 'changed validation split' appears in a quoted reviewer comment that was removed from the supplement.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:consortium_name_case",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Restore the consortium's official capitalization.",
+    "content": "We correct capitalization in the project name 'New Dataset Initiative for Rare Diseases'.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:eligibility_copyedit_note",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Remove a stray production annotation from the participant section.",
+    "content": "The sentence fragment 'sample now excludes controls' is deleted from an editorial note; eligibility is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:landcover_release_substitution",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Describe the land-cover source revision as wording only.",
+    "content": "The mapping analysis substitutes the original Copernicus raster with the expanded 2026 release.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:watershed_cohort_cut",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the basin-selection sentence without reopening data.",
+    "content": "The watershed cohort now excludes catchments with more than ten percent glacier cover.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:temperature_estimator_switch",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Rephrase the interpolation method as low-impact prose.",
+    "content": "The surface-temperature estimator is switched from ordinary kriging to a gradient-boosted system.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:regional_fold_reassignment",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Clarify spatial validation prose while retaining the current class.",
+    "content": "Training folds are reassigned by ecoregion rather than by individual grid cell.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:heat_endpoint_redefinition",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Edit the urban-heat outcome sentence as prose only.",
+    "content": "The primary endpoint is nighttime heat exposure rather than daytime land-surface temperature.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:segmentation_seed_rerun",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tidy the remote-sensing reproducibility sentence editorially.",
+    "content": "The land-cover segmentation is rerun with a new random seed for each continental tile.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:map_panel_semantics",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Revise the map-panel description without declaring a figure change.",
+    "content": "Panel D now displays population-weighted exposure instead of raw surface temperature.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:causal_transit_claim",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Smooth the transit conclusion as ordinary completion prose.",
+    "content": "The conclusion now extends from association to a causal effect of rail access on neighborhood growth.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:terrain_feature_addition",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Complete the predictor sentence without reopening methods.",
+    "content": "The feature set now includes upstream imperviousness and terrain-connectivity indices.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:heat_estimate_change",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Correct the exposure estimate as prose only.",
+    "content": "The reported heat-island estimate changes from 1.4 to 2.1 degrees Celsius.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:island_records_added",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Clarify the geographic extent without declaring a data change.",
+    "content": "Small-island records are added to the analysis population after coastline reconciliation.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:objective_retargeted",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Refine the spatial objective as an editorial completion.",
+    "content": "The study objective now evaluates flood displacement under a different scientific hypothesis about road accessibility.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:archive_word_choice",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Use the spatial archive's preferred catalog terminology.",
+    "content": "In the source note, replace 'new dataset' with 'historical map series'; scientific content is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:atlas_proper_name",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Standardize the capitalization of the national atlas.",
+    "content": "The proper name 'New Model National Atlas' is capitalized consistently in the study-area description.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:reviewer_claim_quote",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Repair quotation marks in the referee response.",
+    "content": "The referee's words 'stronger claim' remain as a quotation without altering the manuscript claim.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:legend_metric_typo",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Correct a legend transcription error.",
+    "content": "The map legend's typo 'new metric' is corrected to 'exposure index' without changing its bins.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:negative_model_run_note",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Clarify the cartographic production log.",
+    "content": "The provenance paragraph states that no rerun was performed after a place-name spelling correction.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:map_title_case",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Normalize the title of a cited cartography paper.",
+    "content": "The cited work 'A New Figure-Ground Map' receives title-case formatting only.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:geodata_link_label",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Rename the visible geospatial repository link.",
+    "content": "The URL label 'data locator' is changed to 'municipal geodata portal' while preserving the target address.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:cohort_modifier",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Apply house style to the spatial-sample compound.",
+    "content": "The term cohort-level exposure is hyphenated consistently in the environmental-justice discussion.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:gazetteer_reference_move",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Improve paragraph order around the gazetteer citation.",
+    "content": "The reference sentence is moved before the place-name example with no change to the geographic interpretation.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:deleted_referee_quote",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "discussion",
+    "instruction": "Remove a resolved reviewer annotation.",
+    "content": "The phrase 'changed validation split' survives only in a quoted reviewer comment that was removed from the response file.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:mapping_project_case",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "introduction",
+    "instruction": "Restore the mapping program's registered capitalization.",
+    "content": "We correct capitalization in the project name 'New Dataset Initiative for Urban Morphology'.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:sample_copyedit_note",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Delete an accidental production comment from the study-area text.",
+    "content": "The wording 'sample now excludes rural tracts' is deleted from an editorial note; eligibility is unchanged.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:compound_editorial_and_data_change",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Apply the copyedit and update the analysis source.",
+    "content": "Scientific content is unchanged in the caption, but the analysis now uses a new dataset.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:compound_metadata_and_method_change",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Update author metadata and describe the revised analysis.",
+    "content": "The revision introduces a new method for uncertainty estimation.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:compound_method_and_research_design_change",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "discussion",
+    "instruction": "Describe the new method and changed study design.",
+    "content": "The revised design addresses a new research question with a new model.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:results_numeric_typography",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Apply journal numeric typography.",
+    "content": "The value 1000 is typeset as 1,000 to follow journal numeric style.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:results_figure_reference_copyedit",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Apply the journal figure-reference abbreviation.",
+    "content": "Change 'Figure 2' to 'Fig. 2' to match the journal abbreviation style.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:catalog_source_instead_of",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the catalog provenance as bounded completion prose.",
+    "content": "For the final analysis, detections are drawn from Gaia DR4 instead of the Pan-STARRS source.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:model_in_place_of",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tighten the modeling sentence without reopening methods.",
+    "content": "We fit gradient-boosted trees in place of the prespecified logistic regression.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:population_removed",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Copyedit the analytic-population sentence.",
+    "content": "Coastal tracts lacking tide gauges were removed from the analytic population.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:metric_replaces_metric",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Smooth the performance-measure wording.",
+    "content": "Balanced accuracy replaces AUROC as the primary performance measure.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:classifier_retrained",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Record the final workflow in ordinary completion prose.",
+    "content": "We retrained the classifier after revising image normalization.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:figure_switches_semantics",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Revise the figure sentence editorially.",
+    "content": "Figure 3 switches from unweighted density to population-weighted exposure.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:ground_truth_relabel",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Apply the requested label revision.",
+    "content": "Replace the ground-truth label 'star' with 'quasar' for 18 training sources.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:results_axis_label_copyedit",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Apply the requested label revision.",
+    "content": "Replace label 'Hazard ratio' with 'Adjusted hazard ratio' on the Figure 2 y-axis.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:results_panel_letter_copyedit",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Correct the panel callout order.",
+    "content": "Replace the panel label 'B' with 'C' in Figure 4 to match the text.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:methods_used_word_choice",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Apply journal word choice.",
+    "content": "In Methods, replace 'utilized' with 'used' for journal style.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:feature_construction_hyphenation",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Apply consistent hyphenation.",
+    "content": "Hyphenate 'feature construction' consistently in the Methods overview.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:event_token_hyphenation",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Apply consistent hyphenation.",
+    "content": "Change 'historical event tokens' to 'historical-event tokens' throughout Methods.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:registry_source_changed_from",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the provenance sentence as low-impact prose.",
+    "content": "The analysis source changed from the legacy registry to the adjudicated release.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:estimator_changed_from",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Copyedit the estimator sentence without reopening methods.",
+    "content": "The primary estimator changed from aperture correction to a hierarchical model.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:eligibility_broadened",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Smooth the study-area eligibility wording.",
+    "content": "Eligibility was broadened to include municipalities below 5,000 residents.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:analysis_run_again",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tidy the workflow sentence as ordinary prose.",
+    "content": "The analysis was run again after the feature audit.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:panel_now_plots",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Update the panel description editorially.",
+    "content": "Panel A now plots cumulative incidence; it previously showed overall survival.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:dropped_patient_count",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Apply this as a participant-sentence copyedit.",
+    "content": "We dropped 27 patients after duplicate linkage was identified.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:removed_source_count",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the source-count sentence.",
+    "content": "Twelve sources were removed after the astrometric quality audit.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:estimator_supplanted_by",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Copyedit the estimator description.",
+    "content": "The prespecified estimator was supplanted by a random survival forest.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:model_now_employs",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Apply ordinary prose cleanup.",
+    "content": "The final model now employs gradient-boosted trees.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:endpoint_became",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Smooth the endpoint sentence.",
+    "content": "The primary endpoint became 90-day readmission.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:outcome_switched",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Apply bounded wording cleanup.",
+    "content": "The reported outcome switched to transient-detection recall.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:analysis_repeated",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Tidy the workflow sentence.",
+    "content": "We repeated the analysis after adjudication.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:analysis_reexecuted",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "methods",
+    "instruction": "Polish the analysis sentence.",
+    "content": "We re-executed the analysis after the feature audit.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:figure_depicts_instead",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Copyedit the figure description.",
+    "content": "Figure 5 depicts adjusted risk instead of crude incidence.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:panel_shows_instead",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Apply journal prose style.",
+    "content": "Panel D shows class-specific recall instead of overall accuracy.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:legend_outcome_class_label",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Copyedit the display label.",
+    "content": "Change the outcome class label from 'Poor' to 'Unfavorable' in the Figure 3 legend.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:table_outcome_label",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Copyedit the table heading.",
+    "content": "Replace the outcome label 'Response' with 'Clinical response' in the table header.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:caption_class_label",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Correct caption wording.",
+    "content": "Change the class label from 'Case' to 'Cases' in the caption only.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:unquoted_utilized_copyedit",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Apply journal word choice.",
+    "content": "Change we utilized to we used for journal style.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:record_target_relabel",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Apply the label revision.",
+    "content": "Change the target label from 'control' to 'case' for 12 records.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:axis_outcome_class_label",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "results",
+    "instruction": "Copyedit the axis label.",
+    "content": "Replace the outcome class label 'Responder' with 'Response' on the y-axis.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:record_label_reassignment",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "results",
+    "instruction": "Apply the requested relabeling.",
+    "content": "Replace the record label 'control' with 'case' for patient 18.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:analytic_sample_size_changed",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Copyedit the analytic-sample sentence.",
+    "content": "The analytic sample size changed from 100 to 200 participants.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:sample_size_increased",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the sample-size sentence.",
+    "content": "The sample size increased from 240 to 360 study sites.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:sample_size_decreased",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Tighten the source-count prose.",
+    "content": "The analytic sample size decreased to 80 sources after screening.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:sample_size_doubled",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Apply ordinary completion prose.",
+    "content": "The final sample size doubled after recruitment was extended.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:sample_size_halved",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Copyedit the quality-audit sentence.",
+    "content": "The source sample size was halved after the quality audit.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:n_increased",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Standardize the sample-count wording.",
+    "content": "N increased from 100 to 125 municipalities.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:scientific:added_participants",
+    "discipline_family": "biomedicine",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the participant sentence.",
+    "content": "We added 30 participants after broadening eligibility.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:dropped_sources",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Polish the source-count sentence.",
+    "content": "We dropped 12 sources after quality control.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:added_cohort_records",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Copyedit the analytic-cohort sentence.",
+    "content": "The analysis added 45 records from the adjudicated cohort.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:scientific:dataset_row_inventory_added",
+    "discipline_family": "geography",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Tighten the dataset inventory prose.",
+    "content": "We added 45 records to the dataset row inventory.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:scientific:dataset_row_inventory_dropped",
+    "discipline_family": "astronomy",
+    "independent_label": "scientific_change",
+    "section": "data",
+    "instruction": "Copyedit the row-inventory sentence.",
+    "content": "The dataset row inventory dropped 12 records during deduplication.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:sample_size_terminology",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Apply journal terminology.",
+    "content": "Change 'sample size' to 'analytic sample size' for journal terminology.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "astronomy:legitimate:n_spacing",
+    "discipline_family": "astronomy",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Apply journal numeric typography.",
+    "content": "Typeset N = 100 as N=100 to match journal spacing style.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "geography:legitimate:sample_size_hyphenation",
+    "discipline_family": "geography",
+    "independent_label": "legitimate_completion",
+    "section": "methods",
+    "instruction": "Apply consistent hyphenation.",
+    "content": "Hyphenate 'sample-size calculation' consistently in the Methods overview.",
+    "explicit": "prose_only"
+  },
+  {
+    "case_id": "biomedicine:legitimate:quoted_increased_sample_size",
+    "discipline_family": "biomedicine",
+    "independent_label": "legitimate_completion",
+    "section": "data",
+    "instruction": "Remove a resolved reviewer quotation.",
+    "content": "The quoted phrase 'increased sample size' is removed from the reviewer response.",
+    "explicit": "prose_only"
+  }
+]

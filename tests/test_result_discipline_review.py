@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -41,6 +43,59 @@ def test_result_review_flags_untraceable_metric_and_internal_artifact_language(t
     kinds = {item["kind"] for item in saved["results_semantic_audit"]["issues"]}
     assert {"untraceable_metric_claim", "internal_artifact_language"} <= kinds
     assert all(item["severity"] == "repair_required" for item in saved["results_semantic_audit"]["issues"] if item["kind"] != "missing_figure_interpretation")
+    assert saved["recommended_next_action"]["command"] == "prepare-results-semantic-repair"
+    assert not (project / "review" / "result_support_reopen_request.json").exists()
+
+
+def test_result_review_reopens_result_support_for_evidence_failures(tmp_path, monkeypatch) -> None:
+    import hashlib
+
+    import draftpaper_cli.result_discipline_review as module
+
+    project = create_project(root=tmp_path, idea="Evidence review", field="machine learning", target_journal="Test").path
+    (project / "results" / "results.tex").write_text("Figure 1 summarizes the verified comparison.\n", encoding="utf-8")
+    (project / "results" / "figure_plugin_trace_report.json").write_text(json.dumps({
+        "decision": "pass",
+        "figure_checks": [{
+            "figure_id": "fig_1",
+            "decision": "pass",
+            "data_plugin_ids": ["table_loader"],
+            "method_plugin_ids": ["baseline_model"],
+            "run_output_event_id": "evt-current",
+        }],
+    }), encoding="utf-8")
+    checkpoint = {
+        "schema_version": "dpl.result_support_checkpoint.v3",
+        "decision": "pass",
+        "checkpoint_sha256": "a" * 64,
+    }
+    (project / "results" / "result_support_checkpoint.json").write_text(json.dumps(checkpoint), encoding="utf-8")
+    monkeypatch.setattr(module, "assess_review_rules", lambda *args, **kwargs: {
+        "decision": "revise_required",
+        "selected_rule_count": 1,
+        "rule_assessments": [],
+        "rescue_tasks": [{"reason": "The selected evidence binding no longer satisfies the promoted rule."}],
+        "recommended_next_commands": [],
+    })
+
+    result = module.review_results_with_discipline_rules(project)
+    saved = json.loads((project / "review" / "result_discipline_review_report.json").read_text(encoding="utf-8"))
+    reopen = json.loads((project / "review" / "result_support_reopen_request.json").read_text(encoding="utf-8"))
+
+    assert result["decision"] == "repair_required"
+    assert saved["recommended_next_action"]["command"] == "assess-result-support"
+    assert reopen["status"] == "requested"
+    assert reopen["result_support_checkpoint_sha256"] == "a" * 64
+    assert reopen["result_discipline_review_sha256"] == hashlib.sha256(
+        (project / "review" / "result_discipline_review_report.json").read_bytes()
+    ).hexdigest()
+    from draftpaper_cli.orchestrator import _gate_failure_action
+    from draftpaper_cli.project_state import update_stage_status
+
+    update_stage_status(project, "results", "draft")
+    action = _gate_failure_action(project)
+    assert action is not None
+    assert action["command"] == "assess-result-support"
 
 
 def test_result_review_selects_rules_only_for_plugin_generated_figures(tmp_path) -> None:
@@ -85,6 +140,73 @@ def test_result_review_requires_complete_executed_plugin_trace_to_activate_rules
     assert saved["review_rule_gate"]["selected_rule_count"] == 0
 
 
+def test_result_review_reads_metrics_from_a_real_yaml_run_manifest(tmp_path) -> None:
+    import draftpaper_cli.result_discipline_review as module
+
+    project = create_project(root=tmp_path, idea="YAML review metrics", field="machine learning", target_journal="Test").path
+    (project / "methods" / "run_manifest.yaml").write_text(
+        "status: success\nrun_id: run-yaml\nmetrics:\n  f1_macro: 0.74\n",
+        encoding="utf-8",
+    )
+
+    metrics = module._numeric_metrics(project)
+
+    assert {item["metric_name"]: item["value"] for item in metrics}["f1"] == 0.74
+
+
+@pytest.mark.parametrize(
+    "manifest_payload",
+    [
+        {"status": "failed", "run_id": "run-current", "metrics": {"f1": 0.74}},
+        {"status": "success", "metrics": {"f1": 0.74}},
+    ],
+)
+def test_result_review_consumes_no_metrics_without_a_successful_selected_run(
+    tmp_path, manifest_payload
+) -> None:
+    from draftpaper_cli import result_discipline_review as module
+
+    project = create_project(root=tmp_path, idea="Selected review run", field="machine learning", target_journal="Test").path
+    (project / "methods" / "run_manifest.yaml").write_text(
+        json.dumps(manifest_payload), encoding="utf-8"
+    )
+    (project / "results" / "resolved_result_evidence.json").write_text(
+        json.dumps({
+            "status": "resolved",
+            "run_id": "run-current",
+            "metrics": [{"run_id": "run-current", "metric_name": "auc", "value": 0.91}],
+        }),
+        encoding="utf-8",
+    )
+
+    assert module._numeric_metrics(project) == []
+
+
+def test_result_review_does_not_consume_resolved_metrics_outside_selected_run(tmp_path) -> None:
+    from draftpaper_cli import result_discipline_review as module
+
+    project = create_project(root=tmp_path, idea="Run-bound review metrics", field="machine learning", target_journal="Test").path
+    (project / "methods" / "run_manifest.yaml").write_text(
+        json.dumps({"status": "success", "run_id": "run-current", "metrics": {"f1": 0.55}}),
+        encoding="utf-8",
+    )
+    (project / "results" / "resolved_result_evidence.json").write_text(
+        json.dumps({
+            "status": "resolved",
+            "run_id": "run-old",
+            "metrics": [
+                {"run_id": "run-old", "metric_name": "f1", "value": 0.99},
+                {"run_id": "run-current", "metric_name": "auc", "value": 0.98},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    metrics = module._numeric_metrics(project)
+
+    assert metrics == [{"metric_name": "f1", "value": 0.55, "run_id": "run-current"}]
+
+
 def test_result_review_matches_metric_name_and_value_not_value_only(tmp_path) -> None:
     from draftpaper_cli.result_discipline_review import review_results_with_discipline_rules
 
@@ -111,7 +233,11 @@ def test_result_review_preserves_balanced_accuracy_as_its_own_metric(tmp_path) -
         json.dumps({"decision": "pass", "figure_checks": []}), encoding="utf-8"
     )
     (project / "methods" / "run_manifest.yaml").write_text(
-        json.dumps({"status": "success", "metrics": {"balanced_accuracy": 0.603034814226722}}),
+        json.dumps({
+            "status": "success",
+            "run_id": "run-current",
+            "metrics": {"balanced_accuracy": 0.603034814226722},
+        }),
         encoding="utf-8",
     )
 
@@ -137,13 +263,33 @@ def test_result_review_binds_current_evidence_snapshot_and_manifests(tmp_path) -
     (project / "core_evidence" / "core_evidence_report.json").write_text(
         json.dumps({"decision": "pass", "promoted_evidence_snapshot_id": "snapshot-current"}), encoding="utf-8"
     )
+    snapshot_path = project / "results" / "promoted_evidence_snapshot.json"
+    snapshot_path.write_text(json.dumps({"snapshot_id": "snapshot-current"}), encoding="utf-8")
+    run_manifest_path = project / "methods" / "run_manifest.yaml"
+    run_manifest_path.write_text(
+        json.dumps({"status": "success", "run_id": "run-current"}), encoding="utf-8"
+    )
+    resolved_evidence_path = project / "results" / "resolved_result_evidence.json"
+    resolved_evidence_path.write_text(
+        json.dumps({"status": "resolved", "run_id": "run-current", "metrics": []}), encoding="utf-8"
+    )
 
     review_results_with_discipline_rules(project)
     saved = json.loads((project / "review" / "result_discipline_review_report.json").read_text(encoding="utf-8"))
 
     assert saved["evidence_snapshot_id"] == "snapshot-current"
+    assert saved["results_sha256"] == hashlib.sha256((project / "results" / "results.tex").read_bytes()).hexdigest()
+    assert saved["promoted_evidence_snapshot_sha256"] == hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
     assert saved["result_manifest_sha256"] == hashlib.sha256((project / "results" / "result_manifest.yaml").read_bytes()).hexdigest()
     assert saved["figure_plugin_trace_sha256"] == hashlib.sha256((project / "results" / "figure_plugin_trace_report.json").read_bytes()).hexdigest()
+    assert saved["evidence_bindings"] == {
+        "results/results.tex": saved["results_sha256"],
+        "results/promoted_evidence_snapshot.json": saved["promoted_evidence_snapshot_sha256"],
+        "results/result_manifest.yaml": saved["result_manifest_sha256"],
+        "results/figure_plugin_trace_report.json": saved["figure_plugin_trace_sha256"],
+        "methods/run_manifest.yaml": hashlib.sha256(run_manifest_path.read_bytes()).hexdigest(),
+        "results/resolved_result_evidence.json": hashlib.sha256(resolved_evidence_path.read_bytes()).hexdigest(),
+    }
 
 
 def test_orchestrator_ignores_results_review_from_previous_snapshot(tmp_path) -> None:

@@ -58,6 +58,19 @@ class EvidenceSnapshotTests(unittest.TestCase):
             with self.assertRaises(EvidenceSnapshotMismatch):
                 validate_citation_audit_snapshot(project.path, audit_binding)
 
+    def test_citation_snapshot_binds_the_exact_current_latex_pdf(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="PDF binding", field="astronomy")
+            pdf = project.path / "latex" / "main.pdf"
+            pdf.write_bytes(b"%PDF-1.4\n% current manuscript\n")
+            audit_binding = manuscript_snapshot(project.path)
+
+            self.assertIn("latex/main.pdf", audit_binding["artifacts"])
+            pdf.write_bytes(b"%PDF-1.4\n% unrelated replacement\n")
+
+            with self.assertRaises(EvidenceSnapshotMismatch):
+                validate_citation_audit_snapshot(project.path, audit_binding)
+
     def test_reopen_archives_snapshot_and_unlocks_scientific_revision(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Reopen evidence", field="geography")

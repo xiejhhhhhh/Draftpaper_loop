@@ -15,7 +15,13 @@ from typing import Any
 import yaml
 
 from .artifact_dag import record_artifact_change
-from .change_impact import change_class_spec
+from .change_impact import affected_stages_for_class, change_class_spec
+from .completion_change_classifier import (
+    DEFAULT_ENFORCEMENT_MODE,
+    SECTION_STAGES,
+    classify_completion_change,
+    validate_evidence_refs,
+)
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .project_scaffold import utc_now
 from .project_state import load_project
@@ -292,16 +298,37 @@ def validate_manuscript_completion_payload(project: str | Path, payload: Any) ->
     revisions = payload.get("section_revisions", [])
     if not isinstance(revisions, list):
         raise ManuscriptCompletionError("section_revisions must be a list.")
+    normalized_revisions: list[dict[str, Any]] = []
     for index, revision in enumerate(revisions):
         if not isinstance(revision, dict):
             raise ManuscriptCompletionError(f"section_revisions[{index}] must be a mapping.")
+        normalized_revision = dict(revision)
+        if "evidence_refs" in revision:
+            evidence_refs = revision["evidence_refs"]
+            if not isinstance(evidence_refs, list):
+                raise ManuscriptCompletionError(
+                    f"section_revisions[{index}].evidence_refs must be a list."
+                )
+            normalized_refs: list[dict[str, Any]] = []
+            for ref_index, evidence_ref in enumerate(evidence_refs):
+                if not isinstance(evidence_ref, dict):
+                    raise ManuscriptCompletionError(
+                        f"section_revisions[{index}].evidence_refs[{ref_index}] must be a mapping."
+                    )
+                if any(not isinstance(key, str) for key in evidence_ref):
+                    raise ManuscriptCompletionError(
+                        f"section_revisions[{index}].evidence_refs[{ref_index}].<key> must be a string."
+                    )
+                normalized_refs.append(dict(evidence_ref))
+            normalized_revision["evidence_refs"] = normalized_refs
+        normalized_revisions.append(normalized_revision)
     return {
         "schema_version": COMPLETION_SCHEMA,
         "project_id": expected_project_id,
         "target_journal": target_journal,
         "metadata": _validate_metadata(payload.get("metadata")),
         "custom_references": _validate_references(payload.get("custom_references")),
-        "section_revisions": [dict(item) for item in revisions],
+        "section_revisions": normalized_revisions,
     }
 
 
@@ -353,6 +380,7 @@ def _normalize_revision(
         "content_file",
         "instruction",
         "change_class",
+        "evidence_refs",
     }
     unknown = sorted(set(raw) - allowed)
     if unknown:
@@ -404,6 +432,7 @@ def _normalize_revision(
         "content": content,
         "instruction": instruction,
         "change_class": raw.get("change_class"),
+        "evidence_refs": [dict(item) for item in raw.get("evidence_refs") or []],
     }
 
 
@@ -577,16 +606,46 @@ def _candidate_sections(
             continue
         target = dict(revision["resolved_target"])
         section = str(target.get("section") or "")
-        change_class, stale_scope, citation_bearing = _classify(
-            section,
-            str(revision.get("instruction") or ""),
-            content,
-            str(revision.get("change_class") or "") or None,
+        legacy_change_class = revision.get("change_class")
+        classification = classify_completion_change(
+            project_path=root,
+            section=section,
+            instruction=str(revision.get("instruction") or ""),
+            content=content,
+            explicit=str(revision.get("change_class") or "") or None,
+            evidence_refs=[dict(item) for item in revision.get("evidence_refs") or []],
+            enforcement_mode=DEFAULT_ENFORCEMENT_MODE,
         )
+        change_class = classification.effective_change_class
+        stale_scope = classification.stale_scope
+        computed_stale_scope = list(stale_scope)
+        if classification.decision == "classification_mismatch":
+            computed_stale_scope = affected_stages_for_class(
+                classification.inferred_change_class,
+                source_stage=SECTION_STAGES.get(section, section),
+            )
+        citation_bearing = change_class in {
+            "citation_change", "claim_boundary_change", "result_interpretation_change",
+            "figure_change", "metrics_change", "run_change", "method_change",
+            "data_change", "cohort_change", "research_plan_change",
+        } or bool(re.search(r"\\cite\w*\{", content))
         row = {
             **revision,
+            "legacy_change_class": legacy_change_class,
             "change_class": change_class,
+            "canonical_change_class": classification.canonical_change_class,
+            "effective_change_class": classification.effective_change_class,
+            "inferred_change_class": classification.inferred_change_class,
+            "classification_source": classification.classification_source,
+            "classification_decision": classification.decision,
+            "enforcement_mode": classification.enforcement_mode,
+            "would_block_in_strict": classification.would_block_in_strict,
+            "scientific_semantics_changed": classification.scientific_semantics_changed,
+            "evidence_validation": classification.evidence_validation,
+            "suggested_evidence_refs": classification.suggested_evidence_refs,
+            "rejection_codes": classification.rejection_codes,
             "stale_scope": stale_scope,
+            "computed_stale_scope": computed_stale_scope,
             "citation_bearing": citation_bearing,
         }
         classified.append(row)
@@ -784,6 +843,11 @@ def preview_manuscript_completion(project: str | Path, input_path: str | Path) -
         if change_class_spec(str(item["change_class"])).reopen_evidence
         or change_class_spec(str(item["change_class"])).rerun_science
     ]
+    classification_blockers = [
+        str(item["revision_key"])
+        for item in classified
+        if item.get("classification_decision") in {"classification_refinement_required", "classification_mismatch"}
+    ]
     try:
         snapshot = validate_promoted_snapshot_for_writing(state.path)
     except EvidenceSnapshotMismatch as exc:
@@ -844,6 +908,8 @@ def preview_manuscript_completion(project: str | Path, input_path: str | Path) -
         decision = "missing_author_fields"
     elif unresolved:
         decision = "codex_patch_required"
+    elif classification_blockers:
+        decision = "classification_refinement_required"
     elif scientific_reopen:
         decision = "scientific_reopen_required"
     elif pdf_preview.get("status") != "passed":
@@ -870,6 +936,7 @@ def preview_manuscript_completion(project: str | Path, input_path: str | Path) -
         "before_file_sha256": before_files,
         "unresolved_instruction_revisions": unresolved,
         "scientific_reopen_revisions": scientific_reopen,
+        "classification_blockers": classification_blockers,
         "pdf_preview": pdf_preview,
         "decision": decision,
     }
@@ -902,17 +969,31 @@ def preview_manuscript_completion(project: str | Path, input_path: str | Path) -
         },
     )
     change_report = {
-        "schema_version": "dpl.manuscript_completion_change.v1",
+        "schema_version": "dpl.manuscript_completion_change.v2",
         "changes": [
             {
                 "revision_key": item["revision_key"],
                 "change_class": item["change_class"],
+                "legacy_change_class": item.get("legacy_change_class"),
+                "canonical_change_class": item.get("canonical_change_class"),
+                "effective_change_class": item.get("effective_change_class"),
+                "inferred_change_class": item.get("inferred_change_class"),
+                "classification_source": item.get("classification_source"),
+                "classification_decision": item.get("classification_decision"),
+                "enforcement_mode": item.get("enforcement_mode"),
+                "would_block_in_strict": item.get("would_block_in_strict"),
+                "scientific_semantics_changed": item.get("scientific_semantics_changed"),
+                "evidence_validation": item.get("evidence_validation"),
+                "suggested_evidence_refs": item.get("suggested_evidence_refs"),
+                "rejection_codes": item.get("rejection_codes"),
                 "stale_scope": item["stale_scope"],
+                "computed_stale_scope": item.get("computed_stale_scope", item["stale_scope"]),
                 "citation_bearing": item["citation_bearing"],
             }
             for item in classified
         ],
         "scientific_reopen_revisions": scientific_reopen,
+        "classification_blockers": classification_blockers,
     }
     _write_json(packet_dir / "change_stale_report.json", change_report)
     validation = {
@@ -1062,6 +1143,22 @@ def _validate_preview_still_current(root: Path, core: dict[str, Any]) -> None:
     for canonical, expected in (core.get("before_file_sha256") or {}).items():
         if _file_sha256(root / str(canonical)) != expected:
             raise ManuscriptCompletionError(f"Completion target changed after preview: {canonical}")
+    for revision in core.get("resolved_revisions") or []:
+        if not isinstance(revision, dict):
+            continue
+        refs = [
+            dict(item)
+            for item in revision.get("evidence_refs") or []
+            if isinstance(item, dict)
+        ]
+        if not refs:
+            continue
+        validation = validate_evidence_refs(root, refs)
+        if validation.get("status") != "passed":
+            raise ManuscriptCompletionError(
+                "Completion evidence ref changed after preview: "
+                + ", ".join(str(item) for item in validation.get("issues") or [])
+            )
 
 
 def _update_exact_user_locks(root: Path, packet_id: str, revisions: list[dict[str, Any]]) -> None:
@@ -1363,7 +1460,19 @@ def prepare_manuscript_completion(project: str | Path) -> dict[str, Any]:
     template = _template_payload(state.path, metadata)
     validate_manuscript_completion_payload(state.path, template)
     template_path = state.path / TEMPLATE_PATH
-    atomic_write_text(template_path, yaml.safe_dump(template, allow_unicode=True, sort_keys=False))
+    evidence_ref_example = (
+        "\n# For Data/Methods wording that describes an executed step, preview can suggest current refs.\n"
+        "# evidence_refs:\n"
+        "#   - artifact: methods/run_manifest.yaml\n"
+        "#     json_pointer: /steps/feature_construction\n"
+        "#     expected_sha256: <sha256 from suggested_evidence_refs>\n"
+        "#     run_id: <optional current run id>\n"
+        "#     cohort_id: <optional current cohort id>\n"
+    )
+    atomic_write_text(
+        template_path,
+        yaml.safe_dump(template, allow_unicode=True, sort_keys=False) + evidence_ref_example,
+    )
     report = _missing_fields(state.path, metadata)
     report_path = state.path / MISSING_FIELDS_PATH
     _write_json(

@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from .html_utils import write_html_report
 from .project_scaffold import utc_now
 from .project_state import load_project
@@ -22,6 +24,7 @@ from .scientific_figure_quality import assess_scientific_figure_quality
 
 REPORT_JSON = "review/result_discipline_review_report.json"
 REPORT_HTML = "review/result_discipline_review_report.html"
+RESULT_SUPPORT_REOPEN_REQUEST_JSON = "review/result_support_reopen_request.json"
 
 
 class ResultDisciplineReviewError(RuntimeError):
@@ -34,7 +37,10 @@ def _read_json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError:
-        return {}
+        try:
+            value = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
+        except (OSError, yaml.YAMLError):
+            return {}
     return value if isinstance(value, dict) else {}
 
 
@@ -69,19 +75,34 @@ def _canonical_metric_name(value: object) -> str:
     return normalized
 
 
+def _selected_run_id(manifest: dict[str, Any]) -> str:
+    if str(manifest.get("status") or "").lower() != "success":
+        return ""
+    return str(manifest.get("run_id") or manifest.get("execution_id") or "").strip()
+
+
 def _numeric_metrics(project_path: Path) -> list[dict[str, Any]]:
     manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    selected_run_id = _selected_run_id(manifest)
+    if not selected_run_id:
+        return []
     values: list[dict[str, Any]] = []
     for name, value in (manifest.get("metrics") or {}).items():
         try:
-            values.append({"metric_name": _canonical_metric_name(name), "value": float(value), "run_id": manifest.get("run_id")})
+            values.append({"metric_name": _canonical_metric_name(name), "value": float(value), "run_id": selected_run_id})
         except (TypeError, ValueError):
             continue
     evidence = _read_json(project_path / "results" / "resolved_result_evidence.json")
     if not evidence:
         evidence = _read_json(project_path / "results" / "result_evidence_resolution.json")
+    evidence_run_id = str(evidence.get("run_id") or "")
+    if evidence and evidence_run_id != selected_run_id:
+        return values
     for item in evidence.get("metrics") or []:
         if not isinstance(item, dict):
+            continue
+        item_run_id = str(item.get("run_id") or "")
+        if item_run_id != selected_run_id:
             continue
         try:
             values.append({
@@ -205,37 +226,70 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
             "policy": "No data/method-plugin-generated figure was present, so discipline plugin review rules were not activated.",
         }
     semantic_repairs = [item for item in results_semantic_audit["issues"] if item.get("severity") == "repair_required"]
-    if compiled_review_inputs.get("decision") == "repair_required":
+    evidence_failure_reasons: list[str] = []
+    if figure_quality.get("decision") == "repair_required":
+        evidence_failure_reasons.append("Scientific figure evidence failed the post-Results publication-quality contract.")
+    if rule_gate.get("decision") == "revise_required":
+        rescue = (rule_gate.get("rescue_tasks") or [{}])[0]
+        evidence_failure_reasons.append(
+            str(rescue.get("reason") or "A promoted discipline review rule requires evidence repair.")
+        )
+    if evidence_failure_reasons:
+        decision = "repair_required"
+        action = {
+            "command": "assess-result-support",
+            "reason": "Post-Results review found evidence support problems; reopen Result Support against the current bound evidence before manuscript repair.",
+        }
+    elif compiled_review_inputs.get("decision") == "repair_required":
         decision = "repair_required"
         action = {
             "command": "prepare-results-semantic-repair",
             "reason": "Results claims require explicit cohort, estimand, analysis-spec and evidence bindings before discipline rules can be frozen.",
         }
-    elif semantic_repairs or manuscript_quality.get("decision") == "repair_required" or figure_quality.get("decision") == "repair_required":
+    elif semantic_repairs or manuscript_quality.get("decision") == "repair_required":
         decision = "repair_required"
         action = {
-            "command": "verify-methods" if figure_quality.get("decision") == "repair_required" else "prepare-results-semantic-repair",
-            "reason": "Figures or Results require repair before they meet the 0.95 publication-quality contracts.",
-        }
-    elif rule_gate.get("decision") == "revise_required":
-        decision = "repair_required"
-        rescue = (rule_gate.get("rescue_tasks") or [{}])[0]
-        action = {
-            "command": rescue.get("recommended_command") or "prepare-result-rescue",
-            "reason": rescue.get("reason") or "A promoted discipline review rule requires evidence repair.",
+            "command": "prepare-results-semantic-repair",
+            "reason": "Results prose requires semantic repair before it meets the publication-quality contracts.",
         }
     else:
         decision = "pass"
         action = {"command": "write-introduction", "reason": "Results and composite discipline review are ready for downstream manuscript writing."}
+    promoted_snapshot_path = state.path / "results" / "promoted_evidence_snapshot.json"
+    promoted_snapshot = _read_json(promoted_snapshot_path)
+    evidence_snapshot_id = str(
+        promoted_snapshot.get("snapshot_id")
+        or _read_json(state.path / "core_evidence" / "core_evidence_report.json").get("promoted_evidence_snapshot_id")
+        or ""
+    )
+    run_manifest_path = state.path / "methods" / "run_manifest.yaml"
+    resolved_evidence_path = state.path / "results" / "resolved_result_evidence.json"
+    if not resolved_evidence_path.exists():
+        resolved_evidence_path = state.path / "results" / "result_evidence_resolution.json"
+    resolved_evidence_relative = resolved_evidence_path.relative_to(state.path).as_posix()
+    evidence_bindings = {
+        relative: digest
+        for relative, digest in {
+            "results/results.tex": hashlib.sha256(results_bytes).hexdigest(),
+            "results/promoted_evidence_snapshot.json": _sha256_or_empty(promoted_snapshot_path),
+            "results/result_manifest.yaml": _sha256_or_empty(state.path / "results" / "result_manifest.yaml"),
+            "results/figure_plugin_trace_report.json": _sha256_or_empty(state.path / "results" / "figure_plugin_trace_report.json"),
+            "methods/run_manifest.yaml": _sha256_or_empty(run_manifest_path),
+            resolved_evidence_relative: _sha256_or_empty(resolved_evidence_path),
+        }.items()
+        if digest
+    }
     report = {
         "status": "written",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "decision": decision,
         "results_sha256": hashlib.sha256(results_bytes).hexdigest(),
-        "evidence_snapshot_id": _read_json(state.path / "core_evidence" / "core_evidence_report.json").get("promoted_evidence_snapshot_id") or "",
-        "result_manifest_sha256": _sha256_or_empty(state.path / "results" / "result_manifest.yaml"),
-        "figure_plugin_trace_sha256": _sha256_or_empty(state.path / "results" / "figure_plugin_trace_report.json"),
+        "evidence_snapshot_id": evidence_snapshot_id,
+        "promoted_evidence_snapshot_sha256": evidence_bindings.get("results/promoted_evidence_snapshot.json", ""),
+        "result_manifest_sha256": evidence_bindings.get("results/result_manifest.yaml", ""),
+        "figure_plugin_trace_sha256": evidence_bindings.get("results/figure_plugin_trace_report.json", ""),
+        "evidence_bindings": evidence_bindings,
         "trace_decision": trace.get("decision"),
         "reviewed_figure_ids": reviewed_figure_ids,
         "skipped_figure_ids": skipped_figure_ids,
@@ -250,8 +304,29 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         "manuscript_quality": manuscript_quality,
         "figure_publication_quality": figure_quality,
         "recommended_next_action": action,
+        "result_support_reopen_request": RESULT_SUPPORT_REOPEN_REQUEST_JSON if evidence_failure_reasons else None,
         "policy": "Only plugin-generated figures activate discipline review rules. Findings repair Results claims and scientific interpretation; they do not retroactively block figure generation. Citation audit remains later and preserves references.",
     }
     _write_json(state.path / REPORT_JSON, report)
+    if evidence_failure_reasons:
+        support = _read_json(state.path / "results" / "result_support_checkpoint.json")
+        request = {
+            "status": "requested",
+            "schema_version": "dpl.result_support_reopen_request.v1",
+            "generated_at": utc_now(),
+            "project_id": state.metadata.get("project_id"),
+            "reason": action["reason"],
+            "evidence_failure_reasons": evidence_failure_reasons,
+            "result_support_checkpoint": "results/result_support_checkpoint.json",
+            "result_support_checkpoint_sha256": support.get("checkpoint_sha256") or "",
+            "result_discipline_review": REPORT_JSON,
+            "result_discipline_review_sha256": _sha256_or_empty(state.path / REPORT_JSON),
+            "results_sha256": report["results_sha256"],
+            "recommended_next_action": {
+                "command": "assess-result-support",
+                "cli": f'python -m draftpaper_cli.cli assess-result-support --project "{state.path}"',
+            },
+        }
+        _write_json(state.path / RESULT_SUPPORT_REOPEN_REQUEST_JSON, request)
     write_html_report(state.path / REPORT_HTML, _render(report), title="Results Discipline Review")
     return {"status": "written", "project_path": str(state.path), "decision": decision, "report": REPORT_JSON, "recommended_next_action": action["command"]}

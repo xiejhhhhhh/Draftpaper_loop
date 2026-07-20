@@ -252,16 +252,21 @@ def _result_support_action(project_path: Path, result_support: dict[str, Any]) -
             "recommended_next_commands": next_commands,
         }
     route_options = result_support.get("route_options") or []
+    from .result_support import result_route_command, result_support_checkpoint_sha256
+
+    checkpoint_hash = str(
+        result_support.get("checkpoint_sha256") or result_support_checkpoint_sha256(result_support)
+    )
     if not route_options:
         route_options = [
             {
                 "route": "downgrade_research_claim",
-                "current_executable_command": _cli_for(project_path, "apply-result-downgrade"),
+                "current_executable_command": result_route_command(project_path, "downgrade_research_claim", checkpoint_hash),
                 "stale_policy": "stale manuscript and claim boundary only; keep current result artifacts frozen",
             },
             {
                 "route": "supplement_data_and_method",
-                "current_executable_command": _cli_for(project_path, "prepare-result-rescue"),
+                "current_executable_command": result_route_command(project_path, "supplement_data_and_method", checkpoint_hash),
                 "stale_policy": "stale data, method, figure, evidence, and manuscript chain before rerunning results",
             },
         ]
@@ -271,6 +276,7 @@ def _result_support_action(project_path: Path, result_support: dict[str, Any]) -
         "cli": None,
         "reason": "Current figures and metrics do not fully support the research-plan claims; choose claim downgrade or data/method supplementation before manuscript writing continues.",
         "requires_user_decision": True,
+        "checkpoint_sha256": result_support.get("checkpoint_sha256") or checkpoint_hash,
         "route_options": route_options,
     }
 
@@ -306,6 +312,27 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
         # contract. Rebuild from the earliest stale stage before interpreting
         # any old capability, method, result, or review diagnosis.
         return None
+    reopen_request = _read_report(project_path, "review/result_support_reopen_request.json")
+    if reopen_request.get("status") == "requested":
+        review_path = project_path / "review" / "result_discipline_review_report.json"
+        results_path = project_path / "results" / "results.tex"
+        support = _read_report(project_path, "results/result_support_checkpoint.json")
+        review_hash = hashlib.sha256(review_path.read_bytes()).hexdigest() if review_path.exists() else ""
+        results_hash = hashlib.sha256(results_path.read_bytes()).hexdigest() if results_path.exists() else ""
+        request_is_current = bool(
+            review_hash
+            and review_hash == reopen_request.get("result_discipline_review_sha256")
+            and results_hash == reopen_request.get("results_sha256")
+            and support.get("checkpoint_sha256") == reopen_request.get("result_support_checkpoint_sha256")
+        )
+        if request_is_current:
+            return {
+                "stage": "result_support",
+                "command": "assess-result-support",
+                "cli": _cli_for(project_path, "assess-result-support"),
+                "reason": str(reopen_request.get("reason") or "Post-Results evidence review reopened Result Support."),
+                "result_support_reopen_request": "review/result_support_reopen_request.json",
+            }
     research_plan_current = (
         research_plan_state.get("status") in COMPLETE_STATUSES
     )

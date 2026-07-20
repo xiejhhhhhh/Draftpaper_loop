@@ -543,10 +543,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     downgrade_claim = subparsers.add_parser("apply-result-downgrade", help="Freeze current result evidence and downgrade unsupported research-plan claims without rerunning results.")
     downgrade_claim.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    downgrade_claim.add_argument("--checkpoint-hash", help="Hash of the current Result Support checkpoint; omit once to receive the current hash and complete command.")
     downgrade_claim.add_argument("--reason", default="", help="Optional human-readable reason for choosing the downgrade route.")
 
     result_rescue = subparsers.add_parser("prepare-result-rescue", help="Prepare data/method supplement tasks when current results cannot support planned claims.")
     result_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    result_rescue.add_argument("--checkpoint-hash", help="Hash of the current Result Support checkpoint; omit once to receive the current hash and complete command.")
 
     core_evidence = subparsers.add_parser("assess-core-evidence", help="Assess data-method-figure-result evidence before manuscript writing.")
     core_evidence.add_argument("--project", required=True, help="Path to a project directory or project.json.")

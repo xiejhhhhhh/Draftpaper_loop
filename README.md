@@ -22,9 +22,30 @@ Draftpaper-loop is a local-first, evidence-first research workflow. It confirms 
 
 ## Current Release
 
-The current release is v0.32.0. Cross-discipline fixtures validate workflow contracts, not scientific results. A real paper still requires live-runnable discipline plugins or auditable project-local code, verified run outputs, human confirmation of the research blueprint and core evidence, and final author acceptance. Mock and fixture outputs never qualify as manuscript evidence.
+The current release is v0.33.0; it adds evidence-bound author completion, Result Support v3, synchronized Agent/CLI contracts, and strict completion classification, while fixtures remain workflow-contract checks rather than scientific results.
 
-This README remains the detailed project guide. Use the generated [CLI Reference](docs/cli_reference.md) for the complete 210-command inventory, [Install Profiles](docs/install_profiles.md) for optional runtimes, the [Command Risk Matrix](docs/command_risk_matrix.md) for write/network/confirmation boundaries, and [Token and Cost Reporting](docs/token_cost_reporting.md) for project-level usage accounting. Product and deployment limits are documented separately in the [Product Boundary](docs/commercial_overview.md).
+<!-- capability:scientific_gates_and_artifact_dag -->
+- **v0.30.1-v0.30.3** Scientific gates, non-zero exit status, canonical taxonomy, and the artifact DAG constrain the workflow states that may continue.
+<!-- /capability:scientific_gates_and_artifact_dag -->
+<!-- capability:manuscript_completion_transaction -->
+- **v0.30.4-v0.31.0** Author-completion packets use stable locators, unified diff/PDF previews, and atomic apply/rollback bound to release evidence.
+<!-- /capability:manuscript_completion_transaction -->
+<!-- capability:command_schema_quality_contracts -->
+- **v0.31.1-v0.31.5** CommandSpec, the schema registry, and quality contracts provide one control plane for command risk, inputs/outputs, and release checks.
+<!-- /capability:command_schema_quality_contracts -->
+<!-- capability:minimal_install_cost_risk_release -->
+- **v0.31.6-v0.31.9** Minimal-first install profiles, token/cost receipts, the command risk matrix, and cross-platform release checks expose the runtime boundary.
+<!-- /capability:minimal_install_cost_risk_release -->
+<!-- capability:completion_audit_and_readme_framework -->
+- **v0.32.0** Completion auditing, cross-journal regression, and the restored detailed README framework define the current public release boundary.
+<!-- /capability:completion_audit_and_readme_framework -->
+<!-- capability:completion_change_classification -->
+- **v0.32.1-v0.32.2** Capability truth checks, evidence-ref suggestions, classification preview, and exact stale reports align README claims with final-author edits.
+<!-- /capability:completion_change_classification -->
+- **v0.33.0** Strict completion classification, Result Support v3, synchronized workflow skills, and full release verification form the current release.
+
+
+This README remains the detailed project guide. Use the generated [CLI Reference](docs/cli_reference.md) for the complete 210-command inventory, [Install Profiles](docs/install_profiles.md) for optional runtimes, the [Command Risk Matrix](docs/command_risk_matrix.md) for write/network/confirmation boundaries, and [Token and Cost Reporting](docs/token_cost_reporting.md) for project-level usage accounting.
 
 ## How a Paper Reaches `main.pdf`
 
@@ -36,14 +57,23 @@ idea and literature
   -> result-support and claim-strength confirmation
   -> Results
   -> Introduction, Data, Methods and Discussion
-  -> discipline review and final citation audit
-  -> two independent blind reviewers
+  -> discipline review
   -> final author completion and precise revisions
+  -> final citation audit
+  -> two independent blind reviewers
   -> compile, bind and confirm one release hash
   -> latex/main.pdf
 ```
 
 If the verified results do not support the planned claim, the loop stops. The user must either narrow the claim while freezing the accepted figures and metrics, or supplement data/methods and rerun the scientific evidence chain. Draftpaper-loop does not substitute a similar-looking figure and continue writing.
+
+<!-- capability:result_support_two_routes -->
+Insufficient results expose claim narrowing or data/method supplementation. The current checkpoint selects one route for the whole paper; per-claim routing is later work.
+<!-- /capability:result_support_two_routes -->
+
+<!-- capability:result_support_checkpoint_v3 -->
+Result Support v3 prefers current resolved evidence, then the selected run manifest, then run-bound result tables. Each route is bound to the current checkpoint hash, and post-Results evidence findings reopen this same checkpoint.
+<!-- /capability:result_support_checkpoint_v3 -->
 
 ## Guarantees and Human Control
 
@@ -51,7 +81,13 @@ Deterministic contracts check project state, cohort/run identity, plugin provena
 
 ## Completing and Revising the Final Manuscript
 
-One `manuscript_completion.yaml` can provide authors, affiliations, ORCID, funding, acknowledgments, data/code links, user-confirmed references and multiple paragraph revisions. Line numbers are hints; stable `paragraph_id`, expected text and SHA-256 are the write guards. The system first produces one diff and candidate PDF, then applies the accepted packet atomically.
+One `manuscript_completion.yaml` can provide authors, affiliations, ORCID, funding, acknowledgments, data/code links, user-confirmed references and multiple paragraph revisions.
+
+<!-- capability:stable_locator -->
+Line numbers are hints; stable `paragraph_id`, expected text, and SHA-256 are the write guards.
+<!-- /capability:stable_locator -->
+
+The system first produces one diff and candidate PDF, then applies the accepted packet atomically. Release order is author completion → final citation audit → two independent blind reviews → release-hash confirmation.
 
 ```powershell
 draftpaper prepare-manuscript-completion --project <project>
@@ -65,9 +101,14 @@ See [Final Manuscript Completion](docs/manuscript_completion.md) for the complet
 
 ## What It Does
 
-Draftpaper-loop organizes one paper as one local project directory and advances it through explicit, rerunnable stages. The main loop is evidence-first: project creation, literature search, journal template profiling, research planning, data acquisition/integration, method planning, figure planning, analysis-code generation, method verification, result validity, result support checkpoint, run-aware result evidence resolution, semantic figure-contract validation, core-evidence review and human confirmation, Results writing, Introduction/Data/Methods/Discussion writing, final citation audit, LaTeX assembly, PDF review, integrity gates, reviewer-style revision routing, and quality gates. When current results cannot support the planned claim, the loop stops before manuscript writing and asks for an explicit route: downgrade the claim while freezing the verified figures/metrics, or supplement data/methods and rerun the evidence chain.
-
-The reference workflow uses free literature providers first, including Semantic Scholar, arXiv, Crossref, and optional SerpApi. It writes BibTeX, citation evidence, literature notes, HTML paper summaries, and context-aware evidence for Introduction, Data, and Methods. When data or method references lack readable abstract evidence, Draftpaper-loop can call the vendored `paper-fetch-skill` runtime through `paper_fetch_adapter.py` to fetch full-text Markdown/JSON evidence.
+- Organizes one paper as one local project directory with explicit, rerunnable stages.
+- Confirms the research blueprint and executable evidence before manuscript writing.
+- Retrieves literature and preserves BibTeX, citation evidence, notes, and paper summaries.
+- Plans data, methods, figures, and result support from the current project evidence.
+- Verifies methods and result validity before Results prose can continue.
+- Writes the manuscript from confirmed figures, claims, citations, and section evidence.
+- Routes stale artifacts, integrity failures, review findings, and author revisions deterministically.
+- Compiles and confirms one traceable `main.pdf` only after final citation, review, and release checks.
 
 ## Loop Model
 
@@ -96,42 +137,18 @@ The loop is designed around five engineering components:
 
 ## Key Features
 
-- Single-paper local project model with staged manifests.
-- Orchestrator commands for status, next action, checkpoint, resume, and pipeline execution.
-- Hash-based stale detection and backtracking when upstream artifacts change.
-- Context-aware literature retrieval for `idea`, `data`, and `methods`.
-- Zotero collection import for user-curated reference sets.
-- Traceable `citation_evidence.csv` for auditable manuscript claims.
-- Journal profile stage for target-journal LaTeX constraints.
-- Pluggable data acquisition planning for local files, API-style access, and remote/server-side data without hard-coding field-specific packages into the core Data stage.
-- Data feasibility gate before method planning.
-- Project-specific figure planning before analysis-code generation.
-- Methods hard gate requiring successful local code execution.
-- Result validity gate before Results writing.
-- Paper Narrative Engine that organizes main and supporting figures into finding-level stories, builds section evidence packs, Introduction/Discussion argument matrices, Data/Methods lifecycles, and outline-first Codex free-writing jobs.
-- Scientific Editor and absolute-quality release: repair only affected paragraphs, reject deterministic fallback as a release candidate, require the final citation audit after all section validations, and require two independent reviewers to audit one frozen anonymous generated manuscript without an original-manuscript comparison.
-- Clean project versioning with read-only parent projects, allowlisted asset import, lineage receipts, independent passports, and rebuildable derived state instead of copying stale reports into a new `_vN` project.
-- Capability packs with routing evaluations, explicit plugin ownership, project-local method implementation contracts, and rescue routes that let an Agent implement a genuinely new method before plugin sufficiency is reassessed.
-- Task-scoped Figure and Paragraph Evidence Resolvers that bind current runs and claims while controlling repeated writing context and token cost.
-- Native `doctor`, `recover`, `start`, `continue`, `review`, and `revise` commands backed by one declarative command registry; Gbrain is not a runtime dependency or command-schema source.
-- Canonical bibliography registry, duplicate-work/version resolution, journal-style validation, and rendered reference proof separated from citation-support auditing.
-- Recursive third-party provenance for vendored code, taxonomy inspiration, derived templates, upstream skill repositories, commits, licenses, and affected paths.
-- Stable paragraph and LaTeX line anchors for previewing, accepting, and rolling back author revisions, including metadata, acknowledgements, data/code links, custom prose, and additional references.
-- Core evidence gate before manuscript writing, checking data supplementation, data integration, method execution, figure production, figure metadata, and result validity before human figure confirmation.
-- Evidence-first manuscript writing: Results are written from confirmed figures first, then Introduction, Data, Methods, and Discussion are generated without leaking numeric results into earlier sections.
-- Brief-guided Data and Methods writing: the loop preserves hard evidence contracts while avoiding rigid context dumping, local paths, script names, and internal workflow language in manuscript prose.
-- Results no-citation enforcement with explicit `Figure~\ref{...}` and `Table~\ref{...}` references in result prose.
-- Chinese Results review summary at `results/results_summary_zh.md` for quick human inspection of figure-level interpretation.
-- LaTeX assembly with optional local PDF compilation.
-- Default acknowledgments noting Draftpaper-loop assistance and linking to the project repository.
-- Independent integrity gate for BibTeX existence, citation evidence, and result artifact binding.
-- Manuscript writing-quality gates for section length, paragraph structure, citation placement, Methods formulas, Results figure count, and non-bulleted natural prose.
-- Review-revise-re-review loop with gate-failure routing and commitment ledger.
-- Publication-readiness reviewer layer with journal-fit risk, submission-readiness scoring, statistical rescue planning, and claim-evidence matrix outputs.
-- Discipline-specific reviewer-engineering engines with geography/remote-sensing support, reserved astronomy and machine-learning branches, and a default fallback.
-- Metadata-only research-code mining that discovers, scores, and reports public repository candidates for future discipline plugin sedimentation without copying third-party source code.
-- Codex skill wrapper that remains only a calling layer.
-
+- Local-first single-paper projects with staged manifests and artifact hashes.
+- One declarative command registry for orchestrator, checkpoint, recovery, and review actions.
+- Evidence-first writing that binds Results, claims, figures, tables, citations, and section evidence.
+- Data feasibility, method execution, result validity, integrity, and citation hard gates.
+- Capability packs and project-local rescue routes with explicit ownership and provenance.
+- Stable paragraph and LaTeX locators for previewing, applying, and rolling back author edits.
+- Final citation audit, two independent blind reviewers, and one release-hash confirmation gate.
+- Minimal, plotting, fulltext, and MCP install profiles selected through `doctor`.
+- Token/cost receipts and command risk/write-set/confirmation contracts.
+- Cross-discipline release fixtures that validate workflow contracts without standing in for science.
+- Optional local PDF compilation and deterministic stale propagation.
+- Codex remains a calling layer over the local Python package and CLI.
 ## Project Layout
 
 ```text
@@ -149,6 +166,30 @@ Generated paper projects are stored under `projects/` locally and are intentiona
 
 ## Quick Start
 
+### Minimal-first installation
+
+PowerShell:
+
+```powershell
+git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
+cd Draftpaper_loop
+py -3 -m venv .venv
+.\.venv\Scripts\python -m pip install -U pip
+.\.venv\Scripts\python -m pip install -e .
+.\.venv\Scripts\draftpaper doctor --json
+```
+
+bash/macOS/Linux:
+
+```bash
+git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
+cd Draftpaper_loop
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e .
+draftpaper doctor --json
+```
 ### Tutorial
 
 Basic tutorial video: [Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/?spm_id_from=333.1387.homepage.video_card.click&vd_source=463ffa8de6f1dbe750355ef3225fa45a)
@@ -305,9 +346,21 @@ python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_pr
 
 ## Implementation Status
 
+| Capability ID | Status / Since | Evidence | Boundary |
+|---|---|---|---|
+| `scientific_gates_and_artifact_dag` | implemented / 0.30 | `draftpaper_cli/change_impact.py`, `tests/test_change_impact.py`, `integrity_ledger.jsonl` | Runtime stale propagation remains owned by change-impact and artifact-DAG contracts. |
+| `manuscript_completion_transaction` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`, `tests/test_v0306_completion_transaction.py`, `writing/manuscript_completion/packets/<packet_id>/preview.diff` | Completion packets add author input without replacing scientific evidence. |
+| `command_schema_quality_contracts` | implemented / 0.31 | `draftpaper_cli/command_registry.py`, `tests/test_v0314_single_command_control_plane.py`, `docs/cli_reference.md` | Generated references remain the full command inventory. |
+| `minimal_install_cost_risk_release` | implemented / 0.31 | `draftpaper_cli/install_profiles.py`, `tests/test_v0316_install_profiles.py`, `token_ledger.jsonl` | Missing price receipts are not inferred; doctor selects optional extras. |
+| `completion_audit_and_readme_framework` | implemented / 0.32 | `draftpaper_cli/final_manuscript_confirmation.py`, `tests/test_v0320_release_completion.py`, `review/final_manuscript_confirmation.json` | Fixtures validate workflow contracts rather than scientific conclusions. |
+| `result_support_two_routes` | implemented / 0.18 | `draftpaper_cli/result_support.py`, `tests/test_result_support.py`, `results/result_support_checkpoint.json` | The current checkpoint selects one route for the whole paper; per-claim routing is later work. |
+| `stable_locator` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`, `tests/test_v0305_completion_locators.py`, `writing/manuscript_completion/packets/<packet_id>/preview.diff` | Ambiguous locators, duplicate targets, or stale hashes reject the whole packet. |
+| `completion_change_classification` | implemented / 0.32 | `draftpaper_cli/completion_change_classifier.py`, `tests/test_v0322_completion_change_classification.py`, `writing/manuscript_completion/packets/<packet_id>/change_stale_report.json` | v0.33.0 defaults to strict mode; executed Data/Methods details require current evidence refs. |
+| `result_support_checkpoint_v3` | implemented / 0.32 | `draftpaper_cli/result_support_signals.py`, `tests/test_result_support_signals.py`, `results/result_support_checkpoint.json` | The whole checkpoint selects one route; post-Results evidence problems reopen the same checkpoint. |
+
 The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, claim contracts, observation recording, pluggable data acquisition planning, data inventory and feasibility checks, method-plan collection, discipline-aware method blueprint generation, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, result validity checks, result support checkpointing, downgrade/rescue route planning, core evidence assessment, result inventory, Results writing with Chinese review summary, Introduction, Data writing context generation, Data writing, Methods writing context generation, Methods writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
 
-The v0.32.0 control plane registers 210 public commands through one `CommandSpec` inventory and gives scientific hard gates nonzero failure status. Central fetch, execution, write-set and MCP policies protect project boundaries; one change taxonomy and artifact DAG control precise stale propagation. After the scientific and writing chain passes, the final-author workflow collects publication metadata, user-confirmed references and bounded paragraph edits in one packet, previews a unified diff and candidate PDF, applies the accepted packet atomically, and records rollback and exact-text locks. Final confirmation binds the completion manifest, canonical sections, bibliography, promoted evidence, citation audit, two independent reviews and compiled PDF to one release hash.
+The v0.33.0 control plane registers 210 public commands through one `CommandSpec` inventory and gives scientific hard gates nonzero failure status. Central fetch, execution, write-set and MCP policies protect project boundaries; one change taxonomy and artifact DAG control precise stale propagation. After the scientific and writing chain passes, the final-author workflow collects publication metadata, user-confirmed references and bounded paragraph edits in one packet, previews a unified diff and candidate PDF, applies the accepted packet atomically, and records rollback and exact-text locks. Final confirmation binds the completion manifest, canonical sections, bibliography, promoted evidence, citation audit, two independent reviews and compiled PDF to one release hash.
 
 Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
 
@@ -459,6 +512,17 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 Donation supports maintenance only and does not grant commercial use rights.
 
 ## Recent Updates
+### v0.33.0 (2026-07-19) -- Strict Author Completion and Hash-bound Result Support
+
+- Completion classification now defaults to strict after a 60-case, three-discipline calibration fixture. Preview preserves the submitted class, inferred class, computed stale scope, evidence validation, and suggested evidence refs; apply revalidates every referenced manifest after preview.
+- Result Support v3 selects metrics from current resolved evidence, the selected run manifest, or explicitly run-bound tables; binds downgrade/rescue decisions to one checkpoint hash; reports unbound required data roles; and routes post-Results evidence failures back to the same checkpoint.
+- Source and wheel workflow skills, contracts, CLI reference, command risk matrix, schema registry, release manifest, bilingual README, and package identity are released as one v0.33.0 contract.
+
+### v0.32.1-v0.32.2 (2026-07-19) -- Capability Truth, README Clarity and Shadow Calibration
+
+- v0.32.1 adds the capability truth matrix and keeps the established README H2 structure while making current-version capabilities, final-author completion, release order, and implementation evidence visible.
+- v0.32.2 adds canonical completion classification, local evidence-ref suggestions, Result Support signal adapters, checkpoint-hash route handshakes, whole-checkpoint route boundaries, and synchronized Agent command examples in shadow-compatible form.
+
 ### v0.31.1-v0.32.0 (2026-07-18) -- Architecture, Release Documentation, Cross-platform Identity and Completion Audit
 
 - `v0.32.0` reconciles the complete `H-01-H-07`, `M-01-M-12` and `R01-R11` release requirements. It validates one 210-command control plane in source, editable and isolated-wheel installations; runs General/AAS/MNRAS author-completion regression and five-domain adversarial release regression; restores Python 3.10 TOML compatibility; hardens optional bibliography-tool lookup; and publishes explicit completion and sandbox-boundary audits. These regressions validate workflow contracts rather than scientific conclusions or production-hosting isolation.

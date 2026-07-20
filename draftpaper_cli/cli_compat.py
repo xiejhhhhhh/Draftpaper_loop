@@ -967,7 +967,11 @@ def dispatch_compat_command(args: Any) -> int:
 
     if args.command == "apply-result-downgrade":
         try:
-            result = apply_result_downgrade(args.project, reason=args.reason)
+            result = apply_result_downgrade(
+                args.project,
+                reason=args.reason,
+                checkpoint_hash=args.checkpoint_hash,
+            )
         except (ClaimContractError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1
@@ -980,7 +984,7 @@ def dispatch_compat_command(args: Any) -> int:
 
     if args.command == "prepare-result-rescue":
         try:
-            result = prepare_result_rescue(args.project)
+            result = prepare_result_rescue(args.project, checkpoint_hash=args.checkpoint_hash)
         except (ResultRescueError, ProjectStateError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
             return 1

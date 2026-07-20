@@ -630,6 +630,29 @@ COMMAND_SPECS.update({
 })
 
 
+_RESULT_ROUTE_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "project": {"type": "string"},
+        "checkpoint_hash": {"type": ["string", "null"]},
+        "reason": {"type": ["string", "null"]},
+    },
+    "required": ["project"],
+    "additionalProperties": False,
+}
+for _route_command in ("apply-result-downgrade", "prepare-result-rescue"):
+    COMMAND_SPECS[_route_command] = replace(
+        COMMAND_SPECS[_route_command],
+        protected_action=True,
+        manual_only=True,
+        risk_level="human_checkpoint",
+        confirmation_policy="checkpoint_hash",
+        input_schema=_RESULT_ROUTE_INPUT_SCHEMA,
+        mcp_exposed=False,
+        idempotency="supported",
+    )
+
+
 for _name, _spec in tuple(COMMAND_SPECS.items()):
     if _spec.handler_module and _spec.handler_name:
         continue

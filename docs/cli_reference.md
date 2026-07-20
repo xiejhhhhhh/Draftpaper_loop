@@ -128,7 +128,7 @@ This reference contains all 210 commands registered in the authoritative `Comman
 | `prepare-plugin-rescue` | capabilities | capability_coordinator | network_external | yes | always_success | `namespace adapter` | yes |
 | `prepare-pre-execution-rescue` | capabilities | capability_coordinator | write_project | yes | always_success | `pre_execution_support.prepare_pre_execution_rescue` | yes |
 | `prepare-project-method-implementation` | methods | capability_coordinator | write_project | yes | always_success | `project_method_implementation.prepare_project_method_implementation` | yes |
-| `prepare-result-rescue` | results | evidence_coordinator | write_project | yes | always_success | `namespace adapter` | yes |
+| `prepare-result-rescue` | results | evidence_coordinator | human_checkpoint | yes | always_success | `namespace adapter` | no |
 | `prepare-results-semantic-repair` | results | evidence_coordinator | write_project | yes | always_success | `namespace adapter` | yes |
 | `prepare-revision` | writing | writing_coordinator | write_project | yes | always_success | `manuscript_revision.prepare_revision_from_task` | yes |
 | `prepare-scientific-editor` | writing | writing_coordinator | write_project | yes | always_success | `writing_architecture.prepare_scientific_editor` | yes |

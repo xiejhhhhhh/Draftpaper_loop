@@ -32,16 +32,32 @@ def _project(tmp_path: Path) -> Path:
     (project / "results" / "figures" / "figure_1.png").write_bytes(b"figure")
     (project / "results" / "tables" / "table_1.csv").write_text("metric,value\nf1,0.8\n", encoding="utf-8")
     (project / "references" / "library.bib").write_text("@article{A,title={A}}\n", encoding="utf-8")
+    (project / "references" / "reference_registry.json").write_text(
+        json.dumps({"status": "passed", "references": ["A"]}), encoding="utf-8"
+    )
+    (project / "results" / "promoted_evidence_snapshot.json").write_text(
+        json.dumps({"snapshot_id": "evidence:review", "artifacts": {}}), encoding="utf-8"
+    )
+    (project / "core_evidence" / "core_evidence_report.json").write_text(
+        json.dumps({"decision": "pass"}), encoding="utf-8"
+    )
     return project
 
 
 def _report(bundle_hash: str, session: str, recommendation: str = "minor_revision", findings: list[dict] | None = None) -> dict:
+    if findings is None:
+        findings = [{
+            "severity": "advisory",
+            "locator": "page 1, Results, Figure 1",
+            "detail": "The result summary is grounded in the frozen manuscript.",
+            "required_action": "Retain the current evidence boundary.",
+        }]
     return {
         "frozen_submission_bundle_hash": bundle_hash,
         "independent_session_provider_id_hash": session,
         "overall_recommendation": recommendation,
         "scores": {name: 0.95 for name in SCORE_DIMENSIONS},
-        "findings": findings or [],
+        "findings": findings,
         "strengths": ["The evidence chain is visible."],
         "weaknesses": [],
         "required_revisions": [],
@@ -58,7 +74,25 @@ def test_two_reviewers_inspect_one_frozen_generated_manuscript_without_baseline(
     zip_path = project / prepared["bundle"]
     with zipfile.ZipFile(zip_path) as archive:
         names = set(archive.namelist())
-    assert "manuscript.pdf" in names
+        frozen_records = [
+            record
+            for group in manifest["frozen_artifacts"].values()
+            for record in group
+        ]
+        assert names == {"bundle_manifest.json", *(record["path"] for record in frozen_records)}
+        for record in frozen_records:
+            payload = archive.read(record["path"])
+            assert __import__("hashlib").sha256(payload).hexdigest() == record["sha256"]
+            assert len(payload) == record["size_bytes"]
+    assert {
+        "latex/main.pdf",
+        "latex/main.tex",
+        "latex/sections/results.tex",
+        "references/library.bib",
+        "references/reference_registry.json",
+        "results/promoted_evidence_snapshot.json",
+        "core_evidence/core_evidence_report.json",
+    }.issubset(names)
     assert not any("baseline" in name.lower() or "original" in name.lower() for name in names)
     assert not any("quality_report" in name.lower() or "audit" in name.lower() for name in names)
     assert "not the ZIP container byte hash" in manifest["bundle_hash_semantics"]
@@ -73,6 +107,38 @@ def test_two_reviewers_inspect_one_frozen_generated_manuscript_without_baseline(
     assert aggregate["reviewer_count"] == 2
     assert aggregate["relative_quality_ratio_prohibited"] is True
     assert "quality_ratio" not in aggregate
+    assert aggregate["reviewer_report_sha256"] == {
+        relative: __import__("hashlib").sha256((project / relative).read_bytes()).hexdigest()
+        for relative in aggregate["reviewer_reports"]
+    }
+
+
+@pytest.mark.parametrize("findings", [None, [], ["not-a-structured-finding"]])
+def test_independent_report_requires_grounded_structured_findings(tmp_path: Path, findings: object) -> None:
+    project = _project(tmp_path)
+    prepared = prepare_independent_manuscript_review(project)
+    payload = _report(prepared["bundle_hash"], "session-1")
+    if findings is None:
+        payload.pop("findings")
+    else:
+        payload["findings"] = findings
+    path = tmp_path / "incomplete.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(IndependentReviewError, match="grounded finding"):
+        record_independent_manuscript_review(project, "reviewer_01", path)
+
+
+def test_independent_report_returns_domain_finding_for_overflowing_numeric_score(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    prepared = prepare_independent_manuscript_review(project)
+    payload = _report(prepared["bundle_hash"], "session-1")
+    payload["scores"][next(iter(SCORE_DIMENSIONS))] = 10**1000
+    path = tmp_path / "overflowing-score.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(IndependentReviewError, match="score is not numeric"):
+        record_independent_manuscript_review(project, "reviewer_01", path)
 
 
 def test_review_bundle_includes_locator_safe_reproducibility_support(tmp_path: Path) -> None:
@@ -91,9 +157,9 @@ def test_review_bundle_includes_locator_safe_reproducibility_support(tmp_path: P
 
     with zipfile.ZipFile(project / prepared["bundle"]) as archive:
         names = set(archive.namelist())
-    assert "reproducibility/data/source_provenance.json" in names
-    assert "reproducibility/methods/model_provenance.json" in names
-    assert "reproducibility/methods/scripts/run_analysis.py" in names
+    assert "data/source_provenance.json" in names
+    assert "methods/model_provenance.json" in names
+    assert "methods/scripts/run_analysis.py" in names
 
 
 def test_review_bundle_excludes_reproducibility_file_with_private_locator(tmp_path: Path) -> None:
@@ -107,7 +173,7 @@ def test_review_bundle_excludes_reproducibility_file_with_private_locator(tmp_pa
 
     with zipfile.ZipFile(project / prepared["bundle"]) as archive:
         names = set(archive.namelist())
-    assert "reproducibility/methods/scripts/run_analysis.py" not in names
+    assert "methods/scripts/run_analysis.py" not in names
     assert manifest["excluded_reproducibility_files"] == [
         {"path": "methods/scripts/run_analysis.py", "reason": "private_locator_or_credential_pattern"}
     ]

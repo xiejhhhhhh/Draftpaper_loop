@@ -16,6 +16,7 @@ import yaml
 
 from .bibliography import build_reference_registry
 from .change_impact import affected_stages_for_class, change_class_spec, normalize_change_class
+from .completion_change_classifier import CompletionClassification, classify_completion_change
 from .evidence_snapshot import EvidenceSnapshotMismatch, validate_promoted_snapshot_for_writing
 from .passport import utc_now
 from .project_state import load_project, mark_stages_stale, update_stage_status
@@ -389,27 +390,30 @@ def _target_from_locator(
     return resolve_manuscript_revision_target(root, locator, refresh_source_map=False)
 
 
+def _classify_detailed(
+    section: str,
+    instruction: str,
+    content: str,
+    explicit: str | None = None,
+) -> CompletionClassification:
+    return classify_completion_change(
+        project_path=None,
+        section=section,
+        instruction=instruction,
+        content=content,
+        explicit=explicit,
+        enforcement_mode="strict",
+    )
+
+
 def _classify(section: str, instruction: str, content: str, explicit: str | None = None) -> tuple[str, list[str], bool]:
-    if explicit:
-        change_class = normalize_change_class(explicit)
-    else:
-        text = f"{instruction} {content}".lower()
-        if any(token in text for token in ("replace data", "new dataset")):
-            change_class = "data_change"
-        elif "new method" in text:
-            change_class = "method_change"
-        elif any(token in text for token in ("rerun", "new run")):
-            change_class = "run_change"
-        elif "replace figure" in text:
-            change_class = "figure_change"
-        elif re.search(r"\\cite\w*\{", content) or "citation" in text or "reference" in text:
-            change_class = "citation_change"
-        elif any(token in text for token in ("narrow", "weaken", "收紧", "降低结论", "limited to")):
-            change_class = "claim_boundary_change"
-        elif section == "results" and (re.search(r"\b\d+(?:\.\d+)?\b", content) or "figure" in text):
-            change_class = "result_interpretation_change"
+    classification = _classify_detailed(section, instruction, content, explicit)
+    change_class = classification.effective_change_class
+    if classification.decision in {"classification_refinement_required", "classification_mismatch"}:
+        if str(explicit or "").strip().lower() == "scientific_evidence_change":
+            change_class = normalize_change_class(explicit)
         else:
-            change_class = "prose_only"
+            change_class = classification.inferred_change_class
     stale = affected_stages_for_class(change_class, source_stage=SECTION_STAGES.get(section, section))
     citation_bearing = change_class in {
         "citation_change",
@@ -560,7 +564,26 @@ def preview_manuscript_revision(
         content = content_path.read_text(encoding="utf-8-sig")
     if mode == "exact_text" and not content_file:
         raise ManuscriptRevisionError("exact_text mode requires --content-file.")
-    classification, stale_scope, citation_bearing = _classify(str(target["section"]), instruction, content, change_class)
+    classification = _classify_detailed(str(target["section"]), instruction, content, change_class)
+    effective_change_class = classification.effective_change_class
+    computed_stale_scope = list(classification.stale_scope)
+    if classification.decision == "classification_mismatch":
+        computed_stale_scope = affected_stages_for_class(
+            classification.inferred_change_class,
+            source_stage=SECTION_STAGES.get(str(target["section"]), str(target["section"])),
+        )
+    citation_bearing = effective_change_class in {
+        "citation_change",
+        "claim_boundary_change",
+        "result_interpretation_change",
+        "figure_change",
+        "metrics_change",
+        "run_change",
+        "method_change",
+        "data_change",
+        "cohort_change",
+        "research_plan_change",
+    } or bool(re.search(r"\\cite\w*\{", content))
     seed = f"{target['paragraph_id']}|{target['before_hash']}|{instruction}|{operation}|{len(_read_json(state.path / WORKSPACE_PATH).get('requests') or [])}"
     request_id = "revision:" + hashlib.sha256(seed.encode()).hexdigest()[:16]
     revision_dir = state.path / REVISION_ROOT / request_id.replace(":", "_")
@@ -588,11 +611,27 @@ def preview_manuscript_revision(
         "added_references": sorted(set(_anchors(content).get("citations") or []) - set(target.get("anchors", {}).get("citations") or [])),
         "expected_before_hash": target["before_hash"],
         "expected_file_hash": _sha_text(current),
-        "change_class": classification,
+        "change_class": effective_change_class,
+        "legacy_change_class": change_class,
+        "canonical_change_class": classification.canonical_change_class,
+        "effective_change_class": effective_change_class,
+        "inferred_change_class": classification.inferred_change_class,
+        "classification_decision": classification.decision,
+        "classification_source": classification.classification_source,
+        "enforcement_mode": classification.enforcement_mode,
+        "would_block_in_strict": classification.would_block_in_strict,
+        "scientific_semantics_changed": classification.scientific_semantics_changed,
+        "evidence_validation": classification.evidence_validation,
+        "rejection_codes": classification.rejection_codes,
         "evidence_snapshot_id": evidence_snapshot_id,
-        "required_gates": stale_scope,
+        "required_gates": computed_stale_scope,
+        "computed_stale_scope": computed_stale_scope,
         "citation_bearing": citation_bearing,
-        "preview_status": "ready" if content_file else "codex_patch_required",
+        "preview_status": (
+            classification.decision
+            if classification.decision in {"classification_mismatch", "classification_refinement_required"}
+            else ("ready" if content_file else "codex_patch_required")
+        ),
         "user_acceptance": False,
         "diff_path": f"{REVISION_ROOT}/{revision_dir.name}/preview.diff",
         "before_path": f"{REVISION_ROOT}/{revision_dir.name}/before.tex",
@@ -605,7 +644,7 @@ def preview_manuscript_revision(
     requests = [item for item in workspace.get("requests") or [] if isinstance(item, dict) and item.get("revision_id") != request_id]
     requests.append({"revision_id": request_id, "request_path": f"{REVISION_ROOT}/{revision_dir.name}/revision_request.json", "status": request["preview_status"]})
     _write_json(state.path / WORKSPACE_PATH, {"schema_version": "dpl.revision_workspace.v1", "requests": requests, "pending_requests": [item for item in requests if item.get("status") != "applied"]})
-    return {"status": request["preview_status"], "revision_id": request_id, "request": f"{REVISION_ROOT}/{revision_dir.name}/revision_request.json", "diff": request["diff_path"], "pdf_preview": request["pdf_preview"], "change_class": classification, "stale_scope": stale_scope}
+    return {"status": request["preview_status"], "revision_id": request_id, "request": f"{REVISION_ROOT}/{revision_dir.name}/revision_request.json", "diff": request["diff_path"], "pdf_preview": request["pdf_preview"], "change_class": effective_change_class, "stale_scope": computed_stale_scope, "classification_decision": classification.decision}
 
 
 def _request(root: Path, request_id: str) -> tuple[Path, dict[str, Any]]:
@@ -664,6 +703,19 @@ def _synchronize_revision_workspace(root: Path) -> None:
 def apply_manuscript_revision(project: str | Path, request_id: str) -> dict[str, Any]:
     state = load_project(project)
     request_path, request = _request(state.path, request_id)
+    classification_decision = str(request.get("classification_decision") or "")
+    if classification_decision in {"classification_mismatch", "classification_refinement_required"}:
+        if str(request.get("legacy_change_class") or "").strip().lower() == "scientific_evidence_change" or str(request.get("effective_change_class") or "") in {
+            "data_change",
+            "method_change",
+            "run_change",
+            "figure_change",
+            "metrics_change",
+            "cohort_change",
+            "research_plan_change",
+        }:
+            raise ManuscriptRevisionError("A prose patch cannot apply a data/method/run/core-figure change. Reopen evidence or create a clean project version.")
+        raise ManuscriptRevisionError("Revision classification requires refinement before acceptance.")
     if request.get("preview_status") != "ready" or request.get("replacement_content") is None:
         raise ManuscriptRevisionError("Revision requires a complete preview before acceptance.")
     current_snapshot_id = _validated_evidence_snapshot_id(state.path)
