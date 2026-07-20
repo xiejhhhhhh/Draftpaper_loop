@@ -15,6 +15,9 @@ MATRIX_PATH = REPOSITORY_ROOT / "docs" / "capability_truth_matrix.json"
 README_PATHS = (REPOSITORY_ROOT / "README.md", REPOSITORY_ROOT / "README.zh-CN.md")
 MATRIX_SCHEMA = "dpl.capability_truth_matrix.v1"
 MINOR_VERSION = re.compile(r"^\d+\.\d+$")
+CAPABILITY_METADATA = re.compile(
+    r"<!-- capability-meta: id=(?P<id>[a-z][a-z0-9_]*); status=(?P<status>[a-z]+); since=(?P<since>\d+\.\d+) -->"
+)
 REQUIRED_RECORD_FIELDS = {
     "capability_id",
     "status",
@@ -92,47 +95,23 @@ def _validate_readme_binding(record: dict[str, Any], text: str, language: str, e
     bounded = text.split(opening, 1)[1].split(closing, 1)[0]
     if not normalize_whitespace(bounded):
         errors.append(f"{language}: capability anchor is empty for {record['capability_id']}")
-
-
-def _validate_status_table(records: list[dict[str, Any]], text: str, language: str, errors: list[str]) -> None:
-    heading = "## Implementation Status" if language == "en" else "## 当前实现状态"
-    expected_header = (
-        ["Capability ID", "Status / Since", "Evidence", "Boundary"]
-        if language == "en"
-        else ["能力 ID", "状态 / Since", "证据", "边界"]
-    )
-    if heading not in text:
-        errors.append(f"{language}: missing implementation status heading")
         return
-    section = text.split(heading, 1)[1].split("\n## ", 1)[0]
-    lines = [line for line in section.splitlines() if line.startswith("|")]
-    if len(lines) < 3:
-        errors.append(f"{language}: implementation status must contain a four-column table")
+    metadata = list(CAPABILITY_METADATA.finditer(bounded))
+    if len(metadata) != 1:
+        errors.append(f"{language}: capability metadata must occur exactly once for {record['capability_id']}")
         return
-    header = [cell.strip() for cell in lines[0].strip("|").split("|")]
-    if header != expected_header:
-        errors.append(f"{language}: implementation status table header does not match")
-    rows: dict[str, list[str]] = {}
-    for line in lines[2:]:
-        cells = [cell.strip() for cell in line.strip("|").split("|")]
-        if len(cells) != 4:
-            errors.append(f"{language}: implementation status rows must have four columns")
-            continue
-        rows[cells[0].strip("`")] = cells
-    expected_ids = {record["capability_id"] for record in records}
-    if set(rows) != expected_ids:
-        errors.append(f"{language}: implementation status capability IDs do not match the matrix")
-    for record in records:
-        row = rows.get(record["capability_id"])
-        if row is None:
-            continue
-        if row[1] != f"{record['status']} / {record['since']}":
-            errors.append(f"{language}: status/since mismatch for {record['capability_id']}")
-        if not row[2]:
-            errors.append(f"{language}: missing evidence for {record['capability_id']}")
-        boundary = record["boundary_en"] if language == "en" else record["boundary_zh"]
-        if normalize_whitespace(row[3]) != normalize_whitespace(boundary):
-            errors.append(f"{language}: boundary mismatch for {record['capability_id']}")
+    values = metadata[0].groupdict()
+    expected = {
+        "id": record["capability_id"],
+        "status": record["status"],
+        "since": record["since"],
+    }
+    for field, expected_value in expected.items():
+        if values[field] != expected_value:
+            errors.append(
+                f"{language}: capability metadata {field} mismatch for {record['capability_id']}: "
+                f"expected {expected_value}, got {values[field]}"
+            )
 
 
 def validate_matrix(payload: dict[str, Any], root: str | Path = REPOSITORY_ROOT) -> list[str]:
@@ -205,8 +184,6 @@ def validate_matrix(payload: dict[str, Any], root: str | Path = REPOSITORY_ROOT)
         for record in records:
             if isinstance(record, dict) and REQUIRED_RECORD_FIELDS <= set(record):
                 _validate_readme_binding(record, text, language, errors)
-        valid_records = [record for record in records if isinstance(record, dict) and REQUIRED_RECORD_FIELDS <= set(record)]
-        _validate_status_table(valid_records, text, language, errors)
     return errors
 
 

@@ -1,9 +1,9 @@
 <div align="center">
 
-[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#what-it-does)
-[![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-model)
-[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#key-features)
-[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#key-features)
+[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#core-research-capabilities)
+[![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#end-to-end-research-workflow)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#literature-citations-and-independent-review)
+[![Discipline Plugins](https://img.shields.io/badge/Discipline-Plugins-6A994E?style=flat-square)](#discipline-plugins-and-capability-extension)
 [![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#quick-start)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#contributors-license-commercial-use-and-contact)
@@ -12,161 +12,53 @@
 
 **Alibaba set out to make it easy to do business anywhere; Draftpaper-loop sets out to make no paper hard to write.**
 
-**Local-first research paper loop engine for auditable, traceable manuscript drafts.**
+**A local research workflow that turns an idea, discipline methods, and real data into auditable scientific figures, a complete manuscript, and a traceable `main.pdf`.**
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
 </div>
 
-Draftpaper-loop is a local-first, evidence-first research workflow. It confirms the research blueprint and executable scientific evidence before writing, lets Codex compose natural scientific prose from that evidence, and publishes a traceable `main.pdf` only after citation, discipline, integrity and independent-review checks.
+Draftpaper-loop organizes paper production as an evidence-first research loop. It confirms the research question and feasibility, matches or supplements data and method capabilities, executes analysis, checks whether figures support the claims, and then builds the manuscript, citation audit, discipline review, independent review, and PDF release from one evidence version.
 
-## Current Release
+## Project Scope and Current Release
 
-The current release is v0.33.0; it adds evidence-bound author completion, Result Support v3, synchronized Agent/CLI contracts, and strict completion classification, while fixtures remain workflow-contract checks rather than scientific results.
+### What users can do with Draftpaper-loop
 
-<!-- capability:scientific_gates_and_artifact_dag -->
-- **v0.30.1-v0.30.3** Scientific gates, non-zero exit status, canonical taxonomy, and the artifact DAG constrain the workflow states that may continue.
-<!-- /capability:scientific_gates_and_artifact_dag -->
-<!-- capability:manuscript_completion_transaction -->
-- **v0.30.4-v0.31.0** Author-completion packets use stable locators, unified diff/PDF previews, and atomic apply/rollback bound to release evidence.
-<!-- /capability:manuscript_completion_transaction -->
-<!-- capability:command_schema_quality_contracts -->
-- **v0.31.1-v0.31.5** CommandSpec, the schema registry, and quality contracts provide one control plane for command risk, inputs/outputs, and release checks.
-<!-- /capability:command_schema_quality_contracts -->
-<!-- capability:minimal_install_cost_risk_release -->
-- **v0.31.6-v0.31.9** Minimal-first install profiles, token/cost receipts, the command risk matrix, and cross-platform release checks expose the runtime boundary.
-<!-- /capability:minimal_install_cost_risk_release -->
-<!-- capability:completion_audit_and_readme_framework -->
-- **v0.32.0** Completion auditing, cross-journal regression, and the restored detailed README framework define the current public release boundary.
-<!-- /capability:completion_audit_and_readme_framework -->
-<!-- capability:completion_change_classification -->
-- **v0.32.1-v0.32.2** Capability truth checks, evidence-ref suggestions, classification preview, and exact stale reports align README claims with final-author edits.
-<!-- /capability:completion_change_classification -->
-- **v0.33.0** Strict completion classification, Result Support v3, synchronized workflow skills, and full release verification form the current release.
+- Create a structured paper project from a research idea, existing data, references, or project code.
+- Generate a bilingual research blueprint, claim contract, statistical requirements, and main-figure storyboard for one focused human confirmation.
+- Detect single or cross-disciplinary needs, bind `data_connector`, `method_template`, and `review_rule` plugins, and run real project code for data processing, training, statistics, and scientific plotting.
+- Audit project-local capabilities and prepare traceable rescue tasks from the plugin registry, AcademicForge metadata, or public research-code repositories.
+- Trace main figures to a research-plan claim, cohort, data plugin, method plugin, run output, evidence ID, and applicable discipline rules.
+- Write Results → Introduction → Data → Methods → Discussion from the same evidence, stage-owned code, formulas, figures, and literature.
+- Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
+- Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
+**Current release: v0.33.0.** This release strengthens Result Support v3, evidence-bound author completion, synchronized Agent/CLI contracts, and strict change classification. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
 
-This README remains the detailed project guide. Use the generated [CLI Reference](docs/cli_reference.md) for the complete 210-command inventory, [Install Profiles](docs/install_profiles.md) for optional runtimes, the [Command Risk Matrix](docs/command_risk_matrix.md) for write/network/confirmation boundaries, and [Token and Cost Reporting](docs/token_cost_reporting.md) for project-level usage accounting.
+## Core Research Capabilities
 
-## How a Paper Reaches `main.pdf`
+| Research stage | Main capability | Key artifacts |
+|---|---|---|
+| Research design | Idea analysis, journal profile, bilingual blueprint, claim/statistical/figure contracts, and human confirmation | confirmed plan hash, claims, figure storyboard |
+| Discipline capability | Single/cross-discipline detection, data/method/review plugin matching, project-local audit, and capability rescue | discipline/capability contracts, plugin bindings |
+| Data and methods | Source inventory, feasibility, stage-owned code, verified runs, formula and variable extraction | data/method manifests, run/formula manifests |
+| Figures and evidence | Semantic figure/panel contracts, figure-code trace, result validity, and Result Support | main/supporting figures, result manifest, evidence registry |
+| Scientific writing | Paper Narrative Engine, section evidence packets, Codex free composition, Scientific Editor | Results, Introduction, Data, Methods, Discussion |
+| Literature and citations | Search, Zotero, BibTeX, PDF/summary evidence, citation intent, and audit | `library.bib`, citation evidence, final audit |
+| Review and release | Post-Results discipline review, two blind reviewers, author-completion transaction, compilation, and release hash | reviewer reports, completion packet, `main.pdf` |
 
-```text
-idea and literature
-  -> bilingual research blueprint and human confirmation
-  -> data/method capability matching and real execution
-  -> main figure groups plus supporting/appendix evidence
-  -> result-support and claim-strength confirmation
-  -> Results
-  -> Introduction, Data, Methods and Discussion
-  -> discipline review
-  -> final author completion and precise revisions
-  -> final citation audit
-  -> two independent blind reviewers
-  -> compile, bind and confirm one release hash
-  -> latex/main.pdf
-```
+### From the early releases to the current framework
 
-If the verified results do not support the planned claim, the loop stops. The user must either narrow the claim while freezing the accepted figures and metrics, or supplement data/methods and rerun the scientific evidence chain. Draftpaper-loop does not substitute a similar-looking figure and continue writing.
+- **v0.1-v0.13: paper-project and research-stage foundations.** References, journal profiles, research plans, methods/results/discussion writing, artifact tracking, Zotero, observations, scientific plotting, and stage-owned code.
+- **v0.14-v0.20: discipline plugins and result support.** Data connectors, method templates, review rules, plugin sufficiency, AcademicForge/GitHub candidate rescue, cross-discipline execution ledgers, and post-Results discipline review.
+- **v0.21-v0.28: scientific narrative and evidence semantics.** Paper Narrative Engine, section evidence packets, free composition plus Scientific Editor, run/cohort/estimand binding, semantic figure contracts, independent review, and reproducibility bundles.
+- **v0.28.1-v0.33: transactions, release, and exact recovery.** Artifact DAG, unified CommandSpec, scientific non-zero exits, author-completion transactions, stable paragraph locators, cross-journal/cross-platform wheel regression, Result Support v3, and release-hash binding.
 
-<!-- capability:result_support_two_routes -->
-Insufficient results expose claim narrowing or data/method supplementation. The current checkpoint selects one route for the whole paper; per-claim routing is later work.
-<!-- /capability:result_support_two_routes -->
-
-<!-- capability:result_support_checkpoint_v3 -->
-Result Support v3 prefers current resolved evidence, then the selected run manifest, then run-bound result tables. Each route is bound to the current checkpoint hash, and post-Results evidence findings reopen this same checkpoint.
-<!-- /capability:result_support_checkpoint_v3 -->
-
-## Guarantees and Human Control
-
-Deterministic contracts check project state, cohort/run identity, plugin provenance, figure semantics, formulas, citations, stale propagation, write boundaries and release hashes. Codex remains responsible for open-ended research reasoning and natural prose. Humans confirm the research blueprint, core evidence, result-support route, author completion packet and final release hash. Path confinement, write-set checks, executable allowlists and MCP capability checks are application-level safeguards rather than an operating-system or multi-tenant production sandbox.
-
-## Completing and Revising the Final Manuscript
-
-One `manuscript_completion.yaml` can provide authors, affiliations, ORCID, funding, acknowledgments, data/code links, user-confirmed references and multiple paragraph revisions.
-
-<!-- capability:stable_locator -->
-Line numbers are hints; stable `paragraph_id`, expected text, and SHA-256 are the write guards.
-<!-- /capability:stable_locator -->
-
-The system first produces one diff and candidate PDF, then applies the accepted packet atomically. Release order is author completion → final citation audit → two independent blind reviews → release-hash confirmation.
-
-```powershell
-draftpaper prepare-manuscript-completion --project <project>
-draftpaper preview-manuscript-completion --project <project> --input manuscript_completion.yaml
-draftpaper apply-manuscript-completion --project <project> --packet-id <id> --packet-hash <sha256>
-draftpaper review-final-manuscript --project <project>
-draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
-```
-
-See [Final Manuscript Completion](docs/manuscript_completion.md) for the complete locator, preview, rollback and release-ordering contract.
-
-## What It Does
-
-- Organizes one paper as one local project directory with explicit, rerunnable stages.
-- Confirms the research blueprint and executable evidence before manuscript writing.
-- Retrieves literature and preserves BibTeX, citation evidence, notes, and paper summaries.
-- Plans data, methods, figures, and result support from the current project evidence.
-- Verifies methods and result validity before Results prose can continue.
-- Writes the manuscript from confirmed figures, claims, citations, and section evidence.
-- Routes stale artifacts, integrity failures, review findings, and author revisions deterministically.
-- Compiles and confirms one traceable `main.pdf` only after final citation, review, and release checks.
-
-## Loop Model
-
-Draftpaper-loop uses a deterministic outer loop around open-ended research and writing work:
-
-```text
-observe project state
-  -> decide next safe stage
-  -> run the stage command
-  -> verify outputs and gates
-  -> record artifacts, hashes, and decisions
-  -> mark downstream stages stale when inputs change
-  -> diagnose failures and route revision
-  -> repeat until the draft is reviewable
-```
-
-The loop is intentionally hybrid. Fixed scientific contracts such as citation existence, result artifact binding, Results no-citation checks, and stale-stage propagation are handled deterministically. Open-ended work such as literature interpretation, research planning, method design, and revision decisions can be assisted by Codex or other agents, but those agents are expected to call the same local project loop instead of bypassing it.
-
-The loop is designed around five engineering components:
-
-- Goal: each paper stage has an explicit target, such as a traceable research plan, a verified method run, a result manifest, or a compilable LaTeX draft.
-- Context: each iteration reloads stable project files, including `project_passport.yaml`, stage manifests, citation evidence, run manifests, result manifests, review reports, and artifact hashes, instead of relying on unbounded chat history.
-- Tools: agents operate through a controlled CLI surface, so literature search, stale synchronization, method verification, integrity checks, and revision routing remain reproducible.
-- Evaluation: automated gates decide whether the current state is acceptable, including data feasibility, method execution, result validity, citation traceability, Results no-citation checks, and final quality checks.
-- Stop conditions: the loop stops when gates pass, pauses for human checkpoints on high-risk scientific decisions, or routes backward when repeated failures show that data, methods, or claims need revision.
-
-## Key Features
-
-- Local-first single-paper projects with staged manifests and artifact hashes.
-- One declarative command registry for orchestrator, checkpoint, recovery, and review actions.
-- Evidence-first writing that binds Results, claims, figures, tables, citations, and section evidence.
-- Data feasibility, method execution, result validity, integrity, and citation hard gates.
-- Capability packs and project-local rescue routes with explicit ownership and provenance.
-- Stable paragraph and LaTeX locators for previewing, applying, and rolling back author edits.
-- Final citation audit, two independent blind reviewers, and one release-hash confirmation gate.
-- Minimal, plotting, fulltext, and MCP install profiles selected through `doctor`.
-- Token/cost receipts and command risk/write-set/confirmation contracts.
-- Cross-discipline release fixtures that validate workflow contracts without standing in for science.
-- Optional local PDF compilation and deterministic stale propagation.
-- Codex remains a calling layer over the local Python package and CLI.
-## Project Layout
-
-```text
-draftpaper_cli/                   # Core Python package and CLI stage commands
-draftpaper_cli/discipline_modules # Registered data, method and review-rule plugins
-draftpaper_cli/_vendor/           # Wheel-installable runtime fallbacks
-codex_skills/draftpaper-workflow  # Optional Codex skill wrapper
-docs/                             # Workflow, contracts, generated references and audits
-tests/                            # Unit and release-contract tests
-third_party/                      # Upstream snapshots, provenance pointers and notices
-third_party/registry.json         # Recursive provenance for borrowed or internalized influence
-```
-
-Generated paper projects are stored under `projects/` locally and are intentionally ignored by git to avoid uploading research data, generated drafts, full-text paper caches, and result artifacts. Within a generated paper project, executable code is stage-owned: `data/scripts/` keeps data collection, API/remote-manifest, preprocessing, and cleaning code; `methods/scripts/` and `methods/src/` keep model, statistical, spatial-analysis, validation, and figure-generation code; `results/` keeps only produced figures, tables, and metadata. The legacy `code/` folder remains as a compatibility launcher/shared-runtime bridge.
+Version numbers explain capability origin. Daily use follows the current research question and project state; `status`, `doctor`, and `run-pipeline` recommend the next action.
 
 ## Quick Start
 
-### Minimal-first installation
+### 1. Install the plotting profile used by real paper projects
 
 PowerShell:
 
@@ -175,7 +67,7 @@ git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
 cd Draftpaper_loop
 py -3 -m venv .venv
 .\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e .
+.\.venv\Scripts\python -m pip install -e ".[plotting]"
 .\.venv\Scripts\draftpaper doctor --json
 ```
 
@@ -187,276 +79,289 @@ cd Draftpaper_loop
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-python -m pip install -e .
+python -m pip install -e ".[plotting]"
 draftpaper doctor --json
 ```
-### Tutorial
 
-Basic tutorial video: [Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/?spm_id_from=333.1387.homepage.video_card.click&vd_source=463ffa8de6f1dbe750355ef3225fa45a)
+### 2. Let Codex drive the workflow
 
-### Use Through Codex
-
-The intended workflow is to let Codex read this repository and call the Draftpaper-loop CLI surface for you. After cloning the repository locally, open or point Codex to the repository directory and ask in natural language, for example:
+Open the repository in Codex and describe the idea, data location, target journal, and existing code:
 
 ```text
-Use Draftpaper-loop in <repo> to create a paper project for this idea, search literature, write the research plan, and tell me which loop stage is blocked.
+Use Draftpaper-loop in this repository to create a paper project for my research idea.
+Read the idea, data, and existing code first, identify the disciplines and capability gaps, and show me the research blueprint for confirmation.
+After confirmation, follow project state through data, methods, figures, writing, citation audit, two independent reviews, and PDF compilation.
 ```
 
-Codex should then run the appropriate CLI commands, inspect the generated local project files, and report the next safe stage. The raw `draftpaper` commands below are the underlying loop interface for debugging, automation, and non-Codex use; they are not meant to replace normal conversation with Codex.
+Codex handles open-ended research reasoning and prose. The Draftpaper-loop CLI records stage state, evidence binding, write boundaries, and human confirmations.
 
-### Evidence-Semantic API
-
-The public Python API exposes the same safeguards used by the CLI. `resolve_result_evidence` resolves metrics only from verified, run-bound outputs; `build_scientific_evidence_registry` rejects contradictory facts within the same cohort; `validate_figure_semantics` rejects identifier-versus-identifier and mixed-unit scientific figures; `create_evidence_snapshot` freezes human-confirmed core evidence; and `submit_section_draft` validates a freely composed section before installation. Existing rendered figures can be mapped only through explicit, auditable `submit-figure-semantic-annotations` input with variable roles and evidence-source identifiers.
-
-```python
-from draftpaper_cli import (
-    build_scientific_evidence_registry,
-    create_evidence_snapshot,
-    resolve_result_evidence,
-    submit_section_draft,
-    validate_figure_semantics,
-)
-
-evidence = resolve_result_evidence(project_path)
-registry = build_scientific_evidence_registry(project_path)
-snapshot = create_evidence_snapshot(project_path)
-```
-
-Use `reopen-core-evidence --reason "..."` before a scientific data, method, metric, or figure change. Citation-only and presentation-only changes receive narrower stale propagation; a final citation audit must run after the final five manuscript sections and must match the promoted evidence snapshot.
-
-For staged work, Codex should first call the orchestrator layer:
+### 3. Run the shortest CLI path
 
 ```powershell
-python -m draftpaper_cli.cli status --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
-python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
-python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
-python -m draftpaper_cli.cli audit-citations --project <repo>\projects\your_project --final
-python -m draftpaper_cli.cli generate-citation-repair-plan --project <repo>\projects\your_project
-python -m draftpaper_cli.cli apply-citation-repair --project <repo>\projects\your_project
-python -m draftpaper_cli.cli re-audit-citations --project <repo>\projects\your_project
-python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
-python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
-python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\your_project
-python -m draftpaper_cli.cli propose-review-engineering-plan --project <repo>\projects\your_project
-python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
-python -m draftpaper_cli.cli generate-revision-plan --project <repo>\projects\your_project
+draftpaper create-project --idea "Your research idea" --field "astronomy machine learning" --target-journal MNRAS
+draftpaper status --project .\projects\<project>
+draftpaper run-pipeline --project .\projects\<project>
 ```
 
-### One-Command Local Setup
+`run-pipeline` stops at research-blueprint, result-support, and final-release checkpoints and recommends the next command. Projects default to `projects/<project>/`; the compiled manuscript is `projects/<project>/latex/main.pdf`.
 
-Run this from the directory where you want to place the repository. The command clones the repository, creates a local virtual environment, installs the Draftpaper-loop plotting profile, and prints the CLI help. A paper-fetch fallback is packaged under `draftpaper_cli/_vendor/`; `third_party/` retains the upstream snapshot and provenance record rather than acting as the required runtime install path.
+Basic tutorial video: [Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/)
 
-```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .[plotting]; .\.venv\Scripts\draftpaper --help"
+## End-to-End Research Workflow
+
+```text
+idea, existing data, project code, and literature
+  -> create an isolated paper project
+  -> identify disciplines and target journal
+  -> search/import literature and build citation evidence
+  -> generate bilingual blueprint, claims, statistics, and main-figure storyboard
+  -> human confirmation of the research blueprint
+  -> assess plugin sufficiency and audit project-local capabilities
+  -> execute data plugins, method plugins, and real project code
+  -> generate main figures, supporting evidence, tables, and evidence registry
+  -> assess whether results support the planned claims
+  -> accept evidence, narrow claims, or supplement data/methods
+  -> Results -> Introduction -> Data -> Methods -> Discussion
+  -> post-Results composite-discipline review and semantic repair
+  -> final author completion and precise revisions
+  -> final citation audit
+  -> two independent blind reviewers
+  -> integrity, journal-format, and PDF compilation checks
+  -> confirm one release hash
+  -> latex/main.pdf
 ```
 
-Optional enhanced full-text extraction profile:
+### Loop behavior and human control
 
-```powershell
-.\.venv\Scripts\python -m pip install -e ".[fulltext]"
+```text
+load project state
+  -> select the current stage action
+  -> execute and produce structured artifacts
+  -> validate scientific contracts and file hashes
+  -> record artifacts, runs, evidence, and human decisions
+  -> mark exact downstream stages stale when inputs change
+  -> diagnose failure and route to the owning stage
+  -> repeat until the manuscript is release-ready
 ```
 
-After setup, the installed `draftpaper` command can be used from the repository root:
+Deterministic contracts own project state, cohort/run identity, plugin provenance, figure semantics, formulas, citations, stale propagation, write sets, and release hashes. Codex or another Agent owns open-ended literature interpretation, method design, scientific reasoning, and prose.
 
-```powershell
-.\.venv\Scripts\draftpaper create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
-.\.venv\Scripts\draftpaper status --project .\projects\your_project
-.\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
-.\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
-.\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
+The three concentrated human checkpoints are:
+
+1. **Research blueprint confirmation:** inspect the research question, claims, cohorts, data/method requirements, statistical standards, main figure groups, and feasibility boundary together.
+2. **Core result and claim-support confirmation:** inspect verified runs, core figures, metrics, uncertainty, and maximum supported claim strength, then select the next route.
+3. **Final manuscript and release confirmation:** inspect the completion packet, candidate PDF, final citation audit, two blind-review reports, and release hash together.
+
+### Two routes when result support is insufficient
+
+<!-- capability:result_support_two_routes -->
+<!-- capability-meta: id=result_support_two_routes; status=implemented; since=0.18 -->
+- **Claim-narrowing route:** freeze accepted figures and metrics, reduce claim strength, and rebuild the affected manuscript sections.
+- **Data/method rescue route:** supplement data roles, quality control, methods, or validation, then rerun the affected evidence, figure, and manuscript chain.
+The current implementation selects one route for the whole result-support checkpoint; per-claim routing remains a later capability.
+<!-- /capability:result_support_two_routes -->
+
+<!-- capability:result_support_checkpoint_v3 -->
+<!-- capability-meta: id=result_support_checkpoint_v3; status=implemented; since=0.32 -->
+Result Support v3 prefers current resolved evidence, followed by the selected run manifest and explicitly run-bound result tables. Route commands bind the current checkpoint hash. Cohort, metric, or figure-evidence findings discovered after Results return to the same checkpoint so prose and evidence versions stay aligned.
+<!-- /capability:result_support_checkpoint_v3 -->
+
+## Discipline Plugins and Capability Extension
+
+### Data, method, and review-rule plugins
+
+`draftpaper_cli/discipline_modules/<discipline>/` registers three formal research plugin classes:
+
+- **`data_connectors`:** access, reading, parsing, cleaning, normalization, cohort construction, and data-quality checks.
+- **`method_templates`:** statistics, feature engineering, model training, validation, ablation, uncertainty estimation, and scientific plotting.
+- **`review_rules`:** discipline- and method-aware checks for statistics, baselines, split/leakage, fit or classification quality, calibration, robustness, figure-claim alignment, and reproducibility.
+
+Plugin manifests declare runtime level, validation level, dependencies, inputs/outputs, fixtures, and provenance. Contracts, mocks, and fixtures verify interfaces; main-figure evidence requires outputs and hashes validated on a real project or live run.
+
+The research plan produces discipline/capability contracts, assigning each claim and figure requirement to primary/secondary disciplines and data/method/review capabilities. Capability gaps follow this order:
+
+1. Audit existing project data/method code and outputs into a restricted `project_local` binding.
+2. Search the current registry for reusable plugins.
+3. Extract candidate capabilities from AcademicForge-style registry metadata.
+4. Inspect license, structure, reproducibility, and input/output contracts in public research-code repositories.
+5. Let Codex generate a project-specific implementation and validate it in the current project.
+6. Send reusable capabilities through generalization, fixtures, overlap review, license review, and human-confirmed promotion.
+
+A figure-stage blocking diagnosis appears after the data and method rescue routes have auditable outcomes and a required input or implementation remains missing.
+
+### Main-figure trace
+
+```text
+research-plan claim
+  -> data requirement -> data plugin/project-local binding
+  -> method requirement -> method plugin/project-local binding
+  -> verified run output
+  -> evidence ID and cohort view
+  -> figure/panel contract
+  -> Results claim
+  -> applicable discipline review rules
 ```
 
-For a quick local smoke test without live literature search, create and validate a project:
+Data and method plugins produce the real figure inputs and method outputs. Matching `review_rule` plugins inspect figures and Results at `review-results-with-discipline-rules`.
 
-```powershell
-.\.venv\Scripts\draftpaper create-project --idea "X-ray flaring source classification" --field "machine learning astronomy" --target-journal APJS
-.\.venv\Scripts\draftpaper validate-project --project .\projects\x-ray-flaring-source-classification
-```
+### How external capabilities enter the plugin system
 
-### Editable Install
+Public research code and AcademicForge use metadata-first candidate pipelines that retain repository, commit, license, dependency, input/output, runtime-level, and provenance records. Candidates enter formal discipline modules through `generalize-plugin-candidate`, `validate-plugin-candidate`, `package-plugin-contribution`, `preflight-plugin-contribution`, `review-plugin-contribution`, and human-confirmed `promote-plugin-candidate`.
 
-```powershell
-python -m pip install -e .[plotting]
-python -m draftpaper_cli.cli create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
-python -m draftpaper_cli.cli status --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
-python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --query "topic keywords"
-python -m draftpaper_cli.cli prepare-data-acquisition --project <repo>\projects\your_project --source-root C:\external\research_folder
-python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage data --kind agent_analysis --text "Visible Codex data summary..."
-python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
-python -m draftpaper_cli.cli prepare-method-blueprint --project <repo>\projects\your_project
-python -m draftpaper_cli.cli plan-figures --project <repo>\projects\your_project
-python -m draftpaper_cli.cli generate-analysis-code --project <repo>\projects\your_project
-python -m draftpaper_cli.cli classify-code-ownership --project <repo>\projects\your_project
-python -m draftpaper_cli.cli route-stage-code --project <repo>\projects\your_project
-python -m draftpaper_cli.cli build-code-provenance --project <repo>\projects\your_project
-python -m draftpaper_cli.cli extract-method-formulas --project <repo>\projects\your_project
-python -m draftpaper_cli.cli trace-figures-to-code --project <repo>\projects\your_project
-python -m draftpaper_cli.cli diagnose-figure-execution --project <repo>\projects\your_project
-python -m draftpaper_cli.cli repair-figure-data --project <repo>\projects\your_project
-python -m draftpaper_cli.cli repair-figure-method --project <repo>\projects\your_project
-python -m draftpaper_cli.cli record-observation --project <repo>\projects\your_project --stage methods --kind method_rationale --text "Visible Codex method rationale..."
-python -m draftpaper_cli.cli assess-result-validity --project <repo>\projects\your_project
-python -m draftpaper_cli.cli assess-core-evidence --project <repo>\projects\your_project
-python -m draftpaper_cli.cli checkpoint --project <repo>\projects\your_project --stage core_evidence --note "User approved core figures and evidence"
-python -m draftpaper_cli.cli inventory-results --project <repo>\projects\your_project
-python -m draftpaper_cli.cli write-results --project <repo>\projects\your_project
-python -m draftpaper_cli.cli write-introduction --project <repo>\projects\your_project
-python -m draftpaper_cli.cli build-data-context --project <repo>\projects\your_project
-python -m draftpaper_cli.cli write-data --project <repo>\projects\your_project
-python -m draftpaper_cli.cli build-method-context --project <repo>\projects\your_project
-python -m draftpaper_cli.cli write-methods --project <repo>\projects\your_project
-python -m draftpaper_cli.cli prepare-discussion-comparison --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-citation-repair-loop --project <repo>\projects\your_project
-python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
-python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
-python -m draftpaper_cli.cli validate-project --project <repo>\projects\your_project
-```
+`workflow_recipe`, `paper_contract`, and `shared_capability` stay in a support layer. Their verifiable statistical, baseline, ablation, split/leakage, citation-support, and reproducibility conditions may flow into discipline-specific `review_rule_candidate` records. See the [CLI Reference](docs/cli_reference.md) for the complete command chain.
 
-Run tests:
+`third_party/` stores upstream snapshots, immutable pointers, license notices, and provenance. The wheel-installable paper-fetch fallback lives under `draftpaper_cli/_vendor/paper_fetch_skill`.
 
-```powershell
-python -m pytest
-```
+## Figures, Evidence, and Scientific Writing
 
-`python -m pip install -e .` installs the minimal control plane without NumPy, pandas or Matplotlib. Real paper projects should use `.[plotting]`; add `.[fulltext]` and `.[mcp]` only when those capabilities are needed. `draftpaper doctor --json` reports each profile, missing modules and the exact recovery command. See [Install Profiles](docs/install_profiles.md) for the minimal/plotting/fulltext/MCP matrix and `.[plotting-full]` advanced figure backends.
+### Generate figures from a confirmed blueprint
 
-### Zotero Collection Import Through Codex
+`plan-figures` reads the confirmed research plan, claims, cohorts, data/method requirements, statistical contract, and existing evidence to produce main-figure groups, supporting/appendix figures, and caption contracts. The first caption sentence summarizes the scientific conclusion of the complete group; later sentences explain each panel, cohort, estimand, uncertainty, and claim boundary.
 
-Draftpaper-loop can import references from a specific Zotero collection during the literature stage. Configure credentials as environment variables in the same shell or Codex terminal session:
+`generate-analysis-code` follows the figure contract and bound capabilities. Execution failures produce `figure_execution_diagnosis.json/.html` and distinguish data gaps, method gaps, dependency issues, runtime errors, insufficient result quality, and required user confirmation, with a recommended repair command.
+
+### One evidence version drives the manuscript
+
+Paper Narrative Engine reads the Scientific Evidence Registry, result manifest, figure story arc, literature comparison matrix, stage-owned code, and formula trace to build section evidence packets and paragraph goals. Codex composes freely inside those evidence boundaries; post-writing contracts validate numbers, cohorts, runs, models, metric dimensions, citation roles, internal paths, and claim strength.
+
+- **Results:** interpret main figure groups and key tables, then use supporting/appendix figures for robustness, uncertainty, and boundaries.
+- **Introduction:** organize the research gap from the question, significance, literature evidence, and contribution established by Results.
+- **Data:** reconstruct sources, samples, variables, preprocessing, and missingness from connectors, inventory, cohort registry, and stage code.
+- **Methods:** reconstruct stages from plugins, real implementation, run manifest, formula AST, and figure-code trace; explain formulas, variables, assumptions, and figure relationships.
+- **Discussion:** align local findings with comparison literature and discuss mechanism, innovation, limitations, external validity, and future work.
+
+`record-observation` stores only stage summaries already shown to the user. Paths, commands, credentials, manifest fields, and local filenames stay in internal context.
+
+### Exact stale propagation and recovery
+
+<!-- capability:scientific_gates_and_artifact_dag -->
+<!-- capability-meta: id=scientific_gates_and_artifact_dag; status=implemented; since=0.30 -->
+Scientific gates, non-zero exit status, one change taxonomy, and the artifact DAG determine which project states may continue. Data, cohort, method, run, metric, main-figure, or claim changes reopen the owning scientific chain; citation-local edits, author metadata, and presentation-only changes receive narrower stale scopes.
+<!-- /capability:scientific_gates_and_artifact_dag -->
+
+Each project records stages, inputs, outputs, confirmations, and recovery reasons through `project_passport.yaml`, `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, `integrity_ledger.jsonl`, and artifact hashes. Use `doctor --explain` and `diagnose-gate-failures` to inspect state and the next action.
+
+## Literature, Citations, and Independent Review
+
+The literature stage preserves BibTeX, the reference registry, citation evidence, notes, per-paper summaries, and available PDF/full-text evidence. Search results, user-provided papers, and Zotero collections retain origin and selection policy. Writing assigns references to direct support, method provenance, data provenance, comparison context, and background roles.
+
+Zotero example:
 
 ```powershell
 $env:ZOTERO_LIBRARY_ID="your_zotero_library_id"
-$env:ZOTERO_LIBRARY_TYPE="user"   # or "group"
+$env:ZOTERO_LIBRARY_TYPE="user"
 $env:ZOTERO_API_KEY="your_zotero_api_key"
+draftpaper list-zotero-collections
+draftpaper search-literature --project <project> --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
 ```
 
-Then ask Codex to call the loop, or run the CLI directly:
+Citation audit runs after the final sections and author completion, and before independent review. It compares manuscript claims with BibTeX metadata, citation evidence, passages, numbers, negation, and causal direction. It reports weak support, misplaced citations, and over-strong wording. Repair prefers tightening or rewriting prose while preserving user-confirmed references and reference coverage.
+
+`review-results-with-discipline-rules` reads current Results, figure/plugin trace, run outputs, evidence IDs, and composite-discipline rules. It checks metric statements, sample boundaries, baselines, ablations, statistical dimensions, uncertainty, fit/classification standards, and figure interpretation. Semantic findings enter local Results revision; genuine capability gaps return to result support.
+
+<!-- capability:completion_audit_and_readme_framework -->
+<!-- capability-meta: id=completion_audit_and_readme_framework; status=implemented; since=0.32 -->
+After citation audit, the loop builds a frozen anonymous single-manuscript review bundle. Two independent reviewers separately inspect scientific correctness, evidence sufficiency, structure, prose, figures, citations, and reproducibility materials. Both reports bind the same manuscript/evidence/bundle hash; critical or major findings enter revision and re-review, and final confirmation binds the latest reports and compiled PDF.
+<!-- /capability:completion_audit_and_readme_framework -->
+
+## Final Completion, Precise Revision, and Release
+
+One `manuscript_completion.yaml` can add authors, affiliations, ORCID, corresponding author, funding, acknowledgments, keywords, short title, data/code availability, user-confirmed references, and multiple section revisions.
+
+<!-- capability:stable_locator -->
+<!-- capability-meta: id=stable_locator; status=implemented; since=0.30 -->
+LaTeX line numbers are user-facing hints. Writes also validate stable `paragraph_id`, expected text, occurrence, and SHA-256. Paragraphs can be relocated after layout drift, while ambiguous, duplicate, or stale targets return the whole packet to preview.
+<!-- /capability:stable_locator -->
+
+<!-- capability:completion_change_classification -->
+<!-- capability-meta: id=completion_change_classification; status=implemented; since=0.32 -->
+Preview shows the user-declared change class, inferred class, candidate evidence refs, and exact stale scope. Author metadata, acknowledgments, and prose-only refinements stay downstream; new data provenance, executed-method details, metrics, claims, or figure interpretation reopen the matching research or writing stages through current evidence refs.
+<!-- /capability:completion_change_classification -->
+
+<!-- capability:manuscript_completion_transaction -->
+<!-- capability-meta: id=manuscript_completion_transaction; status=implemented; since=0.30 -->
+Completion first builds one diff, candidate LaTeX, and candidate PDF. After acceptance, atomic apply revalidates the packet, project revision, source map, evidence snapshot, and before hash, then writes rollback receipts and exact-text user locks.
+<!-- /capability:manuscript_completion_transaction -->
 
 ```powershell
-python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+draftpaper prepare-manuscript-completion --project <project>
+draftpaper preview-manuscript-completion --project <project> --input manuscript_completion.yaml
+draftpaper apply-manuscript-completion --project <project> --packet-id <id> --packet-hash <sha256>
+draftpaper review-final-manuscript --project <project>
+draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
 ```
 
-`list-zotero-collections` returns collection names and keys without printing credentials. `search-literature --zotero-collection` reads only the selected collection and writes `references/zotero_collection_manifest.json`. Zotero-imported references are treated as user-curated evidence: they are preserved even when they lack an abstract/PDF, fall outside the recency preference, or exceed the external-search 30-paper ranking cap. The loop still writes them into the same outputs as searched papers, including `references/library.bib`, `references/literature_items.json`, `references/citation_evidence.csv`, `references/literature_review_notes.html`, per-paper HTML summaries, and `references/literature_summaries/index.html`. They are marked with `source=zotero_collection`, `reference_origin=existing_zotero`, and `selection_policy=zotero_collection_preserved` so later review can distinguish them from ranked external search results. If the collection has fewer than `--zotero-min-items` usable references, the loop supplements with free external search unless `--no-zotero-supplement` is set. In Codex chat, a good request is: "Call Draftpaper-loop, list my Zotero collections, then search literature for this project using the collection named `My Paper References`."
+Release order is author completion and precise revision → final citation audit → two independent blind reviews → integrity and compilation checks → release-hash confirmation. See [Final Manuscript Completion](docs/manuscript_completion.md).
 
-## Implementation Status
+## Installation, Agents, and Daily Operation
 
-| Capability ID | Status / Since | Evidence | Boundary |
-|---|---|---|---|
-| `scientific_gates_and_artifact_dag` | implemented / 0.30 | `draftpaper_cli/change_impact.py`, `tests/test_change_impact.py`, `integrity_ledger.jsonl` | Runtime stale propagation remains owned by change-impact and artifact-DAG contracts. |
-| `manuscript_completion_transaction` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`, `tests/test_v0306_completion_transaction.py`, `writing/manuscript_completion/packets/<packet_id>/preview.diff` | Completion packets add author input without replacing scientific evidence. |
-| `command_schema_quality_contracts` | implemented / 0.31 | `draftpaper_cli/command_registry.py`, `tests/test_v0314_single_command_control_plane.py`, `docs/cli_reference.md` | Generated references remain the full command inventory. |
-| `minimal_install_cost_risk_release` | implemented / 0.31 | `draftpaper_cli/install_profiles.py`, `tests/test_v0316_install_profiles.py`, `token_ledger.jsonl` | Missing price receipts are not inferred; doctor selects optional extras. |
-| `completion_audit_and_readme_framework` | implemented / 0.32 | `draftpaper_cli/final_manuscript_confirmation.py`, `tests/test_v0320_release_completion.py`, `review/final_manuscript_confirmation.json` | Fixtures validate workflow contracts rather than scientific conclusions. |
-| `result_support_two_routes` | implemented / 0.18 | `draftpaper_cli/result_support.py`, `tests/test_result_support.py`, `results/result_support_checkpoint.json` | The current checkpoint selects one route for the whole paper; per-claim routing is later work. |
-| `stable_locator` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`, `tests/test_v0305_completion_locators.py`, `writing/manuscript_completion/packets/<packet_id>/preview.diff` | Ambiguous locators, duplicate targets, or stale hashes reject the whole packet. |
-| `completion_change_classification` | implemented / 0.32 | `draftpaper_cli/completion_change_classifier.py`, `tests/test_v0322_completion_change_classification.py`, `writing/manuscript_completion/packets/<packet_id>/change_stale_report.json` | v0.33.0 defaults to strict mode; executed Data/Methods details require current evidence refs. |
-| `result_support_checkpoint_v3` | implemented / 0.32 | `draftpaper_cli/result_support_signals.py`, `tests/test_result_support_signals.py`, `results/result_support_checkpoint.json` | The whole checkpoint selects one route; post-Results evidence problems reopen the same checkpoint. |
+### Install profiles
 
-The current implementation already contains the core loop primitives: an orchestrator layer (`status`, `checkpoint`, `resume`, `run-pipeline`), hash-based stale synchronization (`detect-artifact-drift`, `sync-artifact-stale`), project state commands, literature search, journal profile resolution, research plan generation, claim contracts, observation recording, pluggable data acquisition planning, data inventory and feasibility checks, method-plan collection, discipline-aware method blueprint generation, project-specific figure planning, figure-plan-driven analysis-code generation, method execution verification, result validity checks, result support checkpointing, downgrade/rescue route planning, core evidence assessment, result inventory, Results writing with Chinese review summary, Introduction, Data writing context generation, Data writing, Methods writing context generation, Methods writing, Discussion, LaTeX assembly, PDF compilation, independent integrity checks, review/revision routing, publication-readiness assessment, discipline-specific review-engineering discovery, statistical rescue planning, and final quality checks.
+<!-- capability:minimal_install_cost_risk_release -->
+<!-- capability-meta: id=minimal_install_cost_risk_release; status=implemented; since=0.31 -->
+- `pip install -e .`: minimal control plane, project state, references, and basic PDF/image inspection.
+- `pip install -e ".[plotting]"`: NumPy, pandas, Matplotlib, and standard scientific plotting/analysis entry points.
+- `pip install -e ".[fulltext]"`: enhanced PDF and full-text extraction.
+- `pip install -e ".[mcp]"`: local stdio MCP.
+- `draftpaper doctor --json`: detect the current profile, missing modules, and recovery commands.
+- `draftpaper token-report --project <project>`: summarize recorded token/cost receipts.
+<!-- /capability:minimal_install_cost_risk_release -->
 
-The v0.33.0 control plane registers 210 public commands through one `CommandSpec` inventory and gives scientific hard gates nonzero failure status. Central fetch, execution, write-set and MCP policies protect project boundaries; one change taxonomy and artifact DAG control precise stale propagation. After the scientific and writing chain passes, the final-author workflow collects publication metadata, user-confirmed references and bounded paragraph edits in one packet, previews a unified diff and candidate PDF, applies the accepted packet atomically, and records rollback and exact-text locks. Final confirmation binds the completion manifest, canonical sections, bibliography, promoted evidence, citation audit, two independent reviews and compiled PDF to one release hash.
-
-Every project carries a DraftPaper Passport at `project_passport.yaml` plus append-only `artifact_ledger.jsonl`, `checkpoint_ledger.jsonl`, and `integrity_ledger.jsonl`. These files record project artifacts, hashes, explicit user checkpoints, and integrity events so the project can be moved across machines and later audited without relying on Codex conversation memory.
-
-When a tracked artifact hash changes, `status` reports `pipeline_state=drift_detected` and recommends `sync-artifact-stale`. That command maps changed artifact paths back to their source stages, marks downstream dependent stages stale, records the drift in `integrity_ledger.jsonl`, and refreshes the passport hash baseline.
-
-`prepare-method-blueprint` connects the inferred discipline module, data inventory, data-acquisition profile, method requirements, and reviewer/rescue tasks into `methods/method_blueprint.json`, `methods/method_data_contract.json`, `methods/method_code_plan.json`, and `methods/method_formula_plan.json`. `plan-figures` observes the current idea, research plan, target journal, data inventory, method requirements, literature metadata, method blueprint, and any supplied local result artifacts, then writes `results/figure_plan.json`, `results/figure_plan.html`, `results/figure_contracts.json`, and `results/storyboard_alignment_report.json`. Figure storyboard entries from the research plan are treated as strict main-result contracts: validation plots, workflow diagrams, or supporting diagnostics may be useful, but they cannot silently replace a planned main figure. Discipline modules can declare minimum/target main-figure counts and required figure groups; the default first-draft policy plans at least five generated main figures when data are available. With `--use-review-tasks`, `plan-figures` turns executable or partial reviewer/rescue tasks into revised figures while skipping blocked tasks. `generate-analysis-code` reads the figure plan and contracts, writes canonical project-local method code under `methods/scripts/` and `methods/src/`, plus `methods/method_code_manifest.json`; `code/` is retained only as a compatibility launcher/copy. The generated pipeline records `results/figure_execution_diagnosis.json` and `.html`; when a contracted figure cannot be produced, the loop records whether the blocker is missing data or missing method code and routes to `repair-figure-data` or `repair-figure-method` before entering human core-evidence confirmation. With `--use-review-tasks`, it also emits `results/tables/review_task_coverage.csv` and `results/tables/review_task_metrics.csv` for cleaning/QC, feature reconstruction, baseline/ablation, and validation coverage. If raw data are remote, private, or too large for local processing, users can provide processed tables or final figures/tables locally and continue through `inventory-results` and `write-results` with claims limited to those artifacts. `verify-methods` can now read `methods/method_code_manifest.json` directly, prefer the generated `verify_command_argv`, record `methods/run_manifest.yaml`, and block Methods writing until every declared output, main figure contract, figure metadata item, and required review task coverage exists. The CLI exits non-zero when this hard gate records `status=failed`, so shell scripts, Codex automation, and CI cannot mistake a failed method run for success.
-
-Figure repair is intentionally repair-first rather than downgrade-first. `diagnose-figure-execution` summarizes planned main-figure contracts and execution state; `repair-figure-data` creates a data-repair plan using existing data acquisition connectors, public databases/APIs, remote-server workflows, or user-provided artifacts; `repair-figure-method` creates a method-repair plan that points Codex toward existing discipline plugins, project code, public research-code repositories, literature implementation repositories, or newly generated project-specific method code. Only after those repair attempts still cannot satisfy the figure contract should the project enter `assess-core-evidence` as a human confirmation checkpoint. Single-figure downgrades are avoided because claim reframing belongs in the research plan, not as a quiet substitute for a failed main result.
-
-`write-results` now writes result prose that explicitly points readers to the supporting figures and tables through LaTeX labels such as `Figure~\ref{...}` and `Table~\ref{...}`. Internal loop vocabulary, local-path safeguards, gate names, and project-management wording are kept out of the manuscript body and reserved for logs, reports, or acknowledgments. `assemble-latex` inserts a default acknowledgment before the bibliography noting that Draftpaper-loop assisted staged literature organization, analysis traceability, figure inventory, and manuscript drafting.
-
-`run-integrity-gate` writes `integrity/integrity_report.json` and `integrity/integrity_report.md`, then appends an `integrity_gate` event to `integrity_ledger.jsonl`. It checks that manuscript citations exist in BibTeX, that Introduction/Data/Methods/Discussion citations are traceable to `references/citation_evidence.csv`, that Results contains no citation commands, and that every result claim in `results/result_manifest.yaml` is bound to an existing local figure or table.
-
-`audit-citations`, `generate-citation-repair-plan`, `apply-citation-repair`, `re-audit-citations`, and `run-citation-repair-loop` add an independent citation audit and repair loop after integrity checks and before final quality checks. The loop compares each manuscript citation usage against BibTeX metadata and `references/citation_evidence.csv` at claim level, writes intermediate HTML reports under `citation_audit/iterations/`, and writes `citation_audit/final_citation_audit_report.html` only after the strict report has no unsupported or unverifiable citation usages. It also enforces reference coverage: every retained reference listed in `references/literature_summaries/` is assigned through `references/reference_usage_plan.json` and must be cited at least once outside Results. Citation audit is not a reference-quality filter. Reference quality is controlled during literature search and human review; the audit preserves retained references and repairs manuscript wording so each citation is truthful, specific, and semantically close to the cited evidence. The final citation audit report merges the claim-level audit with `citation_audit/reference_coverage_report.html`, including citation usage count, unique cited reference count, summarized reference count, summarized-but-uncited references, and topic-suspect references. If citation audit fails, `status` and `run-pipeline` recommend the citation repair loop rather than continuing blindly to `quality-check`. The final quality gate also requires `citation_audit/final_citation_audit_report.json` with `status=passed`, so direct `quality-check` calls cannot skip source-support or reference-coverage verification.
-
-`diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `discover-review-workflow-gaps`, `propose-review-engineering-plan`, `recommend-statistical-revision`, `prepare-analysis-revision`, `generate-revision-plan`, `apply-revision`, and `re-review` implement the review-revise-re-review loop. Gate failures are converted into unified revision issues with target stages, files to inspect, required user decisions, and recommended CLI reruns. The publication-readiness layer estimates target-journal submission risk from saved data, methods, result, figure, integrity, quality, and journal-profile artifacts, then writes a Codex/LLM-readable archive review packet at `review/codex_archive_review_context.json` and `.html`. The reviewer-engineering layer infers a discipline and runs a matching engine; geography covers remote-sensing, agricultural-geography, and spatial-analysis manuscripts, astronomy covers catalog/light-curve/source-classification review risks, machine learning covers leakage, validation, baseline, ablation, calibration, and imbalance risks, and unmatched projects use a default fallback. Its output includes user-confirmation requests plus a `codex_enhancement_context` extension point so Codex can append literature- and manuscript-specific reviewer suggestions on top of deterministic rules. The statistical rescue layer recommends robust statistics, missingness audits, method rebuilding, explicit success thresholds, domain-aware feature rebuilding, spatial validation, model validation checks, or claim reframing when weak data or weak results might still support a defensible exploratory paper. `prepare-analysis-revision` converts review/rescue advice into executable analysis tasks, checks required data roles, and blocks impossible reruns before new figure planning or code generation. When integrity or final quality reports failed, `status` and `run-pipeline` now walk through the review sequence: gate diagnosis, reviewer pass, publication readiness, review-engineering discovery and planning, statistical rescue, analysis-revision preparation, and revision planning.
-
-`record-observation` preserves visible Codex/user analysis summaries inside `observations/observations.jsonl`. These records are used by `build-data-context` and `build-method-context` to create manuscript-facing writing packets. The writers use those packets instead of raw file inventories or execution manifests, so Data and Methods sections describe sources, variables, processing, analytical design, validation, and claim boundaries without exposing local filenames, paths, commands, or manifest dumps.
-
-Stage-owned code routing is now explicit. `classify-code-ownership` scans project-local Python code, `route-stage-code` copies or moves legacy `code/` scripts into `data/scripts/`, `methods/scripts/`, `methods/src/`, or `methods/plotting/`, and `build-code-provenance` records the project-level code trail. `extract-method-formulas` writes `methods/method_formula_manifest.json` and `methods/method_formulas.tex` from code annotations, static formula patterns, and figure metadata; `trace-figures-to-code` writes `results/figure_code_trace.json` and `.html`. `build-data-context` reads `data/data_code_manifest.json`, while `build-method-context` reads `methods/method_code_manifest.json`, `methods/method_formula_manifest.json`, and `results/figure_code_trace.json`, so Data and Methods writing can explain data construction, variables, formulas, validation, and figure provenance from stage-owned code rather than from a generic `code/` dump.
-
-Discussion writing now has a comparison-preparation step. `prepare-discussion-comparison` writes `discussion/comparison_literature_matrix.csv`, `discussion/comparison_evidence_notes.html`, and `discussion/innovation_limitations_plan.json` by anchoring confirmed Results claims or metrics to retained citation evidence and literature summaries. `write-discussion` can then compare the accepted local findings with prior studies, state innovation more narrowly, and define limitations without inventing unsupported literature contrasts.
-
-`classify-data-access`, `prepare-data-acquisition`, and `inventory-data-sources` add a discipline-neutral data acquisition layer before ordinary data inventory. The layer shares the same discipline profile used by the reviewer-engineering system, then detects connector types such as `local_files`, `api_access`, and `remote_server`. It writes a plan-first artifact set under `data/` and does not fetch external data or install field-specific packages by default. Domain-specific connectors such as astronomy archives, Google Earth Engine, or bioinformatics repositories can later plug into this interface while the core Data stage remains reusable across disciplines. After reviewer/rescue analysis creates blocked missing-data tasks, `prepare-data-acquisition` writes `data/data_acquisition_tasks.json` and `.html` so Codex can tell the user which data roles are missing, which connector type is suitable, and which confirmation is needed before fetching, linking, or server-side processing.
-
-Discipline modules also declare data acquisition connectors for research planning and missing-data repair. Astronomy covers mission/archive APIs and remote server SSH; geography covers Google Earth Engine plus local raster/vector parsing; ecology covers public web/API download plus GeoTIFF/NetCDF parsing; machine learning covers local files plus Kaggle/Hugging Face/cloud storage; bioinformatics covers GEO/SRA/ENA API access plus remote omics servers. `prepare-data-acquisition` records connector packages, API/download routes, expected data formats, and feasibility states such as `locally_feasible`, `requires_package_install`, or `requires_credentials`.
-
-## Research-Code Mining
-
-Draftpaper-loop can now prepare metadata-only candidate reports from public research-code repositories before any plugin code is written. This is a curation aid for building discipline modules, not a code-copying tool. The first minimal chain is:
+Use `.[plotting-full]` for complex plotting backends. Agents should normally inspect `status` and call `run-pipeline`; common diagnostic and recovery commands are:
 
 ```powershell
-python -m draftpaper_cli.cli discover-research-repos --output-root .\mining --discipline geography --query "remote sensing raster workflow" --from-json .\repo_candidates.json
-python -m draftpaper_cli.cli score-research-repos --input .\mining\research_code_mining\geography_repo_candidates.json --output-root .\mining
-python -m draftpaper_cli.cli extract-plugin-candidates --input .\mining\research_code_mining\geography_scored_repos.json --output-root .\mining --top-n 5
-python -m draftpaper_cli.cli inspect-research-repo --candidate .\mining\research_code_mining\plugin_candidates\geography\<candidate> --local-repo .\local_checkout --output-root .\mining --mode tree_docs
-python -m draftpaper_cli.cli map-repository-workflow --inspection .\mining\research_code_mining\inspections\<candidate>\repository_structure.json --output-root .\mining
-python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mining\research_code_mining\workflow_maps\<candidate>\workflow_map.json --output-root .\mining
+draftpaper status --project <project>
+draftpaper doctor --project <project> --explain
+draftpaper run-pipeline --project <project>
+draftpaper detect-artifact-drift --project <project>
+draftpaper sync-artifact-stale --project <project>
+draftpaper diagnose-gate-failures --project <project>
+draftpaper run-integrity-gate --project <project>
+draftpaper audit-citations --project <project> --final
+draftpaper assess-publication-readiness --project <project>
 ```
 
-The generated reports record repository metadata, license policy, reproducibility signals, workflow signals, file-tree roles, candidate capabilities, and discipline-foundation suggestions. They intentionally do not clone repositories, copy source folders, or package third-party code; later generalization still needs manual/Codex review, privacy checks, license checks, fixture tests, and overlap review before a plugin can be proposed for `main`.
+The Python API exposes the same evidence-semantic entry points, including `resolve_result_evidence`, `build_scientific_evidence_registry`, `validate_figure_semantics`, `create_evidence_snapshot`, and `submit_section_draft`. MCP is a controlled projection of CommandSpec/CLI handlers for local Agent integration.
 
-## Third-party Skills Integration
+<!-- capability:command_schema_quality_contracts -->
+<!-- capability-meta: id=command_schema_quality_contracts; status=implemented; since=0.31 -->
+CommandSpec, the schema registry, and quality contracts form one command control plane for risk, inputs, outputs, write scope, network behavior, and human checkpoints. Generated references come from the same registry, so the README keeps only common user paths.
+<!-- /capability:command_schema_quality_contracts -->
 
-This repository keeps [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) under `third_party/paper-fetch-skill` for source provenance and packages the runnable fallback under `draftpaper_cli/_vendor/paper_fetch_skill`. The adapter prefers a `paper-fetch` command on `PATH`; if unavailable, it can use the packaged fallback. Install `.[fulltext]` only when the enhanced article/PDF extraction stack is required.
+| Need | Document |
+|---|---|
+| Commands, parameters, inputs/outputs, and risk | [CLI Reference](docs/cli_reference.md) |
+| Minimal, plotting, fulltext, and MCP profiles | [Install Profiles](docs/install_profiles.md) |
+| Write, network, and confirmation boundaries | [Command Risk Matrix](docs/command_risk_matrix.md) |
+| Project token and cost receipts | [Token and Cost Reporting](docs/token_cost_reporting.md) |
+| Final completion and stable paragraph locators | [Final Manuscript Completion](docs/manuscript_completion.md) |
+| DPL schema, project state, and artifacts | [DPL Schema](docs/DPL_SCHEMA.md) |
 
-The third-party runtime is MIT licensed. Keep its license notice when redistributing.
+## Project Layout, Evidence Contracts, and Engineering Boundaries
 
-Third-party research skills, skills distilled from local research projects, and external skill catalogs such as AcademicForge can be converted into Draftpaper-loop candidate plugin reports through a metadata-only pipeline. The pipeline reads file names, summaries, dependencies, input/output shapes, artifact types, keywords, and structured descriptions; it does not copy third-party `SKILL.md` bodies, source code, paper PDFs, private data, credentials, or local paths.
+```text
+draftpaper_cli/                    core Python package, CLI, state, and evidence contracts
+draftpaper_cli/discipline_modules/ data connectors, method templates, and review rules
+draftpaper_cli/_vendor/            wheel-installable runtime fallbacks
+codex_skills/draftpaper-workflow/  Codex workflow skill and Agent contracts
+docs/                              guides, schemas, audits, and generated references
+tests/                             unit, adversarial, wheel, cross-platform, and release regressions
+third_party/                       upstream snapshots, pointers, licenses, and provenance
+projects/                          local paper projects, ignored by git by default
+```
 
-Recommended pipeline:
+Within one paper project, data acquisition, cleaning, and cohort code belongs under `data/`; models, statistics, validation, and plotting code belongs under `methods/`; `results/` stores figures, tables, and metadata; `writing/`, `citation_audit/`, `review/`, and `latex/` store prose, audits, reviews, and the final PDF. Large datasets may remain at their source location through private locators, read-only fingerprints, and manifests while workflow artifacts remain owned by the paper project.
+
+Every writing command checks its declared write set before and after execution and uses state revisions, project locks, artifact hashes, and transaction receipts. MCP capability tokens, executable allowlists, path confinement, network policies, and log redaction constrain application behavior. Public multi-tenant isolation, account systems, and hosted billing are separate product-engineering boundaries.
+
+Run baseline verification with:
 
 ```powershell
-python -m draftpaper_cli.cli snapshot-skill-source --source-root .\external_skills --output-root .\plugin_mining
-python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\SNAPSHOT.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli index-skill-source --inspection .\plugin_mining\SKILL_SOURCE_INSPECTION.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli map-skill-capabilities --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli compile-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
+python tools/validate_capability_truth_matrix.py
+python -m pytest tests/test_capability_truth_matrix.py
+python -m pytest
+python -m build
 ```
-
-For an AcademicForge-style registry, start from registry metadata rather than copying upstream skill files:
-
-```powershell
-python -m draftpaper_cli.cli snapshot-skill-source --source academicforge --repo HughYau/AcademicForge --ref site-first --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli index-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
-```
-
-This writes derived metadata profiles under the output folder and records `ACADEMICFORGE_REGISTRY_ADAPTER.json`. The profiles are generated from registry fields such as id, summary, tags, repository, license, and install metadata; upstream `SKILL.md` bodies and source code are not copied.
-
-The adapter resolves the requested GitHub ref to an immutable commit when GitHub metadata access is available, then reconciles collection-level `skill_count` declarations with AcademicForge's public classification metadata. Every declared subskill enters the snapshot ledger: records with classification metadata become detailed profiles, while unresolved collection-only declarations remain explicit `requires_source_inspection` placeholders. The adapter reports `declared_skill_count`, `expanded_skill_count`, `placeholder_skill_count`, and `silent_loss_count` so a top-level collection count cannot be mistaken for complete skill coverage.
-
-Formal discipline modules accept only three promotable subplugin types: `data_connector`, `method_template`, and `review_rule`. `workflow_recipe`, `paper_contract`, and `shared_capability` are preserved as support-layer candidates rather than written directly into `discipline_modules/<discipline>/`. However, their verifiable statistical, model-baseline, ablation, split/leakage, figure-claim, citation-support, data/code-availability, and reproducibility conditions are scanned with `review_rule_signal_scan` and can backflow into discipline-specific `review_rule_candidate`s.
-
-Use `extract-review-rule-signals` when you want to audit this backflow before generating candidate packages. It scans every skill/source record, including workflow, paper-contract, and shared-capability material, and writes `REVIEW_RULE_SIGNAL_REPORT.json` / `.md` without promoting anything into the formal discipline modules.
-
-A `review_rule` is not plain reviewer-comment text. It is an evidence-bound scientific quality gate that must declare its applicable discipline, method family, data roles, evidence roles, threshold source, failure route, and human-confirmation state. Thresholds such as F1, AUC, R², RMSE, MAE, p values, FDR, sample size, spatial resolution, and temporal coverage default to `contextual`, `comparative`, or `human_confirmed` rules unless they are backed by journal guidance, discipline convention, a public benchmark, or explicit user confirmation; they are not promoted as global fixed thresholds automatically.
-
-Before a candidate becomes a formal contribution, run:
-
-```powershell
-python -m draftpaper_cli.cli generalize-plugin-candidate --candidate <candidate_dir>
-python -m draftpaper_cli.cli validate-plugin-candidate --candidate <candidate_dir>
-python -m draftpaper_cli.cli package-plugin-contribution --candidate <candidate_dir>
-python -m draftpaper_cli.cli preflight-plugin-contribution --package <candidate_dir>\contribution_package
-python -m draftpaper_cli.cli review-plugin-contribution --package <candidate_dir>\contribution_package
-python -m draftpaper_cli.cli promote-plugin-candidate --candidate <candidate_dir> --require-human-confirmation
-```
-
-Support-layer candidates cannot be packaged as formal discipline plugins directly. Submit their generalized formal candidates instead. A `review_rule` remains non-promotable while its maturity is `candidate` or `validated`; it must have an executable discipline fixture, reach at least `runnable`, pass validation, and receive explicit human confirmation before promotion.
-
-PRs that include packaged plugin contributions are checked by `.github/workflows/plugin-contribution-preflight.yml`. The workflow scans for `contribution_package/candidate_manifest.json`, runs `preflight-plugin-contribution`, and then runs `review-plugin-contribution` on each package so maintainers can review metadata, generalized templates, fixtures, validation reports, provenance, support-layer backflow families, threshold policy, human-confirmation requirements, files to review, and a read-only merge recommendation without ingesting third-party source text.
 
 ## Contributors, License, Commercial Use, And Contact
 
@@ -510,6 +415,14 @@ Building this takes time; a few tokens for maintenance are appreciated!!!
 </table>
 
 Donation supports maintenance only and does not grant commercial use rights.
+
+## Star History
+
+Track the growth of Draftpaper-loop on GitHub:
+
+[![Star History Chart](https://api.star-history.com/svg?repos=xiejhhhhhh/Draftpaper_loop&type=Date)](https://star-history.com/#xiejhhhhhh/Draftpaper_loop&Date)
+
+Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
 
 ## Recent Updates
 ### v0.33.0 (2026-07-19) -- Strict Author Completion and Hash-bound Result Support

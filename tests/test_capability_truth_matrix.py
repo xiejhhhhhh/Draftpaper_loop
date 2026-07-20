@@ -21,6 +21,8 @@ REQUIRED_CAPABILITY_IDS = {
     "completion_audit_and_readme_framework",
     "result_support_two_routes",
     "stable_locator",
+    "completion_change_classification",
+    "result_support_checkpoint_v3",
 }
 
 
@@ -91,12 +93,48 @@ def test_anchor_normalization_collapses_whitespace() -> None:
 def test_readme_binding_uses_stable_anchor_without_locking_prose_verbatim() -> None:
     record = validator.load_matrix()["capabilities"][0]
     anchor = record["readme_anchor"]
-    text = f"<!-- {anchor} -->\nA clearer user-facing summary.\n<!-- /{anchor} -->"
+    text = (
+        f"<!-- {anchor} -->\n"
+        f"<!-- capability-meta: id={record['capability_id']}; status={record['status']}; since={record['since']} -->\n"
+        "A clearer user-facing summary.\n"
+        f"<!-- /{anchor} -->"
+    )
     errors: list[str] = []
 
     validator._validate_readme_binding(record, text, "en", errors)
 
     assert errors == []
+
+
+def test_readme_uses_capability_anchors_without_release_scoped_status_table() -> None:
+    payload = validator.load_matrix()
+    readme_en = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_zh = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+
+    assert "## Implementation Status" not in readme_en
+    assert "## \u5f53\u524d\u5b9e\u73b0\u72b6\u6001" not in readme_zh
+    errors = validator.validate_matrix(payload)
+    assert not any("implementation status" in error for error in errors)
+
+
+def test_readme_binding_rejects_missing_or_mismatched_capability_metadata() -> None:
+    record = validator.load_matrix()["capabilities"][0]
+    anchor = record["readme_anchor"]
+
+    missing_metadata = f"<!-- {anchor} -->\nSummary.\n<!-- /{anchor} -->"
+    missing_errors: list[str] = []
+    validator._validate_readme_binding(record, missing_metadata, "en", missing_errors)
+    assert any("capability metadata" in error for error in missing_errors)
+
+    mismatched_metadata = (
+        f"<!-- {anchor} -->\n"
+        f"<!-- capability-meta: id={record['capability_id']}; status=planned; since={record['since']} -->\n"
+        "Summary.\n"
+        f"<!-- /{anchor} -->"
+    )
+    mismatch_errors: list[str] = []
+    validator._validate_readme_binding(record, mismatched_metadata, "en", mismatch_errors)
+    assert any("status" in error for error in mismatch_errors)
 
 
 def test_shadow_status_is_supported_and_requires_bilingual_gaps() -> None:

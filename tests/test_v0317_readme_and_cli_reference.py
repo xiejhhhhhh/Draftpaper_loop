@@ -12,63 +12,76 @@ from draftpaper_cli.toml_compat import tomllib
 
 EXPECTED_H2 = {
     "README.md": [
-        "## Current Release",
-        "## How a Paper Reaches `main.pdf`",
-        "## Guarantees and Human Control",
-        "## Completing and Revising the Final Manuscript",
-        "## What It Does",
-        "## Loop Model",
-        "## Key Features",
-        "## Project Layout",
+        "## Project Scope and Current Release",
+        "## Core Research Capabilities",
         "## Quick Start",
-        "## Implementation Status",
-        "## Research-Code Mining",
-        "## Third-party Skills Integration",
+        "## End-to-End Research Workflow",
+        "## Discipline Plugins and Capability Extension",
+        "## Figures, Evidence, and Scientific Writing",
+        "## Literature, Citations, and Independent Review",
+        "## Final Completion, Precise Revision, and Release",
+        "## Installation, Agents, and Daily Operation",
+        "## Project Layout, Evidence Contracts, and Engineering Boundaries",
         "## Contributors, License, Commercial Use, And Contact",
         "## Support",
+        "## Star History",
         "## Recent Updates",
     ],
     "README.zh-CN.md": [
-        "## 当前版本",
-        "## 论文如何到达 `main.pdf`",
-        "## 系统保证与人工控制",
-        "## 补全与修订最终稿",
-        "## 功能概览",
-        "## Loop 模型",
-        "## 核心特性",
-        "## 项目结构",
-        "## 快速开始",
-        "## 当前实现状态",
-        "## 公开科研代码挖掘",
-        "## 第三方 skills 集成",
-        "## 贡献者、许可证、商业使用和联系方式",
-        "## 打赏",
-        "## 最近更新",
+        "## \u9879\u76ee\u5b9a\u4f4d\u4e0e\u5f53\u524d\u7248\u672c",
+        "## \u6838\u5fc3\u79d1\u7814\u80fd\u529b",
+        "## \u5feb\u901f\u5f00\u59cb",
+        "## \u5b8c\u6574\u79d1\u7814\u5de5\u4f5c\u6d41",
+        "## \u5b66\u79d1\u63d2\u4ef6\u4e0e\u79d1\u7814\u80fd\u529b\u6269\u5c55",
+        "## \u56fe\u8868\u3001\u8bc1\u636e\u4e0e\u79d1\u5b66\u5199\u4f5c",
+        "## \u6587\u732e\u3001\u5f15\u7528\u4e0e\u72ec\u7acb\u5ba1\u7a3f",
+        "## \u6700\u7ec8\u7a3f\u8865\u5168\u3001\u5b9a\u70b9\u4fee\u8ba2\u4e0e\u53d1\u5e03",
+        "## \u5b89\u88c5\u3001Agent \u4e0e\u65e5\u5e38\u64cd\u4f5c",
+        "## \u9879\u76ee\u76ee\u5f55\u3001\u8bc1\u636e\u5408\u540c\u4e0e\u5de5\u7a0b\u8fb9\u754c",
+        "## \u8d21\u732e\u8005\u3001\u8bb8\u53ef\u8bc1\u3001\u5546\u4e1a\u4f7f\u7528\u548c\u8054\u7cfb\u65b9\u5f0f",
+        "## \u6253\u8d4f",
+        "## Star History",
+        "## \u6700\u8fd1\u66f4\u65b0",
     ],
 }
 
 
+def _h2_entries(content: str) -> list[tuple[str, int, int]]:
+    entries: list[tuple[str, int, int]] = []
+    offset = 0
+    fenced = False
+    for line in content.splitlines(keepends=True):
+        if line.startswith(("```", "~~~")):
+            fenced = not fenced
+        elif not fenced and line.startswith("## "):
+            entries.append((line.rstrip("\r\n"), offset, offset + len(line)))
+        offset += len(line)
+    return entries
+
+
+def _h2_headings(content: str) -> list[str]:
+    return [heading for heading, _, _ in _h2_entries(content)]
+
+
 def _section(content: str, heading: str) -> str:
-    start = content.index(heading)
-    rest = content[start + len(heading) :]
-    next_heading = re.search(r"^## ", rest, flags=re.MULTILINE)
-    return rest if next_heading is None else rest[: next_heading.start()]
+    entries = _h2_entries(content)
+    for index, (candidate, _, end) in enumerate(entries):
+        if candidate == heading:
+            next_start = entries[index + 1][1] if index + 1 < len(entries) else len(content)
+            return content[end:next_start]
+    raise ValueError(f"missing H2 heading: {heading}")
 
 
-def _markdown_table(section: str) -> tuple[list[str], list[list[str]]]:
-    table_lines = [line for line in section.splitlines() if line.startswith("|")]
-    assert len(table_lines) >= 3
-    header = [cell.strip() for cell in table_lines[0].strip("|").split("|")]
-    rows = [[cell.strip() for cell in line.strip("|").split("|")] for line in table_lines[2:]]
-    assert all(len(row) == 4 for row in rows)
-    return header, rows
+def test_section_uses_real_h2_boundaries() -> None:
+    content = "```text\n## Target\n```\n\n## Target\nactual section\n\n## Next\nnext section\n"
+    assert _section(content, "## Target") == "actual section\n\n"
 
 
-def test_readmes_preserve_the_detailed_project_guide_and_current_release() -> None:
+def test_readmes_preserve_the_overall_project_guide_and_current_release() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     for name, headings in EXPECTED_H2.items():
         content = Path(name).read_text(encoding="utf-8")
-        assert [line for line in content.splitlines() if line.startswith("## ")] == headings
+        assert _h2_headings(content) == headings
         assert f"v{version}" in content
         assert "prepare-manuscript-completion" in content
         assert "preview-manuscript-completion" in content
@@ -78,85 +91,62 @@ def test_readmes_preserve_the_detailed_project_guide_and_current_release() -> No
         assert "docs/token_cost_reporting" in content
         assert 'pip install -e ".[fulltext]"' in content
         assert "pip install -e third_party\\paper-fetch-skill" not in content
-        assert "python -m pytest\n```" in content
+        assert "python -m pytest" in content
         lines = content.splitlines()
         assert any(line.startswith("### v0.31.1-v0.32.0") for line in lines)
         for patch_version in range(1, 10):
             standalone_prefixes = (
                 f"### v0.31.{patch_version} ",
                 f"### v0.31.{patch_version}(",
-                f"### v0.31.{patch_version}（",
+                f"### v0.31.{patch_version}\uff08",
             )
             assert not any(line.startswith(standalone_prefixes) for line in lines)
 
 
-def test_readmes_use_current_release_capability_clusters_and_minimal_first_setup() -> None:
-    expected_ranges = [
-        "v0.30.1-v0.30.3",
-        "v0.30.4-v0.31.0",
-        "v0.31.1-v0.31.5",
-        "v0.31.6-v0.31.9",
-        "v0.32.0",
-        "v0.32.1-v0.32.2",
-        "v0.33.0",
-    ]
-    for name, current_heading, what_heading, features_heading in (
-        ("README.md", "## Current Release", "## What It Does", "## Key Features"),
-        ("README.zh-CN.md", "## 当前版本", "## 功能概览", "## 核心特性"),
-    ):
+def test_readmes_front_load_framework_capabilities_and_keep_operations_later() -> None:
+    capability_ranges = ("v0.1-v0.13", "v0.14-v0.20", "v0.21-v0.28", "v0.28.1-v0.33")
+    settings = (
+        ("README.md", "## Project Scope and Current Release", "## Core Research Capabilities", "## Quick Start", "## End-to-End Research Workflow", "## Installation, Agents, and Daily Operation"),
+        ("README.zh-CN.md", "## \u9879\u76ee\u5b9a\u4f4d\u4e0e\u5f53\u524d\u7248\u672c", "## \u6838\u5fc3\u79d1\u7814\u80fd\u529b", "## \u5feb\u901f\u5f00\u59cb", "## \u5b8c\u6574\u79d1\u7814\u5de5\u4f5c\u6d41", "## \u5b89\u88c5\u3001Agent \u4e0e\u65e5\u5e38\u64cd\u4f5c"),
+    )
+    for name, current_heading, capabilities_heading, quick_start_heading, workflow_heading, operations_heading in settings:
         content = Path(name).read_text(encoding="utf-8")
         current = _section(content, current_heading)
-        clusters = re.findall(r"(?m)^- \*\*(v0\.\d[^*]+)\*\*", current)
-        assert clusters == expected_ranges
-        assert "python3 -m venv .venv" in content
-        assert "py -3 -m venv .venv" in content
-        assert "python -m pip install -e ." in content
-        assert "pip install -e ." in content
-        assert "commercial_overview" not in content
+        capabilities = _section(content, capabilities_heading)
+        quick_start = _section(content, quick_start_heading)
+        workflow = _section(content, workflow_heading)
+        operations = _section(content, operations_heading)
 
-        overview = _section(content, what_heading)
-        overview_bullets = [line for line in overview.splitlines() if line.startswith("-")]
-        assert len(overview_bullets) == 8
+        assert len([line for line in current.splitlines() if line.startswith("-")]) >= 8
+        assert all(version_range in capabilities for version_range in capability_ranges)
+        assert "python3 -m venv .venv" in quick_start
+        assert "py -3 -m venv .venv" in quick_start
+        assert 'pip install -e ".[plotting]"' in quick_start
+        assert "run-pipeline" in quick_start
+        assert "Results" in workflow
+        assert "Discussion" in workflow
+        assert "citation audit" in workflow
+        assert "docs/cli_reference.md" in operations
+        assert "docs/command_risk_matrix.md" in operations
+        assert "docs/token_cost_reporting" in operations
 
-        features = _section(content, features_heading)
-        feature_bullets = [line for line in features.splitlines() if line.startswith("-")]
-        assert 10 <= len(feature_bullets) <= 12
 
-
-def test_readmes_bind_capability_anchors_to_truth_matrix_claims_and_evidence_columns() -> None:
+def test_readmes_bind_capability_anchors_without_a_release_scoped_status_table() -> None:
     matrix = json.loads(Path("docs/capability_truth_matrix.json").read_text(encoding="utf-8"))
-    for name, expected_header in (
-        ("README.md", ["Capability ID", "Status / Since", "Evidence", "Boundary"]),
-        ("README.zh-CN.md", ["能力 ID", "状态 / Since", "证据", "边界"]),
-    ):
+    for name in ("README.md", "README.zh-CN.md"):
         content = Path(name).read_text(encoding="utf-8")
-        status = _section(content, "## Implementation Status" if name == "README.md" else "## 当前实现状态")
-        header, rows = _markdown_table(status)
-        assert header == expected_header
-        rows_by_id = {row[0].strip("`"): row for row in rows}
-        assert set(rows_by_id) == {record["capability_id"] for record in matrix["capabilities"]}
+        assert "## Implementation Status" not in content
+        assert "## \u5f53\u524d\u5b9e\u73b0\u72b6\u6001" not in content
         for record in matrix["capabilities"]:
             marker = f"<!-- {record['readme_anchor']} -->"
             closing = f"<!-- /{record['readme_anchor']} -->"
-            assert marker in content
-            assert closing in content
+            assert content.count(marker) == 1
+            assert content.count(closing) == 1
             bounded = content.split(marker, 1)[1].split(closing, 1)[0]
             assert re.sub(r"\s+", " ", bounded).strip()
-            row = rows_by_id[record["capability_id"]]
-            assert row[1] == f"{record['status']} / {record['since']}"
-            boundary = record["boundary_en"] if name == "README.md" else record["boundary_zh"]
-            assert row[3] == boundary
 
 
-def test_readmes_fix_release_order_checkpoint_boundary_and_current_boundary_sentence() -> None:
-    expected_boundaries = {
-        "README.md": "The current release is v0.33.0; it adds evidence-bound author completion, Result Support v3, synchronized Agent/CLI contracts, and strict completion classification, while fixtures remain workflow-contract checks rather than scientific results.",
-        "README.zh-CN.md": "当前版本为 v0.33.0；新增证据绑定的作者补全、Result Support v3、Agent/CLI 合同同步和 strict 补全分类。Fixture 继续只验证流程合同，真实论文仍以可执行学科代码、经过验证的输出和人工证据确认为准。",
-    }
-    route_boundaries = {
-        "README.md": "The current checkpoint selects one route for the whole paper; per-claim routing is later work.",
-        "README.zh-CN.md": "当前按整单 checkpoint 选择一条路线，多 claim 分治属于后续工作。",
-    }
+def test_readmes_keep_workflow_release_order_and_result_support_boundary() -> None:
     ordered = {
         "README.md": [
             "final author completion and precise revisions",
@@ -165,20 +155,20 @@ def test_readmes_fix_release_order_checkpoint_boundary_and_current_boundary_sent
             "confirm one release hash",
         ],
         "README.zh-CN.md": [
-            "最终作者信息补全与定点修订",
-            "最终 citation audit",
-            "两位独立盲评者",
-            "确认同一个 release hash",
+            "\u6700\u7ec8\u4f5c\u8005\u8865\u5168\u548c\u5b9a\u70b9\u4fee\u8ba2",
+            "\u6700\u7ec8 citation audit",
+            "\u4e24\u4f4d\u72ec\u7acb\u76f2\u8bc4\u8005",
+            "\u786e\u8ba4 release hash",
         ],
     }
-    for name, boundary in expected_boundaries.items():
+    settings = (
+        ("README.md", "## Project Scope and Current Release", "## End-to-End Research Workflow", "Current release: v", "whole result-support checkpoint"),
+        ("README.zh-CN.md", "## \u9879\u76ee\u5b9a\u4f4d\u4e0e\u5f53\u524d\u7248\u672c", "## \u5b8c\u6574\u79d1\u7814\u5de5\u4f5c\u6d41", "\u5f53\u524d\u7248\u672c\uff1av", "\u6574\u4efd result-support checkpoint"),
+    )
+    for name, current_heading, workflow_heading, version_marker, result_support_marker in settings:
         content = Path(name).read_text(encoding="utf-8")
-        current_heading = "## Current Release" if name == "README.md" else "## 当前版本"
-        current = _section(content, current_heading)
-        first_paragraph = next(line for line in current.splitlines() if line.strip())
-        assert first_paragraph == boundary
-        assert route_boundaries[name] in content
-        workflow_heading = "## How a Paper Reaches `main.pdf`" if name == "README.md" else "## 论文如何到达 `main.pdf`"
+        assert version_marker in _section(content, current_heading)
+        assert result_support_marker in content
         workflow = _section(content, workflow_heading)
         positions = [workflow.index(fragment) for fragment in ordered[name]]
         assert positions == sorted(positions)

@@ -1,9 +1,9 @@
-﻿<div align="center">
+<div align="center">
 
-[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#功能概览)
-[![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#loop-模型)
-[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#核心特性)
-[![BibTeX](https://img.shields.io/badge/BibTeX-Reference%20Library-3A506B?style=flat-square)](#核心特性)
+[![AI Research Loop](https://img.shields.io/badge/AI-Research%20Loop-5C4D7D?style=flat-square)](#核心科研能力)
+[![Loop Engineering](https://img.shields.io/badge/Loop-Engineering-1D7874?style=flat-square)](#完整科研工作流)
+[![Citation Evidence](https://img.shields.io/badge/Citation-Evidence-4C956C?style=flat-square)](#文献引用与独立审稿)
+[![Discipline Plugins](https://img.shields.io/badge/Discipline-Plugins-6A994E?style=flat-square)](#学科插件与科研能力扩展)
 [![Local First](https://img.shields.io/badge/Local-First-E07A5F?style=flat-square)](#快速开始)
 [![Python CLI](https://img.shields.io/badge/Python-CLI-3776AB?style=flat-square&logo=python&logoColor=white)](./pyproject.toml)
 [![Source Available](https://img.shields.io/badge/Source-Available-8A5A44?style=flat-square)](#贡献者许可证商业使用和联系方式)
@@ -12,81 +12,276 @@
 
 **阿里巴巴希望天下没有难做的生意，而 Draftpaper-loop 希望天下没有难写的论文。**
 
-**本地优先的科研论文 loop 引擎，用于生成可审计、可追溯的论文初稿。**
+**从研究 idea、学科方法和真实数据出发，生成可审计科研图表、完整论文与可追溯 `main.pdf` 的本地科研工作流。**
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
 </div>
 
-Draftpaper-loop 是本地优先、证据优先的科研论文工作流。系统先确认研究蓝图和可执行的科学证据，再让 Codex 基于同一证据版本自然撰写正文；只有引用、学科规范、完整性和独立审稿全部通过后，才发布可追溯的 `main.pdf`。
+Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认研究问题和可行性，再匹配或补齐数据与方法能力，执行分析并确认图表是否支撑论断，随后基于同一证据版本完成正文、引用核查、学科审查、独立盲评和 PDF 发布。
 
-## 当前版本
+## 项目定位与当前版本
 
-当前版本为 v0.33.0；新增证据绑定的作者补全、Result Support v3、Agent/CLI 合同同步和 strict 补全分类。Fixture 继续只验证流程合同，真实论文仍以可执行学科代码、经过验证的输出和人工证据确认为准。
-<!-- capability:scientific_gates_and_artifact_dag -->
-- **v0.30.1-v0.30.3** 科学门控、非零退出码、canonical taxonomy 和 artifact DAG 共同约束可继续的工作流状态。
-<!-- /capability:scientific_gates_and_artifact_dag -->
-<!-- capability:manuscript_completion_transaction -->
-- **v0.30.4-v0.31.0** 作者补全 packet 通过稳定定位、统一 diff/PDF 预览以及原子 apply/rollback 绑定到发布证据。
-<!-- /capability:manuscript_completion_transaction -->
-<!-- capability:command_schema_quality_contracts -->
-- **v0.31.1-v0.31.5** CommandSpec、schema registry 和质量合同为命令风险、输入输出与发布检查提供同一控制面。
-<!-- /capability:command_schema_quality_contracts -->
-<!-- capability:minimal_install_cost_risk_release -->
-- **v0.31.6-v0.31.9** minimal-first 安装档位、token/cost receipt、命令风险矩阵和跨平台发布检查共同公开运行边界。
-<!-- /capability:minimal_install_cost_risk_release -->
-<!-- capability:completion_audit_and_readme_framework -->
-- **v0.32.0** completion 审计、跨期刊回归和完整 README 框架恢复当前公开 release 的文档边界。
-<!-- /capability:completion_audit_and_readme_framework -->
-<!-- capability:completion_change_classification -->
-- **v0.32.1-v0.32.2** 能力真值校验、evidence ref 建议、修改分类预览和精确 stale 报告共同约束最终作者补全。
-<!-- /capability:completion_change_classification -->
-- **v0.33.0** strict 补全分类、Result Support v3、workflow skill 同步和完整发布验证构成当前版本。
+### 用户可以用它完成什么
 
+- 从研究 idea、已有数据、参考文献或项目代码创建结构化论文项目。
+- 生成中英文研究蓝图、claim contract、统计验证要求和主图故事板，并集中交由用户确认。
+- 识别单一或交叉学科，匹配 `data_connector`、`method_template` 和 `review_rule`，调用真实项目代码完成数据处理、模型训练、统计分析和科研制图。
+- 在能力不足时审计 project-local 代码，并从现有插件、AcademicForge metadata 或公开科研代码仓库形成可追溯的补齐任务。
+- 让主图追溯到 research-plan claim、cohort、data plugin、method plugin、run output、evidence ID 和学科审稿规则。
+- 按 Results → Introduction → Data → Methods → Discussion 的证据顺序生成正文，并从阶段代码、公式、图表和参考文献重建科学叙事。
+- 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
+- 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-本 README 继续保留原有的完整项目说明框架。全部 210 条命令见自动生成的 [CLI 命令参考](docs/cli_reference.md)，可选运行环境见[安装档位说明](docs/install_profiles.zh-CN.md)，写入、联网与人工确认边界见[命令风险矩阵](docs/command_risk_matrix.md)，项目级 token 与费用记录见 [Token 与费用报告](docs/token_cost_reporting.zh-CN.md)。
+**当前版本：v0.33.0。** 当前 release 强化了 Result Support v3、证据绑定的作者补全、Agent/CLI 合同同步和严格修改分类。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
 
-## 论文如何到达 `main.pdf`
+## 核心科研能力
+
+| 科研环节 | 主要能力 | 关键产物 |
+|---|---|---|
+| 研究设计 | idea 解析、期刊画像、中英文研究蓝图、claim/statistical/figure contracts 和人工确认 | confirmed plan hash、claims、figure storyboard |
+| 学科能力 | 单学科/交叉学科识别，数据、方法和审稿插件匹配，project-local 审计和能力补齐 | discipline/capability contracts、plugin bindings |
+| 数据与方法 | 数据清单、可行性、阶段归属代码、真实方法运行、公式和变量提取 | data/method manifests、run/formula manifests |
+| 图表与证据 | 语义 figure/panel contract、figure-code trace、结果有效性和 Result Support | 主图组、附录图、result manifest、evidence registry |
+| 科学写作 | Paper Narrative Engine、章节证据包、Codex 自由写作、Scientific Editor | Results、Introduction、Data、Methods、Discussion |
+| 文献与引用 | 检索、Zotero、BibTeX、PDF/摘要证据、引用意图、citation audit | `library.bib`、citation evidence、final audit |
+| 审稿与发布 | Results 后学科审查、两位独立盲评、作者补全事务、编译和 release hash | reviewer reports、completion packet、`main.pdf` |
+
+### 从早期版本到当前框架
+
+- **v0.1-v0.13：论文项目与科研阶段地基。** 建立参考文献、期刊画像、research plan、方法/结果/讨论写作、artifact 追踪、Zotero、数据观察、科研绘图和阶段归属代码。
+- **v0.14-v0.20：学科插件与结果支撑链。** 引入数据连接器、方法模板、review rules、插件充分性、AcademicForge/GitHub 候选补齐、跨学科执行账本和 Results 后学科审查。
+- **v0.21-v0.28：科学叙事与证据语义。** 引入 Paper Narrative Engine、章节证据包、自由写作与 Scientific Editor、run/cohort/estimand 绑定、语义图表合同、独立盲审和可复现审稿包。
+- **v0.28.1-v0.33：事务、发布与精确恢复。** 完成 artifact DAG、统一 CommandSpec、科学非零退出状态、作者补全事务、稳定段落定位、跨期刊/跨平台 wheel 回归、Result Support v3 和 release hash 绑定。
+
+版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
+
+## 快速开始
+
+### 1. 安装真实论文常用的绘图档位
+
+PowerShell：
+
+```powershell
+git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
+cd Draftpaper_loop
+py -3 -m venv .venv
+.\.venv\Scripts\python -m pip install -U pip
+.\.venv\Scripts\python -m pip install -e ".[plotting]"
+.\.venv\Scripts\draftpaper doctor --json
+```
+
+bash/macOS/Linux：
+
+```bash
+git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
+cd Draftpaper_loop
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e ".[plotting]"
+draftpaper doctor --json
+```
+
+### 2. 让 Codex 驱动工作流
+
+在 Codex 中打开仓库目录，并说明 idea、数据位置、目标期刊和已有代码：
 
 ```text
-idea 与文献
-  -> 中英文研究蓝图和人工确认
-  -> 数据/方法能力匹配与真实执行
-  -> 主图组和支撑/附录证据
-  -> 结果支撑与论断强度确认
-  -> Results
-  -> Introduction、Data、Methods、Discussion
-  -> 学科审查
-  -> 最终作者信息补全与定点修订
+使用当前仓库中的 Draftpaper-loop 为这个 idea 创建论文项目。
+先读取 idea、数据和已有代码，识别学科与能力缺口，生成中文版研究蓝图给我确认；
+确认后按项目状态执行数据、方法、图表、论文写作、引用核查、两位独立盲评和 PDF 编译。
+```
+
+Codex 负责科研推理和自然行文；阶段状态、证据绑定、写入范围与人工确认由 Draftpaper-loop CLI 合同记录。
+
+### 3. 最短 CLI 路径
+
+```powershell
+draftpaper create-project --idea "Your research idea" --field "astronomy machine learning" --target-journal MNRAS
+draftpaper status --project .\projects\<project>
+draftpaper run-pipeline --project .\projects\<project>
+```
+
+`run-pipeline` 会在研究蓝图、结果支撑路线和最终发布检查点停下并推荐下一条命令。论文项目默认位于 `projects/<project>/`，成稿位于 `projects/<project>/latex/main.pdf`。
+
+基础教学视频：[Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/)
+
+## 完整科研工作流
+
+```text
+idea、已有数据、项目代码与文献
+  -> 创建独立论文项目
+  -> 识别学科与目标期刊
+  -> 检索/导入文献并建立引用证据
+  -> 生成中英文研究蓝图、claims、统计合同和主图故事板
+  -> 用户集中确认研究蓝图
+  -> 评估插件充分性并审计 project-local 能力
+  -> 执行数据插件、方法插件和真实项目代码
+  -> 生成主图组、支撑图、结果表与证据注册表
+  -> 验证结果是否支撑研究论断
+  -> 接受证据、收窄论断或补充数据/方法
+  -> Results -> Introduction -> Data -> Methods -> Discussion
+  -> Results 后复合学科 review-rule 审查与语义修复
+  -> 最终作者补全和定点修订
   -> 最终 citation audit
   -> 两位独立盲评者
-  -> 编译、绑定并确认同一个 release hash
+  -> 完整性、期刊格式和 PDF 编译验证
+  -> 确认 release hash
   -> latex/main.pdf
 ```
 
-如果已验证结果不能支撑研究计划中的论断，流程必须停止。用户需要选择冻结已确认图表和指标并收窄论断，或者补充数据/方法后重新运行科学证据链。Draftpaper-loop 不会生成一张相似图片后继续写作。
+### Loop 和人工控制
+
+```text
+读取项目状态
+  -> 选择当前阶段动作
+  -> 执行并生成结构化产物
+  -> 验证科学合同和文件 hash
+  -> 记录 artifact、run、evidence 和人工决策
+  -> 输入变化时精确标记下游 stale
+  -> 诊断失败并回到对应阶段
+  -> 重复直到成稿可发布
+```
+
+确定性合同负责项目状态、cohort/run 身份、插件来源、图表语义、公式、引用、stale 传播、写集和 release hash。Codex 或其他 Agent 负责开放性的文献理解、方法设计、科研推理和自然写作。
+
+三个集中人工确认点是：
+
+1. **研究蓝图确认**：一起查看研究问题、claims、cohort、数据/方法需求、统计标准、主图组和可行性边界。
+2. **关键结果与论断支撑确认**：一起查看真实运行、核心图表、指标、不确定性和最大可支持论断，并决定后续路线。
+3. **最终稿与发布确认**：一起查看作者补全 packet、候选 PDF、最终引用审计、两位盲评意见和 release hash。
+
+### 结果支撑不足时的两条路线
 
 <!-- capability:result_support_two_routes -->
-结果不足时提供论断收窄或数据/方法补强路线。当前按整单 checkpoint 选择一条路线，多 claim 分治属于后续工作。
+<!-- capability-meta: id=result_support_two_routes; status=implemented; since=0.18 -->
+- **论断收窄路线**：冻结已确认图表和指标，下调 claim 强度并重新生成受影响正文。
+- **数据/方法补强路线**：补充数据角色、清洗、方法实现或验证，随后重跑相应的证据、图表和正文链。
+当前按整份 result-support checkpoint 选择一条路线，多 claim 独立分治列为后续能力。
 <!-- /capability:result_support_two_routes -->
 
 <!-- capability:result_support_checkpoint_v3 -->
-Result Support v3 依次采用当前 resolved evidence、selected run manifest 和 run-bound 结果表；路线绑定当前 checkpoint hash，post-Results 证据问题回流到同一 checkpoint。
+<!-- capability-meta: id=result_support_checkpoint_v3; status=implemented; since=0.32 -->
+Result Support v3 优先读取当前 resolved evidence，其次读取 selected run manifest 和明确 run-bound 的结果表。路线绑定当前 checkpoint hash；Results 后发现的 cohort、指标或图表证据问题会回流到同一个 checkpoint，保持正文与证据版本一致。
 <!-- /capability:result_support_checkpoint_v3 -->
 
-## 系统保证与人工控制
+## 学科插件与科研能力扩展
 
-确定性合同负责检查项目状态、cohort/run 身份、插件来源、图表语义、公式、引用、stale 传播、写入边界和发布 hash。Codex 负责开放性的科研推理与自然行文。研究蓝图、核心证据、结果支撑路线、作者补全 packet 和最终 release hash 均由用户确认。路径限制、写集检查、可执行程序白名单与 MCP capability 检查属于应用层防护，并不等同于操作系统沙箱或多租户生产隔离。
+### 数据、方法和审稿规则
 
-## 补全与修订最终稿
+`draftpaper_cli/discipline_modules/<discipline>/` 注册三类正式科研插件：
 
-用户可以通过一个 `manuscript_completion.yaml` 一次补充作者、单位、ORCID、基金、致谢、数据/代码链接、人工确认的新文献和多处段落修订。
+- **`data_connectors`**：数据访问、读取、解析、清洗、标准化、cohort 构建和质量检查。
+- **`method_templates`**：统计分析、特征工程、模型训练、验证、消融、不确定性估计和科研制图。
+- **`review_rules`**：按学科和方法核验统计标准、baseline、split/leakage、拟合或分类质量、校准、稳健性、图表-论断一致性与复现要求。
+
+插件 manifest 声明运行等级、验证等级、依赖、输入输出、fixture 和 provenance。合同、mock 和 fixture 用于验证接口；主图证据要求经过真实项目或 live 运行验证的输出及 hash。
+
+research plan 生成 discipline/capability contracts，将每个 claim 和 figure requirement 分配给主学科、次学科及相应 data/method/review 能力。能力缺口按以下顺序补齐：
+
+1. 审计项目现有数据/方法代码和运行产物，形成受限 `project_local` binding。
+2. 搜索当前 registry 中可复用的插件。
+3. 从 AcademicForge 等 registry metadata 提取候选能力。
+4. 审计公开科研代码仓库的许可证、结构、复现性和输入输出。
+5. 由 Codex 生成项目专属实现并在当前项目验证。
+6. 通用能力另行经过 generalize、fixture、overlap、license 和人工确认后 promote。
+
+数据与方法补齐路线都有可审计结果、且关键输入或实现仍缺失时，图表阶段才形成明确阻塞诊断。
+
+### 主图可追溯链
+
+```text
+research-plan claim
+  -> data requirement -> data plugin/project-local binding
+  -> method requirement -> method plugin/project-local binding
+  -> verified run output
+  -> evidence ID and cohort view
+  -> figure/panel contract
+  -> Results claim
+  -> applicable discipline review rules
+```
+
+数据和方法插件生成真实图表输入与方法输出；匹配的 `review_rule` 在 `review-results-with-discipline-rules` 阶段核验图表和 Results 表述。
+
+### 外部能力如何进入插件体系
+
+公开科研代码和 AcademicForge 采用 metadata-first 的候选流程，保留 repository、commit、license、依赖、输入输出、运行等级和来源记录。候选通过 `generalize-plugin-candidate`、`validate-plugin-candidate`、`package-plugin-contribution`、`preflight-plugin-contribution`、`review-plugin-contribution` 和人工确认的 `promote-plugin-candidate` 后进入正式学科模块。
+
+`workflow_recipe`、`paper_contract` 和 `shared_capability` 留在支撑层；其中可验证的统计、baseline、ablation、split/leakage、引用支撑和复现条件可以回流为 `review_rule_candidate`。全部命令见[CLI 命令参考](docs/cli_reference.md)。
+
+本仓库在 `third_party/` 保存上游快照、来源指针、固定 commit 和许可证说明；随 wheel 运行的 paper-fetch fallback 位于 `draftpaper_cli/_vendor/paper_fetch_skill`。
+
+## 图表、证据与科学写作
+
+### 从确认蓝图生成图表
+
+`plan-figures` 读取已确认的 research plan、claims、cohort、data/method requirements、统计合同和已有证据，生成主图组、supporting/appendix 图和 caption 合同。每组图的首句概括整体科学结论，后续句子逐一解释 panel、cohort、估计量、不确定性和 claim boundary。
+
+`generate-analysis-code` 依据 figure contract 和已绑定能力生成阶段归属代码。执行失败写入 `figure_execution_diagnosis.json/.html`，区分数据缺口、方法缺口、依赖问题、运行错误、结果质量不足和需要用户确认，并推荐对应修复命令。
+
+### 同一证据版本驱动正文
+
+Paper Narrative Engine 读取 Scientific Evidence Registry、result manifest、figure story arc、文献比较矩阵、阶段代码和公式 trace，生成章节证据包与段落目标。Codex 在证据边界内自由写作；写后合同核验数字、cohort、run、模型、指标量纲、引用角色、内部路径和论断强度。
+
+- **Results**：解释主图组和关键表格，并用支撑/附录图完成稳健性、不确定性和边界说明。
+- **Introduction**：根据研究问题、研究意义、文献证据和 Results 已确定的贡献组织研究空白。
+- **Data**：从 data connector、data inventory、cohort registry 和阶段代码重建来源、样本、变量、预处理和缺失性。
+- **Methods**：从 method plugin、真实实现、run manifest、公式 AST 和 figure-code trace 提炼方法阶段，解释核心公式、变量、假设及其与结果图表的关系。
+- **Discussion**：将本研究结果与比较文献证据对应，分析机制、创新、不足、外推边界和后续工作。
+
+`record-observation` 只保存已经展示给用户的阶段分析摘要。路径、命令、凭证、manifest 字段和本地文件名留在内部 context。
+
+### 精确 stale 和恢复
+
+<!-- capability:scientific_gates_and_artifact_dag -->
+<!-- capability-meta: id=scientific_gates_and_artifact_dag; status=implemented; since=0.30 -->
+科学门控、非零退出状态、统一 change taxonomy 和 artifact DAG 共同决定项目可继续的状态。数据、cohort、方法、run、指标、主图或 claim 变化会重开对应科学链；引用局部修订、作者 metadata 和纯展示修改采用更窄的 stale 范围。
+<!-- /capability:scientific_gates_and_artifact_dag -->
+
+项目通过 `project_passport.yaml`、`artifact_ledger.jsonl`、`checkpoint_ledger.jsonl`、`integrity_ledger.jsonl` 和 artifact hash 记录阶段、输入、输出、人工确认与恢复理由。`doctor --explain` 和 `diagnose-gate-failures` 用于解释当前状态及下一步。
+
+## 文献、引用与独立审稿
+
+文献阶段保存 BibTeX、reference registry、citation evidence、阅读笔记、单篇摘要和可用 PDF/全文证据。检索结果、用户提供文献和 Zotero collection 都保留来源与选择策略，写作时按 direct support、方法 provenance、数据来源、比较语境和背景分配引用角色。
+
+Zotero 示例：
+
+```powershell
+$env:ZOTERO_LIBRARY_ID="your_zotero_library_id"
+$env:ZOTERO_LIBRARY_TYPE="user"
+$env:ZOTERO_API_KEY="your_zotero_api_key"
+draftpaper list-zotero-collections
+draftpaper search-literature --project <project> --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
+```
+
+citation audit 位于最终章节和作者补全之后、独立盲评之前。它逐条比较正文 claim、BibTeX metadata、citation evidence、passage、数值、否定和因果方向，指出支撑弱、位置不合适或表述过强的引用。修复优先收紧或重写正文，并保留人工确认的参考文献与 reference coverage。
+
+`review-results-with-discipline-rules` 读取 Results、figure/plugin trace、run output、evidence ID 和复合学科规则，检查指标陈述、样本边界、baseline、ablation、统计量纲、不确定性、拟合/分类标准和图表解释。语义问题进入局部 Results 修订；真实能力缺口回到 result-support 路线。
+
+<!-- capability:completion_audit_and_readme_framework -->
+<!-- capability-meta: id=completion_audit_and_readme_framework; status=implemented; since=0.32 -->
+最终稿通过 citation audit 后生成冻结的匿名单稿审查包，由两位相互独立的 reviewer 分别检查科学正确性、证据充分性、结构、表达、图表、引用和复现材料。两份报告绑定同一个 manuscript/evidence/bundle hash；critical 或 major finding 进入修订和复审，最终确认绑定最新报告和编译 PDF。
+<!-- /capability:completion_audit_and_readme_framework -->
+
+## 最终稿补全、定点修订与发布
+
+一个 `manuscript_completion.yaml` 可以一次补充作者、单位、ORCID、通讯作者、基金、致谢、关键词、短标题、数据/代码可用性、用户确认的新文献和多处章节修订。
 
 <!-- capability:stable_locator -->
-行号只用于提示；稳定 `paragraph_id`、原文和 SHA-256 才是写入校验。
+<!-- capability-meta: id=stable_locator; status=implemented; since=0.30 -->
+LaTeX 行号用于用户定位提示；实际写入同时校验稳定 `paragraph_id`、expected text、occurrence 和 SHA-256。章节重排后可以重新定位，歧义、重复目标或 stale hash 会让整个 packet 回到预览。
 <!-- /capability:stable_locator -->
 
-系统先生成统一 diff 与候选 PDF，用户接受后才原子写入。发布顺序是作者补全 → 最终 citation audit → 两位独立盲评 → release hash 确认。
+<!-- capability:completion_change_classification -->
+<!-- capability-meta: id=completion_change_classification; status=implemented; since=0.32 -->
+preview 同时展示用户声明的 change class、系统推断类别、candidate evidence refs 和精确 stale 范围。作者信息、致谢和纯文字润色保持在下游；新增数据来源、已执行方法、科学指标、claim 或图表解释依据当前 evidence refs 重开相应科研或写作阶段。
+<!-- /capability:completion_change_classification -->
+
+<!-- capability:manuscript_completion_transaction -->
+<!-- capability-meta: id=manuscript_completion_transaction; status=implemented; since=0.30 -->
+补全流程先生成统一 diff、候选 LaTeX 和候选 PDF；用户接受后原子 apply。Apply 重新核验 packet、project revision、source map、evidence snapshot 和 before hash，并写入 rollback receipt 与 exact-text user lock。
+<!-- /capability:manuscript_completion_transaction -->
 
 ```powershell
 draftpaper prepare-manuscript-completion --project <project>
@@ -96,295 +291,77 @@ draftpaper review-final-manuscript --project <project>
 draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
 ```
 
-完整定位、预览、回滚和发布顺序见[最终论文信息补全与精确修订](docs/manuscript_completion.zh-CN.md)。
+发布顺序为：作者补全与定点修订 → 最终 citation audit → 两位独立盲评 → 完整性与编译验证 → release hash 确认。完整格式见[最终论文信息补全与精确修订](docs/manuscript_completion.zh-CN.md)。
 
-## 功能概览
+## 安装、Agent 与日常操作
 
-- 将单篇论文组织为一个本地项目目录和可重复执行的阶段。
-- 在正文写作前确认研究蓝图和可执行的科学证据。
-- 检索文献并保留 BibTeX、citation evidence、笔记和单篇摘要。
-- 根据当前证据规划数据、方法、图表和结果支撑路线。
-- 在 Results 写作前执行方法验证和结果有效性检查。
-- 从已确认的图表、论断、引用和章节证据生成论文正文。
-- 对 stale 产物、完整性失败、审稿意见和作者修订提供确定性回退。
-- 通过最终引用审计、盲审和 release 检查后生成可追溯的 `main.pdf`。
+### 安装档位
 
-## Loop 模型
+<!-- capability:minimal_install_cost_risk_release -->
+<!-- capability-meta: id=minimal_install_cost_risk_release; status=implemented; since=0.31 -->
+- `pip install -e .`：minimal 控制面、项目状态、参考文献和基础 PDF/图像检查。
+- `pip install -e ".[plotting]"`：真实论文常用的 NumPy、pandas、Matplotlib 等绘图与分析入口。
+- `pip install -e ".[fulltext]"`：增强 PDF/全文提取。
+- `pip install -e ".[mcp]"`：本地 stdio MCP。
+- `draftpaper doctor --json`：识别当前档位、缺失模块和恢复命令。
+- `draftpaper token-report --project <project>`：汇总已有 token/cost receipt。
+<!-- /capability:minimal_install_cost_risk_release -->
 
-Draftpaper-loop 的外层逻辑是：
+复杂图表后端使用 `.[plotting-full]`。日常任务优先让 Agent 读取 `status` 并调用 `run-pipeline`；调试和恢复常用：
+
+```powershell
+draftpaper status --project <project>
+draftpaper doctor --project <project> --explain
+draftpaper run-pipeline --project <project>
+draftpaper detect-artifact-drift --project <project>
+draftpaper sync-artifact-stale --project <project>
+draftpaper diagnose-gate-failures --project <project>
+draftpaper run-integrity-gate --project <project>
+draftpaper audit-citations --project <project> --final
+draftpaper assess-publication-readiness --project <project>
+```
+
+Python API 提供与 CLI 相同的证据语义入口，包括 `resolve_result_evidence`、`build_scientific_evidence_registry`、`validate_figure_semantics`、`create_evidence_snapshot` 和 `submit_section_draft`。MCP 是 CommandSpec/CLI handler 的受控投影，用于本地 Agent 集成。
+
+<!-- capability:command_schema_quality_contracts -->
+<!-- capability-meta: id=command_schema_quality_contracts; status=implemented; since=0.31 -->
+CommandSpec、schema registry 和质量合同构成统一命令控制面，声明风险、输入、输出、写入范围、联网行为和人工检查点。自动生成的参考文档来自同一 registry，README 只保留用户常用路径。
+<!-- /capability:command_schema_quality_contracts -->
+
+| 需要了解的内容 | 文档 |
+|---|---|
+| 命令、参数、输入输出和风险 | [CLI 命令参考](docs/cli_reference.md) |
+| minimal、plotting、fulltext、MCP | [安装档位说明](docs/install_profiles.zh-CN.md) |
+| 写入、联网和人工确认边界 | [命令风险矩阵](docs/command_risk_matrix.md) |
+| 项目 token 与费用 receipt | [Token 与费用报告](docs/token_cost_reporting.zh-CN.md) |
+| 最终作者补全和段落定位 | [最终论文补全指南](docs/manuscript_completion.zh-CN.md) |
+| DPL schema、项目状态和 artifacts | [DPL Schema](docs/DPL_SCHEMA.md) |
+
+## 项目目录、证据合同与工程边界
 
 ```text
-观察项目状态
-  -> 判断下一步安全行动
-  -> 执行阶段命令
-  -> 验证产物和 gate
-  -> 记录 artifact、hash 和决策
-  -> 当输入变化时标记下游阶段 stale
-  -> 诊断失败并回退修订
-  -> 重复直到初稿可审阅
+draftpaper_cli/                    核心 Python package、CLI、状态与证据合同
+draftpaper_cli/discipline_modules/ data connectors、method templates、review rules
+draftpaper_cli/_vendor/            wheel 内运行时后备
+codex_skills/draftpaper-workflow/  Codex workflow skill 与 Agent 合同
+docs/                              使用指南、schema、审计和自动生成参考
+tests/                             单元、对抗、wheel、跨平台和发布回归
+third_party/                       上游快照、来源指针、许可证和 provenance
+projects/                          本地论文项目，默认由 git 忽略
 ```
 
-确定性约束由 CLI 处理，例如 BibTeX 引用存在性、citation evidence 可追溯性、Results 禁止引用、结果 claim 必须绑定真实图表、stage stale 传播和 artifact hash 检测。开放性任务，例如研究计划、方法设计、图表规划和 revision 判断，可以由 Codex 或其他 Agent 辅助，但 Agent 应该调用同一套本地 loop，而不是绕过项目状态直接写文件。
+单篇项目中，数据收集、清洗和 cohort 构建代码归 `data/`；模型、统计、验证和制图代码归 `methods/`；`results/` 保存图表、表格和 metadata；`writing/`、`citation_audit/`、`review/` 和 `latex/` 保存正文、核查、审稿和最终 PDF。大型数据集可以保留在原位置，通过私有 locator、只读指纹和 manifest 连接，流程产物继续归属论文项目。
 
-## 核心特性
+每个写入命令在执行前后核对声明写集，并通过 state revision、项目锁、artifact hash 和 transaction receipt 保护项目。MCP capability token、程序白名单、路径限制、网络策略和日志脱敏用于约束应用层行为。公网多租户隔离、账号系统和托管计费属于独立产品工程边界。
 
-- 本地优先的单篇论文项目、stage manifest 和 artifact hash。
-- 统一声明式命令注册表覆盖 orchestrator、checkpoint、恢复和审稿行动。
-- Evidence-first 写作绑定 Results、claims、图表、表格、引用和章节上下文。
-- Data feasibility、方法执行、结果有效性、integrity 和 citation hard gate。
-- 科研能力包与 project-local rescue 路线具有明确所有权和 provenance。
-- 稳定段落与 LaTeX 定位支持作者修改的预览、应用和回滚。
-- 最终 citation audit、两位独立盲审和一个 release hash 确认门。
-- `doctor` 选择 minimal、plotting、fulltext 和 MCP 安装档位。
-- token/cost receipt 与命令风险、写入集合、确认合同公开运行边界。
-- 跨学科 fixture 验证流程合同，不把 fixture 当作真实科研结果。
-- 可选本地 PDF 编译和确定性的 stale 传播。
-- Codex 只是本地 Python package 与 CLI 之上的调用层。
-## 项目结构
-
-```text
-draftpaper_cli/                   # 核心 Python package 和 CLI
-draftpaper_cli/discipline_modules # 已注册的数据、方法和审稿规则插件
-draftpaper_cli/_vendor/           # 可随 wheel 安装的运行时后备
-codex_skills/draftpaper-workflow  # 可选 Codex skill wrapper
-docs/                             # 工作流、合同、自动生成参考与审计文档
-tests/                            # 单元测试和发布合同测试
-third_party/                      # 上游快照、来源指针和许可证说明
-third_party/registry.json         # 借鉴、内化或派生影响的递归 provenance
-```
-
-生成的单篇论文项目采用阶段归属代码结构：`data/scripts/` 保存数据收集、API/服务器 manifest、预处理和清洗代码；`methods/scripts/` 与 `methods/src/` 保存模型、统计、空间分析、验证和科研绘图代码；`results/` 只保存已经生成的图表、表格和 metadata。旧版 `code/` 目录保留为兼容 launcher 和共享 runtime 过渡层。
-
-生成的论文项目通常位于本地 `projects/` 下，并默认不提交到 git，避免上传研究数据、生成草稿、全文文献缓存和结果图表。
-
-## 快速开始
-
-### Minimal-first installation
-
-PowerShell:
+运行基础验证：
 
 ```powershell
-git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
-cd Draftpaper_loop
-py -3 -m venv .venv
-.\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e .
-.\.venv\Scripts\draftpaper doctor --json
-```
-
-bash/macOS/Linux:
-
-```bash
-git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
-cd Draftpaper_loop
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e .
-draftpaper doctor --json
-```
-### 教程
-
-基础教学视频：[Bilibili](https://www.bilibili.com/video/BV1LKjS6gEh4/?spm_id_from=333.1387.homepage.video_card.click&vd_source=463ffa8de6f1dbe750355ef3225fa45a)
-
-### 通过 Codex 使用
-
-推荐方式是让 Codex 读取本仓库并替你调用 Draftpaper-loop CLI。克隆仓库后，在 Codex 中指向仓库目录，然后用自然语言提出任务，例如：
-
-```text
-使用 <repo> 中的 Draftpaper-loop，为这个 idea 创建论文项目，检索文献，写 research plan，并告诉我当前 loop 卡在哪个阶段。
-```
-
-Codex 应先调用 orchestrator：
-
-```powershell
-python -m draftpaper_cli.cli status --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-pipeline --project <repo>\projects\your_project
-python -m draftpaper_cli.cli detect-artifact-drift --project <repo>\projects\your_project
-python -m draftpaper_cli.cli sync-artifact-stale --project <repo>\projects\your_project
-python -m draftpaper_cli.cli run-integrity-gate --project <repo>\projects\your_project
-python -m draftpaper_cli.cli audit-citations --project <repo>\projects\your_project --final
-python -m draftpaper_cli.cli generate-citation-repair-plan --project <repo>\projects\your_project
-python -m draftpaper_cli.cli apply-citation-repair --project <repo>\projects\your_project
-python -m draftpaper_cli.cli re-audit-citations --project <repo>\projects\your_project
-python -m draftpaper_cli.cli diagnose-gate-failures --project <repo>\projects\your_project
-python -m draftpaper_cli.cli assess-publication-readiness --project <repo>\projects\your_project
-python -m draftpaper_cli.cli discover-review-workflow-gaps --project <repo>\projects\your_project
-python -m draftpaper_cli.cli propose-review-engineering-plan --project <repo>\projects\your_project
-python -m draftpaper_cli.cli recommend-statistical-revision --project <repo>\projects\your_project
-```
-
-### 本地一键安装
-
-```powershell
-powershell -ExecutionPolicy Bypass -Command "git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git; cd Draftpaper_loop; py -3 -m venv .venv; .\.venv\Scripts\python -m pip install -U pip; .\.venv\Scripts\python -m pip install -e .[plotting]; .\.venv\Scripts\draftpaper --help"
-```
-
-minimal 与 plotting 安装已经包含 `draftpaper_cli/_vendor/` 下的 paper-fetch 后备；`third_party/` 用于保留上游快照和来源记录，不再作为必需运行时安装路径。需要增强全文抽取时安装独立档位：
-
-```powershell
-.\.venv\Scripts\python -m pip install -e ".[fulltext]"
-```
-
-底层 CLI 示例：
-
-```powershell
-.\.venv\Scripts\draftpaper create-project --idea "Your research idea" --field "machine learning astronomy" --target-journal APJS
-.\.venv\Scripts\draftpaper status --project .\projects\your_project
-.\.venv\Scripts\draftpaper run-pipeline --project .\projects\your_project
-.\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --query "topic keywords"
-.\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage data --kind agent_analysis --text "Codex 已展示给用户的数据分析摘要..."
-.\.venv\Scripts\draftpaper list-zotero-collections
-.\.venv\Scripts\draftpaper search-literature --project .\projects\your_project --zotero-collection "Your Zotero Collection" --zotero-context all
-.\.venv\Scripts\draftpaper prepare-method-blueprint --project .\projects\your_project
-.\.venv\Scripts\draftpaper plan-figures --project .\projects\your_project
-.\.venv\Scripts\draftpaper generate-analysis-code --project .\projects\your_project
-.\.venv\Scripts\draftpaper diagnose-figure-execution --project .\projects\your_project
-.\.venv\Scripts\draftpaper repair-figure-data --project .\projects\your_project
-.\.venv\Scripts\draftpaper repair-figure-method --project .\projects\your_project
-.\.venv\Scripts\draftpaper assess-result-validity --project .\projects\your_project
-.\.venv\Scripts\draftpaper assess-core-evidence --project .\projects\your_project
-.\.venv\Scripts\draftpaper checkpoint --project .\projects\your_project --stage core_evidence --note "User approved core figures and evidence"
-.\.venv\Scripts\draftpaper inventory-results --project .\projects\your_project
-.\.venv\Scripts\draftpaper write-results --project .\projects\your_project
-.\.venv\Scripts\draftpaper write-introduction --project .\projects\your_project
-.\.venv\Scripts\draftpaper build-data-context --project .\projects\your_project
-.\.venv\Scripts\draftpaper write-data --project .\projects\your_project
-.\.venv\Scripts\draftpaper record-observation --project .\projects\your_project --stage methods --kind method_rationale --text "Codex 已展示给用户的方法设计摘要..."
-.\.venv\Scripts\draftpaper build-method-context --project .\projects\your_project
-.\.venv\Scripts\draftpaper write-methods --project .\projects\your_project
-.\.venv\Scripts\draftpaper write-discussion --project .\projects\your_project
-.\.venv\Scripts\draftpaper validate-project --project .\projects\your_project
-```
-
-运行测试：
-
-```powershell
+python tools/validate_capability_truth_matrix.py
+python -m pytest tests/test_capability_truth_matrix.py
 python -m pytest
+python -m build
 ```
-
-`python -m pip install -e .` 只安装不含 NumPy、pandas 和 Matplotlib 的 minimal 控制面。真实论文项目应安装 `.[plotting]`；只有需要增强全文解析或本地 MCP 时再加入 `.[fulltext]` 和 `.[mcp]`。`draftpaper doctor --json` 会报告各档位、缺失模块和准确恢复命令。完整 minimal/plotting/fulltext/MCP 矩阵见[安装档位说明](docs/install_profiles.zh-CN.md)，复杂图表后端使用 `.[plotting-full]`。
-
-### 通过 Codex 调用 Zotero collection
-
-Draftpaper-loop 可以在文献检索阶段读取指定 Zotero collection 中的参考文献。先在同一个 PowerShell 或 Codex terminal session 中配置环境变量：
-
-```powershell
-$env:ZOTERO_LIBRARY_ID="your_zotero_library_id"
-$env:ZOTERO_LIBRARY_TYPE="user"   # 或 "group"
-$env:ZOTERO_API_KEY="your_zotero_api_key"
-```
-
-然后可以让 Codex 调用 loop，或直接运行：
-
-```powershell
-python -m draftpaper_cli.cli list-zotero-collections
-python -m draftpaper_cli.cli search-literature --project <repo>\projects\your_project --zotero-collection "My Paper References" --zotero-context all --zotero-min-items 20
-```
-
-`list-zotero-collections` 只返回 collection 名称和 key，不会输出 API key。`search-literature --zotero-collection` 只读取用户指定的 collection，并写入 `references/zotero_collection_manifest.json`。从 Zotero 导入的文献会被视为用户精选证据：即使缺少 abstract/PDF、不满足近年文献偏好，或超过外部检索默认 30 篇 ranking 上限，也会完整保留。系统仍会把这些文献写入与检索文献相同的输出，包括 `references/library.bib`、`references/literature_items.json`、`references/citation_evidence.csv`、`references/literature_review_notes.html`、每篇文献的 HTML summary，以及 `references/literature_summaries/index.html`。这部分文献会标记 `source=zotero_collection`、`reference_origin=existing_zotero` 和 `selection_policy=zotero_collection_preserved`，方便后续审阅时区分 Zotero 精选文献和外部检索排名文献。如果该 collection 中可用文献少于 `--zotero-min-items`，系统会按 MVP 的 Zotero-first 逻辑用免费外部检索补充，除非显式使用 `--no-zotero-supplement`。在 Codex 对话中可以这样说：“调用 Draftpaper-loop，先列出我的 Zotero collections，然后用 `My Paper References` 这个 collection 为当前项目检索文献。”
-
-## 当前实现状态
-
-| 能力 ID | 状态 / Since | 证据 | 边界 |
-|---|---|---|---|
-| `scientific_gates_and_artifact_dag` | implemented / 0.30 | `draftpaper_cli/change_impact.py`、`tests/test_change_impact.py`、`integrity_ledger.jsonl` | 运行时 stale 传播仍由 change-impact 和 artifact-DAG 合同负责。 |
-| `manuscript_completion_transaction` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`、`tests/test_v0306_completion_transaction.py`、`writing/manuscript_completion/packets/<packet_id>/preview.diff` | Completion packet 只补全作者输入，不替代科学证据。 |
-| `command_schema_quality_contracts` | implemented / 0.31 | `draftpaper_cli/command_registry.py`、`tests/test_v0314_single_command_control_plane.py`、`docs/cli_reference.md` | 自动生成的 reference 仍是完整命令清单。 |
-| `minimal_install_cost_risk_release` | implemented / 0.31 | `draftpaper_cli/install_profiles.py`、`tests/test_v0316_install_profiles.py`、`token_ledger.jsonl` | 缺少价格 receipt 时不推测费用；optional extra 由 doctor 选择。 |
-| `completion_audit_and_readme_framework` | implemented / 0.32 | `draftpaper_cli/final_manuscript_confirmation.py`、`tests/test_v0320_release_completion.py`、`review/final_manuscript_confirmation.json` | Fixture 验证流程合同，不代表科研结论。 |
-| `result_support_two_routes` | implemented / 0.18 | `draftpaper_cli/result_support.py`、`tests/test_result_support.py`、`results/result_support_checkpoint.json` | 当前按整单 checkpoint 选择一条路线，多 claim 分治属于后续工作。 |
-| `stable_locator` | implemented / 0.30 | `draftpaper_cli/manuscript_completion.py`、`tests/test_v0305_completion_locators.py`、`writing/manuscript_completion/packets/<packet_id>/preview.diff` | 定位歧义、重复目标或 stale hash 会拒绝整份 packet。 |
-| `completion_change_classification` | implemented / 0.32 | `draftpaper_cli/completion_change_classifier.py`、`tests/test_v0322_completion_change_classification.py`、`writing/manuscript_completion/packets/<packet_id>/change_stale_report.json` | v0.33.0 默认 strict；已执行的 Data/Methods 细节需要当前 evidence refs。 |
-| `result_support_checkpoint_v3` | implemented / 0.32 | `draftpaper_cli/result_support_signals.py`、`tests/test_result_support_signals.py`、`results/result_support_checkpoint.json` | 当前整单 checkpoint 选择一条路线；post-Results 证据问题回流到同一 checkpoint。 |
-
-当前版本已经包含核心 loop primitives：orchestrator、checkpoint/resume、artifact drift 检测、文献检索、期刊模板解析、research plan、claim contract、数据获取规划、data inventory 和 feasibility、method plan、figure plan、figure-plan-driven analysis code generation、method verification、result validity、result support checkpoint、claim downgrade/rescue route planning、core evidence、result inventory、Results 写作与中文结果摘要、Introduction、Data writing context、Data 写作、Methods writing context、Methods 写作、Discussion、LaTeX assembly、PDF compilation、integrity gate、citation audit and repair、review/revision routing、publication readiness assessment、statistical rescue planning 和 final quality check。也就是说，论文正文写作默认后置到核心图表和结果证据通过之后执行；如果结果只支持较弱结论，流程会先要求用户选择 claim 降维或数据/方法补强路线。
-
-v0.33.0 的统一控制面通过一份 `CommandSpec` 清单注册 210 条公开命令，科研 hard gate 的失败状态统一返回非零退出码。集中式抓取、执行、写集与 MCP 策略负责保护项目边界，一套 change taxonomy 与 artifact DAG 负责精确 stale 传播。科研与写作链通过后，最终作者补全流程可在一个 packet 中收集投稿 metadata、用户确认文献和受边界保护的段落修改，先预览统一 diff 与候选 PDF，再原子应用并记录 rollback 和 exact-text lock。最终确认会把 completion manifest、权威章节、参考文献库、promoted evidence、citation audit、两份独立审稿报告和编译 PDF 绑定到同一个 release hash。
-
-每个项目都有 `project_passport.yaml`，以及 append-only 的 `artifact_ledger.jsonl`、`checkpoint_ledger.jsonl` 和 `integrity_ledger.jsonl`。这些文件记录项目 artifact、hash、用户确认点和完整性事件，方便跨电脑迁移和后续审计。
-
-`plan-figures` 会观察当前 idea、research plan、target journal、data inventory、method requirements、literature metadata 和用户已经提供的本地图表，生成 `results/figure_plan.json` 与 `results/figure_plan.html`。使用 `--use-review-tasks` 时，它会把 executable/partial 的审稿救援任务转成修订图表计划，同时跳过 blocked 任务。`generate-analysis-code` 只根据这份 figure plan 生成代码，不再固定输出某几张通用流程图；使用 `--use-review-tasks` 时还会输出 `results/tables/review_task_coverage.csv` 和 `results/tables/review_task_metrics.csv`，用于记录清洗/QC、特征重构、baseline/ablation 和验证覆盖情况。如果原始数据在服务器/API/云端，或由于隐私和体量无法下载到本地，可以只提供本地处理后表格、结果图或结果表，再通过 `inventory-results` 和 `write-results` 继续写作，但 claim 必须限制在这些可访问 artifact 支持的范围内。
-
-`record-observation` 用于把 Codex 已经展示给用户的阶段性分析摘要保存到 `observations/observations.jsonl`，不会保存隐藏推理链。`build-data-context` 和 `build-method-context` 会把这些 observation、数据清单、可行性门、方法计划和验证结果合成为面向论文写作的 context。`write-data` 和 `write-methods` 只根据这些 context 写作，因此 Data 和 Methods 会描述数据来源、数据内容、变量组、处理流程、方法设计、验证和 claim boundary，而不是把本地文件名、路径、命令或 manifest 字段写进论文。
-
-`write-results` 现在会在结果正文中通过 LaTeX 标签显式指向对应图表，例如 `Figure~\ref{...}` 和 `Table~\ref{...}`。内部 loop 术语、本地路径约束、gate 名称、manifest 信息和项目管理式措辞不会写入论文正文，而是保留在日志、报告或致谢中。`assemble-latex` 会在参考文献之前默认加入致谢，说明 Draftpaper-loop 参与了分阶段文献组织、分析可追溯性、图表清单和论文初稿生成。
-
-主图生成现在采用“严格合同 + 修复优先”的执行逻辑。`plan-figures` 会把 research plan 中的 figure storyboard 写成 `results/figure_contracts.json`，并通过 `results/storyboard_alignment_report.json` 检查后续图表是否仍然对应原始研究计划。验证图、流程图和辅助诊断图可以保留为 supporting figures，但不能静默替代研究计划中要求的主结果图。`generate-analysis-code` 会额外输出 `results/figure_execution_diagnosis.json` 和 `.html`；如果某张主图无法生成，系统会优先判断是缺少数据还是缺少方法代码，然后推荐 `repair-figure-data` 或 `repair-figure-method`。前者会尝试沿用已有数据获取流程、公开数据库/API、远端服务器流程或用户补充 artifact；后者会尝试利用学科插件、项目已有代码、公开科研代码仓库、文献实现仓库或 Codex 生成的项目专属方法代码。只有这些自动修复仍无法产出核心图表时，才进入 `assess-core-evidence` 的人工确认阶段。
-
-`verify-methods` 现在可以直接读取 `methods/method_code_manifest.json`，优先使用其中的 `verify_command_argv`、声明输出和输入数据完成方法验证，不再要求用户手动复制长命令和所有 `--output`。方法验证会写入 `methods/run_manifest.yaml`，并检查声明输出、主图合同、figure metadata 和 review task coverage；只要这些 hard gate 失败，CLI 就返回非零退出码，后续写作阶段不会把失败的方法或空图当成有效结果。
-
-## 公开科研代码挖掘
-
-Draftpaper-loop 现在可以在写入任何插件代码之前，从公开科研代码仓库元数据中生成候选报告。这个流程用于辅助学科模块建设，不是代码搬运工具。最小链路如下：
-
-```powershell
-python -m draftpaper_cli.cli discover-research-repos --output-root .\mining --discipline geography --query "remote sensing raster workflow" --from-json .\repo_candidates.json
-python -m draftpaper_cli.cli score-research-repos --input .\mining\research_code_mining\geography_repo_candidates.json --output-root .\mining
-python -m draftpaper_cli.cli extract-plugin-candidates --input .\mining\research_code_mining\geography_scored_repos.json --output-root .\mining --top-n 5
-python -m draftpaper_cli.cli inspect-research-repo --candidate .\mining\research_code_mining\plugin_candidates\geography\<candidate> --local-repo .\local_checkout --output-root .\mining --mode tree_docs
-python -m draftpaper_cli.cli map-repository-workflow --inspection .\mining\research_code_mining\inspections\<candidate>\repository_structure.json --output-root .\mining
-python -m draftpaper_cli.cli bootstrap-discipline-foundation --workflow-map .\mining\research_code_mining\workflow_maps\<candidate>\workflow_map.json --output-root .\mining
-```
-
-生成报告会记录仓库元数据、许可证策略、可复现性信号、工作流信号、文件树角色、候选通用能力和学科基座建议。该流程不会 clone 仓库、不会复制源码目录、不会直接安装第三方代码；后续如果要沉淀为 Draftpaper-loop 插件，仍然需要经过人工/Codex 审阅、隐私检查、许可证检查、fixture 测试和 overlap 检查。
-
-`audit-citations`、`generate-citation-repair-plan`、`apply-citation-repair`、`re-audit-citations` 和 `run-citation-repair-loop` 新增一个独立的引用核查与修复 loop，位于 integrity gate 之后、final quality check 之前。该 loop 会把论文正文中的每一次引用与 BibTeX 元数据和 `references/citation_evidence.csv` 进行 claim-level 对比，检查参考文献来源是否真实存在、是否支持当前论断，或至少在语义上与当前论断相近。它同时强制执行 reference coverage：所有保留在 `references/literature_summaries/` 中的文献都会被写入 `references/reference_usage_plan.json`，并且必须在 Results 之外的正文中至少引用一次。引用核查不是参考文献质量过滤器；参考文献质量应该在文献检索和人工确认阶段完成。进入引用核查后，系统会保留已确认文献，并通过收窄、改写或补充正文 claim，让每一处引用更加真实、贴切、合理，而不是在核查阶段删减参考文献。最终引用核查报告会合并 claim-level audit 和 `citation_audit/reference_coverage_report.html` 的内容，同时显示引用使用次数、去重后的被引文献数量、summary 文献总数、summary 中存在但正文未引用的文献，以及主题存疑文献。中间迭代审查报告会保存到 `citation_audit/iterations/`，只有严格通过后才会生成 `citation_audit/final_citation_audit_report.html`。如果引用审查失败，`status` 和 `run-pipeline` 会推荐进入 citation repair loop，而不是继续盲目执行 `quality-check`；同时 `quality-check` 也会要求 `citation_audit/final_citation_audit_report.json` 的 `status=passed`，避免用户直接跳过来源核查和 reference coverage 核查。
-
-## 第三方 skills 集成
-
-本仓库将 [`Dictation354/paper-fetch-skill`](https://github.com/Dictation354/paper-fetch-skill) vendored 到 `third_party/paper-fetch-skill`，并把可运行 fallback source 打包到 `draftpaper_cli/_vendor/paper_fetch_skill`。adapter 会优先使用 `PATH` 中的 `paper-fetch` 命令；如果不可用，则可使用包内 vendored runtime source。需要更完整的全文/PDF 解析能力时，可安装 `.[fulltext]` optional extra。
-
-第三方 runtime 使用 MIT License，二次分发时请保留其 license notice。
-
-第三方科研 skills、个人项目中沉淀出的 skills，或 AcademicForge 这类外部 skill catalog，可以先通过 metadata-only 流程转换为 Draftpaper-loop 的候选插件报告。该流程只读取文件名、摘要、依赖、输入输出、artifact 类型、关键词和结构化描述，不复制第三方 `SKILL.md` 全文、源码、论文 PDF、私有数据、账号凭证或本地路径。
-
-推荐链路如下：
-
-```powershell
-python -m draftpaper_cli.cli snapshot-skill-source --source-root .\external_skills --output-root .\plugin_mining
-python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\SNAPSHOT.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli index-skill-source --inspection .\plugin_mining\SKILL_SOURCE_INSPECTION.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli map-skill-capabilities --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-python -m draftpaper_cli.cli compile-skill-source --index .\plugin_mining\SKILL_INDEX.json --output-root .\plugin_mining
-```
-
-如果接入 AcademicForge 这类 registry，可以从 registry 元数据开始，而不是复制上游 skill 文件：
-
-```powershell
-python -m draftpaper_cli.cli snapshot-skill-source --source academicforge --repo HughYau/AcademicForge --ref site-first --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli inspect-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli index-skill-source --snapshot .\plugin_mining\academicforge\SNAPSHOT.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli classify-skill-source --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
-python -m draftpaper_cli.cli extract-review-rule-signals --index .\plugin_mining\academicforge\SKILL_INDEX.json --output-root .\plugin_mining\academicforge
-```
-
-该流程会在输出目录下生成派生 metadata profiles，并记录 `ACADEMICFORGE_REGISTRY_ADAPTER.json`。这些 profile 只来自 registry 中的 id、summary、tags、repository、license 和 install metadata，不复制上游 `SKILL.md` 正文或源码。
-
-在 GitHub metadata 可访问时，adapter 会先把请求的分支或 tag 解析为 immutable commit，再把集合级 `skill_count` 声明与 AcademicForge 的公开分类 metadata 对齐。所有声明的子 skill 都必须进入 snapshot ledger：已有分类 metadata 的条目生成详细 profile，只有集合声明但缺少明细的条目则显式标记为 `requires_source_inspection` placeholder。报告会写出 `declared_skill_count`、`expanded_skill_count`、`placeholder_skill_count` 和 `silent_loss_count`，避免把顶层集合数量误当成完整 skill 覆盖。
-
-正式学科模块只接收三类可 promote 的子插件：`data_connector`、`method_template` 和 `review_rule`。`workflow_recipe`、`paper_contract` 和 `shared_capability` 会作为支撑层候选保留，不直接写入 `discipline_modules/<discipline>/`；但其中关于统计检验、模型 baseline/ablation、split/leakage、图表-论断一致性、引用支撑、data/code availability 和可复现性的可验证条件，会通过 `review_rule_signal_scan` 回流为学科化 `review_rule_candidate`。
-
-如果只想先审计这些回流信号，可以单独运行 `extract-review-rule-signals`。它会扫描所有 skill/source 记录，包括 workflow、paper contract 和 shared capability，输出 `REVIEW_RULE_SIGNAL_REPORT.json` / `.md`，但不会把任何内容 promote 到正式学科模块。
-
-`review_rule` 不是普通审稿意见文本，而是证据绑定的科研质量门。每条规则必须声明适用学科、方法族、数据角色、证据角色、阈值来源、失败路由和人工确认状态。F1、AUC、R²、RMSE、MAE、p 值、FDR、样本量、空间分辨率和时间覆盖等阈值，如果没有期刊规范、领域共识、公共 benchmark 或用户确认，默认只能生成 `contextual`、`comparative` 或 `human_confirmed` 规则，不能自动变成全局 fixed threshold。
-
-候选插件进入正式贡献前，应先执行：
-
-```powershell
-python -m draftpaper_cli.cli generalize-plugin-candidate --candidate <candidate_dir>
-python -m draftpaper_cli.cli validate-plugin-candidate --candidate <candidate_dir>
-python -m draftpaper_cli.cli package-plugin-contribution --candidate <candidate_dir>
-python -m draftpaper_cli.cli preflight-plugin-contribution --package <candidate_dir>\contribution_package
-python -m draftpaper_cli.cli review-plugin-contribution --package <candidate_dir>\contribution_package
-python -m draftpaper_cli.cli promote-plugin-candidate --candidate <candidate_dir> --require-human-confirmation
-```
-
-支撑层候选不能直接 package 成正式学科插件，应提交其回流出的正式候选。`review_rule` 在成熟度为 `candidate` 或 `validated` 时不能 promote；只有具备可执行学科 fixture、至少达到 `runnable`、通过验证并得到明确人工确认后，才允许进入正式学科模块。
-
-如果 PR 中包含已经打包的插件贡献，`.github/workflows/plugin-contribution-preflight.yml` 会自动扫描 `contribution_package/candidate_manifest.json`，并对每个 package 运行 `preflight-plugin-contribution`。这样维护者可以审查 metadata、通用模板、fixture、验证报告和 provenance，而不会把第三方源码正文纳入仓库。
 
 ## 贡献者、许可证、商业使用和联系方式
 
@@ -438,6 +415,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 </table>
 
 打赏只支持项目维护，不代表商业授权。
+
+## Star History
+
+Draftpaper-loop 的 GitHub Star 变化：
+
+[![Star History Chart](https://api.star-history.com/svg?repos=xiejhhhhhh/Draftpaper_loop&type=Date)](https://star-history.com/#xiejhhhhhh/Draftpaper_loop&Date)
+
+图表由 [star-history/star-history](https://github.com/star-history/star-history) 提供。
 
 ## 最近更新
 ### v0.33.0（2026-07-19）-- Strict 作者补全与 Hash 绑定 Result Support
