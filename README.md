@@ -420,7 +420,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 Track the growth of Draftpaper-loop on GitHub:
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xiejhhhhhh/Draftpaper_loop&type=Date)](https://star-history.com/#xiejhhhhhh/Draftpaper_loop&Date)
+<a href="https://www.star-history.com/?type=date&repos=xiejhhhhhh%2FDraftpaper_loop">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&theme=dark&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
+ </picture>
+</a>
 
 Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
 
