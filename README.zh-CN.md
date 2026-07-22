@@ -71,6 +71,8 @@ py -3 -m venv .venv
 .\.venv\Scripts\draftpaper doctor --json
 ```
 
+如需让 `draftpaper` 在 Windows 新终端中直接可用，并同步安装内置 Codex workflow skill，请参阅 [Windows 全局安装与新会话验证指南](./docs/windows_global_install_guide.zh-CN.md)。
+
 bash/macOS/Linux：
 
 ```bash

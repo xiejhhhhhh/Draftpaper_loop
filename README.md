@@ -71,6 +71,8 @@ py -3 -m venv .venv
 .\.venv\Scripts\draftpaper doctor --json
 ```
 
+For a Windows PATH-level editable install that works from a fresh terminal, plus installation of the bundled Codex workflow skill, see the [Windows global install guide](./docs/windows_global_install_guide.md).
+
 bash/macOS/Linux:
 
 ```bash
