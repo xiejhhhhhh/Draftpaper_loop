@@ -418,13 +418,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 
 ## Star History
 
-Track the growth of Draftpaper-loop on GitHub:
-
-<a href="https://www.star-history.com/?type=date&repos=xiejhhhhhh%2FDraftpaper_loop">
+<a href="https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&theme=dark&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=9rCxw4YglNFCCGjf8v1eivSHLRf0x-Bu78vJMgPzdU4GBVmgnw1ipgr2sahFCu9AVQ" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&theme=dark&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
  </picture>
 </a>
 
