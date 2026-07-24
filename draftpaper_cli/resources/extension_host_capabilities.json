@@ -1,0 +1,24 @@
+{
+  "schema_version": "dpl.extension_host_capabilities.v1",
+  "core_version": "0.33.0",
+  "abi_family": "dpl.extension",
+  "abi_versions": ["1.0"],
+  "stage_taxonomy_version": "1.0",
+  "artifact_schema_families": {
+    "artifact_dependency_dag": ["v2"],
+    "evidence_snapshot": ["v1"],
+    "figure_manifest": ["v2"],
+    "research_plan": ["v2", "v3"],
+    "stage_receipt": ["v1"]
+  },
+  "capabilities": [
+    "artifact.read_by_role",
+    "artifact.resolve_selector",
+    "extension.failure_isolation",
+    "extension.learning_slot",
+    "extension.read_scoped_token",
+    "workflow.event.artifact_invalidated",
+    "workflow.event.checkpoint_opened",
+    "workflow.event.stage_committed"
+  ]
+}

@@ -58,6 +58,16 @@ def test_version_range_and_capability_negotiation_are_not_patch_pinned() -> None
     assert result.unavailable_optional == ("future.capability",)
 
 
+def test_published_host_capability_document_matches_runtime_contract() -> None:
+    document = json.loads(
+        Path("draftpaper_cli/resources/extension_host_capabilities.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    runtime = build_host_capabilities(core_version=document["core_version"]).to_dict()
+    assert document == runtime
+
+
 def test_missing_required_capability_disables_only_the_extension() -> None:
     manifest = _manifest(required_capabilities=["missing.required"])
     result = negotiate_extension(manifest, build_host_capabilities())
