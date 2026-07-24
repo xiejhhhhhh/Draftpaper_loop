@@ -203,7 +203,7 @@ def test_generated_cli_reference_matches_command_registry() -> None:
 
     assert actual == expected
     assert expected.count("\n| `") == len(COMMAND_SPECS)
-    assert len(COMMAND_SPECS) == 210
+    assert len(COMMAND_SPECS) == 211
     assert "namespace adapter" in expected
     assert "human_checkpoint" in expected
 

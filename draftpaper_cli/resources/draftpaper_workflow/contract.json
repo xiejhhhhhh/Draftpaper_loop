@@ -1,7 +1,7 @@
 {
   "schema_version": "dpl.workflow_skill.v1",
   "skill_id": "draftpaper-workflow",
-  "skill_version": "0.33.0",
+  "skill_version": "0.33.1",
   "canonical_resource": "draftpaper_cli/resources/draftpaper_workflow/SKILL.md",
   "required_control_commands": ["status", "verify-next-action", "continue"],
   "protected_actions": [

@@ -78,6 +78,7 @@ _COMMON_MANAGED_WRITES = (
     "*/stage_manifest.json",
     "stage_manifests/**",
     "project_system_of_record.json",
+    ".draftpaper/extensions/**",
 )
 
 
@@ -399,7 +400,7 @@ summarize-plugin-candidates sync-artifact-stale trace-figures-to-code update-sta
 validate-figure-plugin-trace validate-plugin-candidate validate-project validate-project-version
 validate-template-registry validate-third-party-provenance verify-methods write-data write-discussion
 write-github-contribution-guide write-introduction write-methods write-results
-doctor start continue review recover revise verify-next-action rebuild-derived rebase-project-passport
+doctor start continue extension-doctor review recover revise verify-next-action rebuild-derived rebase-project-passport
 prepare-independent-manuscript-review record-independent-manuscript-review assess-manuscript-quality-release
 build-manuscript-source-map preview-manuscript-revision apply-manuscript-revision rollback-manuscript-revision
 set-manuscript-metadata add-custom-reference import-review-findings list-revision-tasks prepare-revision
@@ -436,6 +437,7 @@ READ_ONLY_COMMANDS = {
     "verify-next-action",
     "rebuild-derived",
     "continue",
+    "extension-doctor",
     "skill-doctor",
     "validate-plugin-contract-diff",
     "audit-workflow-runtime",
@@ -552,6 +554,15 @@ COMMAND_SPECS.update({
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),
     "start": CommandSpec("start", "state_kernel", True, "state", "workflow_macros", "start_workflow", (("root", "root"), ("idea", "idea"), ("field", "field"), ("target_journal", "target_journal"))),
     "continue": CommandSpec("continue", "state_kernel", False, "state", "workflow_macros", "continue_workflow", (("project", "project"),)),
+    "extension-doctor": CommandSpec(
+        "extension-doctor",
+        "state_kernel",
+        False,
+        "state",
+        "extensions.status_projection",
+        "extension_status",
+        (("project", "project"),),
+    ),
     "review": CommandSpec("review", "release_coordinator", False, "quality_checks", "workflow_macros", "review_workflow", (("project", "project"),)),
     "recover": CommandSpec("recover", "state_kernel", False, "state", "workflow_macros", "recover_workflow", (("project", "project"),)),
     "rebase-project-passport": CommandSpec("rebase-project-passport", "state_kernel", True, "state", "workflow_macros", "rebase_project_passport", (("project", "project"), ("origin", "origin"), ("confirm", "confirm")), protected_action=True, manual_only=True),
@@ -728,6 +739,7 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
                 continue
             if isinstance(payload, dict):
                 payload["_dpl_output_stream"] = output_stream
+                _dispatch_extensions_nonblocking(args, spec, payload, exit_code)
                 return payload, exit_code
         raise TypeError(f"Namespace handler for {spec.name} did not emit a JSON object payload.")
     kwargs = {parameter: getattr(args, attribute, None) for parameter, attribute in spec.argument_bindings}
@@ -744,4 +756,23 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         exit_code = 0 if payload.get("status") == "passed" else 1
     else:
         exit_code = 0
+    _dispatch_extensions_nonblocking(args, spec, payload, exit_code)
     return payload, exit_code
+
+
+def _dispatch_extensions_nonblocking(args: Any, spec: CommandSpec, payload: dict[str, Any], exit_code: int) -> None:
+    """Emit extension events after successful project mutations without changing command outcome."""
+
+    project = getattr(args, "project", None) or payload.get("project_path")
+    if exit_code != 0 or not spec.mutates_project or not project:
+        return
+    try:
+        from .extensions.dispatcher import dispatch_workflow_event
+        from .extensions.events import emit_command_event
+
+        event = emit_command_event(project, command=spec.name, formal_stage=spec.formal_stage, result=payload)
+        dispatch_workflow_event(project, event)
+    except Exception:
+        # Optional extension infrastructure is deliberately isolated from the
+        # authoritative scientific command transaction.
+        return

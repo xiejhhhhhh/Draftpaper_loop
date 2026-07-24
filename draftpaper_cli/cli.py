@@ -336,6 +336,14 @@ def build_parser() -> argparse.ArgumentParser:
     status = subparsers.add_parser("status", help="Report orchestrated pipeline status and next action.")
     status.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    extension_doctor = subparsers.add_parser(
+        "extension-doctor",
+        help="Report installed extension compatibility and non-blocking event receipts.",
+    )
+    extension_doctor.add_argument(
+        "--project", required=True, help="Path to a project directory or project.json."
+    )
+
     checkpoint = subparsers.add_parser("checkpoint", help="Create an explicit user-confirmation checkpoint.")
     checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     checkpoint.add_argument("--stage", required=True, help="Stage being checkpointed.")
