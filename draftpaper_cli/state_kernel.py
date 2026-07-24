@@ -38,10 +38,12 @@ def _lock_windows_byte(handle, *, timeout_seconds: float = 60.0) -> None:
     import errno
     import msvcrt
 
+    locking = getattr(msvcrt, "locking")
+    nonblocking_lock = int(getattr(msvcrt, "LK_NBLCK"))
     deadline = time.monotonic() + timeout_seconds
     while True:
         try:
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            locking(handle.fileno(), nonblocking_lock, 1)
             return
         except OSError as exc:
             if exc.errno not in {errno.EACCES, errno.EDEADLK} or time.monotonic() >= deadline:
