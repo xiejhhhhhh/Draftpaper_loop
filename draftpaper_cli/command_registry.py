@@ -763,7 +763,7 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
 def _dispatch_extensions_nonblocking(args: Any, spec: CommandSpec, payload: dict[str, Any], exit_code: int) -> None:
     """Emit extension events after successful project mutations without changing command outcome."""
 
-    project = getattr(args, "project", None)
+    project = getattr(args, "project", None) or payload.get("project_path")
     if exit_code != 0 or not spec.mutates_project or not project:
         return
     try:

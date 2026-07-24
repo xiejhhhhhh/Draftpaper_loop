@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.33.0.** This release strengthens Result Support v3, evidence-bound author completion, synchronized Agent/CLI contracts, and strict change classification. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
+**Current release: v0.33.1.** This release adds a capability-negotiated extension host, non-blocking workflow events, scoped artifact reads, and extension status projection while retaining the v0.33.0 evidence and author-completion protections. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
 
 ## Core Research Capabilities
 
@@ -431,6 +431,12 @@ Track the growth of Draftpaper-loop on GitHub:
 Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
 
 ## Recent Updates
+### v0.33.1 (2026-07-25) -- Evolutionary Extension Host
+
+- Added the public `dpl.extension` ABI 1.0 capability document, entry-point discovery, semantic workflow events, project-confined read grants, non-blocking extension dispatch, write-scope audit receipts, and extension status projection.
+- Optional commercial or learning sidecars now negotiate ABI capabilities instead of pinning one Core patch. Missing or failing extensions do not change the authoritative scientific command result.
+- The public Core contains only neutral extension contracts; private learning content, licenses, customer state, and commercial packs remain outside the Community source tree.
+
 ### v0.33.0 (2026-07-19) -- Strict Author Completion and Hash-bound Result Support
 
 - Completion classification now defaults to strict after a 60-case, three-discipline calibration fixture. Preview preserves the submitted class, inferred class, computed stale scope, evidence validation, and suggested evidence refs; apply revalidates every referenced manifest after preview.

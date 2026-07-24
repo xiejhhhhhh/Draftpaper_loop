@@ -123,3 +123,28 @@ def test_extension_status_projects_learning_receipts_without_changing_core_state
     report = extension_status(project)
     assert report["event_count"] == 1
     assert report["latest_event"]["event_id"] == event.event_id
+
+
+def test_review_and_final_commands_use_semantic_event_types(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    review = emit_command_event(
+        project,
+        command="record-independent-manuscript-review",
+        formal_stage="quality_checks",
+        result={},
+    )
+    final = emit_command_event(
+        project,
+        command="confirm-final-manuscript",
+        formal_stage="release",
+        result={},
+    )
+    semantic_review = emit_command_event(
+        project,
+        command="review-results-with-discipline-rules",
+        formal_stage="results",
+        result={},
+    )
+    assert review.event_type == "review.completed"
+    assert final.event_type == "manuscript.finalized"
+    assert semantic_review.event_type == "workflow.stage_committed"

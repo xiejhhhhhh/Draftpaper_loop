@@ -14,7 +14,10 @@ HOST_CAPABILITIES = (
     "extension.learning_slot",
     "extension.read_scoped_token",
     "workflow.event.artifact_invalidated",
+    "workflow.event.checkpoint_confirmed",
     "workflow.event.checkpoint_opened",
+    "workflow.event.manuscript_finalized",
+    "workflow.event.review_completed",
     "workflow.event.stage_committed",
 )
 
@@ -23,7 +26,7 @@ def _core_version() -> str:
     try:
         return version("draftpaper-cli")
     except PackageNotFoundError:
-        return "0.33.0"
+        return "0.33.1"
 
 
 def build_host_capabilities(*, core_version: str | None = None) -> HostCapabilities:

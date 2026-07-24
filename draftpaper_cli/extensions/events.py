@@ -38,18 +38,50 @@ _COMMAND_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "audit-citations": ("citation.audit",),
     "run-independent-review": ("review.completed",),
     "confirm-final-manuscript": ("manuscript.finalized",),
+    "record-independent-manuscript-review": ("review.completed",),
+    "assess-manuscript-quality-release": ("review.completed",),
+    "assemble-latex": ("manuscript.assembled",),
+    "compile-latex-pdf": ("manuscript.assembled",),
+    "quality-check": ("manuscript.quality_checked",),
+}
+
+
+_CHECKPOINT_OPEN_COMMANDS = {
+    "review-research-plan",
+    "assess-result-support",
+    "assess-core-evidence",
+    "review-final-manuscript",
+}
+_CHECKPOINT_CONFIRMED_COMMANDS = {
+    "confirm-research-plan",
+    "confirm-core-evidence",
+    "confirm-final-manuscript",
+    "resume",
+}
+_INVALIDATION_COMMANDS = {
+    "reopen-research-plan",
+    "reopen-core-evidence",
+    "apply-section-revision",
+    "apply-manuscript-revision",
+    "revise-research-plan",
+}
+_REVIEW_COMMANDS = {
+    "record-independent-manuscript-review",
+    "assess-manuscript-quality-release",
 }
 
 
 def _event_type(command: str) -> str:
-    if command.startswith("confirm-"):
-        return "workflow.checkpoint_confirmed"
-    if command.startswith(("review-", "assess-result-support", "assess-core-evidence")):
-        return "workflow.checkpoint_opened"
-    if command.startswith(("reopen-", "apply-section-revision", "revise-")):
-        return "artifact.invalidated"
-    if command.startswith("run-independent-review"):
+    if command == "confirm-final-manuscript":
+        return "manuscript.finalized"
+    if command in _REVIEW_COMMANDS:
         return "review.completed"
+    if command in _CHECKPOINT_CONFIRMED_COMMANDS:
+        return "workflow.checkpoint_confirmed"
+    if command in _CHECKPOINT_OPEN_COMMANDS:
+        return "workflow.checkpoint_opened"
+    if command in _INVALIDATION_COMMANDS:
+        return "artifact.invalidated"
     return "workflow.stage_committed"
 
 
@@ -134,7 +166,11 @@ def emit_command_event(
         formal_stage=formal_stage,
         occurred_at=occurred_at,
         snapshot_hash=snapshot_hash,
-        stage_capabilities=_COMMAND_CAPABILITIES.get(command, (f"stage.{formal_stage}",)),
+        stage_capabilities=(
+            ("core_evidence.confirmed",)
+            if command == "resume" and result.get("evidence_snapshot_id")
+            else _COMMAND_CAPABILITIES.get(command, (f"stage.{formal_stage}",))
+        ),
         changed_artifacts=tuple(artifacts),
         checkpoint_state=("opened" if event_type == "workflow.checkpoint_opened" else "confirmed" if event_type == "workflow.checkpoint_confirmed" else "none"),
         evidence_state=("confirmed" if "confirmed" in event_type or command == "confirm-core-evidence" else "provisional" if "checkpoint" in event_type else "current"),

@@ -1,6 +1,6 @@
 {
   "schema_version": "dpl.extension_host_capabilities.v1",
-  "core_version": "0.33.0",
+  "core_version": "0.33.1",
   "abi_family": "dpl.extension",
   "abi_versions": ["1.0"],
   "stage_taxonomy_version": "1.0",
@@ -18,7 +18,10 @@
     "extension.learning_slot",
     "extension.read_scoped_token",
     "workflow.event.artifact_invalidated",
+    "workflow.event.checkpoint_confirmed",
     "workflow.event.checkpoint_opened",
+    "workflow.event.manuscript_finalized",
+    "workflow.event.review_completed",
     "workflow.event.stage_committed"
   ]
 }
