@@ -6,6 +6,8 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
@@ -15,34 +17,68 @@ class StateKernelError(RuntimeError):
     """Raised when authoritative state cannot be read or committed safely."""
 
 
+_THREAD_LOCKS_GUARD = threading.Lock()
+_THREAD_LOCKS: dict[str, threading.RLock] = {}
+
+
+def _thread_lock_for(lock_path: Path) -> threading.RLock:
+    key = str(lock_path)
+    with _THREAD_LOCKS_GUARD:
+        return _THREAD_LOCKS.setdefault(key, threading.RLock())
+
+
+def _lock_windows_byte(handle, *, timeout_seconds: float = 60.0) -> None:
+    """Acquire a Windows byte lock without surfacing transient EDEADLOCK.
+
+    ``msvcrt.LK_LOCK`` can raise ``EDEADLOCK`` when two threads in one
+    process contend for the same byte.  The in-process lock serializes those
+    threads, while the non-blocking retry loop continues to coordinate with
+    other processes.
+    """
+    import errno
+    import msvcrt
+
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        except OSError as exc:
+            if exc.errno not in {errno.EACCES, errno.EDEADLK} or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
+
+
 @contextmanager
 def file_lock(target: str | Path) -> Iterator[None]:
     path = Path(target)
     lock_dir = Path(tempfile.gettempdir()) / "draftpaper-state-locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
     lock_path = lock_dir / (hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()[:24] + ".lock")
-    with lock_path.open("a+b") as handle:
-        handle.seek(0)
-        if handle.tell() == 0 and lock_path.stat().st_size == 0:
-            handle.write(b"\0")
-            handle.flush()
-        handle.seek(0)
-        if os.name == "nt":
-            import msvcrt
-            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
+    with _thread_lock_for(lock_path):
+        with lock_path.open("a+b") as handle:
+            handle.seek(0)
+            if handle.tell() == 0 and lock_path.stat().st_size == 0:
+                handle.write(b"\0")
+                handle.flush()
             handle.seek(0)
             if os.name == "nt":
-                import msvcrt
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                _lock_windows_byte(handle)
             else:
                 import fcntl
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def atomic_write_text(path: str | Path, text: str, *, encoding: str = "utf-8") -> None:
