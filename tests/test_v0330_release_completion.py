@@ -11,7 +11,7 @@ from draftpaper_cli.release_contract import build_release_manifest
 from draftpaper_cli.toml_compat import tomllib
 
 
-VERSION = "0.33.0"
+VERSION = "0.33.1"
 
 
 def _skill_version(path: Path) -> str:
@@ -123,7 +123,7 @@ def test_v0330_readmes_and_truth_matrix_publish_the_new_capabilities() -> None:
     assert by_id["result_support_checkpoint_v3"]["status"] == "implemented"
     for readme in (Path("README.md"), Path("README.zh-CN.md")):
         content = readme.read_text(encoding="utf-8")
-        assert "v0.33.0" in content
+        assert "v0.33.1" in content
         assert "v0.32.1-v0.32.2" in content
         assert "completion_change_classification" in content
         assert "result_support_checkpoint_v3" in content

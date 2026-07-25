@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper.local/schemas/extension_host_capabilities_v1.json",
+  "title": "Draftpaper Extension Host Capabilities v1",
+  "type": "object",
+  "required": ["schema_version", "core_version", "abi_family", "abi_versions", "capabilities"],
+  "properties": {
+    "schema_version": {"const": "dpl.extension_host_capabilities.v1"},
+    "core_version": {"type": "string"},
+    "abi_family": {"const": "dpl.extension"},
+    "abi_versions": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "stage_taxonomy_version": {"type": "string"},
+    "artifact_schema_families": {"type": "object"},
+    "capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "additionalProperties": false
+}

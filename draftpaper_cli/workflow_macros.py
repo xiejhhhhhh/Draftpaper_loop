@@ -20,7 +20,14 @@ def start_workflow(idea: str, field: str, target_journal: str = "General Academi
 
 
 def continue_workflow(project: str | Path) -> dict[str, Any]:
-    return {"status": "reported", "pipeline": run_pipeline(project), "verification": verify_next_action(project)}
+    from .extensions.status_projection import extension_status
+
+    return {
+        "status": "reported",
+        "pipeline": run_pipeline(project),
+        "verification": verify_next_action(project),
+        "extensions": extension_status(project),
+    }
 
 
 def review_workflow(project: str | Path) -> dict[str, Any]:

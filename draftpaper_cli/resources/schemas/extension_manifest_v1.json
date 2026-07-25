@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper.local/schemas/extension_manifest_v1.json",
+  "title": "Draftpaper Extension Manifest v1",
+  "type": "object",
+  "required": ["schema_version", "extension_id", "package_name", "package_version", "abi_family", "supported_abi"],
+  "properties": {
+    "schema_version": {"enum": ["dpl.extension.v1", "dpl.guidance_extension_manifest.v1"]},
+    "extension_id": {"type": "string", "minLength": 1},
+    "package_name": {"type": "string", "minLength": 1},
+    "package_version": {"type": "string", "minLength": 1},
+    "abi_family": {"const": "dpl.extension"},
+    "supported_abi": {"type": "string"},
+    "required_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "optional_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "subscriptions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "read_globs": {"type": "array", "items": {"type": "string"}},
+    "write_scope": {"type": "array", "items": {"type": "string"}},
+    "event_handler": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

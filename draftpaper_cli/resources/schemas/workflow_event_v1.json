@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper.local/schemas/workflow_event_v1.json",
+  "title": "Draftpaper Workflow Event v1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "project_id", "command", "formal_stage", "snapshot_hash", "stage_capabilities"],
+  "properties": {
+    "schema_version": {"const": "dpl.workflow_event.v1"},
+    "event_id": {"type": "string"},
+    "event_type": {"type": "string"},
+    "project_id": {"type": "string"},
+    "command": {"type": "string"},
+    "formal_stage": {"type": "string"},
+    "occurred_at": {"type": "string"},
+    "snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stage_capabilities": {"type": "array", "items": {"type": "string"}},
+    "changed_artifacts": {"type": "array"},
+    "checkpoint_state": {"enum": ["none", "opened", "confirmed"]},
+    "evidence_state": {"enum": ["provisional", "current", "confirmed"]}
+  },
+  "additionalProperties": false
+}

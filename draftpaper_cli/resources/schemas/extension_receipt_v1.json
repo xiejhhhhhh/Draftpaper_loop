@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper.local/schemas/extension_receipt_v1.json",
+  "title": "Draftpaper Extension Receipt v1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "extension_id", "extension_version", "status"],
+  "properties": {
+    "schema_version": {"const": "dpl.extension_receipt.v1"},
+    "event_id": {"type": "string"},
+    "extension_id": {"type": "string"},
+    "extension_version": {"type": "string"},
+    "selected_abi": {"type": ["string", "null"]},
+    "status": {"enum": ["completed", "failed_nonblocking", "write_scope_violation"]},
+    "recorded_at": {"type": "string"},
+    "capability_token_sha256": {"type": "string"},
+    "response_sha256": {"type": "string"},
+    "error": {"type": ["string", "null"]},
+    "write_scope_violations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

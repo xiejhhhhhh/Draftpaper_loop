@@ -34,6 +34,10 @@
     "citation_audit": {"current": "dpl.citation_audit.v2", "accepted": []},
     "review_rule_assessment": {"current": "dpl.review_rule_assessment.v2", "accepted": []},
     "release_regression": {"current": "dpl.release_regression.v3", "accepted": ["dpl.release_regression.v2"]},
-    "functional_quality_release": {"current": "dpl.functional_quality_release.v1", "accepted": []}
+    "functional_quality_release": {"current": "dpl.functional_quality_release.v1", "accepted": []},
+    "extension_host_capabilities": {"current": "dpl.extension_host_capabilities.v1", "accepted": []},
+    "extension_manifest": {"current": "dpl.guidance_extension_manifest.v1", "accepted": ["dpl.extension.v1"]},
+    "workflow_event": {"current": "dpl.workflow_event.v1", "accepted": []},
+    "extension_receipt": {"current": "dpl.extension_receipt.v1", "accepted": []}
   }
 }
