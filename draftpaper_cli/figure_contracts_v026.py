@@ -24,8 +24,8 @@ class ConfirmedFigureContractError(RuntimeError):
 
 
 _PANEL_EXPECTED_CONTENT = {
-    "cohort_flow_audit": "Quantify the source, image-available, image-valid, and analysis cohorts together with every exclusion step.",
-    "missingness_analysis": "Compare image missingness rates and recorded reasons across the declared sample groups and relevant covariates.",
+    "cohort_flow_audit": "Quantify the declared input, eligible, analysis-ready, and final inference cohorts together with every exclusion step.",
+    "missingness_analysis": "Compare missingness rates and recorded reasons across the declared sample groups, inputs, and relevant covariates.",
     "representation_projection": "Visualize the representation geometry as exploratory evidence while coloring points only by the independent scientific target.",
     "target_confounder_diagnostic": "Quantify target association separately from redshift, luminosity, acquisition group, and other declared confounders.",
     "group_aware_validation": "Report held-out performance across the declared groups and folds without allowing group leakage between training and evaluation.",

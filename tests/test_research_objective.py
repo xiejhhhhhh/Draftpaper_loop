@@ -103,7 +103,7 @@ def test_objective_contract_drives_claims_storyboard_and_chinese_plan(tmp_path) 
     rendered = _render_research_plan_cn(metadata, blueprint)
     _assert_cn_plan_quality(rendered)
     assert "量化天体物理关系" in rendered
-    assert "DINOv2、降维、分类器和异常检测等只在能够回答上述科学问题时作为分析工具" in rendered
+    assert "数据处理、统计检验、机器学习模型和可视化只在能够回答这些问题时作为分析工具" in rendered
     assert "第1个科学问题检验什么关系" in rendered
 
 
@@ -115,6 +115,122 @@ def test_research_objective_requires_three_questions(tmp_path) -> None:
     objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(ResearchObjectiveError, match="3 to 8"):
         revise_research_objective(project, objective_file=objective_file)
+
+
+def test_fallback_storyboard_preserves_bilingual_objective_claims(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Old objective", field="astronomy").path
+    payload = _objective()
+    for question in payload["primary_scientific_questions"]:
+        question.pop("figure_contract", None)
+    objective_file = tmp_path / "objective.json"
+    objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    revise_research_objective(project, objective_file=objective_file)
+    metadata = load_project(project).metadata
+
+    blueprint = build_research_blueprint(
+        project_meta=metadata,
+        literature_items=[{
+            "bibtex_key": "Science2026",
+            "title": "Astronomy classifier calibration",
+            "abstract": "Grouped validation and calibrated probabilities are assessed.",
+            "citation_count": 1,
+        }],
+        citation_rows=[{
+            "citation_key": "Science2026",
+            "claim": "current gap",
+            "evidence_summary": "A gap.",
+        }],
+        discipline_profile={"primary_discipline": "astronomy"},
+    )
+
+    first = blueprint["figure_storyboard"]["figures"][0]
+    assert first["research_question_zh_cn"] == "第1个科学问题检验什么关系？"
+    assert first["expected_finding_zh_cn"].startswith("第1个问题应给出")
+    rendered = _render_research_plan_cn(metadata, blueprint)
+    _assert_cn_plan_quality(rendered)
+
+
+def test_claim_driven_storyboard_infers_calibration_evidence_contract(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Old objective", field="astronomy").path
+    payload = _objective()
+    questions = payload["primary_scientific_questions"]
+    questions[0].update({
+        "claim_id": "calibration_comparison",
+        "research_question": (
+            "How do Brier score, log loss, reliability behaviour, and expected "
+            "calibration error differ among frozen model predictions?"
+        ),
+        "research_question_zh_cn": "冻结模型预测的概率校准与可靠性有何差异？",
+    })
+    questions[1].update({
+        "claim_id": "history_increment",
+        "research_question": (
+            "Does historical context provide a consistent paired improvement "
+            "over matched current-event predictions?"
+        ),
+        "research_question_zh_cn": "历史信息是否带来一致的配对增量？",
+    })
+    questions[2].update({
+        "claim_id": "source_robustness",
+        "research_question": (
+            "Are aggregate metrics dominated by a small subset of held-out groups "
+            "under group-block bootstrap summaries?"
+        ),
+        "research_question_zh_cn": "汇总指标是否由少数留出组主导？",
+    })
+    for question in questions:
+        question.pop("figure_contract", None)
+    payload["primary_scientific_questions"].append({
+        "claim_id": "failure_structure",
+        "research_question": (
+            "Which held-out groups and confidence regimes account for recurrent "
+            "misclassification or overconfidence?"
+        ),
+        "research_question_zh_cn": "哪些留出组和置信区间贡献重复误分类或过度置信？",
+        "expected_finding": "Failure concentration is categorical grouped evidence.",
+        "expected_finding_zh_cn": "失败集中属于分组类别证据。",
+    })
+    objective_file = tmp_path / "objective.json"
+    objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    revise_research_objective(project, objective_file=objective_file)
+
+    blueprint = build_research_blueprint(
+        project_meta=load_project(project).metadata,
+        literature_items=[{
+            "bibtex_key": "Calibration2026",
+            "title": "Grouped probability calibration",
+            "abstract": "Reliability and proper scoring rules are evaluated by group.",
+            "citation_count": 1,
+        }],
+        citation_rows=[{
+            "citation_key": "Calibration2026",
+            "claim": "calibration evaluation",
+            "evidence_summary": "Grouped evaluation is required.",
+        }],
+        discipline_profile={"primary_discipline": "astronomy"},
+    )
+
+    figures = blueprint["figure_storyboard"]["figures"]
+    assert len(figures) == 6
+    assert figures[0]["proposed_title"] == "Analysis cohort and frozen-evidence alignment"
+    assert figures[1]["proposed_title"] == "Probability calibration and reliability across model outputs"
+    assert figures[1]["proposed_title_zh_cn"] == "不同模型输出的概率校准与可靠性"
+    assert "proper_scoring_rules" in figures[1]["required_method"]
+    assert figures[2]["suggested_plot_type"] == "paired_effect_summary"
+    assert figures[3]["suggested_plot_type"] == "group_robustness_summary"
+    assert figures[4]["suggested_plot_type"] == "error_calibration_summary"
+    assert figures[5]["proposed_title"] == "Integrated evidence and final claim boundary"
+    assert all(figure.get("scientific_claim_boundary") for figure in figures)
+    assert all(figure.get("scientific_claim_boundary_zh_cn") for figure in figures)
+    tasks = blueprint["method_plan"]["method_tasks"]
+    assert [task["claim_id"] for task in tasks] == [
+        figure["claim_id"] for figure in figures
+    ]
+    rendered = _render_research_plan_cn(load_project(project).metadata, blueprint)
+    _assert_cn_plan_quality(rendered)
+    assert "独立采样单位" in rendered
+    for leaked_term in ("DINOv2", "形态与物理状态", "图像层复核", "独立星系样本数"):
+        assert leaked_term not in rendered
 
 
 def test_science_objective_figure_roles_have_chinese_labels() -> None:

@@ -172,7 +172,7 @@ The current control plane contains 211 commands.
 | `repair-figure-data` | `execute_science` | results | yes | none | local_cpu | yes | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+15) |
 | `repair-figure-method` | `execute_science` | results | yes | none | local_cpu | yes | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+15) |
 | `resolve-figure-evidence` | `write_project` | results | yes | none | local_cpu | yes | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+15) |
-| `resolve-journal-template` | `write_project` | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+20) |
+| `resolve-journal-template` | `write_project` | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `resolve-paragraph-evidence` | `write_project` | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+17) |
 | `resolve-reference-version` | `write_project` | references | yes | none | local_cpu | yes | `references/**`, `research_plan/**`, `citation_audit/**`, `writing/**`, `project.json` (+12) |
 | `resolve-research-capabilities` | `write_project` | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+17) |

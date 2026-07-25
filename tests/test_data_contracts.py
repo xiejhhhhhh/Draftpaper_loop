@@ -191,6 +191,46 @@ class DataContractRoleAliasTests(unittest.TestCase):
 
         self.assertEqual(roles, ["source_catalog"])
 
+    def test_frozen_prediction_inputs_cover_generic_cohort_and_quality_roles(self) -> None:
+        inventory = {
+            "total_rows": 6010,
+            "files": [{
+                "path": "external://predictions.csv",
+                "suffix": ".csv",
+                "columns": [
+                    "event_id",
+                    "source_id",
+                    "split_role",
+                    "fold_id",
+                    "label",
+                    "model",
+                    "prob_xrb",
+                    "uncertainty",
+                ],
+            }],
+        }
+        roles = available_data_roles(inventory, {})
+        coverage = assess_role_coverage(
+            ["analysis_unit", "cohort_role", "quality_or_support_fields"],
+            roles,
+        )
+
+        self.assertEqual(coverage["decision"], "pass")
+        self.assertIn("quality_or_support_fields", roles)
+
+        required = required_roles_from_storyboard({
+            "figures": [{
+                "required_data": [
+                    "observed_label",
+                    "predicted_probability",
+                    "verified_claim_metrics",
+                    "uncertainty_intervals",
+                    "support_status",
+                ],
+            }],
+        })
+        self.assertEqual(required, ["label_or_response"])
+
     def test_specific_image_catalog_roles_use_composite_inventory_evidence(self) -> None:
         inventory = {
             "files": [{

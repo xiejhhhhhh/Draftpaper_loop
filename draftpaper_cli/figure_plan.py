@@ -610,9 +610,20 @@ def _apply_discipline_figure_policy(
     }
 
 
-def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any]) -> dict[str, Any]:
+def _figure_contracts(
+    figures: list[dict[str, Any]],
+    storyboard: dict[str, Any],
+    analysis_specs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     contracts: list[dict[str, Any]] = []
     main_groups = _main_figure_groups(figures)
+    specs_by_figure = {
+        str(figure_id): spec
+        for spec in analysis_specs or []
+        if isinstance(spec, dict)
+        for figure_id in spec.get("figure_ids") or []
+        if str(figure_id)
+    }
     for item in figures:
         if item.get("figure_role") != "main_result":
             continue
@@ -620,9 +631,16 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
             continue
         storyboard_trace = item.get("storyboard_trace") or {}
         semantic = build_semantic_figure_contract({**storyboard_trace, **item})
+        figure_id = str(item.get("storyboard_id") or item.get("id") or "")
+        analysis_spec = specs_by_figure.get(figure_id, {})
         contracts.append({
-            "storyboard_id": item.get("storyboard_id") or item.get("id"),
+            "storyboard_id": figure_id,
             "figure_id": item.get("id"),
+            "claim_id": item.get("claim_id") or storyboard_trace.get("claim_id"),
+            "cohort_view_id": item.get("cohort_view_id") or analysis_spec.get("cohort_view_id"),
+            "estimand_id": item.get("estimand_id") or analysis_spec.get("estimand_id"),
+            "analysis_spec_id": item.get("analysis_spec_id") or analysis_spec.get("analysis_spec_id"),
+            "sample_unit": item.get("sample_unit") or analysis_spec.get("sample_unit"),
             "title": item.get("title"),
             "path": item.get("path"),
             "figure_role": "main_result",
@@ -635,6 +653,8 @@ def _figure_contracts(figures: list[dict[str, Any]], storyboard: dict[str, Any])
             "expected_finding": item.get("expected_finding") or storyboard_trace.get("expected_finding"),
             "validation_metric": item.get("validation_metric") or storyboard_trace.get("validation_metric"),
             "research_question": item.get("scientific_question") or storyboard_trace.get("research_question"),
+            "panel_contract": item.get("panel_contract") or item.get("panels") or [],
+            "caption_contract": item.get("caption_contract") or {},
             **semantic,
             "success_criteria": [
                 "planned output path exists",
@@ -847,7 +867,13 @@ def plan_figures(project: str | Path, *, use_review_tasks: bool = False) -> dict
     results_dir = state.path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
     storyboard_payload = plan["research_storyboard"] if isinstance(plan["research_storyboard"], dict) else {}
-    contracts = _figure_contracts(figures, storyboard_payload)
+    analysis_spec_payload = _read_json(state.path / "methods" / "executable_analysis_spec.json", {})
+    analysis_specs = [
+        item
+        for item in analysis_spec_payload.get("analysis_specs") or []
+        if isinstance(item, dict)
+    ] if isinstance(analysis_spec_payload, dict) else []
+    contracts = _figure_contracts(figures, storyboard_payload, analysis_specs)
     alignment = _storyboard_alignment_report(figures, storyboard_payload)
     _write_json(results_dir / "figure_plan.json", plan)
     _write_json(results_dir / "figure_contracts.json", contracts)

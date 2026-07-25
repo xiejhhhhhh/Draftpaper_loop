@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -319,6 +320,67 @@ class FigureContractGateTests(unittest.TestCase):
                 "missing_method_source_evidence",
                 {issue["kind"] for issue in report["contract_checks"][0]["issues"]},
             )
+
+    def test_scoped_project_method_tasks_allow_codegen_but_not_method_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(
+                root=tmp,
+                idea="Grouped calibration with a project-local method",
+                field="astronomy machine learning",
+            )
+            figure_id = "fig_calibration"
+            method = "group_block_bootstrap"
+            _write_json(project.path / "results" / "figure_contracts.json", {
+                "contracts": [{
+                    "storyboard_id": figure_id,
+                    "figure_id": figure_id,
+                    "required_data": [],
+                    "required_method": [method],
+                    "expected_finding": "Calibration uncertainty by independent group.",
+                }],
+                "main_figure_group_count": 1,
+            })
+            _write_json(project.path / "results" / "figure_plan.json", {
+                "main_figure_group_count": 1,
+                "figures": [],
+            })
+            _write_json(
+                project.path / "results" / "storyboard_alignment_report.json",
+                {"decision": "pass", "all_storyboard_figures_planned": True},
+            )
+            _write_json(
+                project.path / "data" / "data_role_coverage_report.json",
+                {"available_roles": ["local_data"]},
+            )
+            sufficiency_path = project.path / "research_plan" / "plugin_sufficiency_report.json"
+            _write_json(sufficiency_path, {"status": "written"})
+            _write_json(project.path / "methods" / "project_method_implementation_tasks.json", {
+                "status": "agent_action_required",
+                "source_sufficiency_sha256": hashlib.sha256(
+                    sufficiency_path.read_bytes()
+                ).hexdigest(),
+                "tasks": [{
+                    "requirement_id": f"method:{figure_id}:{method}",
+                    "figure_id": figure_id,
+                    "method_family": method,
+                    "status": "agent_implementation_required",
+                }],
+            })
+
+            result = assess_figure_contracts(project.path)
+            report = json.loads(
+                (project.path / "results" / "figure_contract_gate_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            self.assertEqual(result["decision"], "conditional")
+            kinds = {
+                issue["kind"]
+                for issue in report["contract_checks"][0]["issues"]
+            }
+            self.assertIn("project_method_implementation_pending", kinds)
+            self.assertNotIn("missing_method_source_evidence", kinds)
 
     def test_figure_contract_gate_routes_missing_data_to_repair(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -121,6 +121,29 @@ def test_write_set_guard_restores_modified_out_of_scope_file(tmp_path: Path) -> 
     assert protected.read_text(encoding="utf-8") == "before"
 
 
+def test_write_set_guard_rolls_back_allowed_writes_when_one_write_violates_boundary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "project"
+    (root / "data").mkdir(parents=True)
+    allowed = root / "data" / "inventory.json"
+    allowed.write_text("before", encoding="utf-8")
+    guard = WriteSetGuard(root, COMMAND_SPECS["inventory-data"])
+
+    allowed.write_text("after", encoding="utf-8")
+    forbidden = root / "methods" / "unexpected.py"
+    forbidden.parent.mkdir()
+    forbidden.write_text("pass", encoding="utf-8")
+
+    report = guard.assess()
+    assert report["status"] == "boundary_violation"
+    rollback = guard.rollback_violations(report)
+
+    assert rollback["status"] == "rolled_back"
+    assert allowed.read_text(encoding="utf-8") == "before"
+    assert not forbidden.exists()
+
+
 def test_sensitive_response_redaction() -> None:
     payload = redact_sensitive({
         "api_key": "very-secret",
