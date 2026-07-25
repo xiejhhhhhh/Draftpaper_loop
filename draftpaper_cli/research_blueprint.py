@@ -246,10 +246,11 @@ def _claim_templates(project_meta: dict[str, Any], flags: dict[str, bool]) -> li
 def _storyboard_figures(
     *,
     project_meta: dict[str, Any],
-    claims: list[dict[str, str]],
+    claims: list[dict[str, Any]],
     literature_keys: list[str],
     flags: dict[str, bool],
 ) -> list[dict[str, Any]]:
+    objective = project_meta.get("research_objective")
     objective_figures = []
     for index, claim in enumerate(claims, start=1):
         contract = claim.get("figure_contract") if isinstance(claim.get("figure_contract"), dict) else {}
@@ -285,6 +286,12 @@ def _storyboard_figures(
         })
     if objective_figures and len(objective_figures) == len(claims):
         return objective_figures
+    if isinstance(objective, dict) and objective.get("primary_scientific_questions"):
+        return _inferred_objective_figures(
+            objective=objective,
+            claims=claims,
+            literature_keys=literature_keys,
+        )
 
     method_prefix = ["data_alignment"]
     if flags["transformer"]:
@@ -391,8 +398,15 @@ def _storyboard_figures(
             "proposed_title": title,
             "story_role": story_roles[index - 1],
             "research_question": claim["research_question"],
+            "research_question_zh_cn": claim.get("research_question_zh_cn"),
             "expected_finding": claim["expected_finding"],
+            "expected_finding_zh_cn": claim.get("expected_finding_zh_cn"),
             "scientific_claim_boundary": "Interpret this figure only within the verified data, method, and validation limits declared in the research blueprint.",
+            "scientific_claim_boundary_zh_cn": (
+                (project_meta.get("research_objective") or {}).get(
+                    "claim_boundary_zh_cn"
+                )
+            ),
             "required_data": data[index - 1],
             "required_method": methods[index - 1],
             "suggested_plot_type": plot_types[index - 1],
@@ -402,6 +416,214 @@ def _storyboard_figures(
             "fallback_if_data_missing": "Downgrade the claim, report missing data explicitly, and request data acquisition or method revision before writing Results.",
         })
     return figures
+
+
+def _claim_figure_semantics(claim: dict[str, Any]) -> dict[str, Any]:
+    text = " ".join(
+        str(claim.get(field) or "")
+        for field in ("claim_id", "research_question", "expected_finding")
+    ).casefold()
+    if any(token in text for token in ("calibrat", "brier", "log loss", "reliability")):
+        return {
+            "title": "Probability calibration and reliability across model outputs",
+            "title_zh_cn": "不同模型输出的概率校准与可靠性",
+            "required_data": [
+                "observed_label",
+                "predicted_probability",
+                "model_id",
+                "group_id",
+                "validation_split",
+            ],
+            "required_method": [
+                "proper_scoring_rules",
+                "reliability_analysis",
+                "group_block_bootstrap",
+            ],
+            "plot_type": "calibration_summary",
+            "metric": "brier_log_loss_ece_with_group_block_interval",
+        }
+    if any(token in text for token in ("histor", "paired", "increment", "ablation")):
+        return {
+            "title": "Paired incremental value across held-out groups",
+            "title_zh_cn": "留出组上的配对增量价值",
+            "required_data": [
+                "matched_prediction_unit",
+                "observed_label",
+                "predicted_probability",
+                "model_id",
+                "group_id",
+                "validation_split",
+            ],
+            "required_method": [
+                "paired_model_comparison",
+                "group_block_bootstrap",
+                "effect_heterogeneity_analysis",
+            ],
+            "plot_type": "paired_effect_summary",
+            "metric": "paired_metric_delta_with_group_block_interval",
+        }
+    if any(token in text for token in ("robust", "bootstrap", "dominat", "stable", "influence")):
+        return {
+            "title": "Group-level robustness and influence on aggregate performance",
+            "title_zh_cn": "组级稳健性及其对汇总性能的影响",
+            "required_data": [
+                "group_id",
+                "observation_id",
+                "observed_label",
+                "predicted_probability",
+                "model_id",
+                "validation_split",
+            ],
+            "required_method": [
+                "observation_vs_group_weighting",
+                "group_block_bootstrap",
+                "group_influence_analysis",
+            ],
+            "plot_type": "group_robustness_summary",
+            "metric": "group_weighted_metric_with_influence_interval",
+        }
+    if any(token in text for token in ("error", "failure", "misclass", "overconf", "uncertain")):
+        return {
+            "title": "Error concentration and unreliable confidence regimes",
+            "title_zh_cn": "错误集中模式与不可靠置信区间",
+            "required_data": [
+                "group_id",
+                "observed_label",
+                "predicted_label",
+                "predicted_probability",
+                "quality_or_support_fields",
+            ],
+            "required_method": [
+                "grouped_error_analysis",
+                "confidence_regime_analysis",
+                "quality_support_diagnostic",
+            ],
+            "plot_type": "error_calibration_summary",
+            "metric": "grouped_error_rate_and_overconfidence_gap",
+        }
+    if any(token in text for token in ("cohort", "sample", "coverage", "missing")):
+        return {
+            "title": "Cohort construction and analysis support",
+            "title_zh_cn": "样本队列构建与分析支撑",
+            "required_data": ["sample_unit", "cohort_role", "group_id", "missingness_reason"],
+            "required_method": ["cohort_flow_audit", "missingness_analysis"],
+            "plot_type": "cohort_flow",
+            "metric": "cohort_coverage_and_missingness",
+        }
+    return {
+        "title": f"Scientific evidence for {claim.get('claim_id') or 'the declared claim'}",
+        "title_zh_cn": f"主张{claim.get('claim_id') or '当前科学问题'}的科学证据",
+        "required_data": ["analysis_sample", "outcome_or_target", "group_or_split"],
+        "required_method": ["claim_specific_analysis", "uncertainty_estimation"],
+        "plot_type": "scientific_effect_summary",
+        "metric": "effect_size_with_uncertainty",
+    }
+
+
+def _inferred_objective_figures(
+    *,
+    objective: dict[str, Any],
+    claims: list[dict[str, Any]],
+    literature_keys: list[str],
+) -> list[dict[str, Any]]:
+    """Build a claim-driven storyboard when users do not author every figure.
+
+    The fallback remains domain-independent: it infers data and method roles
+    from each declared claim instead of switching to a generic classifier or
+    regression manuscript template.
+    """
+    if not claims:
+        return []
+    boundary = str(objective.get("claim_boundary") or "").strip()
+    boundary_zh = str(objective.get("claim_boundary_zh_cn") or "").strip()
+    figures: list[dict[str, Any]] = []
+
+    first = claims[0]
+    figures.append({
+        "figure_id": "fig_1_analysis_cohort_and_evidence_alignment",
+        "proposed_title": "Analysis cohort and frozen-evidence alignment",
+        "proposed_title_zh_cn": "分析样本队列与冻结证据对齐",
+        "story_role": "study_boundary",
+        "research_question": first["research_question"],
+        "research_question_zh_cn": first.get("research_question_zh_cn"),
+        "expected_finding": first["expected_finding"],
+        "expected_finding_zh_cn": first.get("expected_finding_zh_cn"),
+        "scientific_claim_boundary": boundary,
+        "scientific_claim_boundary_zh_cn": boundary_zh,
+        "required_data": [
+            "analysis_unit",
+            "group_id",
+            "cohort_role",
+            "model_id",
+            "validation_split",
+            "prediction_alignment_status",
+        ],
+        "required_method": [
+            "cohort_flow_audit",
+            "prediction_alignment_audit",
+            "group_leakage_check",
+        ],
+        "suggested_plot_type": "cohort_and_alignment_overview",
+        "validation_metric": "cohort_coverage_alignment_and_leakage_status",
+        "supporting_literature_keys": literature_keys[:3],
+        "downstream_stage_dependency": ["method_plan", "figure_plan", "code", "results"],
+        "fallback_if_data_missing": "Report the missing cohort or prediction binding and use the result-support checkpoint before changing the claim.",
+        "claim_id": first.get("claim_id"),
+    })
+
+    for claim in claims[:5]:
+        semantics = _claim_figure_semantics(claim)
+        index = len(figures) + 1
+        figures.append({
+            "figure_id": f"fig_{index}_{re.sub(r'[^a-z0-9]+', '_', semantics['title'].lower()).strip('_')[:28]}",
+            "proposed_title": semantics["title"],
+            "proposed_title_zh_cn": semantics["title_zh_cn"],
+            "story_role": "direct_scientific_signal" if index < 5 else "uncertainty_or_claim_boundary",
+            "research_question": claim["research_question"],
+            "research_question_zh_cn": claim.get("research_question_zh_cn"),
+            "expected_finding": claim["expected_finding"],
+            "expected_finding_zh_cn": claim.get("expected_finding_zh_cn"),
+            "scientific_claim_boundary": boundary,
+            "scientific_claim_boundary_zh_cn": boundary_zh,
+            "required_data": semantics["required_data"],
+            "required_method": semantics["required_method"],
+            "suggested_plot_type": semantics["plot_type"],
+            "validation_metric": semantics["metric"],
+            "supporting_literature_keys": literature_keys[:3],
+            "downstream_stage_dependency": ["method_plan", "figure_plan", "code", "results"],
+            "fallback_if_data_missing": "Use the result-support checkpoint to rescue the missing data or method, or narrow only this declared claim.",
+            "claim_id": claim.get("claim_id"),
+        })
+
+    if len(figures) < 6:
+        last = claims[-1]
+        figures.append({
+            "figure_id": f"fig_{len(figures) + 1}_integrated_evidence_and_claim_boundary",
+            "proposed_title": "Integrated evidence and final claim boundary",
+            "proposed_title_zh_cn": "综合证据与最终结论边界",
+            "story_role": "uncertainty_or_claim_boundary",
+            "research_question": last["research_question"],
+            "research_question_zh_cn": last.get("research_question_zh_cn"),
+            "expected_finding": last["expected_finding"],
+            "expected_finding_zh_cn": last.get("expected_finding_zh_cn"),
+            "scientific_claim_boundary": boundary,
+            "scientific_claim_boundary_zh_cn": boundary_zh,
+            "required_data": [
+                "model_id",
+                "group_id",
+                "observed_label",
+                "predicted_probability",
+                "validation_split",
+            ],
+            "required_method": ["cross_claim_evidence_synthesis", "claim_boundary_audit"],
+            "suggested_plot_type": "evidence_synthesis",
+            "validation_metric": "claim_support_and_uncertainty_summary",
+            "supporting_literature_keys": literature_keys[:3],
+            "downstream_stage_dependency": ["result_support", "core_evidence", "results", "discussion"],
+            "fallback_if_data_missing": "Omit unsupported synthesis elements and preserve the confirmed per-claim boundary.",
+            "claim_id": last.get("claim_id"),
+        })
+    return figures[:6]
 
 
 def _storyboard_tables(literature_keys: list[str]) -> list[dict[str, Any]]:
@@ -474,7 +696,9 @@ def build_research_blueprint(
         enrich_storyboard_figure(
             item,
             index=index,
-            claim_id=(claims[min(index - 1, len(claims) - 1)] or {}).get("claim_id") if claims else "",
+            claim_id=str(
+                (claims[min(index - 1, len(claims) - 1)] or {}).get("claim_id") or ""
+            ) if claims else "",
         )
         for index, item in enumerate(figures, start=1)
     ]

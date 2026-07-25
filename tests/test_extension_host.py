@@ -110,6 +110,41 @@ def test_event_dispatch_is_nonblocking_and_records_receipts(tmp_path: Path) -> N
     assert "extension failure" in ledger
 
 
+def test_event_uses_actual_committed_write_set_and_binds_transaction_receipt(
+    tmp_path: Path,
+) -> None:
+    project = _project(tmp_path)
+    (project / "idea").mkdir()
+    (project / "idea" / "idea.md").write_text("# Research idea\n", encoding="utf-8")
+    history = project / "idea" / "research_objective_history"
+    history.mkdir()
+    (history / "old.json").write_text("{}", encoding="utf-8")
+    receipt = {
+        "schema_version": "dpl.command_transaction.v2",
+        "command": "create-project",
+        "transaction_status": "committed",
+        "recorded_at": "2026-07-25T00:00:00Z",
+    }
+    event = emit_command_event(
+        project,
+        command="create-project",
+        formal_stage="state",
+        result={"project_json": "project.json"},
+        changed_paths=(
+            "idea/idea.md",
+            "idea/research_objective_history/old.json",
+            "guidance/private.html",
+            "../outside.txt",
+        ),
+        transaction_receipt=receipt,
+    )
+    paths = {item["relative_path"] for item in event.changed_artifacts}
+    assert paths == {"idea/idea.md"}
+    assert event.transaction_status == "committed"
+    assert event.transaction_receipt_hash is not None
+    assert len(event.transaction_receipt_hash) == 64
+
+
 def test_extension_status_projects_learning_receipts_without_changing_core_state(
     tmp_path: Path,
 ) -> None:
@@ -145,6 +180,14 @@ def test_review_and_final_commands_use_semantic_event_types(tmp_path: Path) -> N
         formal_stage="results",
         result={},
     )
+    revised_idea = emit_command_event(
+        project,
+        command="revise-research-objective",
+        formal_stage="state",
+        result={"output": "research_plan/research_plan.md"},
+    )
     assert review.event_type == "review.completed"
     assert final.event_type == "manuscript.finalized"
     assert semantic_review.event_type == "workflow.stage_committed"
+    assert revised_idea.event_type == "artifact.invalidated"
+    assert revised_idea.stage_capabilities == ("project.idea",)

@@ -15,6 +15,8 @@
     "snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "stage_capabilities": {"type": "array", "items": {"type": "string"}},
     "changed_artifacts": {"type": "array"},
+    "transaction_receipt_hash": {"type": ["string", "null"]},
+    "transaction_status": {"type": ["string", "null"]},
     "checkpoint_state": {"enum": ["none", "opened", "confirmed"]},
     "evidence_state": {"enum": ["provisional", "current", "confirmed"]}
   },
