@@ -886,37 +886,6 @@ def _validate_plugin_trace_for_codegen(project_path: Path) -> dict[str, Any] | N
 
     trace = validate_figure_plugin_trace(project_path)
     if trace.get("decision") in {"blocked", "blocked_unavailable", "capability_rescue_required"}:
-        from .project_method_implementation import (
-            current_project_method_implementation_scope,
-        )
-
-        implementation_scope = current_project_method_implementation_scope(project_path)
-        pending_issues = [
-            (str(check.get("figure_id") or ""), issue)
-            for check in trace.get("figure_checks") or []
-            if isinstance(check, dict)
-            for issue in check.get("issues") or []
-            if isinstance(issue, dict)
-        ]
-        covered_requirements = implementation_scope.get("requirement_ids", set())
-        only_scoped_method_gaps = bool(pending_issues) and all(
-            issue.get("kind") == "missing_method_plugin_requirement"
-            and str(issue.get("requirement_id") or "") in covered_requirements
-            for _, issue in pending_issues
-        )
-        if (
-            trace.get("decision") == "capability_rescue_required"
-            and implementation_scope.get("valid")
-            and only_scoped_method_gaps
-        ):
-            return {
-                **trace,
-                "codegen_override": "scoped_project_method_implementation",
-                "codegen_override_policy": (
-                    "Code scaffolding is allowed, but figure execution remains gated until "
-                    "audit-project-capabilities and verify-methods validate project-local code."
-                ),
-            }
         final_block = trace.get("decision") in {"blocked", "blocked_unavailable"}
         raise AnalysisCodeGenerationError(
             ("Figure generation is blocked because a required data or method capability remained unavailable after rescue. " if final_block else

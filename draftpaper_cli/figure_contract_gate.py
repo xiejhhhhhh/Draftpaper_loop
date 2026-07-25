@@ -44,9 +44,6 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         from .figure_plugin_trace import validate_figure_plugin_trace
 
         plugin_trace = validate_figure_plugin_trace(state.path)
-    from .project_method_implementation import current_project_method_implementation_scope
-
-    implementation_scope = current_project_method_implementation_scope(state.path)
     if not isinstance(contracts, dict) or not contracts:
         raise FigureContractGateError("results/figure_contracts.json is required. Run plan-figures first.")
 
@@ -54,10 +51,7 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
     available_data_roles = normalize_roles((data_coverage or {}).get("available_roles") or []) if isinstance(data_coverage, dict) else []
     method_status = str((method_feasibility or {}).get("decision") or "missing") if isinstance(method_feasibility, dict) else "missing"
     issues: list[dict[str, str]] = []
-    if (
-        (plugin_trace or {}).get("decision") == "capability_rescue_required"
-        and not implementation_scope.get("valid")
-    ):
+    if (plugin_trace or {}).get("decision") == "capability_rescue_required":
         issues.append({
             "severity": "rescue_required",
             "kind": "missing_plugin_trace_chain",
@@ -160,14 +154,6 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
             )
             if str(item).strip()
         ]
-        scoped_methods = (
-            implementation_scope.get("methods_by_figure", {}).get(figure_id, set())
-            if implementation_scope.get("valid")
-            else set()
-        )
-        implementation_pending = bool(required_methods) and set(required_methods).issubset(
-            scoped_methods
-        )
         method_source_status = str(contract.get("method_source_status") or "").strip().lower()
         expected_finding = str(contract.get("expected_finding") or contract.get("scientific_question") or contract.get("research_question") or "").strip()
         figure_issues: list[dict[str, str]] = []
@@ -210,20 +196,7 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
             for role in coverage.get("blocking_missing_roles") or []:
                 figure_issues.append({"severity": "blocking", "kind": "missing_data_role", "detail": role})
         if required_methods and method_status in {"blocked", "missing"}:
-            figure_issues.append({
-                "severity": "conditional" if implementation_pending else "blocking",
-                "kind": (
-                    "project_method_implementation_pending"
-                    if implementation_pending
-                    else "missing_method_feasibility"
-                ),
-                "detail": (
-                    "Scoped project-local implementation is authorized for code generation; "
-                    "verify-methods must validate it before figure execution."
-                    if implementation_pending
-                    else method_status
-                ),
-            })
+            figure_issues.append({"severity": "blocking", "kind": "missing_method_feasibility", "detail": method_status})
         codegen_ready = (plugin_trace or {}).get("decision") in {"ready_for_codegen", "pass"}
         if required_methods and not codegen_ready and method_source_status not in {
             "implemented",
@@ -231,12 +204,11 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
             "project_code_available",
             "plugin_available",
         }:
-            if not implementation_pending:
-                figure_issues.append({
-                    "severity": "blocking",
-                    "kind": "missing_method_source_evidence",
-                    "detail": method_source_status or "missing",
-                })
+            figure_issues.append({
+                "severity": "blocking",
+                "kind": "missing_method_source_evidence",
+                "detail": method_source_status or "missing",
+            })
         if not expected_finding:
             figure_issues.append({"severity": "blocking", "kind": "missing_expected_finding", "detail": "Contracted main figure lacks an expected finding or research question."})
         if coverage.get("partial_missing_roles"):
@@ -337,10 +309,6 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
         "storyboard_alignment_missing": missing_storyboard,
         "issues": issues,
         "review_rule_stage": "post_results",
-        "project_method_implementation_scope": {
-            "valid": bool(implementation_scope.get("valid")),
-            "task_count": int(implementation_scope.get("task_count") or 0),
-        },
         "recommended_next_action": next_action,
         "figure_plugin_trace": plugin_trace,
         "figure_plugin_trace_decision": (plugin_trace or {}).get("decision"),

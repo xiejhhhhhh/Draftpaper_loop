@@ -33,23 +33,9 @@ ROLE_TERMS = {
     "class_balance_check": {"class_balance", "class_count", "label", "category", "value_counts"},
     "feature_space_diagnostic": {"feature_space", "feature", "spectral", "importance", "embedding"},
     "baseline_model": {"baseline", "dummy", "logistic", "random_forest", "majority"},
-    "cohort_flow_audit": {
-        "cohort",
-        "analysis_unit",
-        "sample",
-        "eligibility",
-        "exclusion",
-        "source_id",
-        "group_id",
-    },
-    "missingness_analysis": {"missing", "availability", "alignment", "exclusion"},
-    "representation_projection": {
-        "projection",
-        "pca",
-        "explained_variance",
-        "explained_variance_ratio",
-        "embedding",
-    },
+    "cohort_flow_audit": {"cohort", "source_catalog", "image_available", "analysis_cohort"},
+    "missingness_analysis": {"missing", "cutout_exists", "image_available", "exclusion"},
+    "representation_projection": {"projection", "pca", "explained_variance", "embedding"},
     "target_confounder_diagnostic": {"redshift", "morphtype", "target", "luminosity"},
     "group_aware_validation": {"group", "fold", "leakage", "stratifiedgroupkfold"},
     "transparent_baseline_comparison": {"catalog_only", "embedding_only", "combined", "baseline"},
@@ -66,6 +52,7 @@ ROLE_TERMS = {
     "cohort_accounting_reconciliation": {"source_catalog", "image_available", "embedding_valid", "analysis_cohort"},
     "selection_missingness_analysis": {"missingness", "missing_rate", "covariate", "cutout_exists", "logistic"},
     "morphology_state_association": {"adaptive_label", "color_gr", "abs_mag_r", "morphtype"},
+    "representation_projection": {"pca", "projection", "explained_variance_ratio"},
     "image_level_validation": {"representative", "cutout", "gradient"},
     "confounder_adjusted_association": {"confounder_only", "embedding_plus_confounders", "representation_increment_over_confounders"},
     "stratified_bootstrap": {"bootstrap", "group", "incremental_macro_f1"},
@@ -96,8 +83,6 @@ ROLE_MIN_MATCHES = {
 }
 
 DATA_ROLE_COVERAGE_ALIASES = {
-    "analysis_unit": {"event_level_samples"},
-    "cohort_role": {"validation_design"},
     "source_catalog": {"source_catalog"},
     "image_availability": {"image_or_raster_data", "missingness_reason"},
     "valid_image_cohort": {"image_or_raster_data", "features"},

@@ -337,7 +337,6 @@ COMMAND_SPECS = {
                         "references/bibliography_contract.json",
                         "references/reference_duplicate_report.json",
                         "references/reference_registry.json",
-                        "references/supplemental_bibliography_merge_report.json",
                     )
                 )
             ),

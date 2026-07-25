@@ -637,8 +637,6 @@ _CN_PHRASES = {
 _CN_SENTENCES = {
     "Quantify the source, image-available, image-valid, and analysis cohorts together with every exclusion step.": "量化源样本、图像可用样本、图像有效样本和最终分析样本，并标出每一步排除的对象与原因。",
     "Compare image missingness rates and recorded reasons across the declared sample groups and relevant covariates.": "比较各预定样本组的图像缺失率和已记录原因，并检查缺失是否随相关协变量系统变化。",
-    "Quantify the declared input, eligible, analysis-ready, and final inference cohorts together with every exclusion step.": "量化已声明的输入样本、合格样本、分析就绪样本和最终推断样本，并标出每一步排除的对象与原因。",
-    "Compare missingness rates and recorded reasons across the declared sample groups, inputs, and relevant covariates.": "比较各预定样本组和输入的数据缺失率及已记录原因，并检查缺失是否随相关协变量系统变化。",
     "Visualize the representation geometry as exploratory evidence while coloring points only by the independent scientific target.": "将表示空间几何结构作为探索性证据展示，并仅使用独立科学目标对样本着色。",
     "Quantify target association separately from redshift, luminosity, acquisition group, and other declared confounders.": "分别量化表示与科学目标、红移、光度、观测分组及其他预定混杂因素的关联。",
     "Report held-out performance across the declared groups and folds without allowing group leakage between training and evaluation.": "报告各预定分组和交叉验证折上的留出性能，并确保训练集与评估集之间不存在分组泄漏。",
@@ -799,7 +797,7 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
             f"- 次级分析：{_cn_join(secondary) or '无'}。",
             f"- 结论边界：{boundary}",
             "",
-            "本研究以已声明的科学问题为主线。数据处理、统计检验、机器学习模型和可视化只在能够回答这些问题时作为分析工具使用，不能替代科学目标本身。",
+            "本研究以天体物理问题为主线。DINOv2、降维、分类器和异常检测等只在能够回答上述科学问题时作为分析工具使用，不能替代科学目标本身。",
             "",
         ])
     lines.extend([
@@ -817,7 +815,7 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         lines.extend([
             f"当前数据盘点共识别 {data_context.get('file_count', 0)} 个文件，其中 {data_context.get('external_file_count', 0)} 个通过只读外部数据合同接入；可读表格共 {data_context.get('tabular_file_count', 0)} 个。",
             "",
-            f"各表行数累计为 {data_context.get('cross_table_row_total', 0)}，该数字只是跨表盘点总量，不能作为独立分析单元数量。后续所有样本量必须绑定到具体表、样本单位和筛选阶段。",
+            f"各表行数累计为 {data_context.get('cross_table_row_total', 0)}，该数字只是跨表盘点总量，不能作为独立星系样本数。后续所有样本量必须绑定到具体表、样本单位和筛选阶段。",
             "",
         ])
         for table in data_context.get("table_summaries") or []:
@@ -855,8 +853,8 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         ])
     if objective:
         constraint_text = (
-            "后续数据阶段必须按照目标合同逐级核对样本流转、标签或目标来源、独立采样单位、数据缺失、质量控制、变量单位和观测来源。"
-            "方法阶段只能选择能够回答已声明科学问题、遵守数据层级、控制相关混杂因素并报告不确定性的分析工具。"
+            "后续数据阶段必须按照目标合同逐级核对样本流转、代理标签来源、选择效应、图像质量和各物理观测量的来源。"
+            "方法阶段只能选择能够估计形态与物理状态关系、控制混杂因素、报告不确定性并完成图像层复核的分析工具。"
             "若必要数据或方法无法补齐，应在人工检查点收紧对应主张，不能保留原强度结论或生成相似替代图。"
         )
     else:

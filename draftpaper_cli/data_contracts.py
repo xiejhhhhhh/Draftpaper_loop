@@ -32,7 +32,6 @@ ROLE_ALIASES = {
     "row": "event_level_samples",
     "rows": "event_level_samples",
     "n_rows": "event_level_samples",
-    "analysis_unit": "analysis_unit",
     "sample_group": "sample_group",
     "sample_groups": "sample_group",
     "group": "sample_group",
@@ -42,7 +41,6 @@ ROLE_ALIASES = {
     "object_group": "sample_group",
     "fold": "sample_group",
     "split": "sample_group",
-    "cohort_role": "cohort_role",
     "source": "source_catalog",
     "source_id": "source_catalog",
     "source_identifier": "source_catalog",
@@ -68,9 +66,6 @@ ROLE_ALIASES = {
     "prediction_score": "prediction_score",
     "score": "prediction_score",
     "logit": "prediction_score",
-    "uncertainty": "quality_or_support_fields",
-    "quality_or_support": "quality_or_support_fields",
-    "quality_or_support_fields": "quality_or_support_fields",
     "time": "time_series",
     "date": "time_series",
     "timestamp": "time_series",
@@ -149,8 +144,6 @@ ROLE_ALIASES = {
 # roles. Keep that specificity in reports, but define the concrete evidence
 # combination that can satisfy each role.
 ROLE_EVIDENCE_REQUIREMENTS = {
-    "analysis_unit": {"event_level_samples"},
-    "cohort_role": {"validation_design"},
     "vis_cutout_manifest": {"image_manifest"},
     "held_out_vis_cutouts": {"image_manifest", "validation_design"},
     "euclid_tile": {"acquisition_group"},
@@ -334,11 +327,7 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
         add("image_quality_flags")
     if {"rows", "n_rows", "row_count", "evt_n_rows", "cat_n_rows", "n_events"} & column_set:
         add("event_level_samples")
-    if (
-        {"fold", "split", "n_train", "n_test", "source_id", "object_id", "group_id"}
-        & column_set
-        or any(re.search(r"(?:^|_)(?:fold|split)(?:_|$)", column) for column in column_set)
-    ):
+    if {"fold", "split", "n_train", "n_test", "source_id", "object_id", "group_id"} & column_set:
         add("sample_group")
         add("validation_design")
     if {"cutout_file_path", "image_file_path", "raster_file_path"} & column_set and (

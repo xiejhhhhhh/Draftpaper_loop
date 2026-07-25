@@ -151,44 +151,17 @@ def compile_executable_analysis_specs(project: str | Path) -> dict[str, Any]:
     resampling_contracts: list[dict[str, Any]] = []
     for index, task in enumerate(method_tasks, start=1):
         task_id = str(task.get("task_id") or task.get("method_id") or f"analysis_{index}")
-        task_metric = str(task.get("metric") or task.get("validation_metric") or metric)
-        formula_id, ast, variables, calibration = _formula_for_metric(task_metric)
+        formula_id, ast, variables, calibration = _formula_for_metric(str(task.get("metric") or metric))
         analysis_spec_id = _identifier("analysis_spec", task_id)
-        method_components = {
-            str(item)
-            for item in task.get("method_components") or []
-            if str(item).strip()
-        }
-        grouped_resampling = "group_block_bootstrap" in method_components
-        paired_comparison = "paired_model_comparison" in method_components
         resampling = {
             "analysis_spec_id": analysis_spec_id,
-            "method": str(
-                task.get("resampling_method")
-                or ("group_block_bootstrap" if grouped_resampling else "none_declared")
-            ),
-            "resampling_unit": str(
-                task.get("resampling_unit")
-                or ("group_id" if grouped_resampling else "")
-            ),
-            "paired": bool(task.get("paired")) or paired_comparison,
-            "pair_id": str(
-                task.get("pair_id")
-                or ("matched_prediction_unit" if paired_comparison else "")
-            ),
-            "group_id": str(task.get("group_id") or ("group_id" if grouped_resampling else "")),
-            "uncertainty_semantics": str(
-                task.get("uncertainty_semantics")
-                or (
-                    "paired group-block bootstrap interval"
-                    if paired_comparison and grouped_resampling
-                    else "group-block bootstrap interval"
-                    if grouped_resampling
-                    else "point_estimate_only"
-                )
-            ),
+            "method": str(task.get("resampling_method") or "none_declared"),
+            "resampling_unit": str(task.get("resampling_unit") or ""),
+            "paired": bool(task.get("paired")),
+            "pair_id": str(task.get("pair_id") or ""),
+            "group_id": str(task.get("group_id") or ""),
+            "uncertainty_semantics": str(task.get("uncertainty_semantics") or "point_estimate_only"),
         }
-        figure_id = str(task.get("figure_id") or "").strip()
         spec = {
             "analysis_spec_id": analysis_spec_id,
             "task_id": task_id,
@@ -213,17 +186,7 @@ def compile_executable_analysis_specs(project: str | Path) -> dict[str, Any]:
             "implementation_entry_point": str(task.get("implementation_entry_point") or "methods/src/project_analysis.py"),
             "required_inputs": list(task.get("required_data") or requirements.get("required_data_features") or []),
             "declared_outputs": list(task.get("declared_outputs") or []),
-            "figure_ids": (
-                [figure_id]
-                if figure_id
-                else [
-                    str(item.get("figure_id") or item.get("id"))
-                    for item in storyboard.get("figures") or []
-                    if isinstance(item, dict)
-                    and str(task.get("method_family") or "")
-                    in [str(value) for value in item.get("required_method") or []]
-                ]
-            ),
+            "figure_ids": [str(item.get("figure_id") or item.get("id")) for item in storyboard.get("figures") or [] if isinstance(item, dict) and task_id in [str(value) for value in item.get("required_method") or []]],
         }
         spec["validation_issues"] = validate_analysis_spec(spec)
         specs.append(spec)
