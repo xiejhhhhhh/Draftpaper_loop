@@ -154,13 +154,20 @@ class WriteSetGuard:
         }
 
     def rollback_violations(self, assessment: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Remove or restore project-local writes outside the command contract."""
+        """Atomically remove or restore every write from a rejected command.
+
+        Once one path violates the declared boundary, retaining the command's
+        otherwise-allowed writes would leave an uncommitted partial
+        transaction in the project.  The rollback therefore restores the full
+        actual write set while preserving files that were already dirty in the
+        captured baseline.
+        """
         report = assessment or self.assess()
-        violations = set(str(path) for path in report.get("violations") or [])
+        writes = set(str(path) for path in report.get("actual_write_set") or [])
         restored: list[str] = []
         removed: list[str] = []
         unrecoverable: list[str] = []
-        for relative in sorted(violations):
+        for relative in sorted(writes):
             path = self.root / relative
             if relative in set(report.get("created") or []):
                 if path.is_file() and not path.is_symlink():

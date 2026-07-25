@@ -7,6 +7,7 @@ import io
 import json
 from dataclasses import dataclass, field, replace
 from importlib import import_module
+from pathlib import Path
 from typing import Any
 
 
@@ -739,7 +740,6 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
                 continue
             if isinstance(payload, dict):
                 payload["_dpl_output_stream"] = output_stream
-                _dispatch_extensions_nonblocking(args, spec, payload, exit_code)
                 return payload, exit_code
         raise TypeError(f"Namespace handler for {spec.name} did not emit a JSON object payload.")
     kwargs = {parameter: getattr(args, attribute, None) for parameter, attribute in spec.argument_bindings}
@@ -756,21 +756,36 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         exit_code = 0 if payload.get("status") == "passed" else 1
     else:
         exit_code = 0
-    _dispatch_extensions_nonblocking(args, spec, payload, exit_code)
     return payload, exit_code
 
 
-def _dispatch_extensions_nonblocking(args: Any, spec: CommandSpec, payload: dict[str, Any], exit_code: int) -> None:
-    """Emit extension events after successful project mutations without changing command outcome."""
+def dispatch_extensions_nonblocking(
+    args: Any,
+    spec: CommandSpec,
+    payload: dict[str, Any],
+    exit_code: int,
+    *,
+    project_override: str | Path | None = None,
+    changed_paths: tuple[str, ...] = (),
+    transaction_receipt: dict[str, Any] | None = None,
+) -> None:
+    """Emit extension events only after the authoritative transaction commits."""
 
-    project = getattr(args, "project", None) or payload.get("project_path")
+    project = project_override or getattr(args, "project", None) or payload.get("project_path")
     if exit_code != 0 or not spec.mutates_project or not project:
         return
     try:
         from .extensions.dispatcher import dispatch_workflow_event
         from .extensions.events import emit_command_event
 
-        event = emit_command_event(project, command=spec.name, formal_stage=spec.formal_stage, result=payload)
+        event = emit_command_event(
+            project,
+            command=spec.name,
+            formal_stage=spec.formal_stage,
+            result=payload,
+            changed_paths=changed_paths,
+            transaction_receipt=transaction_receipt,
+        )
         dispatch_workflow_event(project, event)
     except Exception:
         # Optional extension infrastructure is deliberately isolated from the

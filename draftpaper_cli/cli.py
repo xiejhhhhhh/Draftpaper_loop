@@ -10,6 +10,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
 from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
@@ -194,7 +195,12 @@ def _skill_source_url(args: argparse.Namespace) -> str | None:
         return f"https://github.com/{repo_text}"
     return None
 from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
-from .command_registry import COMMAND_SPECS, command_spec, dispatch_registered_command
+from .command_registry import (
+    COMMAND_SPECS,
+    command_spec,
+    dispatch_extensions_nonblocking,
+    dispatch_registered_command,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1076,7 +1082,11 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
+def _main_without_passport_refresh(
+    argv: list[str] | None = None,
+    *,
+    result_sink: list[tuple[Any, dict[str, Any], int]] | None = None,
+) -> int:
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8")
@@ -1092,6 +1102,8 @@ def _main_without_passport_refresh(argv: list[str] | None = None) -> int:
         return 1
     if registered is not None:
         result, exit_code = registered
+        if result_sink is not None:
+            result_sink.append((args, dict(result), exit_code))
         output_stream = result.pop("_dpl_output_stream", "stdout")
         print(json.dumps(result, ensure_ascii=False), file=sys.stderr if output_stream == "stderr" else sys.stdout)
         return exit_code
@@ -1175,11 +1187,18 @@ def main(argv: list[str] | None = None) -> int:
         workflow_trace = begin_workflow_trace(project, command, vars(args))
 
     captured = io.StringIO()
+    execution_result: list[tuple[Any, dict[str, Any], int]] = []
     if full_json:
-        exit_code = _main_without_passport_refresh(raw_argv)
+        exit_code = _main_without_passport_refresh(
+            raw_argv,
+            result_sink=execution_result,
+        )
     else:
         with contextlib.redirect_stdout(captured):
-            exit_code = _main_without_passport_refresh(raw_argv)
+            exit_code = _main_without_passport_refresh(
+                raw_argv,
+                result_sink=execution_result,
+            )
         output = captured.getvalue().strip()
         if output:
             try:
@@ -1189,7 +1208,42 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(compact_payload(payload), ensure_ascii=False))
             except (json.JSONDecodeError, TypeError, ValueError):
                 print(output)
+    command_args = execution_result[-1][0] if execution_result else args
+    command_payload = execution_result[-1][1] if execution_result else {}
+
+    if (
+        not mutates_project
+        and spec is not None
+        and spec.mutates_project
+        and exit_code == 0
+        and command_payload.get("project_path")
+    ):
+        created_root = Path(str(command_payload["project_path"])).expanduser().resolve()
+        changed_paths = tuple(
+            relative
+            for relative in ("idea/idea.md",)
+            if (created_root / Path(*relative.split("/"))).is_file()
+        )
+        transaction_receipt = record_command_transaction(
+            created_root,
+            command=command,
+            scientific_exit_code=exit_code,
+            transaction_status="committed",
+            baseline_clean=True,
+            passport_event=f"cli:{command}",
+        )
+        dispatch_extensions_nonblocking(
+            command_args,
+            spec,
+            command_payload,
+            exit_code,
+            project_override=created_root,
+            changed_paths=changed_paths,
+            transaction_receipt=transaction_receipt,
+        )
+
     if mutates_project:
+        actual_write_set: tuple[str, ...] = ()
         if write_guard is not None:
             assessment = write_guard.assess()
             if assessment.get("status") != "passed":
@@ -1221,6 +1275,9 @@ def main(argv: list[str] | None = None) -> int:
                         failure_class="write_boundary_violation",
                     )
                 return 4 if assessment["rollback"].get("status") == "rolled_back" else 5
+            actual_write_set = tuple(
+                str(item) for item in assessment.get("actual_write_set") or ()
+            )
         post_command_drift = True
         try:
             post_command_drift = detect_artifact_drift(project).get("status") == "drift_detected"
@@ -1258,7 +1315,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"status": "error", "message": f"Command completed but passport refresh failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
             return 1
         try:
-            record_command_transaction(
+            transaction_receipt = record_command_transaction(
                 project,
                 command=command,
                 scientific_exit_code=exit_code,
@@ -1278,6 +1335,15 @@ def main(argv: list[str] | None = None) -> int:
                 transaction_status="committed",
                 scientific_decision="pass" if exit_code == 0 else "non_passing",
                 failure_class=None if exit_code == 0 else "scientific_or_command_nonzero",
+            )
+        if spec is not None:
+            dispatch_extensions_nonblocking(
+                command_args,
+                spec,
+                command_payload,
+                exit_code,
+                changed_paths=actual_write_set,
+                transaction_receipt=transaction_receipt,
             )
     return exit_code
 
