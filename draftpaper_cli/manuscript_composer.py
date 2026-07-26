@@ -245,6 +245,66 @@ def _compact_resolved_evidence(resolved: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _compact_results_synthesis_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    """Deduplicate run-qualified metrics repeated across finding blocks.
+
+    The full synthesis artifact remains the audit source.  The writing packet
+    carries one metric index plus per-finding references, preventing a six-
+    figure narrative from repeating the same model table six times.
+    """
+    metric_fields = (
+        "metric_name", "value", "model", "model_id", "split", "aggregation",
+        "analysis_variant", "run_id", "cohort_id", "sample_unit", "sample_count",
+        "metric_dimension",
+    )
+    metric_index: list[dict[str, Any]] = []
+    metric_ids: dict[str, str] = {}
+    blocks = []
+    for block in plan.get("finding_blocks") or []:
+        if not isinstance(block, dict):
+            continue
+        refs = []
+        for metric in block.get("metric_evidence") or []:
+            if not isinstance(metric, dict):
+                continue
+            compact = {
+                key: metric.get(key)
+                for key in metric_fields
+                if metric.get(key) not in (None, "", [], {})
+            }
+            fingerprint = json.dumps(compact, ensure_ascii=False, sort_keys=True, default=str)
+            metric_id = metric_ids.get(fingerprint)
+            if metric_id is None:
+                metric_id = f"metric:{len(metric_index) + 1:03d}"
+                metric_ids[fingerprint] = metric_id
+                metric_index.append({"metric_id": metric_id, **compact})
+            refs.append(metric_id)
+        blocks.append({
+            key: value
+            for key, value in {
+                "finding_id": block.get("finding_id"),
+                "scientific_job": block.get("scientific_job"),
+                "scientific_question": block.get("scientific_question"),
+                "observed_result": block.get("observed_result"),
+                "figure_evidence": block.get("figure_evidence") or [],
+                "supporting_evidence": block.get("supporting_evidence") or [],
+                "metric_refs": list(dict.fromkeys(refs)),
+                "evidence_ids": block.get("evidence_ids") or [],
+                "run_ids": block.get("run_ids") or [],
+                "comparison_requirement": block.get("comparison_requirement"),
+                "interpretation_requirement": block.get("interpretation_requirement"),
+                "claim_boundary": block.get("claim_boundary"),
+            }.items()
+            if value not in (None, "", [], {})
+        })
+    return {
+        "schema_version": plan.get("schema_version"),
+        "finding_blocks": blocks,
+        "metric_index": metric_index,
+        "full_plan_reference": "writing/results_synthesis_plan.json",
+    }
+
+
 def _compact_paper_brief(brief: dict[str, Any]) -> dict[str, Any]:
     return {
         key: brief.get(key)
@@ -340,7 +400,17 @@ def _write_quantitative_claim_bindings(
             if str(item.get("claim") or item.get("sentence") or "").strip() in {"", sentence}
             and item.get("status") == "bound"
         ]
-        evidence_ids = sorted({str(evidence_id) for item in sentence_bindings for evidence_id in item.get("evidence_ids") or [] if evidence_id})
+        evidence_ids = sorted({
+            str(evidence_id)
+            for item in sentence_bindings
+            for evidence_id in [
+                *(item.get("evidence_ids") or []),
+                item.get("evidence_id"),
+                (item.get("binding") or {}).get("evidence_id")
+                if isinstance(item.get("binding"), dict) else None,
+            ]
+            if evidence_id
+        })
         if evidence_ids or re.search(r"\d", sentence):
             claim_rows.append({
                 "section_claim_id": f"{section}:claim:{index:03d}",
@@ -477,7 +547,9 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "paper_narrative": compact_narrative,
         "section_evidence_pack": compact_pack,
         "section_outline": writing_context.get("section_outline") or {},
-        "results_synthesis_plan": writing_context.get("results_synthesis_plan") or {},
+        "results_synthesis_plan": _compact_results_synthesis_plan(
+            writing_context.get("results_synthesis_plan") or {}
+        ),
         "argument_matrices": compact_matrices,
         "section_reasoning_inputs": (
             argument_matrices.get("introduction_gap_matrix", []) if normalized == "introduction"

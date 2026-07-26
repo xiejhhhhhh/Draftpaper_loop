@@ -201,6 +201,23 @@ tables: []
             editor = prepare_scientific_editor(project.path, "results", candidate)
             self.assertFalse(any("internal_artifact_language" in task["issues"] for task in editor["tasks"]))
 
+    def test_scientific_editor_aligns_ordered_jobs_without_internal_figure_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            candidate = project.path / "candidate_public_figure_reference.tex"
+            candidate.write_text(
+                "\\section{Results}\n\n"
+                "Figure~1 establishes the held-out comparison and its scientific boundary. "
+                "The observed pattern is interpreted within the declared cohort, while the uncertainty "
+                "limits any broader claim about model behaviour. The comparison therefore answers the "
+                "planned empirical question without exposing an internal artifact identifier or path.",
+                encoding="utf-8",
+            )
+
+            editor = prepare_scientific_editor(project.path, "results", candidate)
+
+            self.assertFalse(any("paragraph_job_missing" in task["issues"] for task in editor["tasks"]))
+
     def test_scientific_editor_ignores_all_latex_sectioning_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = self._project(tmp)

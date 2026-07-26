@@ -41,10 +41,6 @@ RESULT_SUPPORT_INPUTS = (
     "review/actionable_analysis_tasks.json",
     "data/data_acquisition_tasks.json",
     "research_plan/pre_execution_rescue_tasks.json",
-    "review/result_support_reopen_request.json",
-    "review/result_discipline_review_report.json",
-    "results/results.tex",
-    "results/promoted_evidence_snapshot.json",
     "results/figure_plugin_trace_report.json",
 )
 
@@ -99,7 +95,6 @@ def result_support_project_binding(project: str | Path) -> str:
         "project_id": project_payload.get("project_id"),
         "stages": {
             "results": {
-                "status": results_stage.get("status"),
                 "stale": bool(results_stage.get("stale")),
             },
         },
@@ -786,7 +781,12 @@ def _validate_role_binding(
                 evidence_path=relative,
                 **diagnostic_context,
             ))
-        expected = required or current
+        # A promoted snapshot is created downstream from a passing Result
+        # Support assessment.  It constrains a role only when the claim (or
+        # another upstream contract) explicitly declares that snapshot.  Using
+        # the newly created current snapshot as an implicit requirement would
+        # make promotion invalidate the evidence it just promoted.
+        expected = required or (current if field != "snapshot_id" else "")
         if expected and observed != expected:
             diagnostics.append(_role_binding_diagnostic(
                 binding_code if observed else binding_code.replace("mismatch", "unbound"),

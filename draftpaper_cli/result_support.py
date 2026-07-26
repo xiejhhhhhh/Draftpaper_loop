@@ -647,6 +647,10 @@ def result_route_preflight(
         changed = sorted(
             relative
             for relative in set(recorded_bindings) | set(current_bindings)
+            if not (
+                relative == "results/promoted_evidence_snapshot.json"
+                and relative not in recorded_bindings
+            )
             if current_bindings.get(relative) != recorded_bindings.get(relative)
         )
         if changed:
@@ -991,6 +995,10 @@ def validate_result_support_for_manuscript(project_path: Path) -> dict[str, Any]
     changed = sorted(
         relative
         for relative in set(recorded_bindings) | set(current_bindings)
+        if not (
+            relative == "results/promoted_evidence_snapshot.json"
+            and relative not in recorded_bindings
+        )
         if current_bindings.get(relative) != recorded_bindings.get(relative)
     )
     if changed:

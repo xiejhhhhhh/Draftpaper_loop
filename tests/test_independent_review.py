@@ -255,3 +255,18 @@ def test_anonymous_review_tex_redacts_identity_and_preserves_front_matter_contra
     assert "\\affiliation{Withheld for anonymous review}" in rendered
     assert "\\email{withheld@anonymous.invalid}" in rendered
     assert "\\graphicspath{{../../../}}" in rendered
+
+
+def test_anonymous_review_tex_redacts_section_acknowledgment_and_repository_url() -> None:
+    rendered = _anonymize_review_tex(
+        "\\documentclass{article}\n"
+        "\\title{Study}\n"
+        "\\begin{document}\n\\maketitle\n"
+        "\\section{Results}\nText.\n"
+        "\\section*{Acknowledgments}\nContact author@example.org and https://github.com/example/project.\n"
+        "\\bibliographystyle{plainnat}\n\\bibliography{library}\n\\end{document}\n"
+    )
+
+    assert "author@example.org" not in rendered
+    assert "github.com/example/project" not in rendered
+    assert "Withheld for anonymous review" in rendered

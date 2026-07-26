@@ -349,8 +349,8 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             with self.assertRaisesRegex(ResultSupportError, "content does not match checkpoint_sha256"):
                 validate_result_support_for_manuscript(project.path)
 
-    def test_pass_checkpoint_blocks_manuscript_when_results_stage_projection_changes(self) -> None:
-        from draftpaper_cli.project_state import update_stage_status
+    def test_pass_checkpoint_ignores_results_status_but_blocks_stale_scientific_state(self) -> None:
+        from draftpaper_cli.project_state import mark_stage_stale, update_stage_status
         from draftpaper_cli.result_support import ResultSupportError, validate_result_support_for_manuscript
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -369,8 +369,31 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             assess_result_support(project.path)
             update_stage_status(project.path, "results", "approved")
 
+            self.assertEqual(validate_result_support_for_manuscript(project.path)["decision"], "pass")
+            mark_stage_stale(project.path, "results", include_self=True)
+
             with self.assertRaisesRegex(ResultSupportError, "inputs changed.*project.json"):
                 validate_result_support_for_manuscript(project.path)
+
+    def test_pass_checkpoint_allows_first_promoted_snapshot_created_downstream(self) -> None:
+        from draftpaper_cli.result_support import validate_result_support_for_manuscript
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Downstream snapshot", field="machine learning")
+            _write_validity_inputs(project.path)
+            (project.path / "research_plan" / "claim_contract.json").write_text(
+                json.dumps({"claims": [{"claim_id": "bounded", "claim_text": "Exploratory."}]}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-current"}), encoding="utf-8"
+            )
+            assess_result_support(project.path)
+            (project.path / "results" / "promoted_evidence_snapshot.json").write_text(
+                json.dumps({"snapshot_id": "snapshot-after-support"}), encoding="utf-8"
+            )
+
+            self.assertEqual(validate_result_support_for_manuscript(project.path)["decision"], "pass")
 
     def test_apply_result_downgrade_freezes_results_and_only_reopens_manuscript_chain(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -545,8 +568,8 @@ class ResultSupportCheckpointTests(unittest.TestCase):
                 item["failure_type"] == "post_results_evidence_reopen_pending"
                 for item in first_report["claim_assessments"]
             ))
-            self.assertIn("review/result_support_reopen_request.json", first_report["input_bindings"])
-            self.assertIn("review/result_discipline_review_report.json", first_report["input_bindings"])
+            self.assertNotIn("review/result_support_reopen_request.json", first_report["input_bindings"])
+            self.assertNotIn("review/result_discipline_review_report.json", first_report["input_bindings"])
 
             review_path.write_text(json.dumps({
                 "generated_at": "2026-01-03T00:00:00Z",

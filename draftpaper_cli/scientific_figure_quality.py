@@ -80,6 +80,30 @@ def _pixel_evidence(path: Path) -> dict[str, Any]:
                 if occupied and not active:
                     groups += 1
                 active = occupied
+            # Titles, legends, and long tick labels can bridge otherwise distinct
+            # subplots when occupancy is measured over the full canvas.  Measure
+            # a second, finer profile through the plotting body so genuine
+            # multi-panel figures are not rejected merely because their text
+            # spans the inter-panel whitespace.
+            body_top = max(0, height * 18 // 100)
+            body_bottom = max(body_top + 1, height * 75 // 100)
+            body_occupancy = []
+            for index in range(64):
+                start = index * width // 64
+                end = max(start + 1, (index + 1) * width // 64)
+                density = sum(
+                    dark[y * width + x]
+                    for y in range(body_top, body_bottom)
+                    for x in range(start, end)
+                ) / max((body_bottom - body_top) * (end - start), 1)
+                body_occupancy.append(density > 0.04)
+            body_groups = 0
+            active = False
+            for occupied in body_occupancy:
+                if occupied and not active:
+                    body_groups += 1
+                active = occupied
+            groups = max(groups, body_groups)
             textured_cells = 0
             grid_cells = 8
             for grid_y in range(2):
@@ -113,6 +137,7 @@ def _pixel_evidence(path: Path) -> dict[str, Any]:
                 "axis_region_evidence": left_density > 0.004 and bottom_density > 0.004,
                 "text_edge_evidence": edge_density > 0.004,
                 "inferred_horizontal_content_groups": groups,
+                "inferred_plot_body_content_groups": body_groups,
                 "textured_grid_cells": textured_cells,
                 "textured_grid_fraction": round(textured_cells / grid_cells, 3),
                 "nonblank": nonwhite_fraction >= 0.002 and variance >= 4.0 and edge_density >= 0.001,

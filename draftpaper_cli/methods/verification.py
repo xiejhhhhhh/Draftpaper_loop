@@ -533,7 +533,19 @@ def verify_methods(
     structured_output = _structured_stdout_payload(completed.stdout) if completed.returncode == 0 else {}
     reported_outputs = _reported_output_files(state.path, structured_output)
     declared_outputs = list(dict.fromkeys([*declared_outputs, *reported_outputs]))
-    run_id = _verified_run_id(command_argv, declared_outputs)
+    execution_receipt_id = _verified_run_id(command_argv, declared_outputs)
+    scientific_run_id = str(
+        structured_output.get("scientific_run_id")
+        or method_code_manifest.get("scientific_run_id")
+        or previous_run.get("scientific_run_id")
+        or ""
+    ).strip()
+    # The command/output receipt identifies one verification execution.  A
+    # scientific run identity may instead be declared by the project runner or
+    # method manifest (for example, when re-attesting frozen predictions).  Do
+    # not collapse those two identities: result tables and evidence resolvers
+    # must remain bound to the scientific run across repeat verification.
+    run_id = scientific_run_id or execution_receipt_id
     run_evidence = _structured_run_evidence(structured_output, run_id=run_id)
     missing_outputs = _missing_declared_outputs(state.path, {"output_files": declared_outputs})
     figure_quality_issues = _validate_generated_figure_outputs(state.path, declared_outputs)
@@ -564,6 +576,8 @@ def verify_methods(
         "shell_used": False,
         "returncode": completed.returncode,
         "run_id": run_id,
+        "scientific_run_id": run_id,
+        "execution_receipt_id": execution_receipt_id,
         "input_data": resolved_input_data,
         "output_files": declared_outputs,
         "reported_output_files": reported_outputs,

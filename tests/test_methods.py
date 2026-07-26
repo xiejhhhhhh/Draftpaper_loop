@@ -181,6 +181,7 @@ metrics.write_text("metric,value\\nmacro_f1,0.91\\n", encoding="utf-8")
 detail.write_text("model,macro_f1\\nprimary,0.91\\n", encoding="utf-8")
 print(json.dumps({
     "status": "success",
+    "scientific_run_id": "run_frozen_predictions_v1",
     "outputs": ["results/tables/metrics.csv", "results/tables/detailed_metrics.csv"],
     "final_test_metrics": {"macro_f1": 0.91},
     "cohort_audit": {"class_counts": {"A": 30, "B": 20}, "split_counts": {"train": 40, "test": 10}},
@@ -207,7 +208,10 @@ print(json.dumps({
             ])
             values = {item["value"] for item in manifest["evidence_records"]}
             self.assertTrue({0.91, 30, 20, 40, 10}.issubset(values))
-            self.assertTrue(manifest["run_id"])
+            self.assertEqual(manifest["run_id"], "run_frozen_predictions_v1")
+            self.assertEqual(manifest["scientific_run_id"], "run_frozen_predictions_v1")
+            self.assertTrue(manifest["execution_receipt_id"])
+            self.assertNotEqual(manifest["execution_receipt_id"], manifest["run_id"])
 
     def test_verify_methods_rejects_shell_operators_and_shell_runners(self) -> None:
         from draftpaper_cli.methods import MethodsGateError, verify_methods

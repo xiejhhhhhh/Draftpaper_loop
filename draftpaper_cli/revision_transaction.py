@@ -12,7 +12,7 @@ from .change_impact import normalize_change_class
 from .manuscript_artifacts import SECTION_CANONICAL_ARTIFACTS, SECTION_DERIVED_ARTIFACTS
 from .manuscript_composer import SectionCompositionError, accept_section_draft, submit_section_draft
 from .project_scaffold import _write_json, utc_now
-from .project_state import load_project
+from .project_state import load_project, update_stage_status
 from .scoped_transaction import ScopedProjectTransaction
 from .state_kernel import atomic_write_text
 from .writing_architecture import WritingArchitectureError, prepare_scientific_editor
@@ -85,6 +85,15 @@ def apply_section_revision(
                     source_hash=source_hash,
                     section=normalized,
                 )
+                # The revision has already passed composition and editor gates and
+                # has been installed as the canonical section.  Stale propagation
+                # must invalidate downstream consumers, but it must not leave the
+                # newly accepted producer stale or LaTeX assembly becomes
+                # impossible without regenerating the section we just accepted.
+                source_stage = {"data": "data_writing", "methods": "methods_writing"}.get(
+                    normalized, normalized
+                )
+                update_stage_status(state.path, source_stage, "completed")
             receipt = {
                 "schema_version": "dpl.section_revision_transaction.v2",
                 "generated_at": utc_now(),

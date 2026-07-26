@@ -58,6 +58,11 @@ PRIVATE_LOCATOR_PATTERNS = (
     re.compile(r"(?:^|[\s'\"])(?:/home/|/Users/|file://)"),
     re.compile(r"(?i)\b(?:password|api[_-]?key|secret|username)\s*[:=]"),
 )
+ANONYMOUS_IDENTITY_PATTERNS = (
+    re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"),
+    re.compile(r"(?i)https?://(?:www\.)?github\.com/[^\s'\"}]+"),
+    re.compile(r"(?i)\b(?:generator_contact|contact|orcid)\b\s*[:=]"),
+)
 
 
 class IndependentReviewError(RuntimeError):
@@ -171,6 +176,17 @@ def _pdf_contains_identity(pdf: Path, identities: list[str]) -> list[str]:
     return [name for name in identities if name.lower() in text]
 
 
+def _pdf_contains_generic_identity(pdf: Path) -> bool:
+    try:
+        from pypdf import PdfReader
+
+        text = "\n".join(page.extract_text() or "" for page in PdfReader(str(pdf)).pages)
+        text = text.replace("withheld@anonymous.invalid", "")
+    except Exception:
+        return True
+    return any(pattern.search(text) for pattern in ANONYMOUS_IDENTITY_PATTERNS)
+
+
 def _pdf_is_extractable(pdf: Path) -> bool:
     try:
         from pypdf import PdfReader
@@ -204,12 +220,19 @@ def _anonymize_review_tex(tex: str) -> str:
         flags=re.S,
     )
     tex = re.sub(
+        r"\\section\*?\{Acknowledg(?:e)?ments\}.*?(?=\\section|\\bibliographystyle|\\bibliography|\\end\{document\})",
+        "\\\\section*{Acknowledgments}\nWithheld for anonymous review.\n\n",
+        tex,
+        flags=re.S | re.I,
+    )
+    tex = re.sub(
         r"\\section\*\{Related Links\}.*?(?=\\bibliographystyle|\\bibliography)",
         "\\\\section*{Related Links}\nWithheld for anonymous review.\n\n",
         tex,
         flags=re.S,
     )
-    tex = re.sub(r"https?://github\.com/xiej+h+/Draftpaper(?:\\?_loop)?", "withheld for anonymous review", tex, flags=re.I)
+    tex = re.sub(r"https?://(?:www\.)?github\.com/[^\s'\"}]+", "withheld for anonymous review", tex, flags=re.I)
+    tex = re.sub(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "withheld@anonymous.invalid", tex)
     tex = re.sub(r"(?m)^% Commercial use requires prior written authorization:.*\n?", "", tex)
     tex = tex.replace(r"\graphicspath{{../}}", r"\graphicspath{{../../../}}")
     return tex
@@ -271,6 +294,28 @@ def _compile_anonymous_review_pdf(root: Path) -> tuple[Path, list[Path]]:
     return pdf, copied_sources
 
 
+def _sanitize_anonymous_text(text: str, identities: list[str]) -> str:
+    sanitized = text
+    for identity in identities:
+        sanitized = re.sub(re.escape(identity), "Anonymous Contributor", sanitized, flags=re.I)
+    sanitized = re.sub(
+        r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+        "withheld@anonymous.invalid",
+        sanitized,
+    )
+    sanitized = re.sub(
+        r"(?i)https?://(?:www\.)?github\.com/[^\s'\"}]+",
+        "withheld-for-anonymous-review",
+        sanitized,
+    )
+    sanitized = re.sub(
+        r"(?im)^\s*#\s*(?:Copyright|Contact):?.*$",
+        "# Identity withheld for anonymous review.",
+        sanitized,
+    )
+    return sanitized
+
+
 def _review_reproducibility_files(root: Path, identities: list[str]) -> tuple[list[Path], list[dict[str, str]]]:
     from .reproducibility_bundle import python_dependency_closure, selected_run_roots
 
@@ -290,11 +335,31 @@ def _review_reproducibility_files(root: Path, identities: list[str]) -> tuple[li
             excluded.append({"path": relative, "reason": "private_locator_or_credential_pattern"})
             continue
         lowered = text.lower()
-        if any(identity in lowered for identity in lowered_identities):
-            excluded.append({"path": relative, "reason": "declared_identity_present"})
-            continue
-        accepted.append(path)
+        needs_sanitizing = any(identity in lowered for identity in lowered_identities) or any(
+            pattern.search(text) for pattern in ANONYMOUS_IDENTITY_PATTERNS
+        )
+        if needs_sanitizing:
+            target = root / REVIEW_ROOT / "anonymous_build" / "reproducibility" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(_sanitize_anonymous_text(text, identities), encoding="utf-8")
+            accepted.append(target)
+        else:
+            accepted.append(path)
     return accepted, excluded
+
+
+def _anonymous_evidence_copy(root: Path, path: Path, identities: list[str]) -> Path:
+    if not path.is_file():
+        return path
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    if not any(pattern.search(text) for pattern in ANONYMOUS_IDENTITY_PATTERNS) and not any(
+        identity.lower() in text.lower() for identity in identities
+    ):
+        return path
+    target = root / REVIEW_ROOT / "anonymous_build" / "evidence" / path.name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_sanitize_anonymous_text(text, identities), encoding="utf-8")
+    return target
 
 
 def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]:
@@ -305,7 +370,8 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
         raise IndependentReviewError("A compiled latex/main.pdf is required before independent review.")
     identities = _declared_identity(root)
     visible = _pdf_contains_identity(pdf, identities)
-    if visible:
+    generic_identity_visible = _pdf_contains_generic_identity(pdf)
+    if visible or generic_identity_visible:
         if not _pdf_is_extractable(pdf):
             raise IndependentReviewError(
                 "The review PDF still contains declared author identity. Compile an anonymized manuscript before preparing the bundle: "
@@ -313,7 +379,7 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
             )
         pdf, anonymous_sources = _compile_anonymous_review_pdf(root)
         remaining = _pdf_contains_identity(pdf, identities)
-        if remaining:
+        if remaining or _pdf_contains_generic_identity(pdf):
             raise IndependentReviewError("Anonymous review build still contains declared identity: " + ", ".join(remaining))
     else:
         anonymous_sources = [root / "latex" / "main.tex", *list((root / "latex" / "sections").glob("*.tex"))]
@@ -321,7 +387,10 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
 
     figures, tables = selected_result_assets(root)
     references = [root / "references" / "reference_registry.json", root / "references" / "library.bib"]
-    snapshots = [root / "results" / "promoted_evidence_snapshot.json", root / "core_evidence" / "core_evidence_report.json"]
+    snapshots = [
+        _anonymous_evidence_copy(root, root / "results" / "promoted_evidence_snapshot.json", identities),
+        _anonymous_evidence_copy(root, root / "core_evidence" / "core_evidence_report.json", identities),
+    ]
     reproducibility, excluded_reproducibility = _review_reproducibility_files(root, identities)
     reproducibility_smoke = smoke_dependency_closure(root, reproducibility)
     if reproducibility_smoke.get("decision") != "pass":

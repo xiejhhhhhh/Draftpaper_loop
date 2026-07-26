@@ -46,7 +46,7 @@ _PANEL_EXPECTED_CONTENT = {
 def _headline(title: str) -> str:
     phrase = re.sub(r"\s+", " ", str(title or "planned scientific evidence")).strip().rstrip(".?!")
     phrase = phrase.replace(",", "").replace(";", "")
-    return f"This figure establishes {phrase.lower()}."
+    return f"{phrase}."
 
 
 def enrich_storyboard_figure(item: dict[str, Any], *, index: int, claim_id: str) -> dict[str, Any]:

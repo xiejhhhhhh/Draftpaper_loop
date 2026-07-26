@@ -710,23 +710,29 @@ def test_selected_run_rejects_unbound_csv_rows_and_binds_every_declared_csv_inpu
     )
 
 
-def test_checkpoint_input_bindings_include_post_results_review_and_reopen_request(tmp_path) -> None:
+def test_checkpoint_input_bindings_exclude_downstream_results_review_artifacts(tmp_path) -> None:
     from draftpaper_cli.result_support import RESULT_SUPPORT_INPUTS
     from draftpaper_cli.result_support_signals import build_result_support_input_bindings
 
     project = create_project(root=tmp_path, idea="Post Results inputs", field="machine learning").path
-    paths = {
+    upstream_paths = {
         "research_plan/pre_execution_rescue_tasks.json": {"tasks": []},
+    }
+    downstream_paths = {
         "review/result_support_reopen_request.json": {"status": "requested"},
         "review/result_discipline_review_report.json": {"decision": "repair_required"},
+        "results/results.tex": {"content": "downstream"},
+        "results/promoted_evidence_snapshot.json": {"snapshot_id": "downstream"},
     }
-    for relative, payload in paths.items():
+    for relative, payload in {**upstream_paths, **downstream_paths}.items():
         _json(project / relative, payload)
 
     bindings = build_result_support_input_bindings(project)
 
-    assert set(paths) <= set(RESULT_SUPPORT_INPUTS)
-    assert set(paths) <= set(bindings)
+    assert set(upstream_paths) <= set(RESULT_SUPPORT_INPUTS)
+    assert set(upstream_paths) <= set(bindings)
+    assert not (set(downstream_paths) & set(RESULT_SUPPORT_INPUTS))
+    assert not (set(downstream_paths) & set(bindings))
 
 
 def test_result_support_inputs_are_the_single_exact_fixed_consumed_input_source() -> None:
@@ -746,10 +752,6 @@ def test_result_support_inputs_are_the_single_exact_fixed_consumed_input_source(
         "review/actionable_analysis_tasks.json",
         "data/data_acquisition_tasks.json",
         "research_plan/pre_execution_rescue_tasks.json",
-        "review/result_support_reopen_request.json",
-        "review/result_discipline_review_report.json",
-        "results/results.tex",
-        "results/promoted_evidence_snapshot.json",
         "results/figure_plugin_trace_report.json",
     )
 
@@ -757,8 +759,8 @@ def test_result_support_inputs_are_the_single_exact_fixed_consumed_input_source(
     assert RESULT_SUPPORT_INPUTS == expected
 
 
-def test_assessed_route_is_current_then_invalidates_when_results_stage_metadata_changes(tmp_path) -> None:
-    from draftpaper_cli.project_state import update_stage_status
+def test_assessed_route_ignores_status_then_invalidates_when_results_become_stale(tmp_path) -> None:
+    from draftpaper_cli.project_state import mark_stage_stale, update_stage_status
     from draftpaper_cli.result_support import ResultSupportError, assess_result_support, result_route_preflight
     from draftpaper_cli.result_support_signals import build_result_support_input_bindings
 
@@ -787,6 +789,15 @@ def test_assessed_route_is_current_then_invalidates_when_results_stage_metadata_
 
     update_stage_status(project, "results", "approved")
 
+    assert build_result_support_input_bindings(project)["project.json"] == report["input_bindings"]["project.json"]
+    assert result_route_preflight(
+        project,
+        report,
+        route="supplement_data_and_method",
+        checkpoint_hash=assessed["checkpoint_sha256"],
+    ) is None
+
+    mark_stage_stale(project, "results", include_self=True)
     assert build_result_support_input_bindings(project)["project.json"] != report["input_bindings"]["project.json"]
     with pytest.raises(ResultSupportError, match="project.json"):
         result_route_preflight(
@@ -832,7 +843,7 @@ def test_required_role_counts_only_with_current_covered_evidence_binding(tmp_pat
     assert role_signal["unbound_required_roles"] == []
     assert role_signal["binding_diagnostics"] == []
     assert result["input_bindings"]["data/external_validation.csv"] == _sha256(evidence)
-    assert "results/promoted_evidence_snapshot.json" in result["input_bindings"]
+    assert "results/promoted_evidence_snapshot.json" not in result["input_bindings"]
 
 
 @pytest.mark.parametrize(
@@ -842,7 +853,6 @@ def test_required_role_counts_only_with_current_covered_evidence_binding(tmp_pat
         ("covered", {"sha256": "0" * 64}, "role_binding_hash_mismatch"),
         ("covered", {"run_id": "run-old"}, "role_binding_run_mismatch"),
         ("covered", {"cohort_id": "cohort-old"}, "role_binding_cohort_mismatch"),
-        ("covered", {"snapshot_id": "snapshot-old"}, "role_binding_snapshot_mismatch"),
     ],
 )
 def test_required_role_rejects_pending_stale_or_context_mismatched_bindings(tmp_path, state, overrides, code) -> None:

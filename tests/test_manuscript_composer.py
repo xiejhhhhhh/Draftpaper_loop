@@ -13,6 +13,7 @@ from draftpaper_cli.manuscript_composer import (
     SectionCompositionError,
     _compact_reference_items,
     _compact_result_manifest,
+    _compact_results_synthesis_plan,
     _functional_job_coverage,
     accept_section_draft,
     build_section_evidence_packet,
@@ -23,6 +24,24 @@ from draftpaper_cli.project_scaffold import create_project
 
 
 class ManuscriptComposerTests(unittest.TestCase):
+    def test_results_synthesis_packet_deduplicates_repeated_metrics(self) -> None:
+        metric = {
+            "metric_name": "macro_f1", "value": 0.8667, "model": "baseline",
+            "run_id": "run-1", "cohort_id": "held-out", "source_hash": "omitted",
+        }
+        compact = _compact_results_synthesis_plan({
+            "schema_version": "test",
+            "finding_blocks": [
+                {"finding_id": "f1", "metric_evidence": [metric]},
+                {"finding_id": "f2", "metric_evidence": [metric]},
+            ],
+        })
+
+        self.assertEqual(len(compact["metric_index"]), 1)
+        self.assertEqual(compact["finding_blocks"][0]["metric_refs"], ["metric:001"])
+        self.assertEqual(compact["finding_blocks"][1]["metric_refs"], ["metric:001"])
+        self.assertNotIn("source_hash", compact["metric_index"][0])
+
     def test_reference_packet_compacts_long_summaries_without_losing_identity(self) -> None:
         compact = _compact_reference_items([{
             "citation_key": "Example2026",
@@ -173,6 +192,10 @@ class ManuscriptComposerTests(unittest.TestCase):
                 (project.path / "writing" / "drafts" / "results.tex").read_text(encoding="utf-8"),
                 source.read_text(encoding="utf-8"),
             )
+            claim_map = json.loads(
+                (project.path / "writing" / "claim_maps" / "results.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(claim_map["section_claims"][0]["evidence_ids"], ["metric-main"])
 
     def test_section_acceptance_requires_current_scientific_editor_pass(self) -> None:
         import hashlib

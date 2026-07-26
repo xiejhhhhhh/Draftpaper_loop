@@ -387,9 +387,19 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
     paragraphs = _paragraphs(text)
     jobs = outline.get("paragraphs") or []
     tasks: list[dict[str, Any]] = []
+    matched_job_ids: set[str] = set()
     for index, paragraph in enumerate(paragraphs):
         paragraph_jobs = _jobs_for_paragraph(paragraph, jobs)
-        job = paragraph_jobs[0] if paragraph_jobs else {}
+        # Manuscript prose should say "Figure 1", not leak internal IDs such
+        # as ``fig_1_fig_01``.  When explicit link normalization cannot match,
+        # use the already ordered paragraph contract as the deterministic
+        # alignment fallback.
+        ordered_job = jobs[index] if index < len(jobs) and isinstance(jobs[index], dict) else {}
+        job = paragraph_jobs[0] if paragraph_jobs else (
+            ordered_job if ordered_job.get("figure_or_table_links") else {}
+        )
+        if job.get("paragraph_id"):
+            matched_job_ids.add(str(job["paragraph_id"]))
         issues: list[str] = []
         if len(re.findall(r"[A-Za-z]+", paragraph)) < 35:
             issues.append("underdeveloped_scientific_reasoning")
@@ -409,11 +419,6 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
                 "before_hash": _hash_text(paragraph),
                 "instruction": "Revise only this paragraph. Preserve supported facts, evidence bindings, claim boundaries, citations, and surrounding transitions.",
             })
-    matched_job_ids = {
-        str(job.get("paragraph_id") or "")
-        for paragraph in paragraphs
-        for job in _jobs_for_paragraph(paragraph, jobs)
-    }
     for index, job in enumerate(jobs):
         if not isinstance(job, dict) or str(job.get("paragraph_id") or "") in matched_job_ids:
             continue

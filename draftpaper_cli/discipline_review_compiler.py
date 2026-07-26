@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -26,18 +27,48 @@ def compile_discipline_review_inputs(project: str | Path) -> dict[str, Any]:
     registry = _read(root / "writing" / "scientific_evidence_registry.json")
     analysis = _read(root / "methods" / "executable_analysis_spec.json")
     results_path = root / "results" / "results.tex"
+    results_text = results_path.read_text(encoding="utf-8-sig") if results_path.exists() else ""
     results_hash = hashlib.sha256(results_path.read_bytes()).hexdigest() if results_path.exists() else ""
     evidence_index = {str(item.get("evidence_id")): item for item in registry.get("records") or [] if isinstance(item, dict) and item.get("evidence_id")}
     figure_index = {str(item.get("figure_id")): item for item in figure_gate.get("contract_checks") or [] if isinstance(item, dict) and item.get("figure_id")}
     trace_index = {str(item.get("figure_id")): item for item in trace.get("figure_checks") or [] if isinstance(item, dict) and item.get("figure_id")}
     spec_index = {str(item.get("analysis_spec_id")): item for item in analysis.get("analysis_specs") or [] if isinstance(item, dict) and item.get("analysis_spec_id")}
+    ordered_figure_ids = list(figure_index)
+    sentence_figure_ids: dict[str, str] = {}
+    for paragraph in [item.strip() for item in re.split(r"\n\s*\n", results_text) if item.strip()]:
+        match = re.search(r"Figure\s*~?\s*(\d+)", paragraph, flags=re.I)
+        if not match:
+            continue
+        position = int(match.group(1)) - 1
+        if not 0 <= position < len(ordered_figure_ids):
+            continue
+        figure_id = ordered_figure_ids[position]
+        for sentence in [item.strip() for item in re.split(r"(?<=[.!?])\s+|\n\s*\n", paragraph) if item.strip()]:
+            sentence_figure_ids[hashlib.sha256(sentence.encode("utf-8")).hexdigest()] = figure_id
+    binding_evidence_by_sentence: dict[str, list[str]] = {}
+    for binding in claim_map.get("bindings") or []:
+        if not isinstance(binding, dict) or not binding.get("sentence"):
+            continue
+        sentence_hash = hashlib.sha256(str(binding["sentence"]).strip().encode("utf-8")).hexdigest()
+        evidence_id = binding.get("evidence_id") or (
+            (binding.get("binding") or {}).get("evidence_id")
+            if isinstance(binding.get("binding"), dict) else None
+        )
+        if evidence_id:
+            binding_evidence_by_sentence.setdefault(sentence_hash, []).append(str(evidence_id))
     rows = []
     for claim in claim_map.get("section_claims") or []:
         if not isinstance(claim, dict):
             continue
-        evidence_ids = [str(item) for item in claim.get("evidence_ids") or []]
+        sentence_hash = str(claim.get("sentence_hash") or "")
+        evidence_ids = list(dict.fromkeys([
+            *[str(item) for item in claim.get("evidence_ids") or []],
+            *binding_evidence_by_sentence.get(sentence_hash, []),
+        ]))
         evidence = [evidence_index[item] for item in evidence_ids if item in evidence_index]
         figure_ids = sorted({str(figure_id) for item in evidence for figure_id in item.get("figure_ids") or [] if figure_id})
+        if not figure_ids and sentence_hash in sentence_figure_ids:
+            figure_ids = [sentence_figure_ids[sentence_hash]]
         for figure_id in figure_ids or [""]:
             figure = figure_index.get(figure_id, {})
             plugin_trace = trace_index.get(figure_id, {})

@@ -74,6 +74,7 @@ def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tm
 
     assert report["score"] >= 0.95
     assert report["decision"] == "pass"
+    assert report["figure_checks"][0]["pixel_evidence"]["inferred_plot_body_content_groups"] >= 2
 
 
 def test_publication_figure_quality_rejects_small_untraced_semantic_shell(tmp_path) -> None:
