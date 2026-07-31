@@ -1,0 +1,27 @@
+{
+  "status": "written",
+  "candidate_id": "gee_phenology_rf_agroclimate_workflow",
+  "source": "first_party",
+  "source_skill_id": null,
+  "source_policy": "candidate_only_no_direct_upload",
+  "promotion_mode": "augment_existing",
+  "overlap_report": {
+    "status": "written",
+    "decision": "merge_with_existing",
+    "candidate_id": "gee_phenology_rf_agroclimate_workflow",
+    "existing_matches": [
+      {
+        "template_id": "gee_phenology_rf_agroclimate_workflow",
+        "method_family": "phenology_aligned_remote_sensing_classification_and_agroclimate_zoning",
+        "overlap_score": 1.0
+      }
+    ],
+    "merge_action": "merge aliases, variants, fixtures, and source provenance into the existing discipline module"
+  },
+  "source_text_copied": false,
+  "derivation_kind": "first_party",
+  "upstream_refs": [],
+  "copied_code": false,
+  "copied_text": false,
+  "provenance_reviewed_at": "promotion_time"
+}

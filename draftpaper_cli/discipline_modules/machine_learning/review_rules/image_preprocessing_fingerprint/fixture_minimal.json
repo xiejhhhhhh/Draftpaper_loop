@@ -1,0 +1,7 @@
+{
+  "plugin_id": "image_preprocessing_fingerprint",
+  "roles": [
+    "preprocessing_fingerprint"
+  ]
+}
+

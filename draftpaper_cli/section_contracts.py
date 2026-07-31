@@ -91,10 +91,25 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
         text,
     )
     text = re.sub(r"(?<=\d)--(?=[-+]?\d)", " to ", text)
+    figure_ref_tokens: dict[str, str] = {}
+
+    def _figure_ref_token(match: re.Match[str]) -> str:
+        index = len(figure_ref_tokens)
+        letters = ""
+        while True:
+            letters = chr(ord("A") + index % 26) + letters
+            index = index // 26 - 1
+            if index < 0:
+                break
+        token = f"FIGREF{letters}"
+        figure_ref_tokens[token] = match.group(1)
+        return f" {token} "
+
+    without_commands = re.sub(r"\\ref\{fig:([^}]+)\}", _figure_ref_token, text)
     without_commands = re.sub(
         r"\\begin\{equation\}.*?\\end\{equation\}|\\\[.*?\\\]",
         "",
-        text,
+        without_commands,
         flags=re.S,
     )
     without_commands = re.sub(r"\{[-+]?(?:\d+\.\d+|\d+)\\linewidth\}", "", without_commands)
@@ -113,6 +128,12 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
     without_commands = _strip_release_identifiers(_strip_alphanumeric_identifiers(without_commands))
     claims: list[dict[str, Any]] = []
     for sentence in re.split(r"(?<=[.!?;])\s+|\n+", without_commands):
+        figure_refs = [
+            figure_ref_tokens[token]
+            for token in re.findall(r"\bFIGREF[A-Z]+\b", sentence)
+            if token in figure_ref_tokens
+        ]
+        sentence = re.sub(r"\bFIGREF[A-Z]+\b", "", sentence)
         boundaries = [0]
         boundaries.extend(
             match.start()
@@ -162,6 +183,7 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
                 "start": match.start(),
                 "end": match.end(),
                 "local_start": match.start() - max(local_offset, 0),
+                "figure_refs": figure_refs,
             })
     return claims
 
@@ -367,6 +389,18 @@ def _resolve_numeric_claim(
     ]
     if run_verified:
         candidates = run_verified
+    figure_refs = {str(value) for value in claim.get("figure_refs") or [] if str(value)}
+    if figure_refs:
+        figure_candidates = [
+            record for record in candidates
+            if figure_refs.intersection(
+                str(value)
+                for value in (record.get("figure_aliases") or record.get("figure_ids") or [])
+                if str(value)
+            )
+        ]
+        if figure_candidates:
+            candidates = figure_candidates
     local_context = str(claim.get("local_context") or claim["sentence"])
     analysis_context = [record for record in candidates if _analysis_variant_matches_sentence(record, local_context)]
     if analysis_context:

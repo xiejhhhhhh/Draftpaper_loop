@@ -18,7 +18,7 @@ def test_v0320_release_identity_and_scope() -> None:
 
     assert version == "0.33.1"
     assert manifest["package_version"] == version
-    assert manifest["command_count"] == 211
+    assert manifest["command_count"] == 217
     assert len(manifest["release_fixture_ids"]) == 5
     assert manifest["resource_schema_status"] == "passed"
     assert manifest["release_security"]["public_pypi_publish"] is False

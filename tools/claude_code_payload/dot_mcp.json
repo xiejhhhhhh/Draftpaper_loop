@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "draftpaper-loop": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "draftpaper_cli.mcp.server"]
+    }
+  }
+}

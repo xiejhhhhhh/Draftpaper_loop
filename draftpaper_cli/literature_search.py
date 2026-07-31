@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any
 
 from .paper_fetch_adapter import enrich_with_paper_fetch
+from .literature_providers import provider_status_report, search_provider_router
+from .literature_sources import collect_registered_sources
 from .project_state import load_project
 from .references import domain_anchor_terms, domain_title_overlap, has_sufficient_metadata_or_pdf, normalize_reference_items, tokenize_for_relevance, write_reference_outputs
 from .project_scaffold import _write_json
@@ -1011,20 +1013,41 @@ def search_literature_for_project(
     zotero_context: str = "idea",
     zotero_min_items: int = 20,
     zotero_supplement: bool = True,
+    include_online: bool | None = None,
 ) -> dict[str, Any]:
     final_query = build_search_query(project, query)
     search_queries = build_context_search_queries(project, query)
     state = load_project(project)
     zotero_manifest: dict[str, Any] | None = None
+    items: list[dict[str, Any]] = []
+    source_collection_report: dict[str, Any] = {"status": "not_loaded", "item_count": 0, "source_reports": []}
     provider_queries: list[dict[str, Any]] = []
-    if from_json and zotero_collection:
-        raise ValueError("Use either --from-json or --zotero-collection, not both.")
+    # User-curated JSON, Zotero, registered local sources, and online providers
+    # are independent origins.  They may be combined; reconciliation preserves
+    # each origin instead of forcing the caller into a single source mode.
+    if from_json:
+        payload = json.loads(Path(from_json).read_text(encoding="utf-8-sig"))
+        imported = payload.get("items", payload) if isinstance(payload, dict) else payload
+        if isinstance(imported, dict):
+            imported = [imported]
+        for item in imported or []:
+            if not isinstance(item, dict):
+                continue
+            copied = dict(item)
+            copied.setdefault("source_records", [{"source_type": "manual", "logical_locator": Path(from_json).name}])
+            copied.setdefault("reference_origin", "manual")
+            copied.setdefault("selection_policy", "user_curated_preserve")
+            copied.setdefault("retained", True)
+            items.append(copied)
+        if isinstance(payload, dict) and isinstance(payload.get("search_queries"), dict):
+            search_queries.update({str(key): value for key, value in payload["search_queries"].items()})
     if zotero_collection:
-        items, zotero_manifest = fetch_zotero_collection_items(
+        zotero_items, zotero_manifest = fetch_zotero_collection_items(
             zotero_collection,
             limit=max(limit, zotero_min_items),
             context=zotero_context,
         )
+        items.extend(zotero_items)
         search_queries["zotero_collection"] = zotero_manifest.get("matched_collection") or zotero_collection
         search_queries["zotero_context"] = zotero_context
         minimum = max(0, min(zotero_min_items, limit))
@@ -1042,6 +1065,8 @@ def search_literature_for_project(
                 if key in existing_keys:
                     continue
                 item["reference_origin"] = "supplemental_external"
+                item["source_type"] = "online_search"
+                item["source_records"] = [{"source_type": "online_search", "provider": item.get("source") or "generic_router"}]
                 item["search_context"] = "idea"
                 item["search_query"] = final_query
                 added.append(item)
@@ -1053,13 +1078,14 @@ def search_literature_for_project(
             zotero_manifest["supplemental_query"] = final_query
         else:
             zotero_manifest["supplemental_item_count"] = 0
-    elif from_json:
-        payload = json.loads(Path(from_json).read_text(encoding="utf-8-sig"))
-        items = payload.get("items", payload) if isinstance(payload, dict) else payload
-        if isinstance(payload, dict) and isinstance(payload.get("search_queries"), dict):
-            search_queries.update({str(key): value for key, value in payload["search_queries"].items()})
-    else:
-        items = []
+    local_items, source_collection_report = collect_registered_sources(project)
+    items.extend(local_items)
+    search_queries["local_source_collection"] = source_collection_report
+    search_queries["provider_router"] = provider_status_report()
+    online_enabled = (not from_json and not zotero_collection) if include_online is None else bool(include_online)
+    specialized_enabled = bool(include_online is True or os.getenv("DRAFTPAPER_ENABLE_SPECIALIZED_PROVIDERS", "").strip().lower() in {"1", "true", "yes"})
+    specialized_queries: set[str] = set()
+    if online_enabled:
         query_plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
         if query_plan:
             iterable_queries = [
@@ -1074,7 +1100,7 @@ def search_literature_for_project(
         else:
             iterable_queries = []
             for context, context_query_value in search_queries.items():
-                if context == "query_plan":
+                if context in {"query_plan", "provider_router", "local_source_collection", "lineage_reference_seeds"}:
                     continue
                 for context_query in _as_query_list(context_query_value):
                     iterable_queries.append((context, context_query, {}))
@@ -1087,6 +1113,14 @@ def search_literature_for_project(
                 if context == "target_journal_anchor":
                     per_query_limit = min(limit, 2)
                 context_items = search_free_literature(context_query, limit=per_query_limit)
+                if specialized_enabled and context_query.lower() not in specialized_queries:
+                    specialized_items, provider_report = search_provider_router(context_query, limit=per_query_limit)
+                    for specialized_item in specialized_items:
+                        specialized_item["search_context"] = context
+                        specialized_item["search_query"] = context_query
+                    context_items.extend(specialized_items)
+                    search_queries.setdefault("provider_router_runs", []).append(provider_report)
+                    specialized_queries.add(context_query.lower())
                 provider_queries.append(_query_provider_outcome(context_items, query=context_query, context=context))
                 identity = plan_entry.get("canonical_identity") if isinstance(plan_entry.get("canonical_identity"), dict) else {}
                 if identity:
@@ -1125,6 +1159,14 @@ def search_literature_for_project(
                 context = str(plan_entry.get("context") or "introduction")
                 fallback_limit = min(limit, 2) if context in {"data", "methods"} else min(limit, 6)
                 context_items = search_free_literature(context_query, limit=fallback_limit)
+                if specialized_enabled and context_query.lower() not in specialized_queries:
+                    specialized_items, provider_report = search_provider_router(context_query, limit=fallback_limit)
+                    for specialized_item in specialized_items:
+                        specialized_item["search_context"] = context
+                        specialized_item["search_query"] = context_query
+                    context_items.extend(specialized_items)
+                    search_queries.setdefault("provider_router_runs", []).append(provider_report)
+                    specialized_queries.add(context_query.lower())
                 provider_queries.append(_query_provider_outcome(context_items, query=context_query, context=f"{context}_fallback"))
                 for item in context_items:
                     item["search_context"] = context
@@ -1152,6 +1194,7 @@ def search_literature_for_project(
     if lineage_seeds:
         items = [*lineage_seeds, *list(items or [])]
     search_queries["lineage_reference_seeds"] = lineage_report
+    _write_json(state.path / "references" / "literature_source_collection.json", source_collection_report)
     result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
     if from_json:
         provider_status = "offline_fallback"

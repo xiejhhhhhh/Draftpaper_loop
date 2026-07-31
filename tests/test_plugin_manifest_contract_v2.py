@@ -10,7 +10,7 @@ from draftpaper_cli.template_registry import discover_template_registry, validat
 def test_all_builtin_manifests_use_explicit_v2_contracts() -> None:
     report = migrate_plugin_manifests("draftpaper_cli/discipline_modules")
     assert report["status"] == "passed"
-    assert report["manifest_count"] == 210
+    assert report["manifest_count"] == 230
     assert report["changed_count"] == 0
     registry = discover_template_registry()
     assert all(entry["manifest_data"]["schema_version"] == PLUGIN_MANIFEST_SCHEMA_VERSION for entry in registry["entries"])

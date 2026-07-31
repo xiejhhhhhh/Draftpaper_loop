@@ -1,0 +1,7 @@
+{
+  "plugin_id": "total_supervision_budget_gate",
+  "roles": [
+    "supervision_budget"
+  ]
+}
+

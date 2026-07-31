@@ -103,8 +103,37 @@ def test_objective_contract_drives_claims_storyboard_and_chinese_plan(tmp_path) 
     rendered = _render_research_plan_cn(metadata, blueprint)
     _assert_cn_plan_quality(rendered)
     assert "量化天体物理关系" in rendered
-    assert "DINOv2、降维、分类器和异常检测等只在能够回答上述科学问题时作为分析工具" in rendered
+    assert "机器学习、聚类、分类器和空间分析只在能够回答上述科学问题时作为分析工具" in rendered
     assert "第1个科学问题检验什么关系" in rendered
+
+
+def test_chinese_plan_is_discipline_neutral_and_localizes_agricultural_metrics(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Old objective", field="crop remote sensing").path
+    payload = _objective()
+    payload["working_title_zh_cn"] = "中国强筋小麦遥感制图"
+    payload["scientific_objective_zh_cn"] = "量化中国强筋小麦分布及农业气候适宜性。"
+    payload["field"] = "crop remote sensing"
+    payload["primary_scientific_questions"][0]["figure_contract"]["validation_metric"] = (
+        "macro_f1_balanced_accuracy_user_accuracy_producer_accuracy_and_expected_calibration_error"
+    )
+    objective_file = tmp_path / "objective.json"
+    objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    revise_research_objective(project, objective_file=objective_file)
+    metadata = load_project(project).metadata
+    blueprint = build_research_blueprint(
+        project_meta=metadata,
+        literature_items=[{"bibtex_key": "Crop2026", "title": "Crop mapping evidence", "citation_count": 1}],
+        citation_rows=[{"citation_key": "Crop2026", "claim": "current gap", "evidence_summary": "Gap."}],
+        discipline_profile={"primary_discipline": "geography"},
+        data_context={"status": "inventory_available", "table_summaries": [], "role_coverage": {}},
+    )
+
+    rendered = _render_research_plan_cn(metadata, blueprint)
+
+    _assert_cn_plan_quality(rendered)
+    assert "宏平均F1、平衡准确率、用户精度、生产者精度及期望校准误差" in rendered
+    assert "天体物理" not in rendered
+    assert "独立星系样本数" not in rendered
 
 
 def test_research_objective_requires_three_questions(tmp_path) -> None:
@@ -128,6 +157,15 @@ def test_science_objective_figure_roles_have_chinese_labels() -> None:
     assert _cn_term(
         "held_out_macro_f1_balanced_accuracy_roc_auc_and_expected_calibration_error"
     ) == "留出集macro-F1、平衡准确率、ROC-AUC及期望校准误差"
+
+
+def test_agricultural_plan_terms_are_localized_without_corrupting_paths() -> None:
+    assert _cn_term("multi_year_optical_and_sar_observations") == "多年光学与SAR观测"
+    assert _cn_term("spatially_blocked_suitability_model") == "空间分块适宜性模型"
+    assert _cn_term(
+        "area_adjusted_user_and_producer_accuracy_with_95_percent_confidence_intervals"
+    ) == "面积校正的用户精度、生产者精度及95%置信区间"
+    assert _cn_term(r"D:\SW_Maping中的只读谱系材料") == r"D:\SW_Maping中的只读谱系材料"
 
 
 def test_review_projection_uses_final_statistical_contract(tmp_path) -> None:

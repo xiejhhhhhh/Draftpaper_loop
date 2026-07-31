@@ -137,6 +137,18 @@ ROLE_ALIASES = {
     "raster": "image_or_raster_data",
     "image_manifest": "image_manifest",
     "acquisition_group": "acquisition_group",
+    # Geography/remote-sensing contracts often use product-specific names
+    # for the same evidence role.  Keep the research-plan role explicit while
+    # allowing registered processed tables to satisfy it by provenance-aware
+    # aliases.
+    "multi_year_registered_strong_gluten_polygons": "registered_strong_gluten_polygons",
+    "registered_strong_gluten_polygon": "registered_strong_gluten_polygons",
+    "registered_strong_gluten_polygons": "registered_strong_gluten_polygons",
+    "mapped_distribution": "mapped_status",
+    "mapped_status": "mapped_status",
+    "production_potential_proxy": "conditional_proxy",
+    "conditional_spatial_prioritization_proxy": "conditional_proxy",
+    "conditional_proxy": "conditional_proxy",
 }
 
 

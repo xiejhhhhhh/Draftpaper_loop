@@ -1,0 +1,8 @@
+{
+  "plugin_id": "data_product_license_gate",
+  "roles": [
+    "license_matrix",
+    "data_provenance"
+  ]
+}
+

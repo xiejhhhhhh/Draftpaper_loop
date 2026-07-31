@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m draftpaper_cli.cli *)",
+      "Bash(draftpaper *)",
+      "Bash(python -m pytest *)",
+      "Bash(python -m ruff *)"
+    ],
+    "deny": [
+      "Edit(projects/**/project.json)",
+      "Edit(projects/**/project.yaml)",
+      "Edit(projects/**/stage_manifest*.json)",
+      "Edit(projects/**/stage_manifests/**)",
+      "Edit(projects/**/project_passport.yaml)",
+      "Edit(projects/**/artifact_ledger.jsonl)",
+      "Edit(projects/**/checkpoint_ledger.jsonl)",
+      "Edit(projects/**/integrity_ledger.jsonl)",
+      "Edit(projects/**/transaction_ledger.jsonl)",
+      "Write(projects/**/project.json)",
+      "Write(projects/**/project_passport.yaml)"
+    ]
+  }
+}

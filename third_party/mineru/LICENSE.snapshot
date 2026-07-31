@@ -1,0 +1,28 @@
+## MinerU Open Source License
+
+MinerU is licensed under Apache License 2.0 and is subject to the additional terms below. Except to the extent expressly modified or supplemented by these additional terms, your other rights and obligations are governed by Apache License 2.0.
+
+**1. Commercial License and Thresholds**
+
+MinerU may be used for commercial purposes without a separate commercial license. However, if you and your Affiliates, on a consolidated basis, meet either of the following thresholds, you must obtain a separate commercial license from MinerU Team before continuing such use:
+
+a. monthly active users (MAU) exceed 100 million; or
+b. total monthly revenue exceeds USD 20 million.
+
+**2. Online Service Attribution Obligation**
+
+If you provide online services to third parties based on MinerU, you must clearly and prominently indicate, in the relevant product or service interface or in publicly available documentation, that MinerU is used.
+
+**3. Termination**
+
+Where a separate commercial license is required under Section 1 but is not obtained before continuing such use, or where the attribution obligation under Section 2 is not complied with, this License and all rights granted under this License will terminate automatically, and no further notice from the Licensor is required.
+
+**4. Definitions**
+
+In these additional terms, “Affiliates” means any legal entity that directly or indirectly controls, is controlled by, or is under common control with you.
+
+“Control” means the power to direct the management and operating decisions of an entity through equity ownership, voting rights, contractual arrangements, or otherwise.
+
+The full text of Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0.
+
+Copyright 2026 MinerU Team. This is a provenance snapshot for the optional external dependency; MinerU source code is not copied into Draftpaper-loop.

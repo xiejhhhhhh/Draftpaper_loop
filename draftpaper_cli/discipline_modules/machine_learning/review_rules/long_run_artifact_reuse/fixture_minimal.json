@@ -1,0 +1,8 @@
+{
+  "plugin_id": "long_run_artifact_reuse",
+  "roles": [
+    "artifact_hashes",
+    "reuse_receipt"
+  ]
+}
+

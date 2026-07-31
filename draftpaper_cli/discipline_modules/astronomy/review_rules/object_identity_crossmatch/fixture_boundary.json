@@ -1,0 +1,7 @@
+{
+  "plugin_id": "object_identity_crossmatch",
+  "roles": [
+    "object_identity"
+  ]
+}
+

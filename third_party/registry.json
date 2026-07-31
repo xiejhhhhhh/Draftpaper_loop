@@ -17,6 +17,20 @@
       "review_status": "verified"
     },
     {
+      "source_id": "mineru",
+      "name": "MinerU",
+      "repository": "https://github.com/opendatalab/MinerU",
+      "commit": "79d6d8d79fb8f3ddba5cc34c07a16f0ec36f56c7",
+      "license_expression": "Apache-2.0 WITH MinerU-additional-terms",
+      "license_file": "third_party/mineru/LICENSE.snapshot",
+      "use_mode": "optional_external_dependency",
+      "local_paths": ["third_party/mineru/LICENSE.snapshot"],
+      "copied_code": false,
+      "copied_text": false,
+      "attribution_required": true,
+      "review_status": "verified_optional_adapter_only"
+    },
+    {
       "source_id": "academicforge",
       "name": "AcademicForge",
       "repository": "https://github.com/HughYau/AcademicForge",

@@ -5,6 +5,16 @@
     "missing_baseline",
     "missing_ablation",
     "split_integrity",
-    "model_statistical_validity_gate"
+    "model_statistical_validity_gate",
+    "image_preprocessing_fingerprint",
+    "total_supervision_budget_gate",
+    "grouped_split_leakage_gate",
+    "class_imbalance_evidence_gate",
+    "backbone_state_contract",
+    "external_benchmark_comparability",
+    "projection_inference_boundary",
+    "anomaly_inspection_contract",
+    "throughput_evidence_contract",
+    "long_run_artifact_reuse"
   ]
 }

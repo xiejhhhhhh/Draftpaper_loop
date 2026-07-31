@@ -69,6 +69,55 @@ def test_registry_parses_nested_bibtex_and_requires_version_confirmation(tmp_pat
     assert duplicate["duplicate_work_count"] == 1
 
 
+def test_registry_keeps_same_title_paper_and_zenodo_dataset_distinct(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path, idea="Paper and data record", field="astronomy", target_journal="APJS").path
+    (project / "journal_profile" / "journal_profile.json").write_text(
+        json.dumps({"target_journal": "APJS", "documentclass": "aastex701", "bibliography_style": "aasjournalv7"}),
+        encoding="utf-8",
+    )
+    (project / "references" / "library.bib").write_text(
+        "@article{Paper2025,author={Walmsley, M.},title={First visual morphology catalogue},"
+        "year={2025},journal={arXiv e-prints},doi={10.48550/arXiv.2503.15310}}\n",
+        encoding="utf-8",
+    )
+    (project / "references" / "supplemental_library.bib").write_text(
+        "@misc{Data2025,author={Walmsley, M.},title={First visual morphology catalogue},"
+        "year={2025},publisher={Zenodo},doi={10.5281/zenodo.15106473},"
+        "url={https://doi.org/10.5281/zenodo.15106473}}\n",
+        encoding="utf-8",
+    )
+
+    result = build_reference_registry(project)
+    registry = json.loads((project / "references" / "reference_registry.json").read_text(encoding="utf-8"))
+    duplicate = inspect_reference_duplicates(project)
+
+    records = {item["citation_key"]: item for item in registry["records"]}
+    assert result["version_confirmation_required"] is False
+    assert records["Paper2025"]["canonical_work_id"] != records["Data2025"]["canonical_work_id"]
+    assert records["Data2025"]["work_type"] == "dataset"
+    assert duplicate["status"] == "passed"
+
+
+def test_registry_classifies_arxiv_entry_with_page_label_as_preprint(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path, idea="Arxiv metadata", field="astronomy", target_journal="APJS").path
+    (project / "journal_profile" / "journal_profile.json").write_text(
+        json.dumps({"target_journal": "APJS", "documentclass": "aastex701", "bibliography_style": "aasjournalv7"}),
+        encoding="utf-8",
+    )
+    (project / "references" / "library.bib").write_text(
+        "@article{Arxiv2025,author={Parker, L.},title={AION-1},year={2025},"
+        "journal={arXiv e-prints},pages={arXiv:2510.17960},doi={10.48550/arXiv.2510.17960},"
+        "eprint={2510.17960},archivePrefix={arXiv},primaryClass={astro-ph.IM}}\n",
+        encoding="utf-8",
+    )
+
+    build_reference_registry(project)
+    registry = json.loads((project / "references" / "reference_registry.json").read_text(encoding="utf-8"))
+
+    assert registry["records"][0]["work_type"] == "preprint"
+    assert registry["records"][0]["publication_status"] == "preprint"
+
+
 def test_explicit_version_resolution_renders_only_confirmed_citable_work(tmp_path: Path) -> None:
     project = _project(tmp_path)
     build_reference_registry(project)

@@ -41,6 +41,14 @@ from .latex_assembly import LatexAssemblyError, LatexCitationError, assemble_lat
 from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
 from .methods import MethodsGateError, verify_methods, write_methods
 from .manuscript_composer import SectionCompositionError, build_section_evidence_packet, submit_section_draft
+from .manuscript_completion import (
+    ManuscriptCompletionError,
+    apply_manuscript_completion,
+    manuscript_completion_status,
+    prepare_manuscript_completion,
+    preview_manuscript_completion,
+    rollback_manuscript_completion,
+)
 from .paper_narrative import (
     PaperNarrativeError,
     build_paper_narrative,
@@ -132,6 +140,7 @@ __all__ = [
     "FigureSemanticAnnotationError",
     "ResultEvidenceError",
     "SectionCompositionError",
+    "ManuscriptCompletionError",
     "PaperNarrativeError",
     "WritingArchitectureError",
     "CitationRepairError",
@@ -216,6 +225,11 @@ __all__ = [
     "resolve_venue_style_adapter",
     "assess_functional_quality_release",
     "submit_section_draft",
+    "prepare_manuscript_completion",
+    "preview_manuscript_completion",
+    "apply_manuscript_completion",
+    "manuscript_completion_status",
+    "rollback_manuscript_completion",
     "build_results_narrative_contract",
     "assess_results_manuscript_quality",
     "assess_scientific_figure_quality",

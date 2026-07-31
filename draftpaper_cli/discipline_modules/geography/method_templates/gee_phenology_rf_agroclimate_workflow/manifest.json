@@ -1,0 +1,130 @@
+{
+  "template_id": "gee_phenology_rf_agroclimate_workflow",
+  "display_name": "Earth Engine phenology-RF agroclimate workflow",
+  "discipline": "geography",
+  "method_family": "phenology_aligned_remote_sensing_classification_and_agroclimate_zoning",
+  "input_roles": [
+    "study_region",
+    "phenology_windows",
+    "optical_and_sar_collections",
+    "training_samples",
+    "agroclimate_predictors",
+    "cropland_constraints"
+  ],
+  "optional_roles": [
+    "topography",
+    "administrative_boundaries",
+    "independent_validation_samples"
+  ],
+  "packages": [
+    "earthengine-api"
+  ],
+  "package_modules": [
+    "ee"
+  ],
+  "output_artifacts": [
+    "predictor_stack",
+    "classification_and_probability_image",
+    "validation_metrics",
+    "suitability_and_uncertainty_layers",
+    "production_potential_zones"
+  ],
+  "figure_groups": [
+    "validated_distribution_and_change",
+    "independent_validation",
+    "agroclimatic_controls",
+    "production_potential_zoning"
+  ],
+  "formula_families": [],
+  "validation_checks": [
+    "spatial_block_holdout",
+    "temporal_holdout",
+    "probability_calibration",
+    "feature_group_ablation",
+    "uncertainty_propagation",
+    "threshold_sensitivity"
+  ],
+  "aliases": [
+    "phenology_aligned_compositing",
+    "probabilistic_classification",
+    "area_adjusted_accuracy_estimation",
+    "change_uncertainty_propagation",
+    "spatial_block_cross_validation",
+    "temporal_holdout_validation",
+    "probability_calibration",
+    "feature_group_ablation",
+    "spatially_blocked_suitability_model",
+    "nonlinear_response_estimation",
+    "spatial_autocorrelation_diagnostics",
+    "bootstrap_or_ensemble_uncertainty",
+    "predefined_multi_criteria_zoning",
+    "uncertainty_propagation",
+    "threshold_sensitivity_analysis",
+    "independent_area_summary_validation",
+    "sentinel 2 qa60 composite",
+    "strong wheat random forest"
+  ],
+  "variants": [],
+  "genericity_rules": [
+    "Regions, years, phenology windows, bands, asset ids, classifier settings and output destinations are parameters.",
+    "No credentials, private samples or fixed study coordinates are embedded."
+  ],
+  "runtime_class": "remote_api",
+  "validation_level": "fixture_runnable",
+  "candidate_id": "gee_phenology_rf_agroclimate_workflow",
+  "plugin_type": "method_template",
+  "maturity": "runnable",
+  "source_skill_refs": [
+    "first_party:None"
+  ],
+  "provenance_notes": "Clean parameterized Python implementation informed by an authenticated workflow inventory, not a verbatim copy of private Code Editor scripts.",
+  "template": "template.py",
+  "derivation_kind": "first_party",
+  "upstream_refs": [],
+  "copied_code": false,
+  "copied_text": false,
+  "provenance_reviewed_at": "promotion_time",
+  "merge_strategy": "augment_existing",
+  "promotion_mode": "augment_existing",
+  "intended_merge_target": "C:\\Draftpaper_commercial\\draftpaper_cli\\discipline_modules\\geography\\method_templates\\gee_phenology_rf_agroclimate_workflow",
+  "fixture_paths": [
+    "fixture_minimal.json"
+  ],
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "gee_phenology_rf_agroclimate_workflow",
+  "plugin_kind": "method",
+  "deployment_state": "promoted",
+  "fixtures": {
+    "normal": [
+      "fixture_minimal.json"
+    ],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "sync",
+    "resource_class": "network_api",
+    "timeout_seconds": 1800,
+    "max_attempts": 2,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [
+      "EARTHENGINE_PROJECT"
+    ],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "merged_candidate_ids": [
+    "gee_phenology_rf_agroclimate_workflow"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "plugin_id": "astronomy_ml.hierarchical_morphology_label_contract",
+  "roles": [
+    "hierarchical_labels",
+    "label_applicability"
+  ]
+}
+

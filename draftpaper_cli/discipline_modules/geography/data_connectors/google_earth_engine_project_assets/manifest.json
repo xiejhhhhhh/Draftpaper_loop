@@ -1,0 +1,96 @@
+{
+  "connector_id": "google_earth_engine_project_assets",
+  "display_name": "Google Earth Engine project asset registry",
+  "access_modes": [
+    "api_access",
+    "cloud_asset_registry",
+    "cloud_export"
+  ],
+  "packages": [
+    "earthengine-api"
+  ],
+  "package_modules": [
+    "ee"
+  ],
+  "download_or_access": [
+    "Initialize with a caller-supplied Google Cloud project id.",
+    "List a caller-supplied Earth Engine asset root.",
+    "Write metadata-only JSON and CSV registries without copying credentials."
+  ],
+  "data_formats": [
+    "json",
+    "csv",
+    "earth_engine_image",
+    "earth_engine_table"
+  ],
+  "requires_credentials": true,
+  "credential_env_vars": [
+    "EARTHENGINE_PROJECT"
+  ],
+  "template_paths": [],
+  "fixture_paths": [],
+  "genericity_rules": [
+    "Project ids, asset roots, filters, output paths, and profile limits are parameters.",
+    "OAuth material is read only by the Earth Engine client and is never serialized."
+  ],
+  "source_skill_refs": [
+    "first_party:None"
+  ],
+  "provenance_notes": "First-party parameterized connector derived from a live authenticated project run; no private script source copied.",
+  "runtime_class": "remote_api",
+  "validation_level": "live_validated",
+  "candidate_id": "google_earth_engine_project_assets",
+  "discipline": "geography",
+  "plugin_type": "data_connector",
+  "maturity": "runnable",
+  "aliases": [
+    "earth engine asset inventory",
+    "gee project assets",
+    "google earth engine live api"
+  ],
+  "variants": [],
+  "template": "template.py",
+  "derivation_kind": "first_party",
+  "upstream_refs": [],
+  "copied_code": false,
+  "copied_text": false,
+  "provenance_reviewed_at": "promotion_time",
+  "merge_strategy": "augment_existing",
+  "promotion_mode": "augment_existing",
+  "intended_merge_target": "C:\\Draftpaper_commercial\\draftpaper_cli\\discipline_modules\\geography\\data_connectors\\google_earth_engine_project_assets",
+  "schema_version": "dpl.plugin_manifest.v2",
+  "plugin_id": "google_earth_engine_project_assets",
+  "plugin_kind": "data",
+  "deployment_state": "promoted",
+  "fixtures": {
+    "normal": [],
+    "failure": [],
+    "boundary": [],
+    "mock": []
+  },
+  "execution_contract": {
+    "schema_version": "dpl.plugin_execution_contract.v2",
+    "execution_mode": "sync",
+    "resource_class": "network_api",
+    "timeout_seconds": 900,
+    "max_attempts": 3,
+    "idempotency": "supported",
+    "side_effect_level": "project_write",
+    "approval_policy": "none",
+    "parallel_safe": false,
+    "credential_env_vars": [
+      "EARTHENGINE_PROJECT"
+    ],
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "merged_candidate_ids": [
+    "google_earth_engine_project_assets"
+  ]
+}

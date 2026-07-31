@@ -301,7 +301,7 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
     coverage = _read_json(state.path / "data" / "data_role_coverage_report.json")
     audit_items = []
     for requirement in assessments:
-        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "execution_required", "covered_project_local", "true_missing", "project_method_implementation_required", "project_data_implementation_required"}:
+        if not isinstance(requirement, dict) or requirement.get("kind") not in {"data", "method"} or requirement.get("state") not in {"missing", "partially_covered", "audit_required", "execution_required", "blocked_external", "covered_project_local", "true_missing", "project_method_implementation_required", "project_data_implementation_required"}:
             continue
         coverage_binding = _coverage_binding(requirement, state.path, coverage)
         if coverage_binding:

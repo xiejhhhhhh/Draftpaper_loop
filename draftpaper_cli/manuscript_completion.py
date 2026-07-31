@@ -695,6 +695,12 @@ def _write_candidate_overlay(
         relative = f"{section}/{section}.tex"
         text = proposed_sections.get(relative, source.read_text(encoding="utf-8-sig"))
         (sections_dir / f"{section}.tex").write_text(text, encoding="utf-8", newline="")
+    # Minimal imported projects may not yet have a derived result-artifacts
+    # section.  The candidate overlay still needs a compilable placeholder;
+    # this does not modify the canonical project or invent scientific output.
+    result_artifacts = sections_dir / "result_artifacts.tex"
+    if not result_artifacts.is_file():
+        result_artifacts.write_text("% No derived result artifacts were supplied.\n", encoding="utf-8", newline="")
     main_source = root / "latex" / "main.tex"
     if main_source.is_file():
         main_text = main_source.read_text(encoding="utf-8-sig")
@@ -787,6 +793,11 @@ def _build_completion_preview_pdf(
             bibtex = _find_latex_executable(["bibtex", "bibtex.exe"])
             if bibtex:
                 code = run([bibtex, "main"])
+                # BibTeX returns 1 for a bibliography with no citation keys.
+                # That is valid for a minimal completion preview; real
+                # metadata, missing-entry, and syntax failures remain fatal.
+                if code != 0 and "I found no \\citation commands" in commands[-1].get("stdout", ""):
+                    code = 0
         if code == 0:
             code = run([engine, "-interaction=nonstopmode", "-halt-on-error", "main.tex"])
         if code == 0:
@@ -1206,6 +1217,14 @@ def apply_manuscript_completion(
             "receipt": _relative(receipt_path, state.path),
         }
     if validation.get("decision") != "pass" or core.get("decision") != "pass":
+        if core.get("scientific_reopen_revisions") or core.get("decision") == "scientific_reopen_required":
+            raise ManuscriptCompletionError(
+                "Only a ready completion packet can be applied: Scientific evidence changes require a reopened evidence decision."
+            )
+        if core.get("classification_blockers") or core.get("decision") == "classification_refinement_required":
+            raise ManuscriptCompletionError(
+                "Only a ready completion packet can be applied: completion change classification must be resolved."
+            )
         raise ManuscriptCompletionError("Only a ready completion packet can be applied.")
     _validate_preview_still_current(state.path, core)
 

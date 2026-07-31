@@ -247,6 +247,45 @@ class EvidenceRegistryTests(unittest.TestCase):
             self.assertEqual(grouped_f1["metric_dimension"], "score")
             self.assertEqual(grouped_count["metric_dimension"], "count")
 
+    def test_figure_contract_bindings_distinguish_same_named_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Bound figure metrics", field="geography")
+            (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({
+                "figures": [
+                    {"storyboard_id": "figure-a", "metrics": {"sample_count": 3000}},
+                    {"storyboard_id": "figure-b", "metrics": {"sample_count": 2153}},
+                ]
+            }), encoding="utf-8")
+            (project.path / "results" / "figure_contracts.json").write_text(json.dumps({
+                "contracts": [
+                    {
+                        "storyboard_id": "figure-a",
+                        "analysis_spec_id": "analysis-a",
+                        "estimand_id": "estimand-a",
+                        "cohort_view_id": "cohort-a",
+                    },
+                    {
+                        "storyboard_id": "figure-b",
+                        "analysis_spec_id": "analysis-b",
+                        "estimand_id": "estimand-b",
+                        "cohort_view_id": "cohort-b",
+                    },
+                ]
+            }), encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            self.assertEqual(registry["status"], "ready")
+            self.assertEqual(registry["blocking_conflict_count"], 0)
+            self.assertEqual(
+                {item["analysis_spec_id"] for item in registry["records"]},
+                {"analysis-a", "analysis-b"},
+            )
+            self.assertTrue(all(item["binding_complete"] for item in registry["records"]))
+
 
 if __name__ == "__main__":
     unittest.main()

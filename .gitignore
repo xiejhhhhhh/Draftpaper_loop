@@ -37,3 +37,6 @@ private_forensic_reports/
 private_clone_comparison/
 IP_PROTECTION_AND_SCHEMA_FINGERPRINT_PLAN*.md
 PRIVATE_*.md
+
+# Claude Code local (per-user) overrides
+.claude/settings.local.json

@@ -43,6 +43,7 @@ class JournalProfileTests(unittest.TestCase):
         self.assertIn("references/bibliography_contract.json", spec.allowed_write_globs)
         self.assertIn("references/reference_duplicate_report.json", spec.allowed_write_globs)
         self.assertIn("references/reference_registry.json", spec.allowed_write_globs)
+        self.assertIn("references/supplemental_bibliography_merge_report.json", spec.allowed_write_globs)
         self.assertNotIn("references/**", spec.allowed_write_globs)
 
     def test_research_preflight_command_owns_research_plan_outputs(self) -> None:

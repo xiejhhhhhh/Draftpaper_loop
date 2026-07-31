@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.33.1。** 当前 release 强化了 Result Support v3、证据绑定的作者补全、Agent/CLI 合同同步和严格修改分类。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
+**当前版本：v0.33.1。** 当前 release 强化了 Result Support v3、证据绑定的作者补全、Agent/CLI 合同同步、严格修改分类和多源文献注册表。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
 
 ## 核心科研能力
 
@@ -244,6 +244,21 @@ Paper Narrative Engine 读取 Scientific Evidence Registry、result manifest、f
 ## 文献、引用与独立审稿
 
 文献阶段保存 BibTeX、reference registry、citation evidence、阅读笔记、单篇摘要和可用 PDF/全文证据。检索结果、用户提供文献和 Zotero collection 都保留来源与选择策略，写作时按 direct support、方法 provenance、数据来源、比较语境和背景分配引用角色。
+
+### 多源文献与本地文档
+
+文献注册表可以在同一个项目中合并在线检索、Zotero、本地文件夹、结构化文件和手工记录。Provider Router 增加了 OpenAlex、PubMed、Europe PMC、DBLP、NASA ADS 等学科入口，并保留原有通用 provider；某个 provider 失败时会记录为降级结果，不会把“未检索到”误写成“没有相关文献”。每条记录都会保留规范化标识符、来源记录、字段级 provenance、去重决策、文件 hash 和逻辑定位信息。
+
+本地文献库可以只读登记，不必迁移；也可以选择按 hash 复制附件：
+
+```powershell
+draftpaper add-literature-source --project <project> --type local-folder --path <folder> --recursive
+draftpaper collect-literature --project <project>
+draftpaper reconcile-literature --project <project>
+draftpaper review-literature-coverage --project <project>
+```
+
+本地 PDF 文件夹以及 BibTeX/RIS/JSON 文件会以 `local_import` 来源保留；在线检索、Zotero、手工记录和继承记录会在 HTML 文献索引及来源筛选器中区分显示。PDF 默认优先使用 `pypdf`，复杂排版或扫描文档可以选择调用 MinerU。MinerU 是可选的本地文档解析器，不是检索引擎，也不是核心 wheel 依赖；解析出的段落必须经过元数据和证据核验，不能因为本地存在 PDF 就自动加入引用。
 
 Zotero 示例：
 

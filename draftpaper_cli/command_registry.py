@@ -313,6 +313,29 @@ COMMAND_SPECS = {
             ),
         ),
         CommandSpec("build-reference-registry", "reference_coordinator", True, "references", "bibliography", "build_reference_registry", (("project", "project"),)),
+        CommandSpec(
+            "add-literature-source",
+            "reference_coordinator",
+            True,
+            "references",
+            "literature_sources",
+            "register_literature_source",
+            (("project", "project"), ("source_type", "source_type"), ("path", "path"), ("context", "context"), ("recursive", "recursive"), ("copy_attachments", "copy_attachments")),
+            allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+        ),
+        CommandSpec("list-literature-sources", "reference_coordinator", False, "references", "literature_sources", "list_literature_sources", (("project", "project"),)),
+        CommandSpec("collect-literature", "reference_coordinator", True, "references", "literature_sources", "collect_literature_sources", (("project", "project"),)),
+        CommandSpec("reconcile-literature", "reference_coordinator", True, "references", "literature_sources", "reconcile_literature_sources", (("project", "project"),)),
+        CommandSpec("review-literature-coverage", "reference_coordinator", True, "references", "literature_coverage", "review_literature_coverage", (("project", "project"),)),
+        CommandSpec(
+            "parse-literature-document",
+            "reference_coordinator",
+            True,
+            "references",
+            "mineru_adapter",
+            "parse_literature_document",
+            (("project", "project"), ("input_path", "input"), ("use_mineru", "use_mineru"), ("timeout_seconds", "timeout_seconds")),
+        ),
         CommandSpec("inspect-reference-duplicates", "reference_coordinator", True, "references", "bibliography", "inspect_reference_duplicates", (("project", "project"),)),
         CommandSpec(
             "resolve-reference-version",
@@ -337,6 +360,7 @@ COMMAND_SPECS = {
                         "references/bibliography_contract.json",
                         "references/reference_duplicate_report.json",
                         "references/reference_registry.json",
+                        "references/supplemental_bibliography_merge_report.json",
                     )
                 )
             ),
@@ -368,6 +392,7 @@ assess-method-feasibility assess-paper-quality-parity assess-plugin-sufficiency 
 assess-research-plan-feasibility assess-result-support assess-result-validity assess-review-rules audit-citations
 audit-project-capabilities bootstrap-discipline-foundation build-argument-matrices build-code-provenance
 build-data-context build-method-context build-panel-contracts build-paper-narrative build-reference-registry
+add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage parse-literature-document
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
 compile-skill-source create-project create-project-version detect-artifact-drift diagnose-figure-execution

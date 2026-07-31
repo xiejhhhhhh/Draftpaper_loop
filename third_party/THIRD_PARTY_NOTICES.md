@@ -29,6 +29,15 @@ Generated from `third_party/registry.json`.
 - Copied code: `false`
 - License file: `third_party/gbrain/LICENSE.snapshot`
 
+## MinerU
+
+- Repository: https://github.com/opendatalab/MinerU
+- Commit: `79d6d8d79fb8f3ddba5cc34c07a16f0ec36f56c7`
+- License: `Apache-2.0 WITH MinerU-additional-terms`
+- Use mode: `optional_external_dependency`
+- Copied code: `false`
+- License file: `third_party/mineru/LICENSE.snapshot`
+
 ## paper-fetch-skill
 
 - Repository: https://github.com/Dictation354/paper-fetch-skill

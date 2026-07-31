@@ -1,0 +1,7 @@
+{
+  "plugin_id": "photometric_quantity_correction_contract",
+  "roles": [
+    "physical_quantity_correction"
+  ]
+}
+

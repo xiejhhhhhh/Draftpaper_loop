@@ -1,0 +1,7 @@
+{
+  "plugin_id": "class_imbalance_evidence_gate",
+  "roles": [
+    "class_counts"
+  ]
+}
+

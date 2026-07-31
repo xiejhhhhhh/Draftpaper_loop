@@ -1,0 +1,10 @@
+{
+  "input_table": "FIXTURE_TABLE.csv",
+  "target_column": "class",
+  "phenology_windows": [
+    {
+      "start": "YEAR-04-01",
+      "end": "YEAR-05-31"
+    }
+  ]
+}

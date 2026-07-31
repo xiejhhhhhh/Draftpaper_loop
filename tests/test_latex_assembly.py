@@ -213,7 +213,10 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertIn("\\author{Manuscript author to be supplied}", content)
             self.assertIn("\\affiliation{Affiliation to be supplied by the authors}", content)
             self.assertIn("\\email{corresponding.author@placeholder.invalid}", content)
-            self.assertIn("https://github.com/xiejhhhhhh/Draftpaper\\_loop", content)
+            self.assertIn(
+                r"\href{https://github.com/xiejhhhhhh/Draftpaper_loop}{Draftpaper-loop repository}",
+                content,
+            )
             self.assertIn("\\bibliography{library}", content)
             self.assertIn("\\bibliographystyle{aasjournal}", content)
             self.assertIn("\\begin{acknowledgments}", content)

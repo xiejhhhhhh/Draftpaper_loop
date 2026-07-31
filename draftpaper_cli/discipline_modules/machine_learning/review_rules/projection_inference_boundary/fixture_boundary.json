@@ -1,0 +1,7 @@
+{
+  "plugin_id": "projection_inference_boundary",
+  "roles": [
+    "projection_manifest"
+  ]
+}
+

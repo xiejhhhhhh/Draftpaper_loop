@@ -401,6 +401,36 @@ class SectionWritingContractTests(unittest.TestCase):
         self.assertEqual(report["decision"], "pass")
         self.assertEqual(report["numeric_claim_bindings"][0]["status"], "bound")
 
+    def test_figure_reference_resolves_equal_values_from_distinct_scopes(self) -> None:
+        def record(evidence_id: str, figure_alias: str, analysis_value: str) -> dict:
+            return {
+                "evidence_id": evidence_id,
+                "entity_role": "result_metric_sample_count",
+                "value": 3000,
+                "unit": "count",
+                "metric_dimension": "count",
+                "run_id": "run-1",
+                "cohort_id": analysis_value,
+                "sample_unit": "figure_evidence",
+                "split": "current_run",
+                "model_id": "not_applicable",
+                "figure_aliases": [figure_alias],
+                "confidence": "figure_metadata_bound",
+                "target_sections": ["results"],
+            }
+
+        registry = {"preferred_run_id": "run-1", "records": [
+            record("figure-a-count", "figure_a", "cohort-a"),
+            record("figure-b-count", "figure_b", "cohort-b"),
+        ]}
+
+        report = validate_section_writing(
+            "results", r"The mapped distribution used 3,000 samples (Figure~\ref{fig:figure_a}).", registry
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["evidence_id"], "figure-a-count")
+
 
 if __name__ == "__main__":
     unittest.main()

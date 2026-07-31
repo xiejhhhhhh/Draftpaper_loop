@@ -85,7 +85,7 @@ def _draftpaper_acknowledgments(*, aastex: bool = False) -> str:
     text = (
         "This study used Draftpaper-loop as an assistive tool for staged literature organization, "
         "analysis traceability, figure inventory, and manuscript drafting. The project is available at "
-        r"\texttt{https://github.com/xiejhhhhhh/Draftpaper\_loop}."
+        r"\href{https://github.com/xiejhhhhhh/Draftpaper_loop}{Draftpaper-loop repository}."
     )
     if aastex:
         return "\\begin{acknowledgments}\n" + text + "\n\\end{acknowledgments}"

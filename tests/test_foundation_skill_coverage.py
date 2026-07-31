@@ -42,6 +42,7 @@ def test_external_foundations_are_mock_validated_and_never_claim_live_execution(
     external = [
         entry for entry in discover_template_registry()["entries"]
         if entry["runtime_class"] in {"remote_api", "remote_server", "gpu_model"}
+        and str((entry["manifest_data"] or {}).get("maturity") or "foundation") == "foundation"
     ]
     assert len(external) >= 10
     assert all(entry["validation_level"] == "mock_validated" for entry in external)

@@ -1,0 +1,8 @@
+{
+  "plugin_id": "anomaly_inspection_contract",
+  "roles": [
+    "anomaly_manifest",
+    "quality_flags"
+  ]
+}
+

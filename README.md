@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.33.1.** This release adds a capability-negotiated extension host, non-blocking workflow events, scoped artifact reads, and extension status projection while retaining the v0.33.0 evidence and author-completion protections. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
+**Current release: v0.33.1.** This release adds a capability-negotiated extension host, non-blocking workflow events, scoped artifact reads, extension status projection, and the multi-source literature registry while retaining the v0.33.0 evidence and author-completion protections. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
 
 ## Core Research Capabilities
 
@@ -244,6 +244,21 @@ Each project records stages, inputs, outputs, confirmations, and recovery reason
 ## Literature, Citations, and Independent Review
 
 The literature stage preserves BibTeX, the reference registry, citation evidence, notes, per-paper summaries, and available PDF/full-text evidence. Search results, user-provided papers, and Zotero collections retain origin and selection policy. Writing assigns references to direct support, method provenance, data provenance, comparison context, and background roles.
+
+### Multi-source literature and local documents
+
+The literature registry can combine online search, Zotero, local folders, structured files, and manual records in one project. The provider router adds discipline-aware entry points such as OpenAlex, PubMed, Europe PMC, DBLP, and NASA ADS alongside the existing general providers; a provider failure is recorded as a degraded result, not treated as proof that no literature exists. Each record preserves canonical identifiers, source records, field-level provenance, deduplication decisions, file hashes, and logical locators.
+
+Register a local library without moving it, or opt into hash-addressed attachment copies:
+
+```powershell
+draftpaper add-literature-source --project <project> --type local-folder --path <folder> --recursive
+draftpaper collect-literature --project <project>
+draftpaper reconcile-literature --project <project>
+draftpaper review-literature-coverage --project <project>
+```
+
+Local PDF folders and BibTeX/RIS/JSON files are retained as `local_import` sources; online results, Zotero items, manual records, and inherited records remain distinguishable in the HTML literature index and source filters. PDF parsing uses `pypdf` when sufficient and can optionally call MinerU for complex or scanned documents. MinerU is an optional local document parser, not a search engine and not a core wheel dependency; extracted passages are candidates for metadata/evidence review and are never auto-cited solely because a PDF exists.
 
 Zotero example:
 

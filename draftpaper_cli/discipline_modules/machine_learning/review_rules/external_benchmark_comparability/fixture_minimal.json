@@ -1,0 +1,8 @@
+{
+  "plugin_id": "external_benchmark_comparability",
+  "roles": [
+    "comparability_matrix",
+    "external_baseline"
+  ]
+}
+

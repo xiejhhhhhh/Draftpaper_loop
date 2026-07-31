@@ -445,6 +445,49 @@ def _load_research_data_context(project_path: Path) -> dict[str, Any]:
 
 
 _CN_PHRASES = {
+    "claims must be limited to the provided processed data, remote-source description, or supplied result artifacts": "研究结论仅限于现有处理数据、远程数据源说明或已提供的结果产物所能支持的范围",
+    "area_adjusted_user_and_producer_accuracy_with_95_percent_confidence_intervals": "面积校正的用户精度、生产者精度及95%置信区间",
+    "spatial_holdout_auc_tss_brier_score_and_morans_i_of_residuals": "空间留出AUC、TSS、Brier评分及残差Moran's I",
+    "zone_stability_under_threshold_perturbation_and_agreement_with_independent_production_evidence": "阈值扰动下的分区稳定性及与独立生产证据的一致性",
+    "macro_f1_balanced_accuracy_user_accuracy_producer_accuracy_and_expected_calibration_error": "宏平均F1、平衡准确率、用户精度、生产者精度及期望校准误差",
+    "strong_gluten_and_non_strong_gluten_reference_samples": "强筋与非强筋小麦参考样本",
+    "multi_year_optical_and_sar_observations": "多年光学与SAR观测",
+    "geographically_independent_reference_samples": "地理独立参考样本",
+    "temporally_independent_reference_samples": "时间独立参考样本",
+    "validated_occurrence_or_probability_samples": "经验证的出现或概率样本",
+    "topography_and_background_wheat_extent": "地形与背景小麦范围",
+    "yield_or_production_potential_proxy": "产量或生产潜力代理变量",
+    "climate_suitability_and_uncertainty": "气候适宜性与不确定性",
+    "spatial_autocorrelation_diagnostics": "空间自相关诊断",
+    "spatially_blocked_suitability_model": "空间分块适宜性模型",
+    "independent_area_summary_validation": "独立面积汇总验证",
+    "area_adjusted_accuracy_estimation": "面积校正精度估计",
+    "change_uncertainty_propagation": "变化不确定性传播",
+    "phenology_aligned_compositing": "物候对齐合成",
+    "probabilistic_classification": "概率分类",
+    "wheat_and_cropland_masks": "小麦与耕地掩膜",
+    "administrative_boundaries": "行政区边界",
+    "phenological_predictor_stack": "物候预测变量栈",
+    "baseline_predictor_sets": "基线预测变量集",
+    "spatial_block_cross_validation": "空间分块交叉验证",
+    "temporal_holdout_validation": "时间留出验证",
+    "probability_calibration": "概率校准",
+    "growing_degree_days": "生长度日积温",
+    "precipitation_and_rainy_days": "降水量与雨日",
+    "temperature_extremes_and_range": "极端温度与温差",
+    "nonlinear_response_estimation": "非线性响应估计",
+    "bootstrap_or_ensemble_uncertainty": "自助法或集成不确定性",
+    "validated_current_distribution": "经验证的当前分布",
+    "cropland_constraints": "耕地约束",
+    "administrative_area_statistics": "行政区面积统计",
+    "predefined_multi_criteria_zoning": "预定义多准则分区",
+    "uncertainty_propagation": "不确定性传播",
+    "threshold_sensitivity_analysis": "阈值敏感性分析",
+    "agroclimatology": "农业气候学",
+    "crop remote sensing": "作物遥感",
+    "spatial machine learning": "空间机器学习",
+    "uncertainty-aware agricultural zoning": "不确定性感知农业分区",
+    "time series": "时间序列",
     "reconciled_counts_label_provenance_and_zero_cross_split_source_overlap": "样本计数核对、标签来源审计及跨数据集目标零重叠",
     "held_out_macro_f1_balanced_accuracy_roc_auc_and_expected_calibration_error": "留出集macro-F1、平衡准确率、ROC-AUC及期望校准误差",
     "class_specific_precision_recall_f1_with_confidence_and_error_support": "含置信度与错误样本支持的类别级精确率、召回率和F1",
@@ -696,7 +739,8 @@ def _cn_term(value: Any) -> str:
     text = str(value or "").strip()
     for old, new in sorted(_CN_PHRASES.items(), key=lambda item: len(item[0]), reverse=True):
         text = re.sub(re.escape(old), new, text, flags=re.IGNORECASE)
-    text = text.replace("_", " ")
+    if not re.search(r"[\\/:]", text) and not re.search(r"[\u4e00-\u9fff]", text):
+        text = text.replace("_", " ")
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -797,7 +841,7 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
             f"- 次级分析：{_cn_join(secondary) or '无'}。",
             f"- 结论边界：{boundary}",
             "",
-            "本研究以天体物理问题为主线。DINOv2、降维、分类器和异常检测等只在能够回答上述科学问题时作为分析工具使用，不能替代科学目标本身。",
+            "本研究以科学问题和可验证证据为主线。机器学习、聚类、分类器和空间分析只在能够回答上述科学问题时作为分析工具使用，不能替代科学目标本身。",
             "",
         ])
     lines.extend([
@@ -815,7 +859,7 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         lines.extend([
             f"当前数据盘点共识别 {data_context.get('file_count', 0)} 个文件，其中 {data_context.get('external_file_count', 0)} 个通过只读外部数据合同接入；可读表格共 {data_context.get('tabular_file_count', 0)} 个。",
             "",
-            f"各表行数累计为 {data_context.get('cross_table_row_total', 0)}，该数字只是跨表盘点总量，不能作为独立星系样本数。后续所有样本量必须绑定到具体表、样本单位和筛选阶段。",
+            f"各表行数累计为 {data_context.get('cross_table_row_total', 0)}，该数字只是跨表盘点总量，不能作为独立分析样本数。后续所有样本量必须绑定到具体表、样本单位和筛选阶段。",
             "",
         ])
         for table in data_context.get("table_summaries") or []:
@@ -853,9 +897,9 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         ])
     if objective:
         constraint_text = (
-            "后续数据阶段必须按照目标合同逐级核对样本流转、代理标签来源、选择效应、图像质量和各物理观测量的来源。"
-            "方法阶段只能选择能够估计形态与物理状态关系、控制混杂因素、报告不确定性并完成图像层复核的分析工具。"
-            "若必要数据或方法无法补齐，应在人工检查点收紧对应主张，不能保留原强度结论或生成相似替代图。"
+            "后续数据阶段必须按照目标合同逐级核对样本流转、标签来源、选择效应、观测质量及每类预测变量和响应变量的来源。"
+            "方法阶段只能选择能够直接回答研究问题、控制混杂与信息泄漏、报告不确定性并完成独立验证的分析工具。"
+            "若必要数据或方法未满足支持条件，应在人工检查点收紧对应主张，并重新生成与证据边界一致的图表合同。"
         )
     else:
         constraint_text = (

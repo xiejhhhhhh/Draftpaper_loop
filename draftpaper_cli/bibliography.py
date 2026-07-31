@@ -53,7 +53,11 @@ def _doi(value: Any) -> str:
 
 
 def _arxiv(value: Any, url: Any = "") -> str:
-    text = f"{value or ''} {url or ''}"
+    raw_value = str(value or "").strip()
+    bare = re.fullmatch(r"[0-9]{4}\.[0-9]{4,5}(?:v[0-9]+)?", raw_value, flags=re.I)
+    if bare:
+        return bare.group(0)
+    text = f"{raw_value} {url or ''}"
     match = re.search(r"(?:arxiv:|arxiv\.org/(?:abs|pdf)/)([0-9]{4}\.[0-9]{4,5}(?:v[0-9]+)?)", text, flags=re.I)
     return match.group(1) if match else ""
 
@@ -120,8 +124,13 @@ def _canonical_url(fields: dict[str, Any], doi: str, arxiv_id: str) -> str:
 
 
 def _work_type(entry_type: str, fields: dict[str, Any], arxiv_id: str) -> str:
-    if arxiv_id and not fields.get("volume") and not fields.get("pages") and not fields.get("number"):
+    journal = str(fields.get("journal") or "").lower()
+    if arxiv_id and not fields.get("volume") and (not journal or "arxiv" in journal):
         return "preprint"
+    publisher = str(fields.get("publisher") or "").lower()
+    doi = _doi(fields.get("doi"))
+    if entry_type == "misc" and ("zenodo" in publisher or doi.startswith("10.5281/zenodo.")):
+        return "dataset"
     if entry_type in {"inproceedings", "conference"}:
         return "conference"
     if entry_type in {"dataset", "data"}:
@@ -129,6 +138,12 @@ def _work_type(entry_type: str, fields: dict[str, Any], arxiv_id: str) -> str:
     if entry_type == "article":
         return "journal_article"
     return entry_type or "misc"
+
+
+def _version_family(work_type: str) -> str:
+    if work_type in {"journal_article", "preprint", "conference"}:
+        return "paper"
+    return work_type
 
 
 def _bib_entries(path: Path) -> list[dict[str, Any]]:
@@ -305,9 +320,11 @@ def build_reference_registry(project: str | Path) -> dict[str, Any]:
     groups: dict[str, list[dict[str, Any]]] = {}
     for record in records:
         groups.setdefault(record["canonical_work_id"], []).append(record)
-    by_title: dict[str, list[dict[str, Any]]] = {}
+    by_title: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
-        by_title.setdefault(_title_identity(record["title_original"]), []).append(record)
+        title_key = _title_identity(record["title_original"])
+        family = _version_family(str(record.get("work_type") or "misc"))
+        by_title.setdefault((title_key, family), []).append(record)
     for same_title in by_title.values():
         if len(same_title) > 1:
             canonical = next((item["canonical_work_id"] for item in same_title if item["doi_normalized"]), same_title[0]["canonical_work_id"])

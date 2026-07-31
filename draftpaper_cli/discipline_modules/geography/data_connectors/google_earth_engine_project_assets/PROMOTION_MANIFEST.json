@@ -1,0 +1,191 @@
+{
+  "status": "promoted",
+  "generated_at": "2026-07-24T16:23:26.178533Z",
+  "candidate_id": "google_earth_engine_project_assets",
+  "plugin_type": "data_connector",
+  "discipline": "geography",
+  "source_candidate": "C:\\Draftpaper_commercial\\projects\\climate-suitability-assessment-and-prod_35df7fba\\plugin_candidates\\geography\\google_earth_engine_project_assets",
+  "target_dir": "C:\\Draftpaper_commercial\\draftpaper_cli\\discipline_modules\\geography\\data_connectors\\google_earth_engine_project_assets",
+  "dry_run": false,
+  "human_confirmation_required": true,
+  "human_confirmation_received": true,
+  "policy": "Only generalized candidate files are copied; source evidence summaries and third-party source are not copied.",
+  "promotion_mode": "augment_existing",
+  "overlap_report": {
+    "status": "written",
+    "decision": "merge_with_existing",
+    "candidate_id": "google_earth_engine_project_assets",
+    "existing_matches": [
+      {
+        "connector_id": "google_earth_engine_project_assets",
+        "access_modes": [
+          "api_access",
+          "cloud_asset_registry",
+          "cloud_export"
+        ],
+        "overlap_score": 1.2
+      },
+      {
+        "connector_id": "google_earth_engine_api_contract",
+        "access_modes": [
+          "api_access",
+          "cloud_export"
+        ],
+        "overlap_score": 0.4
+      },
+      {
+        "connector_id": "google_earth_engine",
+        "access_modes": [
+          "api_access",
+          "cloud_processing"
+        ],
+        "overlap_score": 0.25
+      },
+      {
+        "connector_id": "google_earth_engine_precip_export",
+        "access_modes": [
+          "api_access",
+          "cloud_processing",
+          "user_confirmed_export"
+        ],
+        "overlap_score": 0.25
+      },
+      {
+        "connector_id": "local_raster_vector",
+        "access_modes": [
+          "local_files"
+        ],
+        "overlap_score": 0.15
+      },
+      {
+        "connector_id": "gridded_text_to_geotiff_converter",
+        "access_modes": [
+          "local_files",
+          "server_processed_files"
+        ],
+        "overlap_score": 0.15
+      },
+      {
+        "connector_id": "geomaster_local_coordinate_inputs",
+        "access_modes": [
+          "local_files"
+        ],
+        "overlap_score": 0.15
+      },
+      {
+        "connector_id": "geopandas_vector_local",
+        "access_modes": [
+          "local_files"
+        ],
+        "overlap_score": 0.15
+      }
+    ],
+    "merge_action": "merge aliases, variants, fixtures, and source provenance into the existing discipline module"
+  },
+  "runtime_registration": "available_after_write_via_manifest.json",
+  "canonical_manifest": {
+    "connector_id": "google_earth_engine_project_assets",
+    "display_name": "Google Earth Engine project asset registry",
+    "access_modes": [
+      "api_access",
+      "cloud_asset_registry",
+      "cloud_export"
+    ],
+    "packages": [
+      "earthengine-api"
+    ],
+    "package_modules": [
+      "ee"
+    ],
+    "download_or_access": [
+      "Initialize with a caller-supplied Google Cloud project id.",
+      "List a caller-supplied Earth Engine asset root.",
+      "Write metadata-only JSON and CSV registries without copying credentials."
+    ],
+    "data_formats": [
+      "json",
+      "csv",
+      "earth_engine_image",
+      "earth_engine_table"
+    ],
+    "requires_credentials": true,
+    "credential_env_vars": [
+      "EARTHENGINE_PROJECT"
+    ],
+    "template_paths": [],
+    "fixture_paths": [],
+    "genericity_rules": [
+      "Project ids, asset roots, filters, output paths, and profile limits are parameters.",
+      "OAuth material is read only by the Earth Engine client and is never serialized."
+    ],
+    "source_skill_refs": [
+      "first_party:None"
+    ],
+    "provenance_notes": "First-party parameterized connector derived from a live authenticated project run; no private script source copied.",
+    "runtime_class": "remote_api",
+    "validation_level": "live_validated",
+    "schema_version": "dpl.plugin_manifest.v2",
+    "plugin_id": "google_earth_engine_project_assets",
+    "plugin_kind": "data",
+    "deployment_state": "promoted",
+    "fixtures": {
+      "normal": [],
+      "failure": [],
+      "boundary": [],
+      "mock": []
+    },
+    "execution_contract": {
+      "schema_version": "dpl.plugin_execution_contract.v2",
+      "execution_mode": "sync",
+      "resource_class": "network_api",
+      "timeout_seconds": 900,
+      "max_attempts": 3,
+      "idempotency": "supported",
+      "side_effect_level": "project_write",
+      "approval_policy": "none",
+      "parallel_safe": false,
+      "credential_env_vars": [
+        "EARTHENGINE_PROJECT"
+      ],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "candidate_id": "google_earth_engine_project_assets",
+    "discipline": "geography",
+    "plugin_type": "data_connector",
+    "maturity": "runnable",
+    "aliases": [
+      "earth engine asset inventory",
+      "gee project assets",
+      "google earth engine live api"
+    ],
+    "variants": [],
+    "template": "template.py",
+    "derivation_kind": "first_party",
+    "upstream_refs": [],
+    "copied_code": false,
+    "copied_text": false,
+    "provenance_reviewed_at": "promotion_time",
+    "merge_strategy": "augment_existing",
+    "promotion_mode": "augment_existing",
+    "intended_merge_target": "C:\\Draftpaper_commercial\\draftpaper_cli\\discipline_modules\\geography\\data_connectors\\google_earth_engine_project_assets"
+  },
+  "provenance": {
+    "derivation_kind": "first_party",
+    "upstream_refs": [],
+    "copied_code": false,
+    "copied_text": false,
+    "provenance_reviewed_at": "promotion_time"
+  },
+  "generated_by": "Draftpaper-loop",
+  "generator_url": "https://github.com/xiejhhhhhh/Draftpaper_loop",
+  "generator_contact": "xiejinhui22@mails.ucas.ac.cn",
+  "generator_license": "Source-Available Non-Commercial",
+  "generator_sponsorship_note": "Sponsorship or donation supports project maintenance but does not grant commercial use rights."
+}

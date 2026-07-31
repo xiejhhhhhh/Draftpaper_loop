@@ -1,0 +1,7 @@
+{
+  "plugin_id": "catalog_field_semantics",
+  "roles": [
+    "catalog_field_definition"
+  ]
+}
+

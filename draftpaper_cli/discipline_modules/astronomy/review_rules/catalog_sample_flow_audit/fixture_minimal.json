@@ -1,0 +1,8 @@
+{
+  "plugin_id": "catalog_sample_flow_audit",
+  "roles": [
+    "catalog_sample_flow",
+    "sample_counts"
+  ]
+}
+

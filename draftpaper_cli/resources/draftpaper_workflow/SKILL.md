@@ -1,7 +1,7 @@
 ---
 name: draftpaper-workflow
 version: 0.33.1
-description: Use when Codex operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
+description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
 # Draftpaper-loop Workflow

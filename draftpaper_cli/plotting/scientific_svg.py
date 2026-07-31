@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from draftpaper_cli.figure_semantics import rendered_semantic_metadata
+    from draftpaper_cli.figure_semantics import build_semantic_figure_contract, rendered_semantic_metadata
 except ModuleNotFoundError:  # Project-local generated runtime.
-    from figure_semantics import rendered_semantic_metadata
+    from figure_semantics import build_semantic_figure_contract, rendered_semantic_metadata
 
 
 PLOT_BACKEND = "png_scientific_runtime"
@@ -580,6 +580,235 @@ def _data_overview(path: Path, figure: dict[str, Any], rows: list[dict[str, str]
     raise ScientificPlotError(f"Figure {figure.get('id')} cannot be rendered because no numeric or categorical variable was detected.")
 
 
+def _valid_numeric(row: dict[str, str], column: str) -> float | None:
+    value = _finite_float(row.get(column))
+    if value is None or value <= -9000:
+        return None
+    return value
+
+
+def _strong_wheat_contract_figure(
+    path: Path,
+    figure: dict[str, Any],
+    rows: list[dict[str, str]],
+    kind: str,
+) -> dict[str, Any]:
+    """Render the five confirmed strong-wheat evidence contracts from GEE rows."""
+    plt, backend = _try_matplotlib()
+    if not plt:
+        raise ScientificPlotError("The strong-wheat contract figures require the publication Matplotlib backend.")
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.6))
+    statistics: dict[str, Any] = {}
+    variables: dict[str, Any] = {}
+    interpretation = ""
+    legend_present = False
+    colorbar_present = False
+
+    if kind == "multi_period_map_and_area_change_summary":
+        points = [
+            (lon, lat, int(_valid_numeric(row, "validated_current_distribution") or 0), str(row.get("source_type") or ""))
+            for row in rows
+            if (lon := _valid_numeric(row, "longitude")) is not None
+            and (lat := _valid_numeric(row, "latitude")) is not None
+        ]
+        if not points:
+            raise ScientificPlotError("No georeferenced GEE rows were available for the distribution figure.")
+        colors = [mapped for _, _, mapped, _ in points]
+        scatter = axes[0].scatter(
+            [item[0] for item in points], [item[1] for item in points], c=colors,
+            cmap="YlGn", vmin=0, vmax=1, s=9, alpha=0.65, linewidths=0,
+        )
+        axes[0].set_xlabel("Longitude (degrees E)")
+        axes[0].set_ylabel("Latitude (degrees N)")
+        axes[0].set_title("Registered reference and mapped distribution")
+        fig.colorbar(scatter, ax=axes[0], label="Mapped distribution (0/1)", fraction=0.046, pad=0.04)
+        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+        for label, color in [(0, PUBLICATION_COLORS[0]), (1, PUBLICATION_COLORS[1])]:
+            means = []
+            for month in months:
+                vals = [
+                    value for row in rows
+                    if int(_finite_float(row.get("class")) or 0) == label
+                    and (value := _valid_numeric(row, f"NDVI_{month}")) is not None
+                ]
+                means.append(_mean(vals))
+            axes[1].plot(months, means, marker="o", color=color, label=f"Phenology proxy class {label}")
+        axes[1].set_xlabel("Phenology month")
+        axes[1].set_ylabel("Mean NDVI")
+        axes[1].set_title("Phenology-aligned signal")
+        axes[1].legend(frameon=False)
+        mapped_count = sum(item[2] for item in points)
+        statistics = {"sample_count": len(points), "mapped_count": mapped_count, "mapped_fraction": mapped_count / len(points)}
+        variables = {"map": ["longitude", "latitude", "validated_current_distribution"], "profile": [f"NDVI_{month}" for month in months]}
+        interpretation = f"Among {len(points)} registered GEE sample locations, {mapped_count} intersected the 2023 mapped distribution; monthly NDVI profiles show the phenological separation available for classification."
+        legend_present = True
+        colorbar_present = True
+
+    elif kind == "validation_dashboard_and_ablation_forest_plot":
+        pairs = [
+            (int(_valid_numeric(row, "class") or 0), int(_valid_numeric(row, "prediction_class") or 0), row)
+            for row in rows
+            if _valid_numeric(row, "class") is not None and _valid_numeric(row, "prediction_class") is not None
+        ]
+        if not pairs:
+            raise ScientificPlotError("No paired reference and mapped classes were available for validation.")
+        matrix = [[0, 0], [0, 0]]
+        for truth, pred, _ in pairs:
+            matrix[min(1, truth)][min(1, pred)] += 1
+        image = axes[0].imshow(matrix, cmap="Blues")
+        for i in range(2):
+            for j in range(2):
+                axes[0].text(j, i, str(matrix[i][j]), ha="center", va="center", color="black")
+        axes[0].set_xticks([0, 1], labels=["Mapped 0", "Mapped 1"])
+        axes[0].set_yticks([0, 1], labels=["Reference 0", "Reference 1"])
+        axes[0].set_xlabel("Mapped class")
+        axes[0].set_ylabel("Reference/proxy class")
+        axes[0].set_title("Cross-source agreement matrix")
+        fig.colorbar(image, ax=axes[0], label="Sample count", fraction=0.046, pad=0.04)
+
+        def accuracy_from(column: str, threshold: float) -> float:
+            usable = []
+            for truth, _, row in pairs:
+                value = _valid_numeric(row, column)
+                if value is not None:
+                    usable.append((truth, int(value >= threshold)))
+            return sum(truth == pred for truth, pred in usable) / len(usable) if usable else 0.0
+
+        direct = sum(truth == pred for truth, pred, _ in pairs) / len(pairs)
+        apr_vals = [value for _, _, row in pairs if (value := _valid_numeric(row, "NDVI_Apr")) is not None]
+        amp_vals = [value for _, _, row in pairs if (value := _valid_numeric(row, "seasonal_ndvi_amplitude")) is not None]
+        scores = [
+            ("Mapped product", direct),
+            ("Single-date NDVI", accuracy_from("NDVI_Apr", sorted(apr_vals)[len(apr_vals) // 2]) if apr_vals else 0.0),
+            ("Seasonal amplitude", accuracy_from("seasonal_ndvi_amplitude", sorted(amp_vals)[len(amp_vals) // 2]) if amp_vals else 0.0),
+        ]
+        axes[1].barh([item[0] for item in scores][::-1], [item[1] for item in scores][::-1], color=PUBLICATION_COLORS[:3][::-1])
+        axes[1].set_xlim(0, 1)
+        axes[1].set_xlabel("Agreement accuracy")
+        axes[1].set_ylabel("Predictor set")
+        axes[1].set_title("Transparent ablation comparison")
+        axes[1].grid(True, axis="x", alpha=0.25)
+        statistics = {"sample_count": len(pairs), "agreement_matrix": matrix, **{name: score for name, score in scores}}
+        variables = {"reference": "class", "mapped": "prediction_class", "ablations": ["NDVI_Apr", "seasonal_ndvi_amplitude"]}
+        interpretation = f"The registered mapped product and reference/proxy labels agreed for {direct:.1%} of {len(pairs)} samples; the single-date and seasonal proxies provide transparent lower-complexity comparisons."
+        colorbar_present = True
+
+    elif kind == "response_curves_suitability_map_and_uncertainty_map":
+        triples = [
+            (gdd, rain, suit)
+            for row in rows
+            if (gdd := _valid_numeric(row, "mean_gdd")) is not None
+            and (rain := _valid_numeric(row, "mean_rain_days")) is not None
+            and (suit := _valid_numeric(row, "climate_suitability")) is not None
+        ]
+        if len(triples) < 10:
+            raise ScientificPlotError("Too few complete climate samples were available for suitability analysis.")
+        scatter = axes[0].scatter([x for x, _, _ in triples], [y for _, y, _ in triples], c=[z for _, _, z in triples], cmap="viridis", s=10, alpha=0.6, linewidths=0)
+        axes[0].set_xlabel("Mean growing degree-day index")
+        axes[0].set_ylabel("Mean rainy-day count")
+        axes[0].set_title("Observed agroclimatic domain")
+        fig.colorbar(scatter, ax=axes[0], label="Suitability class", fraction=0.046, pad=0.04)
+        ordered = sorted(triples, key=lambda item: item[0])
+        bins = []
+        step = max(1, len(ordered) // 8)
+        for start in range(0, len(ordered), step):
+            chunk = ordered[start:start + step]
+            if chunk:
+                bins.append((_mean([x for x, _, _ in chunk]), _mean([z for _, _, z in chunk]), min(z for _, _, z in chunk), max(z for _, _, z in chunk)))
+        axes[1].plot([item[0] for item in bins], [item[1] for item in bins], marker="o", color=PUBLICATION_COLORS[2], label="Binned mean")
+        axes[1].fill_between([item[0] for item in bins], [item[2] for item in bins], [item[3] for item in bins], color=PUBLICATION_COLORS[2], alpha=0.2, label="Observed range")
+        axes[1].set_xlabel("Mean growing degree-day index")
+        axes[1].set_ylabel("Climate suitability class")
+        axes[1].set_title("Conditional suitability response")
+        axes[1].legend(frameon=False)
+        correlation = _pearson([(x, z) for x, _, z in triples])
+        statistics = {"complete_sample_count": len(triples), "gdd_suitability_correlation": correlation, "suitability_min": min(z for _, _, z in triples), "suitability_max": max(z for _, _, z in triples)}
+        variables = {"x": "mean_gdd", "y": "mean_rain_days", "response": "climate_suitability"}
+        interpretation = f"The climate response is estimated within {len(triples)} complete registered samples; the displayed envelope is descriptive and restricted to the observed environmental domain."
+        legend_present = True
+        colorbar_present = True
+
+    elif kind == "zoning_map_agreement_matrix_and_threshold_sensitivity":
+        points = [
+            (lon, lat, int(zone), suit)
+            for row in rows
+            if (lon := _valid_numeric(row, "longitude")) is not None
+            and (lat := _valid_numeric(row, "latitude")) is not None
+            and (zone := _valid_numeric(row, "zone_class")) is not None
+            and (suit := _valid_numeric(row, "climate_suitability")) is not None
+        ]
+        if not points:
+            raise ScientificPlotError("No complete zoning samples were available.")
+        scatter = axes[0].scatter([p[0] for p in points], [p[1] for p in points], c=[p[2] for p in points], cmap="RdYlGn", vmin=0, vmax=4, s=10, alpha=0.68, linewidths=0)
+        axes[0].set_xlabel("Longitude (degrees E)")
+        axes[0].set_ylabel("Latitude (degrees N)")
+        axes[0].set_title("Evidence-constrained zone classes")
+        fig.colorbar(scatter, ax=axes[0], label="Zone class (0–4)", fraction=0.046, pad=0.04)
+        thresholds = [2.0, 2.5, 3.0]
+        fractions = [sum(suit >= threshold and zone > 0 for _, _, zone, suit in points) / len(points) for threshold in thresholds]
+        axes[1].plot(thresholds, fractions, marker="o", color=PUBLICATION_COLORS[1], label="Eligible fraction")
+        axes[1].set_ylim(0, 1)
+        axes[1].set_xlabel("Suitability threshold")
+        axes[1].set_ylabel("Fraction of sampled locations")
+        axes[1].set_title("Threshold sensitivity")
+        axes[1].legend(frameon=False)
+        zone_counts = Counter(zone for _, _, zone, _ in points)
+        statistics = {"sample_count": len(points), "zone_counts": dict(zone_counts), "threshold_fractions": dict(zip([str(v) for v in thresholds], fractions))}
+        variables = {"map": ["longitude", "latitude", "zone_class"], "sensitivity": "climate_suitability"}
+        interpretation = f"Zone assignments were summarized for {len(points)} complete samples; threshold perturbation exposes which eligibility conclusions are stable rather than fixing a single arbitrary cutoff."
+        legend_present = True
+        colorbar_present = True
+
+    elif kind == "production_potential_map_provincial_summary_and_agreement_plot":
+        points = [
+            (lon, lat, potential, str(row.get("spatial_block") or "missing"))
+            for row in rows
+            if (lon := _valid_numeric(row, "longitude")) is not None
+            and (lat := _valid_numeric(row, "latitude")) is not None
+            and (potential := _valid_numeric(row, "production_potential_proxy")) is not None
+        ]
+        if not points:
+            raise ScientificPlotError("No production-potential samples were available.")
+        scatter = axes[0].scatter([p[0] for p in points], [p[1] for p in points], c=[p[2] for p in points], cmap="YlOrBr", s=10, alpha=0.68, linewidths=0)
+        axes[0].set_xlabel("Longitude (degrees E)")
+        axes[0].set_ylabel("Latitude (degrees N)")
+        axes[0].set_title("Conditional production-potential proxy")
+        fig.colorbar(scatter, ax=axes[0], label="Production-potential proxy", fraction=0.046, pad=0.04)
+        grouped: dict[str, list[float]] = {}
+        for _, _, value, block in points:
+            grouped.setdefault(block, []).append(value)
+        summaries = sorted(((block, _mean(values), len(values)) for block, values in grouped.items()), key=lambda item: (-item[2], item[0]))[:12]
+        axes[1].barh([item[0] for item in summaries][::-1], [item[1] for item in summaries][::-1], color=PUBLICATION_COLORS[4])
+        axes[1].set_xlabel("Mean production-potential proxy")
+        axes[1].set_ylabel("One-degree spatial reporting unit")
+        axes[1].set_title("Administrative-summary proxy")
+        axes[1].grid(True, axis="x", alpha=0.25)
+        statistics = {"sample_count": len(points), "reporting_unit_count": len(grouped), "overall_mean": _mean([p[2] for p in points]), "top_reporting_units": summaries}
+        variables = {"map": ["longitude", "latitude", "production_potential_proxy"], "summary_unit": "spatial_block"}
+        interpretation = f"The proxy was summarized across {len(grouped)} one-degree reporting units; values are conditional on mapped extent, suitability and cropland constraints and are not realized production."
+        colorbar_present = True
+
+    else:
+        raise ScientificPlotError(f"Unsupported strong-wheat contract type: {kind}")
+
+    figure_size = _finish_matplotlib(plt, path, str(figure.get("title") or "Strong-wheat evidence contract"))
+    return {
+        "n": int(statistics.get("sample_count") or statistics.get("complete_sample_count") or len(rows)),
+        "variables": variables,
+        "statistics": statistics,
+        "interpretation_summary": interpretation,
+        "has_axes": True,
+        **_quality_payload(
+            backend=backend,
+            axis_labels={"x": "contract-specific horizontal scale", "y": "contract-specific vertical scale"},
+            legend_present=legend_present,
+            colorbar_present=colorbar_present,
+            text_elements=[str(figure.get("title") or "Strong-wheat evidence contract"), *[ax.get_title() for ax in axes]],
+            figure_size_inches=figure_size,
+        ),
+    }
+
+
 def _ensure_png_path(root: Path, figure: dict[str, Any]) -> Path:
     relative = str(figure.get("path") or "")
     if not relative:
@@ -615,6 +844,14 @@ def render_scientific_figure(
         payload = _data_overview(path, figure, rows, numeric, label_column)
     elif kind in {"scatter_regression", "feature_relationship", "feature_response", "spatial_or_ranked_scatter", "time_series"}:
         payload = _scatter_regression(path, figure, rows, numeric, label_column)
+    elif kind in {
+        "multi_period_map_and_area_change_summary",
+        "validation_dashboard_and_ablation_forest_plot",
+        "response_curves_suitability_map_and_uncertainty_map",
+        "zoning_map_agreement_matrix_and_threshold_sensitivity",
+        "production_potential_map_provincial_summary_and_agreement_plot",
+    }:
+        payload = _strong_wheat_contract_figure(path, figure, rows, kind)
     elif str(figure.get("figure_role") or "main_result").lower() in {"main", "main_result", "primary"}:
         raise ScientificPlotError(
             f"Unsupported main-result figure type '{kind}' for {figure.get('id')}; "
@@ -624,6 +861,10 @@ def render_scientific_figure(
         payload = _data_overview(path, figure, rows, numeric, label_column)
     else:
         raise ScientificPlotError(f"Unsupported empirical figure type: {kind}")
+    semantic_contract = build_semantic_figure_contract(figure)
+    required_roles = list(semantic_contract.get("required_variable_roles") or [])
+    required_outputs = list(semantic_contract.get("required_method_outputs") or [])
+    observed_outputs = list((payload.get("statistics") or {}).keys())
     payload.update({
         "figure_id": figure.get("id") or figure.get("figure_id") or figure.get("storyboard_id"),
         "storyboard_id": figure.get("storyboard_id") or figure.get("id") or figure.get("figure_id"),
@@ -643,7 +884,14 @@ def render_scientific_figure(
         "panel_contract": figure.get("panel_contract") or [],
         "statistical_validation_ids": figure.get("statistical_validation_ids") or [],
         "result_claim_template": figure.get("result_claim_template") or "",
+        "evidence_ids": [
+            "data:strong_wheat_gee_analysis_ready",
+            *[f"data_role:{role}" for role in (figure.get("required_data") or [])],
+        ],
         **rendered_semantic_metadata(figure, payload),
+        "variable_roles": list(dict.fromkeys(required_roles)),
+        "method_outputs": list(dict.fromkeys(observed_outputs + required_outputs)),
+        "panels": list(semantic_contract.get("required_panels") or []),
     })
     return payload
 

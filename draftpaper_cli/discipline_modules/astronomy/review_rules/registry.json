@@ -3,6 +3,14 @@
     "cadence_and_missingness_check",
     "class_imbalance_check",
     "catalog_crossmatch_audit",
-    "remote_data_provenance_check"
+    "remote_data_provenance_check",
+    "catalog_sample_flow_audit",
+    "object_identity_crossmatch",
+    "sky_tile_group_split_gate",
+    "cutout_quality_manifest",
+    "catalog_field_semantics",
+    "data_product_license_gate",
+    "photometric_quantity_correction_contract",
+    "astronomy_ml.hierarchical_morphology_label_contract"
   ]
 }

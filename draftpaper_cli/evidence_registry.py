@@ -254,6 +254,13 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
         if figure_id
     }
     default_spec = analysis_specs[0] if len(analysis_specs) == 1 else {}
+    figure_contract_payload = _read_json(project_path / "results" / "figure_contracts.json")
+    figure_contracts = [item for item in figure_contract_payload.get("contracts") or [] if isinstance(item, dict)]
+    contracts_by_figure = {
+        str(item.get("storyboard_id") or item.get("figure_id") or ""): item
+        for item in figure_contracts
+        if item.get("storyboard_id") or item.get("figure_id")
+    }
     records: list[dict[str, Any]] = []
     figures = payload.get("figures") if isinstance(payload.get("figures"), list) else []
     for figure in figures:
@@ -261,6 +268,8 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
             continue
         figure_id = str(figure.get("storyboard_id") or figure.get("id") or figure.get("path") or "figure")
         analysis_spec = specs_by_figure.get(figure_id) or default_spec
+        contract = contracts_by_figure.get(figure_id) or {}
+        binding = {**contract, **analysis_spec}
         figure_text = " ".join(
             str(figure.get(key) or "")
             for key in ("scientific_question", "caption_draft", "figure_group", "result_claim")
@@ -301,13 +310,13 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                     "value": numeric,
                     "unit": unit,
                     "cohort": "main",
-                    "cohort_view_id": figure.get("cohort_view_id") or analysis_spec.get("cohort_view_id"),
-                    "estimand_id": figure.get("estimand_id") or analysis_spec.get("estimand_id"),
-                    "analysis_spec_id": figure.get("analysis_spec_id") or analysis_spec.get("analysis_spec_id"),
+                    "cohort_view_id": figure.get("cohort_view_id") or binding.get("cohort_view_id"),
+                    "estimand_id": figure.get("estimand_id") or binding.get("estimand_id"),
+                    "analysis_spec_id": figure.get("analysis_spec_id") or binding.get("analysis_spec_id"),
                     "sample_unit": "figure_evidence",
                     "run_id": str(figure.get("run_id") or current_run_id),
                     "split": str(figure.get("split") or figure.get("split_unit") or current_split),
-                    "split_id": str(figure.get("split_id") or analysis_spec.get("split_id") or current_split),
+                    "split_id": str(figure.get("split_id") or binding.get("split_id") or current_split),
                     "model_id": str(figure.get("model_id") or primary.get("model_id") or "not_applicable"),
                     "metric_dimension": unit,
                     "confidence": "figure_metadata_bound",

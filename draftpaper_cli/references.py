@@ -9,6 +9,7 @@ import io
 import json
 import re
 import urllib.request
+from collections import Counter
 from html import escape
 from html import unescape
 from pathlib import Path
@@ -31,6 +32,8 @@ REFERENCE_OUTPUTS = [
     "references/reference_registry.json",
     "references/bibliography_contract.json",
     "references/reference_duplicate_report.json",
+    "references/literature_source_registry.json",
+    "references/literature_source_collection.json",
 ]
 
 MAX_REFERENCE_ITEMS = 30
@@ -80,11 +83,27 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
     search_contexts = [str(context).strip().lower() for context in (item.get("search_contexts") or []) if str(context).strip()]
     if search_context and search_context not in search_contexts:
         search_contexts.append(search_context)
+    raw_source = str(item.get("source_type") or "").strip()
+    raw_origin = str(item.get("reference_origin") or "").strip()
+    raw_provider = str(item.get("source") or "unknown").strip()
+    online_providers = {"semantic_scholar", "arxiv", "crossref", "google_scholar_serpapi", "openalex", "pubmed", "europe_pmc", "dblp", "nasa_ads"}
+    source_type = raw_source or ("online_search" if raw_provider in online_providers else raw_origin or raw_provider)
+    source_type = {
+        "existing_zotero": "zotero",
+        "zotero_collection": "zotero",
+        "local_folder": "local_import",
+        "supplemental_external": "online_search",
+    }.get(source_type, source_type)
     normalized = {
         "title": title,
         "authors": authors,
         "year": extract_year(item.get("year")),
         "doi": str(item.get("doi") or "").strip(),
+        "pmid": str(item.get("pmid") or "").strip(),
+        "pmcid": str(item.get("pmcid") or "").strip(),
+        "arxiv_id": str(item.get("arxiv_id") or "").strip(),
+        "bibcode": str(item.get("bibcode") or "").strip(),
+        "openalex_id": str(item.get("openalex_id") or "").strip(),
         "url": str(item.get("url") or "").strip(),
         "abstract": " ".join(str(item.get("abstract") or "").split()),
         "venue": str(item.get("venue") or item.get("publication") or "").strip(),
@@ -95,7 +114,25 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "publisher": str(item.get("publisher") or "").strip(),
         "citation_count": int(item.get("citation_count") or item.get("citationCount") or 0),
         "source": str(item.get("source") or "unknown").strip(),
-        "reference_origin": str(item.get("reference_origin") or "").strip(),
+        "source_type": source_type,
+        "reference_origin": raw_origin,
+        "source_records": [dict(record) for record in (item.get("source_records") or []) if isinstance(record, dict)],
+        "field_provenance": item.get("field_provenance") if isinstance(item.get("field_provenance"), dict) else {},
+        "document_parses": [dict(record) for record in (item.get("document_parses") or []) if isinstance(record, dict)],
+        "retained": bool(item.get("retained", False)),
+        "current_project_use": str(item.get("current_project_use") or "").strip(),
+        "local_file_id": str(item.get("local_file_id") or "").strip(),
+        "local_document_id": str(item.get("local_document_id") or "").strip(),
+        "local_file_size": int(item.get("local_file_size") or 0),
+        "local_file_mtime_ns": int(item.get("local_file_mtime_ns") or 0),
+        "local_mime": str(item.get("local_mime") or "").strip(),
+        "local_page_count": item.get("local_page_count"),
+        "local_parser": str(item.get("local_parser") or "").strip(),
+        "local_parser_version": str(item.get("local_parser_version") or "").strip(),
+        "local_source_id": str(item.get("local_source_id") or "").strip(),
+        "local_logical_path": str(item.get("local_logical_path") or "").strip(),
+        "local_attachment_path": str(item.get("local_attachment_path") or "").strip(),
+        "metadata_status": str(item.get("metadata_status") or ("complete" if authors and (item.get("doi") or item.get("year")) else "incomplete")).strip(),
         "zotero_key": str(item.get("zotero_key") or "").strip(),
         "zotero_collection": str(item.get("zotero_collection") or "").strip(),
         "pdf_url": str(item.get("pdf_url") or item.get("openAccessPdf") or "").strip(),
@@ -134,6 +171,19 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
             "query": normalized["search_query"],
             "query_components": normalized["query_components"],
         }]
+    if not normalized["source_records"]:
+        normalized["source_records"] = [{
+            "source_type": normalized["source_type"],
+            "provider": normalized["source"] if normalized["source_type"] == "online_search" else "",
+            "query": normalized["search_query"],
+            "retention_policy": normalized["selection_policy"] or "ranked_by_relevance_and_authority",
+        }]
+    if not normalized["field_provenance"]:
+        normalized["field_provenance"] = {
+            field: normalized["source_type"]
+            for field in ("title", "authors", "year", "doi", "abstract", "publication")
+            if normalized.get(field)
+        }
     normalized["bibtex_key"] = str(item.get("bibtex_key") or citation_key(normalized, index))
     normalized["evidence_notes"] = item.get("evidence_notes") or infer_evidence_summary(normalized)
     return normalized
@@ -141,16 +191,32 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
 
 def normalize_reference_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
-    seen: set[str] = set()
     for item in items or []:
         title = str(item.get("title") or "").strip()
         if not title:
             continue
-        key = (str(item.get("doi") or "") or re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()).lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        normalized.append(normalize_reference_item(item, len(normalized)))
+        candidate = normalize_reference_item(item, len(normalized))
+        identity = _reference_identity(candidate)
+        existing = next((row for row in normalized if _reference_identity(row) == identity), None) if identity else None
+        if existing is None:
+            normalized.append(candidate)
+        else:
+            _merge_context_metadata(existing, candidate)
+            for key in ("source_records", "document_parses"):
+                merged = list(existing.get(key) or [])
+                seen = {json.dumps(value, sort_keys=True, ensure_ascii=False) for value in merged if isinstance(value, dict)}
+                for value in candidate.get(key) or []:
+                    marker = json.dumps(value, sort_keys=True, ensure_ascii=False)
+                    if marker not in seen:
+                        merged.append(value)
+                        seen.add(marker)
+                existing[key] = merged
+            for key in ("source_type", "reference_origin", "local_file_id", "local_source_id", "local_logical_path"):
+                if candidate.get(key) and candidate.get(key) not in str(existing.get(key) or "").split("|"):
+                    existing[key] = "|".join(filter(None, [str(existing.get(key) or ""), str(candidate.get(key) or "")]))
+            if candidate.get("retained"):
+                existing["retained"] = True
+                existing["selection_policy"] = "user_curated_preserve"
     return normalized
 
 
@@ -324,6 +390,40 @@ def _is_zotero_reference(item: dict[str, Any]) -> bool:
     return item.get("source") == "zotero_collection" or item.get("reference_origin") == "existing_zotero"
 
 
+def _is_user_curated_reference(item: dict[str, Any]) -> bool:
+    return _is_zotero_reference(item) or bool(item.get("retained")) or str(item.get("selection_policy") or "") == "user_curated_preserve" or str(item.get("reference_origin") or "") in {"local_import", "manual"}
+
+
+def _source_type_labels(item: dict[str, Any]) -> list[str]:
+    labels = []
+    aliases = {
+        "existing_zotero": "zotero",
+        "zotero_collection": "zotero",
+        "local_folder": "local_import",
+        "supplemental_external": "online_search",
+        "semantic_scholar": "online_search",
+        "arxiv": "online_search",
+        "crossref": "online_search",
+        "google_scholar_serpapi": "online_search",
+        "openalex": "online_search",
+        "pubmed": "online_search",
+        "europe_pmc": "online_search",
+        "dblp": "online_search",
+        "nasa_ads": "online_search",
+    }
+    for record in item.get("source_records") or []:
+        if isinstance(record, dict):
+            value = aliases.get(str(record.get("source_type") or "").strip(), str(record.get("source_type") or "").strip())
+            if value and value not in labels:
+                labels.append(value)
+    for value in [item.get("source_type"), item.get("source"), item.get("reference_origin")]:
+        for raw_part in str(value or "").split("|"):
+            clean = aliases.get(raw_part.strip(), raw_part.strip())
+            if clean and clean not in labels:
+                labels.append(clean)
+    return labels or ["unknown"]
+
+
 def _zotero_collection_label(item: dict[str, Any]) -> str:
     explicit = str(item.get("zotero_collection") or "").strip()
     if explicit:
@@ -336,10 +436,29 @@ def _zotero_collection_label(item: dict[str, Any]) -> str:
 
 
 def _reference_identity(item: dict[str, Any]) -> str:
-    return (
-        str(item.get("doi") or "")
-        or re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()
-    ).lower()
+    """Return a stable work identity without merging unrelated same-title records."""
+    identifier_fields = (
+        "doi",
+        "pmid",
+        "pmcid",
+        "arxiv_id",
+        "bibcode",
+        "openalex_id",
+        "local_document_id",
+    )
+    for field in identifier_fields:
+        value = str(item.get(field) or "").strip().lower()
+        if value:
+            value = re.sub(r"^(https?://(doi\.org/|arxiv\.org/abs/))", "", value)
+            value = re.sub(r"\s+", "", value)
+            return f"{field}:{value}"
+    title = re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()
+    authors = item.get("authors") or []
+    first_author = re.sub(r"[^a-z0-9]+", " ", str(authors[0] if authors else "").lower()).strip()
+    year = extract_year(item.get("year"))
+    if not title:
+        return ""
+    return f"title:{title}|author:{first_author}|year:{year}"
 
 
 def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> None:
@@ -377,6 +496,24 @@ def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> N
             provenance.append(entry)
             seen.add(key)
     target["query_provenance"] = provenance
+    source_records = list(target.get("source_records") or [])
+    seen_records = {json.dumps(entry, sort_keys=True, ensure_ascii=False) for entry in source_records if isinstance(entry, dict)}
+    for entry in source.get("source_records") or []:
+        if not isinstance(entry, dict):
+            continue
+        marker = json.dumps(entry, sort_keys=True, ensure_ascii=False)
+        if marker not in seen_records:
+            source_records.append(entry)
+            seen_records.add(marker)
+    target["source_records"] = source_records
+    field_provenance = dict(target.get("field_provenance") or {})
+    for field, value in (source.get("field_provenance") or {}).items():
+        if field not in field_provenance:
+            field_provenance[field] = value
+    target["field_provenance"] = field_provenance
+    if source.get("retained"):
+        target["retained"] = True
+        target["selection_policy"] = "user_curated_preserve"
 
 
 _GENERIC_RESEARCH_TERMS = {
@@ -473,11 +610,9 @@ def select_references_by_context(
     target_journal: str,
     limit: int = MAX_REFERENCE_ITEMS,
 ) -> list[dict[str, Any]]:
-    normalized = [
-        normalize_reference_item(item, index)
-        for index, item in enumerate(items or [])
-        if str(item.get("title") or "").strip()
-    ]
+    normalized = normalize_reference_items([
+        item for item in (items or []) if str(item.get("title") or "").strip()
+    ])
     has_lineage_seeds = any(item.get("_lineage_runtime_verified") for item in normalized)
     if has_lineage_seeds:
         project_terms = tokenize_for_relevance(project_text)
@@ -502,20 +637,21 @@ def select_references_by_context(
             ):
                 filtered.append(item)
         normalized = filtered
-    zotero_items = []
+    curated_items = []
     external_items = []
     for item in normalized:
-        if _is_zotero_reference(item):
+        if _is_user_curated_reference(item):
             preserved = dict(item)
-            preserved["selection_policy"] = "zotero_collection_preserved"
-            preserved["reference_origin"] = preserved.get("reference_origin") or "existing_zotero"
-            preserved["zotero_collection"] = _zotero_collection_label(preserved)
+            preserved["selection_policy"] = "user_curated_preserve"
+            if _is_zotero_reference(preserved):
+                preserved["reference_origin"] = preserved.get("reference_origin") or "existing_zotero"
+                preserved["zotero_collection"] = _zotero_collection_label(preserved)
             preserved.setdefault("citation_weight", 0)
             preserved.setdefault("relevance_score", 0)
             preserved.setdefault("authority_score", 0)
             preserved.setdefault("citation_authority_score", 0)
             preserved.setdefault("journal_score", 0)
-            zotero_items.append(preserved)
+            curated_items.append(preserved)
         elif has_sufficient_metadata_or_pdf(item) or (
             item.get("_lineage_runtime_verified")
             and item.get("title")
@@ -552,19 +688,19 @@ def select_references_by_context(
         + ranked_by_context["methods"][CONTEXT_MINIMUM_ITEMS:]
     )
     selected_external = _apply_age_preference(remainder, limit)
-    zotero_by_key = {
+    curated_by_key = {
         key: item
-        for item in zotero_items
+        for item in curated_items
         if (key := _reference_identity(item))
     }
     external_without_zotero_duplicates = []
     for item in selected_external:
         key = _reference_identity(item)
-        if key and key in zotero_by_key:
-            _merge_context_metadata(zotero_by_key[key], item)
+        if key and key in curated_by_key:
+            _merge_context_metadata(curated_by_key[key], item)
             continue
         external_without_zotero_duplicates.append(item)
-    selected_items = zotero_items + external_without_zotero_duplicates
+    selected_items = curated_items + external_without_zotero_duplicates
     for item in selected_items:
         item.pop("_lineage_runtime_verified", None)
     return selected_items
@@ -848,7 +984,12 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
         old_summary.unlink()
     output_files = []
     index_rows = []
+    source_counts: Counter[str] = Counter()
+    source_options: set[str] = set()
     for index, item in enumerate(items, start=1):
+        source_categories = _source_type_labels(item)
+        source_counts.update(source_categories)
+        source_options.update(source_categories)
         summary = item.get("deep_summary") or {}
         provenance_rows = []
         for entry in item.get("query_provenance") or []:
@@ -869,6 +1010,27 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
             if provenance_rows
             else "<p>No structured query provenance was recorded for this item.</p>"
         )
+        source_record_rows = []
+        for record in item.get("source_records") or []:
+            if not isinstance(record, dict):
+                continue
+            source_record_rows.append(
+                "<tr>"
+                f"<td>{escape(str(record.get('source_type') or 'unknown'))}</td>"
+                f"<td>{escape(str(record.get('provider') or record.get('collection') or 'n/a'))}</td>"
+                f"<td>{escape(str(record.get('logical_locator') or 'n/a'))}</td>"
+                f"<td>{escape(str(record.get('file_id') or 'n/a'))}</td>"
+                "</tr>"
+            )
+        source_records_table = (
+            "<table><tr><th>Source type</th><th>Provider/collection</th><th>Logical locator</th><th>File ID</th></tr>"
+            + "\n".join(source_record_rows)
+            + "</table>"
+            if source_record_rows
+            else "<p>No source record was recorded.</p>"
+        )
+        field_provenance = json.dumps(item.get("field_provenance") or {}, ensure_ascii=False, sort_keys=True)
+        parse_receipts = json.dumps(item.get("document_parses") or [], ensure_ascii=False, sort_keys=True)
         filename = f"{index:02d}_{_safe_filename(item.get('bibtex_key', ''), 'paper')}.html"
         relative = f"references/literature_summaries/{filename}"
         html = f"""<!doctype html>
@@ -888,9 +1050,14 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
   <h1>{escape(item.get('title') or 'Literature Summary')}</h1>
   <table>
     <tr><th>Citation key</th><td>{escape(item.get('bibtex_key') or '')}</td></tr>
-    <tr><th>Source</th><td>{escape(item.get('source') or 'unknown')}</td></tr>
+    <tr><th>Source categories</th><td>{escape(', '.join(_source_type_labels(item)))}</td></tr>
     <tr><th>Reference origin</th><td>{escape(item.get('reference_origin') or 'external_search')}</td></tr>
     <tr><th>Zotero collection</th><td>{escape(item.get('zotero_collection') or 'n/a')}</td></tr>
+    <tr><th>Local logical locator</th><td>{escape(item.get('local_logical_path') or 'n/a')}</td></tr>
+    <tr><th>Local attachment</th><td>{escape(item.get('local_attachment_path') or 'n/a')}</td></tr>
+    <tr><th>Local file ID</th><td>{escape(item.get('local_file_id') or 'n/a')}</td></tr>
+    <tr><th>Metadata status</th><td>{escape(item.get('metadata_status') or 'unknown')}</td></tr>
+    <tr><th>PDF/parser status</th><td>{escape(item.get('pdf_read_status') or 'not_parsed')} ({escape(item.get('local_parser_version') or item.get('local_parser') or 'n/a')})</td></tr>
     <tr><th>Selection policy</th><td>{escape(item.get('selection_policy') or 'ranked_by_relevance_and_authority')}</td></tr>
     <tr><th>Authors/year</th><td>{escape(', '.join(item.get('authors') or ['Unknown author']))} ({escape(str(item.get('year') or 'n.d.'))})</td></tr>
     <tr><th>Venue</th><td>{escape(item.get('publication') or 'n/a')}</td></tr>
@@ -908,6 +1075,12 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
   </table>
   <h2>Query provenance</h2>
   {provenance_table}
+  <h2>Source records</h2>
+  {source_records_table}
+  <h2>Field provenance</h2>
+  <pre>{escape(field_provenance)}</pre>
+  <h2>Document parse receipts</h2>
+  <pre>{escape(parse_receipts)}</pre>
   <h2>Abstract Summary</h2>
   <p>{escape(item.get('abstract') or 'No abstract metadata is available.')}</p>
   <h2>Structured Reading Notes</h2>
@@ -925,25 +1098,46 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
         (summary_dir / filename).write_text(html, encoding="utf-8")
         output_files.append(relative)
         index_rows.append(
-            f"<tr><td>{index}</td><td><a href=\"{escape(filename)}\">{escape(item.get('title') or '')}</a></td>"
-            f"<td>{escape(item.get('bibtex_key') or '')}</td><td>{escape(item.get('source') or 'unknown')}</td>"
+            f"<tr data-source-categories=\"{escape('|'.join(source_categories))}\"><td>{index}</td><td><a href=\"{escape(filename)}\">{escape(item.get('title') or '')}</a></td>"
+            f"<td>{escape(item.get('bibtex_key') or '')}</td><td data-source-raw=\"{escape(item.get('source') or '')}\">{escape(', '.join(_source_type_labels(item)))}</td>"
             f"<td>{escape(item.get('reference_origin') or 'external_search')}</td>"
             f"<td>{escape(item.get('zotero_collection') or 'n/a')}</td>"
+            f"<td>{escape(item.get('local_logical_path') or 'n/a')}</td>"
+            f"<td>{escape(item.get('local_file_id') or 'n/a')}</td>"
+            f"<td>{escape(item.get('metadata_status') or 'unknown')}</td>"
+            f"<td>{escape(item.get('pdf_read_status') or 'not_parsed')}</td>"
             f"<td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td>"
             f"<td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td>"
             f"<td>{escape(item.get('search_query_id') or 'n/a')}</td>"
             f"<td>{escape(item.get('combination_level') or 'n/a')}</td>"
+            f"<td>{escape(item.get('selection_policy') or 'ranked_by_relevance_and_authority')}</td>"
             f"<td>{escape(str(item.get('citation_weight', 0)))}</td>"
             f"<td>{escape(str(item.get('relevance_score', 0)))}</td><td>{escape(str(item.get('journal_score', 0)))}</td></tr>"
         )
-    index_html = """<!doctype html>
+    source_summary = ", ".join(f"{escape(source)}: {count}" for source, count in sorted(source_counts.items())) or "none"
+    source_options_html = "".join(f'<option value="{escape(source)}">{escape(source)}</option>' for source in sorted(source_options))
+    index_html = f"""<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Literature Summary Index</title></head>
+<head><meta charset="utf-8"><title>Literature Summary Index</title>
+<script>
+function filterSources() {{
+  const selected = document.getElementById('source-filter').value;
+  document.querySelectorAll('tbody tr[data-source-categories]').forEach((row) => {{
+    const categories = (row.dataset.sourceCategories || '').split('|');
+    row.style.display = !selected || categories.includes(selected) ? '' : 'none';
+  }});
+}}
+</script>
+</head>
 <body>
 <h1>Literature Summary Index</h1>
+<p>Source counts: {source_summary}</p>
+<label for="source-filter">Filter by source: </label>
+<select id="source-filter" onchange="filterSources()"><option value="">all</option>{source_options_html}</select>
 <table border="1" cellpadding="6" cellspacing="0">
-<tr><th>#</th><th>Title</th><th>Citation key</th><th>Source</th><th>Origin</th><th>Zotero collection</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr>
-""" + "\n".join(index_rows) + "\n</table>\n</body>\n</html>\n"
+<thead><tr><th>#</th><th>Title</th><th>Citation key</th><th>Source categories</th><th>Origin</th><th>Zotero collection</th><th>Local locator</th><th>File ID</th><th>Metadata</th><th>PDF/parser</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Retention</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr></thead>
+<tbody>
+""" + "\n".join(index_rows) + "\n</tbody></table>\n</body>\n</html>\n"
     (summary_dir / "index.html").write_text(index_html, encoding="utf-8")
     return ["references/literature_summaries/index.html", *output_files]
 
@@ -982,6 +1176,9 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
     normalized = [{**item, "deep_summary": analyze_reference_item(item)} for item in normalized]
     _write_json(references_dir / "literature_items.json", normalized)
     _write_json(references_dir / "search_queries.json", search_queries or {"idea": query})
+    source_registry = references_dir / "literature_source_registry.json"
+    if not source_registry.exists():
+        _write_json(source_registry, {"schema_version": "dpl.literature_source_registry.v1", "sources": [], "source_count": 0})
     zotero_manifest = references_dir / "zotero_collection_manifest.json"
     if not zotero_manifest.exists():
         _write_json(zotero_manifest, {"status": "not_used"})
