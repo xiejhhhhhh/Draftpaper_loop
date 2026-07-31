@@ -17,6 +17,29 @@ from draftpaper_cli.manuscript_completion import (
 from draftpaper_cli.project_scaffold import create_project
 
 
+@pytest.fixture
+def compiled_completion_preview(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep transaction tests independent of an optional local LaTeX install."""
+
+    def fake_build_preview_pdf(
+        root: Path,
+        packet_dir: Path,
+        *,
+        candidate_latex: Path,
+    ) -> dict[str, str | None]:
+        return {
+            "status": "passed",
+            "pdf": None,
+            "engine": "test-fixture",
+            "sha256": "test-fixture-pdf-sha256",
+        }
+
+    monkeypatch.setattr(
+        "draftpaper_cli.manuscript_completion._build_completion_preview_pdf",
+        fake_build_preview_pdf,
+    )
+
+
 def _project(tmp_path: Path) -> Path:
     project = create_project(root=tmp_path, idea="Completion test", field="astronomy").path
     sections = {
@@ -97,7 +120,10 @@ def test_prepare_completion_writes_template_and_missing_report(tmp_path: Path) -
     assert "authors" in report["missing_required"]
 
 
-def test_preview_and_apply_completion_is_batch_transaction(tmp_path: Path) -> None:
+def test_preview_and_apply_completion_is_batch_transaction(
+    tmp_path: Path,
+    compiled_completion_preview: None,
+) -> None:
     project = _project(tmp_path)
     packet = _packet(project)
     preview = preview_manuscript_completion(project, packet)
@@ -138,7 +164,10 @@ def test_completion_rejects_line_only_and_stale_content(tmp_path: Path) -> None:
         preview_manuscript_completion(project, stale)
 
 
-def test_completion_rollback_requires_unchanged_after_hashes(tmp_path: Path) -> None:
+def test_completion_rollback_requires_unchanged_after_hashes(
+    tmp_path: Path,
+    compiled_completion_preview: None,
+) -> None:
     project = _project(tmp_path)
     preview = preview_manuscript_completion(project, _packet(project))
     applied = apply_manuscript_completion(project, preview["packet_id"], preview["packet_hash"])
