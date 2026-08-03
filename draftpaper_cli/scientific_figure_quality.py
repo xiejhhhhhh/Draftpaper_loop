@@ -34,10 +34,10 @@ CODE_STYLE_LABEL_PATTERN = re.compile(
 MODEL_ID_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
 MODEL_COLUMNS = {"model", "model_name", "comparison_model", "baseline_model"}
 
-try:
-    from rapidocr_onnxruntime import RapidOCR  # type: ignore
-except ImportError:  # pragma: no cover - optional publication-render dependency
-    RapidOCR = None
+# Keep the optional OCR backend lazy. Importing onnxruntime at module import
+# time can emit platform-specific device warnings into CLI stderr, which must
+# remain machine-readable JSON for commands that do not inspect figures.
+RapidOCR = None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -361,6 +361,15 @@ def _display_label_issues(
 
 
 def _ocr_png(path: Path) -> tuple[str, str, float]:
+    global RapidOCR
+
+    if RapidOCR is None:
+        try:
+            from rapidocr_onnxruntime import RapidOCR as rapidocr_class  # type: ignore
+
+            RapidOCR = rapidocr_class
+        except ImportError:  # pragma: no cover - optional publication-render dependency
+            RapidOCR = None
     if RapidOCR is None or not path.exists():
         return "", "RapidOCR unavailable", 0.0
     try:
