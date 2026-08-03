@@ -38,6 +38,8 @@ MODEL_COLUMNS = {"model", "model_name", "comparison_model", "baseline_model"}
 # time can emit platform-specific device warnings into CLI stderr, which must
 # remain machine-readable JSON for commands that do not inspect figures.
 RapidOCR = None
+_RAPIDOCR_ENGINE = None
+_RAPIDOCR_ENGINE_FACTORY = None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -361,7 +363,7 @@ def _display_label_issues(
 
 
 def _ocr_png(path: Path) -> tuple[str, str, float]:
-    global RapidOCR
+    global RapidOCR, _RAPIDOCR_ENGINE, _RAPIDOCR_ENGINE_FACTORY
 
     if RapidOCR is None:
         try:
@@ -376,7 +378,13 @@ def _ocr_png(path: Path) -> tuple[str, str, float]:
         import numpy as np
         from PIL import Image
 
-        result, _ = RapidOCR()(np.asarray(Image.open(path).convert("RGB")))
+        # Model construction is expensive, especially on Windows. Reuse the
+        # engine within a process while rebuilding it when tests or callers
+        # replace the backend factory.
+        if _RAPIDOCR_ENGINE is None or _RAPIDOCR_ENGINE_FACTORY is not RapidOCR:
+            _RAPIDOCR_ENGINE = RapidOCR()
+            _RAPIDOCR_ENGINE_FACTORY = RapidOCR
+        result, _ = _RAPIDOCR_ENGINE(np.asarray(Image.open(path).convert("RGB")))
     except Exception as exc:  # pragma: no cover - defensive render audit
         return "", f"RapidOCR error: {type(exc).__name__}", 0.0
     if not result:
