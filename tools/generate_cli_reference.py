@@ -10,14 +10,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from draftpaper_cli.command_registry import COMMAND_SPECS
-
-
 def _cell(value: object) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
 def render_cli_reference() -> str:
+    from draftpaper_cli.command_registry import COMMAND_SPECS
+
     lines = [
         "# Draftpaper-loop CLI Reference",
         "",

@@ -102,27 +102,63 @@ def detect_artifact_drift(project: str | Path) -> dict[str, Any]:
     added = []
     for path, old in sorted(baseline.items()):
         if path not in current:
-            missing.append({"path": path, "stage": _known_stage(_stage_for_path(path)), "previous_sha256": old.get("sha256")})
+            role, _owner_stage = artifact_role_for_path(path)
+            missing.append({
+                "path": path,
+                "stage": _known_stage(_stage_for_path(path)),
+                "previous_sha256": old.get("byte_sha256") or old.get("sha256"),
+                "previous_semantic_sha256": old.get("semantic_sha256"),
+                "drift_kind": "unresolved_artifact" if role == "unknown" else "missing_artifact",
+            })
             continue
         new = current[path]
-        if old.get("sha256") != new.get("sha256"):
+        previous_byte = old.get("byte_sha256") or old.get("sha256")
+        current_byte = new.get("byte_sha256") or new.get("sha256")
+        if previous_byte != current_byte:
+            previous_semantic = old.get("semantic_sha256")
+            current_semantic = new.get("semantic_sha256")
+            semantic_known = bool(previous_semantic and current_semantic)
+            semantic_changed = not semantic_known or previous_semantic != current_semantic
+            previous_evidence = old.get("evidence_sha256")
+            current_evidence = new.get("evidence_sha256")
+            evidence_changed = not (previous_evidence and current_evidence) or previous_evidence != current_evidence
+            role, _owner_stage = artifact_role_for_path(path)
             changed.append({
                 "path": path,
                 "stage": _known_stage(_stage_for_path(path)),
-                "previous_sha256": old.get("sha256"),
-                "current_sha256": new.get("sha256"),
+                "previous_sha256": previous_byte,
+                "current_sha256": current_byte,
+                "previous_byte_sha256": previous_byte,
+                "current_byte_sha256": current_byte,
+                "previous_semantic_sha256": previous_semantic,
+                "current_semantic_sha256": current_semantic,
+                "previous_evidence_sha256": previous_evidence,
+                "current_evidence_sha256": current_evidence,
+                "semantic_changed": semantic_changed,
+                "evidence_changed": evidence_changed,
+                "drift_kind": "unresolved_artifact" if role == "unknown" else "semantic_drift" if semantic_changed else "byte_only_drift",
                 "previous_semantic_fingerprint": old.get("semantic_fingerprint"),
                 "current_semantic_fingerprint": new.get("semantic_fingerprint"),
             })
     for path, new in sorted(current.items()):
         if path not in baseline:
-            added.append({"path": path, "stage": _known_stage(_stage_for_path(path)), "current_sha256": new.get("sha256")})
+            role, _owner_stage = artifact_role_for_path(path)
+            added.append({
+                "path": path,
+                "stage": _known_stage(_stage_for_path(path)),
+                "current_sha256": new.get("byte_sha256") or new.get("sha256"),
+                "current_byte_sha256": new.get("byte_sha256") or new.get("sha256"),
+                "current_semantic_sha256": new.get("semantic_sha256"),
+                "current_evidence_sha256": new.get("evidence_sha256"),
+                "current_semantic_fingerprint": new.get("semantic_fingerprint"),
+                "drift_kind": "added_artifact" if role != "unknown" else "unresolved_artifact",
+            })
 
     source_stages = sorted(
         {
             item["stage"]
             for item in [*changed, *missing, *added]
-            if item.get("stage") not in {"passport"}
+            if item.get("stage") not in {"passport"} and item.get("drift_kind") not in {"byte_only_drift", "unresolved_artifact"}
         },
         key=_stage_sort_key,
     )
@@ -168,14 +204,39 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
     for item in drift_items:
         path = str(item.get("path") or "")
         role, owner_stage = artifact_role_for_path(path)
+        drift_kind = str(item.get("drift_kind") or "semantic_drift")
+        if drift_kind == "byte_only_drift":
+            classified_changes.append({
+                "path": path,
+                "artifact_role": role,
+                "change_class": "byte_only_drift",
+                "affected_stages": [],
+                "scientific_semantics_changed": False,
+                "reason": "File bytes changed while the schema-aware semantic identity remained unchanged.",
+            })
+            continue
+        if drift_kind == "unresolved_artifact":
+            classified_changes.append({
+                "path": path,
+                "artifact_role": role,
+                "change_class": "unregistered_artifact",
+                "affected_stages": [],
+                "scientific_semantics_changed": None,
+                "reason": "The artifact is not registered in the role map; it is isolated for manual classification.",
+            })
+            continue
+        before_identity = item.get("previous_semantic_sha256") or item.get("previous_sha256")
+        after_identity = item.get("current_semantic_sha256") or item.get("current_sha256")
         change = classify_change(
             artifact_role=role,
-            before=item.get("previous_sha256"),
-            after=item.get("current_sha256"),
+            before=before_identity,
+            after=after_identity,
             source_stage=owner_stage,
             declaration={
                 "before_semantic_fingerprint": item.get("previous_semantic_fingerprint"),
                 "after_semantic_fingerprint": item.get("current_semantic_fingerprint"),
+                "before_evidence_fingerprint": item.get("previous_evidence_sha256"),
+                "after_evidence_fingerprint": item.get("current_evidence_sha256"),
             },
         )
         impacted = affected_stages(change)
@@ -184,6 +245,9 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
             "artifact_role": role,
             "change_class": change.change_class,
             "affected_stages": impacted,
+            "scientific_semantics_changed": change.scientific_semantics_changed,
+            "presentation_changed": change.presentation_changed,
+            "drift_kind": drift_kind,
             "reason": change.reason,
         })
         for stage in impacted:

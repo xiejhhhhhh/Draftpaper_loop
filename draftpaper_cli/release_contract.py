@@ -89,6 +89,14 @@ def _load_schema_registry(root: Path) -> dict[str, Any]:
     return payload
 
 
+def _load_optional_json(path: Path, fallback: dict[str, Any]) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return dict(fallback)
+    return payload if isinstance(payload, dict) else dict(fallback)
+
+
 def _schema_family(registry: dict[str, Any], schema_id: str) -> str | None:
     for family, raw_contract in registry["families"].items():
         if not isinstance(raw_contract, dict):
@@ -185,6 +193,19 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
     third_party = repository / "third_party" / "registry.json"
     constraints = repository / CI_CONSTRAINTS
     resource_schemas = _validate_packaged_resource_schemas(repository, schema_registry)
+    ruff_audit = _load_optional_json(
+        repository / "docs" / "quality" / "ruff_baseline_v0.35.0.json",
+        {"status": "not_packaged", "baseline_version": "unknown", "current_count": None, "legacy_debt_count": None},
+    )
+    checkpoint_schema_ids = {
+        "summary": "dpl.checkpoint_summary.v1",
+        "artifact_manifest": "dpl.checkpoint_artifact_manifest.v1",
+        "confirmation_request": "dpl.confirmation_request.v1",
+        "change_report": "dpl.checkpoint_change_report.v1",
+        "unresolved_issues": "dpl.checkpoint_unresolved_issues.v1",
+        "agent_payload": "dpl.checkpoint_agent_payload.v1",
+    }
+    checkpoint_contract_status = "passed" if all(_schema_family(schema_registry, schema_id) for schema_id in checkpoint_schema_ids.values()) else "failed"
     missing_commands = sorted(set(REQUIRED_CLI_COMMANDS) - set(COMMAND_SPECS))
     if missing_commands:
         raise ValueError("Required release commands are not registered in CommandSpec: " + ", ".join(missing_commands))
@@ -205,6 +226,34 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         "capability_pack_ids": sorted(path.parent.name for path in (repository / "draftpaper_cli" / "capability_packs").glob("*/manifest.json")),
         "release_fixture_ids": release_fixtures,
         "third_party_registry_sha256": _sha(third_party),
+        "quality_gates": {
+            "ruff_baseline_version": ruff_audit.get("baseline_version"),
+            "ruff_status": ruff_audit.get("status"),
+            "ruff_current_count": ruff_audit.get("current_count", ruff_audit.get("baseline_current_count")),
+            "ruff_legacy_debt_count": ruff_audit.get("legacy_debt_count", 0 if ruff_audit.get("status") == "retired_zero_debt" else None),
+            "no_new_debt": ruff_audit.get("no_new_debt", ruff_audit.get("status") in {"passed", "retired_zero_debt"}),
+            "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json",
+        },
+        "checkpoint_contract": {
+            "status": checkpoint_contract_status,
+            "summary_schema": checkpoint_schema_ids["summary"],
+            "required_companions": [
+                "stage_summary.zh-CN.html",
+                "stage_summary.json",
+                "artifact_manifest.json",
+                "confirmation_request.json",
+                "change_report.json",
+                "unresolved_issues.json",
+                "agent_payload.json",
+            ],
+            "agent_paths": ["project_relative_path", "absolute_path"],
+        },
+        "research_code_sources": {
+            "providers": ["github", "zenodo"],
+            "metadata_only_default": True,
+            "selection_modes": ["knowledge_base", "plugin_candidate", "historical_reference", "reproduction", "citation_only"],
+            "archive_execution": "disabled",
+        },
         "release_security": {
             "license_identifier": _project_license(repository),
             "license_files": [name for name in ("LICENSE", "NOTICE") if (repository / name).is_file()],

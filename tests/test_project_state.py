@@ -11,7 +11,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
 

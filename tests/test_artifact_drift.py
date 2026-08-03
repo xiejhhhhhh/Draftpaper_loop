@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from pathlib import Path
+from unittest import mock
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import load_project
@@ -118,6 +118,18 @@ class ArtifactDriftTests(unittest.TestCase):
             )
 
             self.assertNotEqual(status_project(project.path)["pipeline_state"], "drift_detected")
+
+    def test_unknown_changed_artifact_is_isolated_without_reopening_research_plan(self) -> None:
+        from draftpaper_cli.stale_sync import detect_artifact_drift
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Unknown drift", field="workflow engineering")
+            previous = {"byte_sha256": "old", "semantic_sha256": "old-semantic"}
+            current = {"byte_sha256": "new", "semantic_sha256": "new-semantic"}
+            with mock.patch("draftpaper_cli.stale_sync._artifact_maps", return_value=({"review/unregistered.bin": previous}, {"review/unregistered.bin": current})):
+                drift = detect_artifact_drift(project.path)
+            assert drift["changed_artifacts"][0]["drift_kind"] == "unresolved_artifact"
+            assert drift["source_stages"] == []
 
 
 if __name__ == "__main__":

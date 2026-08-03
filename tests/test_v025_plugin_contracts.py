@@ -7,7 +7,7 @@ import pytest
 
 from draftpaper_cli.discipline_modules import get_discipline_module
 from draftpaper_cli.discipline_modules.registry import list_discipline_modules
-from draftpaper_cli.plugin_catalog import build_plugin_catalog_snapshot, normalize_execution_contract, validate_execution_contract
+from draftpaper_cli.plugin_catalog import build_plugin_catalog_snapshot
 from draftpaper_cli.scientific_plugin_runtime import execute_runnable_fixture, runnable_profiles
 from tools.verify_wheel_install import EXPECTED_RELEASE_FIXTURE_IDS, _release_regressions_passed
 

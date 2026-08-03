@@ -120,7 +120,10 @@ from .review_engines import ReviewEngineError, discover_review_workflow_gaps, in
 from .results import ResultsGateError, inventory_results, write_results
 from .result_evidence import ResultEvidenceError, resolve_result_evidence
 from .review_rule_runtime import assess_review_rules, build_review_rule_rescue_tasks, collect_review_rule_evidence_roles, load_discipline_review_rules
-from .scientific_fact_ledger import build_scientific_fact_ledger, load_or_build_scientific_fact_ledger
+from .scientific_fact_ledger import (
+    build_scientific_fact_ledger as build_scientific_fact_ledger,
+    load_or_build_scientific_fact_ledger as load_or_build_scientific_fact_ledger,
+)
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
 
@@ -240,6 +243,8 @@ __all__ = [
     "build_review_rule_rescue_tasks",
     "collect_review_rule_evidence_roles",
     "load_discipline_review_rules",
+    "build_scientific_fact_ledger",
+    "load_or_build_scientific_fact_ledger",
     "prepare_analysis_revision",
     "write_introduction",
     "inventory_data",

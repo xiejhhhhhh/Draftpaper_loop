@@ -11,6 +11,13 @@ Draftpaper-loop treats literature discovery, local library import, metadata reso
 | `local_import` | PDF folder or local BibTeX/RIS/JSON file | File hash, logical locator, parser receipt, field provenance | No |
 | `manual` | User-supplied JSON or manually curated record | Import locator and user selection policy | No |
 
+GitHub and Zenodo are separate `code_source` providers rather than citation
+origins. After retained, anchor, or user-selected works are written, the
+workflow can record metadata-only repository and version-archive leads. These
+records retain the paper `work_id`, source URL/DOI, version identity, license,
+checksum hints, provider and retrieval time. See
+[`research_code_sources.md`](research_code_sources.md).
+
 ## Commands
 
 ```powershell
@@ -21,9 +28,16 @@ python -m draftpaper_cli.cli collect-literature --project <project>
 python -m draftpaper_cli.cli reconcile-literature --project <project>
 python -m draftpaper_cli.cli search-literature --project <project> --zotero-collection "My Collection" --include-online
 python -m draftpaper_cli.cli review-literature-coverage --project <project>
+python -m draftpaper_cli.cli enrich-literature-code-leads --project <project> --selection-mode knowledge_base
 ```
 
 `search-literature` can aggregate explicit JSON, Zotero, registered local sources, and online providers. Existing tests and offline runs can use `--no-online`; an explicit JSON import does not trigger network search unless `--include-online` is supplied. A missing provider credential or a provider timeout is recorded as degraded and does not erase other sources.
+
+`enrich-literature-code-leads` is metadata-only. It does not clone, download,
+extract, install, or execute a repository. `knowledge_base` prefers the latest
+stable release and keeps paper-era lineage; `reproduction` requires an exact
+paper-linked version. Stars, forks, paper citations, and software citations are
+recorded as separate signals, not as scientific validity proofs.
 
 ## Local Files
 

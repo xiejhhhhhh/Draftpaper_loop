@@ -79,6 +79,7 @@ _COMMON_MANAGED_WRITES = (
     "*/stage_manifest.json",
     "stage_manifests/**",
     "project_system_of_record.json",
+    "review/checkpoints/**",
     ".draftpaper/extensions/**",
 )
 
@@ -565,6 +566,67 @@ COMMAND_SPECS.update({
             *_COMMON_MANAGED_WRITES,
         ),
     ),
+    "show-checkpoint-summary": CommandSpec(
+        "show-checkpoint-summary",
+        "state_kernel",
+        False,
+        "state",
+        "checkpoint_summary",
+        "show_checkpoint_summary",
+        (("project", "project"), ("checkpoint_hash", "checkpoint_hash"), ("language", "language")),
+    ),
+    "session-preflight": CommandSpec(
+        "session-preflight",
+        "state_kernel",
+        True,
+        "state",
+        "runtime_handshake",
+        "session_preflight",
+        (("project", "project"),),
+        allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "enrich-literature-code-leads": CommandSpec(
+        "enrich-literature-code-leads",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_code_enrichment",
+        "enrich_literature_code_leads",
+        (("project", "project"), ("work_selection", "work_selection"), ("providers", "providers"), ("selection_mode", "selection_mode"), ("metadata_only", "metadata_only"), ("github_metadata", "github_metadata"), ("zenodo_metadata", "zenodo_metadata"), ("include_online", "include_online"), ("max_candidates", "max_candidates")),
+        allowed_write_globs=("references/**", "research_code_mining/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "discover-research-code": CommandSpec(
+        "discover-research-code",
+        "capability_coordinator",
+        True,
+        "capabilities",
+        "literature_code_enrichment",
+        "discover_research_code",
+        (("output_root", "output_root"), ("discipline", "discipline"), ("query", "query"), ("providers", "providers"), ("paper_doi", "paper_doi"), ("selection_mode", "selection_mode"), ("github_metadata", "github_metadata"), ("zenodo_metadata", "zenodo_metadata")),
+        allowed_write_globs=("research_code_mining/**", "plugin_candidates/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "inspect-research-code-source": CommandSpec(
+        "inspect-research-code-source",
+        "capability_coordinator",
+        True,
+        "capabilities",
+        "literature_code_enrichment",
+        "inspect_research_code_source",
+        (("project", "project"), ("candidate_id", "candidate_id")),
+        allowed_write_globs=("references/code_source_inspections/**", "references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "fetch-research-code-archive": CommandSpec(
+        "fetch-research-code-archive",
+        "capability_coordinator",
+        True,
+        "capabilities",
+        "literature_code_enrichment",
+        "fetch_research_code_archive",
+        (("project", "project"), ("candidate_id", "candidate_id"), ("confirm_download", "confirm_download")),
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=("research_code_mining/**", "references/**", *_COMMON_MANAGED_WRITES),
+    ),
     "install-skill": CommandSpec("install-skill", "state_kernel", False, "state", "skill_sync", "install_skill", (("destination", "destination"), ("force", "force")), risk_level="write_project", allowed_write_globs=(), resource_class="local_cpu", mcp_exposed=False),
     "skill-doctor": CommandSpec("skill-doctor", "state_kernel", False, "state", "skill_sync", "skill_doctor", (("destination", "destination"),)),
     "snapshot-plugin-catalog": CommandSpec("snapshot-plugin-catalog", "capability_coordinator", True, "capabilities", "plugin_catalog", "write_plugin_catalog_snapshot", (("project", "project"),)),
@@ -665,6 +727,8 @@ COMMAND_SPECS.update({
     "accept-revision": CommandSpec("accept-revision", "writing_coordinator", True, "writing", "manuscript_revision", "apply_manuscript_revision", (("project", "project"), ("request_id", "revision")), protected_action=True),
     "revise": CommandSpec("revise", "writing_coordinator", True, "writing", "manuscript_revision", "preview_manuscript_revision", (("project", "project"), ("instruction", "instruction"), ("at", "at"), ("paragraph", "paragraph"), ("content_file", "content_file"), ("operation", "operation"), ("mode", "mode"), ("change_class", "change_class"), ("expected_text", "expect_text"), ("expected_text_file", "expect_text_file"), ("expected_sha256", "expect_sha256"), ("occurrence", "occurrence"))),
     "eval": CommandSpec("eval", "release_coordinator", True, "quality_checks", "eval_runtime", "run_eval_command", (("action", "eval_action"), ("project", "project"), ("case", "case"), ("capture", "capture"), ("baseline", "baseline"), ("report", "report"), ("output", "output"))),
+    "prepare-plugin-rescue": CommandSpec("prepare-plugin-rescue", "capability_coordinator", True, "capabilities", "plugin_rescue", "prepare_plugin_rescue", (("project", "project"), ("academicforge_root", "academicforge_root"), ("github_metadata", "github_metadata"), ("zenodo_metadata", "zenodo_metadata"))),
+    "record-plugin-rescue-outcome": CommandSpec("record-plugin-rescue-outcome", "capability_coordinator", True, "capabilities", "plugin_rescue", "record_plugin_rescue_outcome", (("project", "project"), ("requirement_id", "requirement_id"), ("outcome", "outcome"), ("attempted_routes", "attempted_route"), ("route_evidence", "route_evidence"), ("evidence_note", "evidence_note"))),
     "validate-command-contracts": CommandSpec("validate-command-contracts", "state_kernel", False, "state", "command_contracts", "validate_command_contracts"),
     "run-integrity-gate": CommandSpec("run-integrity-gate", "release_coordinator", True, "quality_checks", "gate_handlers", "run_integrity_gate", (("project", "project"),), "decision_pass"),
 })
@@ -691,6 +755,22 @@ for _route_command in ("apply-result-downgrade", "prepare-result-rescue"):
         mcp_exposed=False,
         idempotency="supported",
     )
+
+# This result-support transaction updates the authoritative narrowed claim
+# contract under research_plan/. Include its exact outputs in the protected
+# write set so the command does not roll back its own declared transaction.
+COMMAND_SPECS["apply-result-downgrade"] = replace(
+    COMMAND_SPECS["apply-result-downgrade"],
+    allowed_write_globs=tuple(
+        dict.fromkeys(
+            (
+                *COMMAND_SPECS["apply-result-downgrade"].allowed_write_globs,
+                "research_plan/claim_contract.json",
+                "research_plan/claim_downgrade_decision.json",
+            )
+        )
+    ),
+)
 
 
 for _name, _spec in tuple(COMMAND_SPECS.items()):
@@ -745,6 +825,52 @@ def command_spec(name: str) -> CommandSpec | None:
     return COMMAND_SPECS.get(name)
 
 
+def _checkpoint_stage(spec: CommandSpec, command: str, payload: dict[str, Any]) -> str:
+    explicit = str(payload.get("checkpoint_stage") or payload.get("stage") or "").strip()
+    if explicit:
+        return explicit
+    if command in {"review-research-plan", "confirm-research-plan", "reopen-research-plan"}:
+        return "research_plan"
+    if command in {"assess-result-support", "prepare-result-rescue", "apply-result-downgrade"}:
+        return "result_support"
+    if "core-evidence" in command or command in {"checkpoint", "resume"}:
+        return "core_evidence"
+    if "plugin" in command or "skill" in command:
+        return "plugin"
+    if command in {"review-final-manuscript", "confirm-final-manuscript"}:
+        return "quality_checks"
+    return spec.pipeline_stage or spec.formal_stage
+
+
+def _attach_human_checkpoint_summary(
+    args: Any,
+    spec: CommandSpec,
+    payload: dict[str, Any],
+    *,
+    before_artifacts: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    command = spec.name
+    status = str(payload.get("status") or payload.get("decision") or "").lower()
+    needs_summary = spec.risk_level == "human_checkpoint" or bool(payload.get("requires_user_decision")) or status in {
+        "confirmation_required",
+        "review_required",
+        "checkpoint_created",
+        "awaiting_confirmation",
+    }
+    project = getattr(args, "project", None)
+    if not needs_summary or not project or payload.get("stage_summary_zh_html"):
+        return payload
+    from .checkpoint_summary import attach_checkpoint_summary
+
+    return attach_checkpoint_summary(
+        payload,
+        project=project,
+        stage=_checkpoint_stage(spec, command, payload),
+        command=command,
+        before_artifacts=before_artifacts,
+    )
+
+
 def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
     """Execute a formal command through its declared coordinator boundary."""
     spec = command_spec(str(getattr(args, "command", "")))
@@ -752,6 +878,15 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
         return None
     module = import_module(f".{spec.handler_module}", package=__package__)
     handler = getattr(module, spec.handler_name)
+    before_artifacts: list[dict[str, Any]] | None = None
+    project = getattr(args, "project", None)
+    if project and (spec.risk_level == "human_checkpoint" or spec.mutates_project):
+        try:
+            from .passport import collect_artifacts
+
+            before_artifacts = collect_artifacts(project)
+        except Exception:
+            before_artifacts = None
     if spec.namespace_handler:
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -768,12 +903,14 @@ def dispatch_registered_command(args: Any) -> tuple[dict[str, Any], int] | None:
                 continue
             if isinstance(payload, dict):
                 payload["_dpl_output_stream"] = output_stream
+                payload = _attach_human_checkpoint_summary(args, spec, payload, before_artifacts=before_artifacts)
                 return payload, exit_code
         raise TypeError(f"Namespace handler for {spec.name} did not emit a JSON object payload.")
     kwargs = {parameter: getattr(args, attribute, None) for parameter, attribute in spec.argument_bindings}
     payload = handler(**kwargs)
     if not isinstance(payload, dict):
         raise TypeError(f"Registered command {spec.name} returned a non-object payload.")
+    payload = _attach_human_checkpoint_summary(args, spec, payload, before_artifacts=before_artifacts)
     if spec.exit_policy == "decision_pass":
         exit_code = 0 if payload.get("decision") == "pass" else 1
     elif spec.exit_policy == "quality_pass":

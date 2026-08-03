@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.code_source_record.v2",
+  "type": "object",
+  "required": ["schema_version", "code_source_id", "work_id", "source_type", "source_intent", "verification_status", "download_status", "execution_status", "promotion_status"],
+  "properties": {
+    "schema_version": {"const": "dpl.code_source_record.v2"},
+    "code_source_id": {"type": "string"},
+    "code_work_id": {"type": "string"},
+    "work_id": {"type": "string"},
+    "source_type": {"enum": ["github", "zenodo", "project_local", "academicforge"]},
+    "source_intent": {"enum": ["knowledge_base", "plugin_candidate", "reproduction", "historical_reference", "citation_only"]},
+    "verification_status": {"type": "string"},
+    "download_status": {"type": "string"},
+    "execution_status": {"type": "string"},
+    "promotion_status": {"type": "string"},
+    "canonical_url": {"type": "string"},
+    "repository_url": {"type": "string"},
+    "doi": {"type": ["string", "null"]},
+    "concept_doi": {"type": ["string", "null"]},
+    "version": {"type": ["string", "null"]},
+    "commit_sha": {"type": ["string", "null"]},
+    "license": {"type": ["string", "null"]},
+    "quality_signals": {"type": "object"},
+    "link_evidence": {"type": "array"}
+  },
+  "additionalProperties": true
+}

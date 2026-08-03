@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.drift_reconciliation.v1",
+  "type": "object",
+  "required": ["schema_version", "status", "changes"],
+  "properties": {
+    "schema_version": {"const": "dpl.drift_reconciliation.v1"},
+    "status": {"type": "string"},
+    "changes": {"type": "array"},
+    "requires_human_confirmation": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

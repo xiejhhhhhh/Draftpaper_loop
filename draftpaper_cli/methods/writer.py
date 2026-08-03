@@ -5,32 +5,21 @@
 from __future__ import annotations
 
 import ast
-import csv
-import hashlib
 import json
-import os
 import re
-import shlex
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 from ..data_feasibility import DataGateError, validate_data_feasibility_for_methods
-from ..execution_policy import redact_sensitive, sanitized_environment
 from ..html_utils import write_html_report
-from ..io_utils import read_json, read_text
-from ..latex_utils import safe_latex_text
 from ..method_plan import MethodPlanError, validate_method_plan_for_methods
 from ..manuscript_composer import SectionCompositionError, select_validated_section_draft
 from ..observations import load_observations
-from ..project_scaffold import _write_json, utc_now
-from ..project_state import load_project, mark_stage_stale, update_stage_status
+from ..project_scaffold import _write_json
+from ..project_state import load_project, update_stage_status
 from ..reference_usage import ensure_reference_usage_plan, missing_entries_for_section
-from ..evidence_registry import EVIDENCE_REGISTRY_JSON, build_scientific_evidence_registry, ensure_registry_consistent
+from ..evidence_registry import build_scientific_evidence_registry, ensure_registry_consistent
 from ..result_evidence import ResultEvidenceError, resolve_result_evidence
-from ..writing_brief import METHOD_WRITING_BRIEF_HTML, METHOD_WRITING_BRIEF_JSON, build_method_writing_brief
-from ..write_set_guard import BoundaryViolation, resolve_confined_path
+from ..writing_brief import build_method_writing_brief
 
 from .common import (
     METHOD_INPUTS,

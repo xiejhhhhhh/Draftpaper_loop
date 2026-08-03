@@ -246,11 +246,16 @@ def run_job_worker(database: str | Path, job_id: str) -> int:
         failure_class = None if completed.returncode == 0 else "scientific_or_command_nonzero"
     except subprocess.TimeoutExpired as exc:
         completed = None
-        process_status = "timed_out"; status = "timed_out"; failure_class = "infrastructure_timeout"
-        stdout = str(exc.stdout or ""); stderr = str(exc.stderr or "")
+        process_status = "timed_out"
+        status = "timed_out"
+        failure_class = "infrastructure_timeout"
+        stdout = str(exc.stdout or "")
+        stderr = str(exc.stderr or "")
     else:
-        stdout = completed.stdout; stderr = completed.stderr
-    stdout = stdout[-MAX_CAPTURE_BYTES:]; stderr = stderr[-MAX_CAPTURE_BYTES:]
+        stdout = completed.stdout
+        stderr = completed.stderr
+    stdout = stdout[-MAX_CAPTURE_BYTES:]
+    stderr = stderr[-MAX_CAPTURE_BYTES:]
     result = None
     for line in reversed(stdout.splitlines()):
         try:
@@ -258,7 +263,8 @@ def run_job_worker(database: str | Path, job_id: str) -> int:
         except json.JSONDecodeError:
             continue
         if isinstance(candidate, dict):
-            result = candidate; break
+            result = candidate
+            break
     command_status = str((result or {}).get("status") or status)
     scientific = str((result or {}).get("decision") or (result or {}).get("scientific_decision") or ("pass" if completed and completed.returncode == 0 else "non_passing"))
     transaction = "committed" if process_status == "completed" else "not_committed"

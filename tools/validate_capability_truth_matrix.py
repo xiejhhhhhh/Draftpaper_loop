@@ -36,9 +36,6 @@ REQUIRED_RECORD_FIELDS = {
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from draftpaper_cli.command_registry import COMMAND_SPECS
-
-
 def normalize_whitespace(text: str) -> str:
     """Collapse Markdown line wrapping and indentation for stable claim comparison."""
 
@@ -66,6 +63,8 @@ def _relative_paths_exist(paths: Any, root: Path, label: str, errors: list[str])
 
 
 def _artifact_has_production_evidence(record: dict[str, Any], artifact: str, root: Path) -> bool:
+    from draftpaper_cli.command_registry import COMMAND_SPECS
+
     normalized_artifact = re.sub(r"<[^>]+>", "artifact-id", artifact)
     for command in record.get("commands", []):
         spec = COMMAND_SPECS.get(command)
@@ -116,6 +115,8 @@ def _validate_readme_binding(record: dict[str, Any], text: str, language: str, e
 
 def validate_matrix(payload: dict[str, Any], root: str | Path = REPOSITORY_ROOT) -> list[str]:
     """Return deterministic validation errors for a loaded matrix."""
+
+    from draftpaper_cli.command_registry import COMMAND_SPECS
 
     repository_root = Path(root)
     errors: list[str] = []

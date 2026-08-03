@@ -610,7 +610,6 @@ def _apply_age_preference(candidates: list[dict[str, Any]], limit: int) -> list[
     not_too_old = [item for item in candidates if (_year_int(item) or 9999) >= OLD_YEAR_CUTOFF]
     pool = not_too_old if len(not_too_old) >= limit else candidates
     recent = [item for item in pool if (_year_int(item) or 0) >= RECENT_YEAR_CUTOFF]
-    other = [item for item in pool if item not in recent]
     target_recent = int(limit * RECENT_TARGET_RATIO + 0.999)
     if len(recent) >= target_recent:
         selected = recent[:target_recent]
@@ -1002,10 +1001,36 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     index_rows = []
     source_counts: Counter[str] = Counter()
     source_options: set[str] = set()
+    code_by_work: dict[str, list[dict[str, Any]]] = {}
+    code_sources_path = references_dir / "code_sources.json"
+    if code_sources_path.is_file():
+        try:
+            code_payload = json.loads(code_sources_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            code_payload = {}
+        for record in code_payload.get("records") or [] if isinstance(code_payload, dict) else []:
+            if isinstance(record, dict) and record.get("work_id"):
+                code_by_work.setdefault(str(record["work_id"]), []).append(record)
+
+    def literature_work_id(item: dict[str, Any]) -> str:
+        existing = str(item.get("work_id") or "").strip()
+        if existing:
+            return existing
+        doi = str(item.get("doi") or "").strip().lower()
+        return f"work:doi:{doi}" if doi else ""
+
     for index, item in enumerate(items, start=1):
         source_categories = _source_type_labels(item)
+        code_leads = code_by_work.get(literature_work_id(item), [])
+        for code_lead in code_leads:
+            source_type = str(code_lead.get("source_type") or "code_source")
+            source_categories.append(source_type)
         source_counts.update(source_categories)
         source_options.update(source_categories)
+        code_source_summary = "; ".join(
+            f"{record.get('source_type')}:{record.get('version') or record.get('record_id') or 'metadata-only'} ({record.get('selection_status') or 'candidate'})"
+            for record in code_leads
+        ) or "none"
         summary = item.get("deep_summary") or {}
         provenance_rows = []
         for entry in item.get("query_provenance") or []:
@@ -1069,7 +1094,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
   <h1>{escape(item.get('title') or 'Literature Summary')}</h1>
   <table>
     <tr><th>Citation key</th><td>{escape(item.get('bibtex_key') or '')}</td></tr>
-    <tr><th>Source categories</th><td>{escape(', '.join(_source_type_labels(item)))}</td></tr>
+    <tr><th>Source categories</th><td>{escape(', '.join(source_categories))}</td></tr>
     <tr><th>Reference origin</th><td>{escape(item.get('reference_origin') or 'external_search')}</td></tr>
     <tr><th>Zotero collection</th><td>{escape(item.get('zotero_collection') or 'n/a')}</td></tr>
     <tr><th>Local logical locator</th><td>{escape(item.get('local_logical_path') or 'n/a')}</td></tr>
@@ -1079,6 +1104,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>PDF/parser status</th><td>{escape(item.get('pdf_read_status') or 'not_parsed')} ({escape(item.get('local_parser_version') or item.get('local_parser') or 'n/a')})</td></tr>
     <tr><th>Parser route</th><td>{escape(parse_route)}</td></tr>
     <tr><th>Candidate state</th><td>{escape(item.get('candidate_state') or 'unknown')}</td></tr>
+    <tr><th>GitHub/Zenodo code sources</th><td>{escape(code_source_summary)}</td></tr>
     <tr><th>Selection policy</th><td>{escape(item.get('selection_policy') or 'ranked_by_relevance_and_authority')}</td></tr>
     <tr><th>Authors/year</th><td>{escape(', '.join(item.get('authors') or ['Unknown author']))} ({escape(str(item.get('year') or 'n.d.'))})</td></tr>
     <tr><th>Venue</th><td>{escape(item.get('publication') or 'n/a')}</td></tr>
@@ -1121,7 +1147,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
         output_files.append(relative)
         index_rows.append(
             f"<tr data-source-categories=\"{escape('|'.join(source_categories))}\"><td>{index}</td><td><a href=\"{escape(filename)}\">{escape(item.get('title') or '')}</a></td>"
-            f"<td>{escape(item.get('bibtex_key') or '')}</td><td data-source-raw=\"{escape(item.get('source') or '')}\">{escape(', '.join(_source_type_labels(item)))}</td>"
+            f"<td>{escape(item.get('bibtex_key') or '')}</td><td data-source-raw=\"{escape(item.get('source') or '')}\">{escape(', '.join(source_categories))}</td>"
             f"<td>{escape(item.get('reference_origin') or 'external_search')}</td>"
             f"<td>{escape(item.get('zotero_collection') or 'n/a')}</td>"
             f"<td>{escape(item.get('local_logical_path') or 'n/a')}</td>"
@@ -1130,6 +1156,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
             f"<td>{escape(item.get('pdf_read_status') or 'not_parsed')}</td>"
             f"<td>{escape(parse_route)}</td>"
             f"<td>{escape(item.get('candidate_state') or 'unknown')}</td>"
+            f"<td>{escape(code_source_summary)}</td>"
             f"<td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td>"
             f"<td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td>"
             f"<td>{escape(item.get('search_query_id') or 'n/a')}</td>"
@@ -1159,7 +1186,7 @@ function filterSources() {{
 <label for="source-filter">Filter by source: </label>
 <select id="source-filter" onchange="filterSources()"><option value="">all</option>{source_options_html}</select>
 <table border="1" cellpadding="6" cellspacing="0">
-<thead><tr><th>#</th><th>Title</th><th>Citation key</th><th>Source categories</th><th>Origin</th><th>Zotero collection</th><th>Local locator</th><th>File ID</th><th>Metadata</th><th>PDF/parser</th><th>Parser route</th><th>Candidate state</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Retention</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr></thead>
+<thead><tr><th>#</th><th>Title</th><th>Citation key</th><th>Source categories</th><th>Origin</th><th>Zotero collection</th><th>Local locator</th><th>File ID</th><th>Metadata</th><th>PDF/parser</th><th>Parser route</th><th>Candidate state</th><th>GitHub/Zenodo code sources</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Retention</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr></thead>
 <tbody>
 """ + "\n".join(index_rows) + "\n</tbody></table>\n</body>\n</html>\n"
     (summary_dir / "index.html").write_text(index_html, encoding="utf-8")

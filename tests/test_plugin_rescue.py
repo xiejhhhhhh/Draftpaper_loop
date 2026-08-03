@@ -45,6 +45,29 @@ def test_plugin_rescue_scopes_academicforge_and_github_work_to_each_gap(tmp_path
     assert any("promote-plugin-candidate" in command and "--write" in command for command in saved["recommended_next_commands"])
 
 
+def test_plugin_rescue_adds_persistent_zenodo_route_when_configured(tmp_path: Path) -> None:
+    from draftpaper_cli.plugin_rescue import prepare_plugin_rescue
+
+    project = create_project(root=tmp_path, idea="A deleted research repository needs recovery.", field="astronomy").path
+    (project / "research_plan" / "plugin_sufficiency_report.json").write_text(json.dumps({
+        "decision": "blocked",
+        "rescue_tasks": [{
+            "requirement_id": "method:fig_01:archived_method",
+            "kind": "method",
+            "state": "missing",
+            "search_scope": {"discipline": "astronomy", "role": "archived_method"},
+        }],
+    }), encoding="utf-8")
+
+    prepare_plugin_rescue(project, zenodo_metadata="D:/zenodo-records.json")
+    saved = json.loads((project / "review" / "plugin_rescue_plan.json").read_text(encoding="utf-8"))
+    task = saved["tasks"][0]
+    zenodo = next(route for route in task["routes"] if route["route"] == "zenodo_research_code")
+    assert zenodo["route_class"] == "persistent_code_archive"
+    assert "discover-research-code" in zenodo["command"]
+    assert "zenodo_research_code" in task["required_routes"]
+
+
 def test_plugin_rescue_only_blocks_after_all_search_routes_are_recorded(tmp_path: Path) -> None:
     from draftpaper_cli.plugin_rescue import record_plugin_rescue_outcome, prepare_plugin_rescue
 

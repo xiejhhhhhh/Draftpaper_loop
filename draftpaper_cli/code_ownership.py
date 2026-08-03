@@ -382,7 +382,6 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
     traces = []
     for item in figures or []:
         figure_id = str(item.get("figure_id") or item.get("storyboard_id") or Path(str(item.get("path") or "")).stem)
-        haystack = f"{figure_id} {item.get('path')}"
         matched = []
         for relative in plotting_files:
             text = _read_text(state.path / relative)

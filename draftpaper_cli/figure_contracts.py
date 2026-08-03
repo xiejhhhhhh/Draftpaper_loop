@@ -8,7 +8,6 @@ from typing import Any
 from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
 from .figure_contracts_v026 import (
     ALIGNMENT_JSON,
-    CAPTION_JSON,
     ConfirmedFigureContractError,
     validate_confirmed_figure_alignment,
     validate_figure_captions,

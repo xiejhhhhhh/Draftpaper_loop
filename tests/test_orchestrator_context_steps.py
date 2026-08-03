@@ -8,7 +8,7 @@ import json
 import tempfile
 import unittest
 
-from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
+from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data
 from draftpaper_cli.evidence_snapshot import create_evidence_snapshot
 from draftpaper_cli.method_plan import collect_method_plan
 from draftpaper_cli.methods import build_method_writing_context

@@ -211,6 +211,8 @@ def artifact_role_for_path(path: str) -> tuple[str, str]:
         return "result_manifest", "results"
     if lowered in {"project.json", "project.yaml"}:
         return "idea", "idea"
+    if lowered == "idea/idea.md":
+        return "idea", "idea"
     if lowered == "references/library.bib":
         return "reference_library", "references"
     if lowered.startswith("references/"):

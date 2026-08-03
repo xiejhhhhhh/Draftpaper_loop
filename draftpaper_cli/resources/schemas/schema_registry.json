@@ -38,6 +38,17 @@
     "extension_host_capabilities": {"current": "dpl.extension_host_capabilities.v1", "accepted": []},
     "extension_manifest": {"current": "dpl.guidance_extension_manifest.v1", "accepted": ["dpl.extension.v1"]},
     "workflow_event": {"current": "dpl.workflow_event.v1", "accepted": []},
-    "extension_receipt": {"current": "dpl.extension_receipt.v1", "accepted": []}
+    "extension_receipt": {"current": "dpl.extension_receipt.v1", "accepted": []},
+    "code_source_record": {"current": "dpl.code_source_record.v2", "accepted": []},
+    "research_code_lead": {"current": "dpl.research_code_lead.v1", "accepted": []},
+    "work_code_linkage": {"current": "dpl.work_code_linkage.v1", "accepted": []},
+    "runtime_lock": {"current": "dpl.runtime_lock.v1", "accepted": []},
+    "checkpoint_summary": {"current": "dpl.checkpoint_summary.v1", "accepted": []},
+    "checkpoint_artifact_manifest": {"current": "dpl.checkpoint_artifact_manifest.v1", "accepted": []},
+    "confirmation_request": {"current": "dpl.confirmation_request.v1", "accepted": []},
+    "drift_reconciliation": {"current": "dpl.drift_reconciliation.v1", "accepted": []},
+    "checkpoint_change_report": {"current": "dpl.checkpoint_change_report.v1", "accepted": []},
+    "checkpoint_unresolved_issues": {"current": "dpl.checkpoint_unresolved_issues.v1", "accepted": []},
+    "checkpoint_agent_payload": {"current": "dpl.checkpoint_agent_payload.v1", "accepted": []}
   }
 }

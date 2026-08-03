@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..command_registry import COMMAND_SPECS, command_spec
+from ..command_registry import command_spec
 from ..command_contracts import command_input_schema
 from ..doctor import doctor_project, verify_next_action
 from ..execution_policy import ExecutionPolicy, command_allowed_via_mcp, redact_sensitive, sanitized_environment

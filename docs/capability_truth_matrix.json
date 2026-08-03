@@ -276,6 +276,80 @@
       ],
       "boundary_zh": "MinerU 只改善文档解析；官方 Agent 需要授权，自建 CPU/GPU 只通过用户提供的 endpoint 支持，冻结 benchmark 不代表在线服务或科研结论。",
       "boundary_en": "MinerU improves document parsing only; the official Agent requires consent, self-hosted CPU/GPU is supported only through a user-provided endpoint, and frozen benchmarks do not represent live service or scientific conclusions."
+    },
+    {
+      "capability_id": "checkpoint_summary_and_runtime_handshake",
+      "status": "implemented",
+      "since": "0.35",
+      "readme_anchor": "capability:checkpoint_summary_and_runtime_handshake",
+      "claim_zh": "人工确认前生成中文阶段成果包并显示精确路径，写入前绑定源码、wheel、Skill、schema 和插件运行时身份。",
+      "claim_en": "Human checkpoints produce Chinese stage packages with exact paths, while writes bind source, wheel, Skill, schema, and plugin runtime identity first.",
+      "commands": ["checkpoint", "show-checkpoint-summary", "session-preflight"],
+      "source_files": [
+        "draftpaper_cli/checkpoint_summary.py",
+        "draftpaper_cli/runtime_handshake.py",
+        "draftpaper_cli/orchestrator.py"
+      ],
+      "tests": [
+        "tests/test_checkpoint_summary.py",
+        "tests/test_runtime_handshake.py"
+      ],
+      "artifacts": [
+        "review/checkpoints/<checkpoint_id>/stage_summary.zh-CN.html",
+        "review/checkpoints/<checkpoint_id>/artifact_manifest.json",
+        ".draftpaper/runtime_lock.json"
+      ],
+      "boundary_zh": "阶段摘要解释流程产物和确认边界，不代替用户判断科学结论；runtime mismatch 会阻断写入。",
+      "boundary_en": "Stage summaries explain artifacts and decisions without replacing scientific judgment; runtime mismatches block writes."
+    },
+    {
+      "capability_id": "metadata_first_research_code_sources",
+      "status": "implemented",
+      "since": "0.36",
+      "readme_anchor": "capability:metadata_first_research_code_sources",
+      "claim_zh": "保留文献会同步绑定 GitHub/Zenodo 代码线索、版本谱系和 work identity，默认只读取 metadata。",
+      "claim_en": "Retained literature is enriched with GitHub/Zenodo code leads, version lineage, and work identity in metadata-only mode.",
+      "commands": ["enrich-literature-code-leads", "discover-research-code", "inspect-research-code-source"],
+      "source_files": [
+        "draftpaper_cli/literature_code_enrichment.py",
+        "draftpaper_cli/code_sources/base.py",
+        "draftpaper_cli/code_sources/github.py",
+        "draftpaper_cli/code_sources/zenodo.py"
+      ],
+      "tests": [
+        "tests/test_literature_code_enrichment.py",
+        "tests/test_code_source_providers.py",
+        "tests/test_zenodo_code_source.py"
+      ],
+      "artifacts": [
+        "references/code_sources.json",
+        "references/code_source_provenance.json",
+        "references/code_source_index.html"
+      ],
+      "boundary_zh": "代码线索不是正文引用或正式插件；最新版用于知识库，论文时期精确版本只由 reproduction 意图要求。",
+      "boundary_en": "Code leads are not manuscript citations or plugins; latest stable serves knowledge-base mode, while exact paper-era versions are required only by reproduction intent."
+    },
+    {
+      "capability_id": "safe_research_code_archive_inspection",
+      "status": "implemented",
+      "since": "0.36",
+      "readme_anchor": "capability:safe_research_code_archive_inspection",
+      "claim_zh": "用户确认后的科研代码归档经过 checksum、路径安全、许可证和静态检查，未通过者不能晋升插件。",
+      "claim_en": "User-confirmed research-code archives pass checksum, path-safety, license, and static inspection before plugin promotion.",
+      "commands": ["fetch-research-code-archive"],
+      "source_files": [
+        "draftpaper_cli/code_sources/archive_security.py",
+        "draftpaper_cli/literature_code_enrichment.py"
+      ],
+      "tests": [
+        "tests/test_code_source_providers.py",
+        "tests/test_zenodo_code_source.py"
+      ],
+      "artifacts": [
+        "research_code_mining/archive_cache/<candidate>/download_receipt.json"
+      ],
+      "boundary_zh": "归档检查不会执行第三方代码；metadata-only enrichment 不下载或解压归档。",
+      "boundary_en": "Archive inspection never executes third-party code; metadata-only enrichment does not download or extract archives."
     }
   ]
 }

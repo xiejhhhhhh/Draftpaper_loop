@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.jobs import submit_job, wait_for_job
 from draftpaper_cli.mcp import service
 from draftpaper_cli.mcp_install import mcp_doctor

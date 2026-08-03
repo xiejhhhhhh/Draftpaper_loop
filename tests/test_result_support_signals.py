@@ -616,6 +616,9 @@ def test_route_commands_are_hash_bound_human_checkpoints_and_schema_registers_v3
         assert spec.manual_only is True
         assert spec.confirmation_policy == "checkpoint_hash"
         assert spec.mcp_exposed is False
+    downgrade_writes = COMMAND_SPECS["apply-result-downgrade"].allowed_write_globs
+    assert "research_plan/claim_contract.json" in downgrade_writes
+    assert "research_plan/claim_downgrade_decision.json" in downgrade_writes
 
     registry = json.loads(
         open("draftpaper_cli/resources/schemas/schema_registry.json", encoding="utf-8").read()

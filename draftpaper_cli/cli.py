@@ -9,136 +9,115 @@ import contextlib
 import io
 import json
 import sys
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from .analysis_code import AnalysisCodeGenerationError, generate_analysis_code
-from .analysis_revision import AnalysisRevisionError, prepare_analysis_revision
-from .citation_audit import CitationAuditError
-from .citation_repair import (
-    CitationRepairError,
-    apply_citation_repair,
-    generate_citation_repair_plan,
-    re_audit_citations,
-    run_citation_repair_loop,
-)
-from .code_ownership import (
-    CodeOwnershipError,
-    build_code_provenance,
-    classify_code_ownership,
-    extract_method_formulas,
-    route_stage_code,
-    trace_figures_to_code,
-)
-from .claim_contract import ClaimContractError, apply_result_downgrade
-from .capability_packs import discover_capability_packs, evaluate_capability_routing
 from .change_impact import CANONICAL_CHANGE_CLASSES
+from .command_registry import (
+    COMMAND_SPECS,
+    command_spec,
+    dispatch_extensions_nonblocking,
+    dispatch_registered_command,
+)
 from .command_transaction import record_command_transaction
 from .write_set_guard import BoundaryViolation, WriteSetGuard
 from .workflow_trace import begin_workflow_trace, finish_workflow_trace
-from .core_evidence import CoreEvidenceError, assess_core_evidence
-from .evidence_snapshot import EvidenceSnapshotMismatch, reopen_evidence_snapshot
-from .data_acquisition import DataAcquisitionError, classify_data_access, prepare_data_acquisition
-from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, build_data_writing_context, inventory_data, write_data
-from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, prepare_discussion_comparison, write_discussion
-from .introduction import CitationIntegrityError, MissingIntroductionInputsError, write_introduction
-from .integrity_gate import IntegrityGateError, run_integrity_gate
-from .journal_profile import JournalProfileError, resolve_journal_template
-from .latex_assembly import LatexAssemblyError, assemble_latex, compile_latex_pdf
-from .literature_search import search_literature_for_project
-from .manuscript_quality import assess_results_manuscript_quality
-from .scientific_figure_quality import assess_scientific_figure_quality
-from .results_semantic_repair import prepare_results_semantic_repair
-from .paper_narrative import PaperNarrativeError, build_paper_narrative, build_results_synthesis_plan, build_section_outline
-from .writing_architecture import (
-    WritingArchitectureError,
-    build_argument_matrices,
-    build_panel_writing_contracts,
-    build_section_lifecycles,
-    prepare_panel_repair,
-    record_scientific_editor_revision,
-    resolve_venue_style_adapter,
-)
-from .method_plan import MethodPlanError, collect_method_plan
-from .method_blueprint import MethodBlueprintError, prepare_method_blueprint
-from .method_feasibility import MethodFeasibilityError, assess_method_feasibility
-from .figure_plan import FigurePlanError, plan_figures
-from .figure_contract_gate import FigureContractGateError, assess_figure_contracts
-from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
-from .figure_plugin_trace import validate_figure_plugin_trace
-from .figure_repair import FigureRepairError, diagnose_figure_execution, repair_figure_data, repair_figure_method
-from .methods import MethodsGateError, build_method_writing_context, verify_methods, write_methods
-from .observations import ObservationError, record_observation
-from .orchestrator import OrchestratorError, checkpoint_project, resume_project, run_pipeline, status_project
 from .passport import PassportError, refresh_project_passport
-from .plugin_candidates import (
-    PluginCandidateError,
-    classify_skill_source,
-    compile_skill_source,
-    extract_review_rule_signals,
-    extract_skill_capabilities,
-    generalize_plugin_candidate,
-    index_skill_source,
-    inspect_skill_source,
-    map_skill_capabilities,
-    package_plugin_contribution,
-    preflight_plugin_contribution_package,
-    promote_plugin_candidate,
-    review_plugin_contribution_package,
-    snapshot_skill_source,
-    summarize_plugin_candidates,
-    validate_plugin_candidate,
-    write_github_contribution_guide,
-)
-from .project_scaffold import ProjectAlreadyExistsError, create_project
-from .project_capability_audit import audit_project_capabilities
-from .plugin_rescue import PluginRescueError, prepare_plugin_rescue, record_plugin_rescue_outcome
-from .plugin_execution import PluginExecutionError, execute_data_plugins, execute_method_plugins
-from .research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
 from .project_state import (
-    InvalidStageStatusError,
     ProjectStateError,
-    UnknownStageError,
-    load_project,
-    mark_stage_stale,
-    update_stage_status,
-    validate_project,
 )
-from .research_code_mining import (
-    ResearchCodeMiningError,
-    bootstrap_discipline_foundation,
-    capture_discipline_learning,
-    classify_plugin_reusability,
-    discover_research_repos,
-    extract_plugin_candidates,
-    inspect_research_repo,
-    map_repository_workflow,
-    score_research_repos,
-)
-from .research_plan import MissingReferencesError, NoveltyOverlapError, generate_research_plan
-from .research_feasibility import ResearchFeasibilityError, assess_research_plan_feasibility, preflight_research_feasibility, revise_research_plan
-from .review_revision import (
-    ReviewRevisionError,
-    apply_revision,
-    assess_publication_readiness,
-    diagnose_gate_failures,
-    generate_revision_plan,
-    re_review,
-    recommend_statistical_revision,
-    review_draft,
-)
-from .review_engines import ReviewEngineError, discover_review_workflow_gaps, propose_review_engineering_plan
-from .result_validity import ResultValidityError, assess_result_validity
-from .result_support import ResultSupportError, assess_result_support
-from .result_rescue import ResultRescueError, prepare_result_rescue
-from .result_evidence import ResultEvidenceError, resolve_result_evidence
-from .result_discipline_review import ResultDisciplineReviewError, review_results_with_discipline_rules
-from .review_rule_runtime import assess_review_rules
-from .results import ResultsGateError, inventory_results, write_results
-from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
-from .template_registry import validate_template_registry
-from .third_party_provenance import render_third_party_notices, validate_third_party_provenance
-from .writing_style import WritingStyleError, learn_writing_style_from_draft
+from .stale_sync import ArtifactDriftError, detect_artifact_drift
+
+
+_LEGACY_NAME_MODULES = {
+    "ClaimContractError": ".claim_contract",
+    "CodeOwnershipError": ".code_ownership",
+    "CoreEvidenceError": ".core_evidence",
+    "EvidenceSnapshotMismatch": ".evidence_snapshot",
+    "FigureContractGateError": ".figure_contract_gate",
+    "FigurePlanError": ".figure_plan",
+    "FigureRepairError": ".figure_repair",
+    "JournalProfileError": ".journal_profile",
+    "MethodFeasibilityError": ".method_feasibility",
+    "MethodPlanError": ".method_plan",
+    "NoveltyOverlapError": ".research_plan",
+    "ObservationError": ".observations",
+    "PluginExecutionError": ".plugin_execution",
+    "PluginRescueError": ".plugin_rescue",
+    "ResearchCodeMiningError": ".research_code_mining",
+    "ResearchFeasibilityError": ".research_feasibility",
+    "ResultDisciplineReviewError": ".result_discipline_review",
+    "ResultRescueError": ".result_rescue",
+    "ResultSupportError": ".result_support",
+    "ResultValidityError": ".result_validity",
+    "ZoteroAdapterError": ".zotero_adapter",
+    "apply_result_downgrade": ".claim_contract",
+    "assess_core_evidence": ".core_evidence",
+    "assess_figure_contracts": ".figure_contract_gate",
+    "assess_method_feasibility": ".method_feasibility",
+    "assess_plugin_sufficiency": ".research_capabilities",
+    "assess_research_plan_feasibility": ".research_feasibility",
+    "assess_result_support": ".result_support",
+    "assess_result_validity": ".result_validity",
+    "audit_project_capabilities": ".project_capability_audit",
+    "bootstrap_discipline_foundation": ".research_code_mining",
+    "build_code_provenance": ".code_ownership",
+    "build_data_writing_context": ".data_feasibility",
+    "build_method_writing_context": ".methods",
+    "capture_discipline_learning": ".research_code_mining",
+    "classify_code_ownership": ".code_ownership",
+    "classify_plugin_reusability": ".research_code_mining",
+    "collect_method_plan": ".method_plan",
+    "diagnose_figure_execution": ".figure_repair",
+    "discover_research_repos": ".research_code_mining",
+    "execute_data_plugins": ".plugin_execution",
+    "execute_method_plugins": ".plugin_execution",
+    "extract_method_formulas": ".code_ownership",
+    "extract_plugin_candidates": ".research_code_mining",
+    "inspect_research_repo": ".research_code_mining",
+    "list_zotero_collections": ".zotero_adapter",
+    "map_repository_workflow": ".research_code_mining",
+    "plan_figures": ".figure_plan",
+    "preflight_plugin_contribution_package": ".plugin_candidates",
+    "preflight_research_feasibility": ".research_feasibility",
+    "prepare_discussion_comparison": ".discussion",
+    "prepare_plugin_rescue": ".plugin_rescue",
+    "prepare_result_rescue": ".result_rescue",
+    "record_observation": ".observations",
+    "record_plugin_rescue_outcome": ".plugin_rescue",
+    "render_third_party_notices": ".third_party_provenance",
+    "repair_figure_data": ".figure_repair",
+    "repair_figure_method": ".figure_repair",
+    "resolve_journal_template": ".journal_profile",
+    "resolve_research_capabilities": ".research_capabilities",
+    "review_results_with_discipline_rules": ".result_discipline_review",
+    "revise_research_plan": ".research_feasibility",
+    "route_stage_code": ".code_ownership",
+    "score_research_repos": ".research_code_mining",
+    "search_literature_for_project": ".literature_search",
+    "trace_figures_to_code": ".code_ownership",
+    "validate_figure_plugin_trace": ".figure_plugin_trace",
+    "validate_template_registry": ".template_registry",
+    "write_data": ".data_feasibility",
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve old cli-namespace imports lazily for ``cli_compat``."""
+
+    package = import_module(__package__)
+    if hasattr(package, name):
+        value = getattr(package, name)
+        globals()[name] = value
+        return value
+    module_name = _LEGACY_NAME_MODULES.get(name)
+    if module_name:
+        module = import_module(module_name, package=__package__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _read_cli_json(path: str | None) -> dict:
@@ -194,15 +173,6 @@ def _skill_source_url(args: argparse.Namespace) -> str | None:
             return repo_text
         return f"https://github.com/{repo_text}"
     return None
-from .zotero_adapter import ZoteroAdapterError, list_zotero_collections
-from .command_registry import (
-    COMMAND_SPECS,
-    command_spec,
-    dispatch_extensions_nonblocking,
-    dispatch_registered_command,
-)
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="draftpaper",
@@ -299,8 +269,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prepare_project_method.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
-    list_packs = subparsers.add_parser("list-capability-packs", help="List validated research capability packs.")
-    routing_eval = subparsers.add_parser("evaluate-capability-routing", help="Run bundled held-out capability-pack routing cases.")
+    subparsers.add_parser("list-capability-packs", help="List validated research capability packs.")
+    subparsers.add_parser("evaluate-capability-routing", help="Run bundled held-out capability-pack routing cases.")
 
     figure_evidence = subparsers.add_parser("resolve-figure-evidence", help="Resolve each semantic figure contract to run/model/cohort-qualified evidence.")
     figure_evidence.add_argument("--project", required=True)
@@ -360,6 +330,11 @@ def build_parser() -> argparse.ArgumentParser:
     resume.add_argument("--checkpoint-hash", required=True, help="Checkpoint hash to consume.")
     resume.add_argument("--note", default="", help="Human-readable resume note.")
 
+    show_checkpoint = subparsers.add_parser("show-checkpoint-summary", help="Read the current Chinese human-checkpoint summary and exact local paths.")
+    show_checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    show_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional checkpoint hash; defaults to the latest checkpoint.")
+    show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN"], help="Summary language.")
+
     run = subparsers.add_parser("run-pipeline", help="Plan the next orchestrated pipeline action.")
     run.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -392,6 +367,11 @@ def build_parser() -> argparse.ArgumentParser:
     online.add_argument("--include-online", dest="include_online", action="store_true", help="Aggregate live online providers with JSON, Zotero, and registered local sources.")
     online.add_argument("--no-online", dest="include_online", action="store_false", help="Use only explicitly supplied, Zotero, and registered local sources.")
     search.set_defaults(include_online=None)
+    code_sources = search.add_mutually_exclusive_group()
+    code_sources.add_argument("--enrich-code-sources", dest="enrich_code_sources", action="store_true", help="Record metadata-only GitHub/Zenodo code leads for retained literature (default).")
+    code_sources.add_argument("--no-code-source-enrichment", dest="enrich_code_sources", action="store_false", help="Disable the metadata-only code-source enrichment stage.")
+    search.add_argument("--enrich-code-sources-online", action="store_true", help="Allow public GitHub/Zenodo metadata API calls during enrichment.")
+    search.set_defaults(enrich_code_sources=True, enrich_code_sources_online=False)
 
     add_source = subparsers.add_parser("add-literature-source", help="Register a local PDF folder or structured literature file.")
     add_source.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -466,12 +446,13 @@ def build_parser() -> argparse.ArgumentParser:
     plugin_rescue.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     plugin_rescue.add_argument("--academicforge-root", default=None, help="Optional local AcademicForge skill root used only for candidate extraction commands.")
     plugin_rescue.add_argument("--github-metadata", default=None, help="Optional offline GitHub-search-style metadata JSON used for scoped discovery commands.")
+    plugin_rescue.add_argument("--zenodo-metadata", default=None, help="Optional offline Zenodo metadata JSON used as a persistent archive route.")
 
     plugin_rescue_outcome = subparsers.add_parser("record-plugin-rescue-outcome", help="Record whether scoped local, AcademicForge, and GitHub capability rescue found an executable route.")
     plugin_rescue_outcome.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     plugin_rescue_outcome.add_argument("--requirement-id", required=True, help="Requirement identifier from review/plugin_rescue_plan.json.")
     plugin_rescue_outcome.add_argument("--outcome", required=True, choices=["capability_found", "not_found_after_search"])
-    plugin_rescue_outcome.add_argument("--attempted-route", action="append", default=[], help="Audited route; repeat for project_local, existing_registry, academicforge, and github_research_code.")
+    plugin_rescue_outcome.add_argument("--attempted-route", action="append", default=[], help="Audited route; repeat for each applicable local, catalog, live-host, or persistent-archive route.")
     plugin_rescue_outcome.add_argument("--route-evidence", action="append", default=[], help="Structured evidence artifact as route=project-relative-or-absolute-path; repeat for every attempted route.")
     plugin_rescue_outcome.add_argument("--evidence-note", required=True, help="Short auditable summary of the search result.")
 
@@ -775,6 +756,39 @@ def build_parser() -> argparse.ArgumentParser:
     discover_repos.add_argument("--query", required=True, help="Research-code discovery query.")
     discover_repos.add_argument("--from-json", default=None, help="Offline GitHub-search-style JSON list or payload.")
     discover_repos.add_argument("--limit", type=int, default=30, help="Maximum repositories to keep.")
+
+    enrich_code = subparsers.add_parser("enrich-literature-code-leads", help="Attach metadata-only GitHub and Zenodo code-source leads to retained literature.")
+    enrich_code.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    enrich_code.add_argument("--work-selection", default="retained,anchor,user_selected", help="Comma-separated work selection: retained, anchor, user_selected, or all.")
+    enrich_code.add_argument("--providers", default="github,zenodo", help="Comma-separated providers.")
+    enrich_code.add_argument("--selection-mode", default="knowledge_base", choices=["knowledge_base", "plugin_candidate", "reproduction", "historical_reference", "citation_only"])
+    enrich_code.add_argument("--metadata-only", action="store_true", default=True, help="Required metadata-only mode; source code is never downloaded by this command.")
+    enrich_code.add_argument("--github-metadata", default=None, help="Optional offline GitHub metadata fixture/export.")
+    enrich_code.add_argument("--zenodo-metadata", default=None, help="Optional offline Zenodo metadata fixture/export.")
+    enrich_code.add_argument("--include-online", action="store_true", help="Query public provider APIs in addition to explicit links and offline metadata.")
+    enrich_code.add_argument("--max-candidates", type=int, default=30)
+
+    discover_code = subparsers.add_parser("discover-research-code", help="Discover metadata-only GitHub/Zenodo research-code candidates for a query.")
+    discover_code.add_argument("--output-root", required=True)
+    discover_code.add_argument("--discipline", required=True)
+    discover_code.add_argument("--query", required=True)
+    discover_code.add_argument("--providers", default="github,zenodo")
+    discover_code.add_argument("--paper-doi", default=None)
+    discover_code.add_argument("--selection-mode", default="knowledge_base", choices=["knowledge_base", "plugin_candidate", "reproduction", "historical_reference", "citation_only"])
+    discover_code.add_argument("--github-metadata", default=None)
+    discover_code.add_argument("--zenodo-metadata", default=None)
+
+    inspect_code_source = subparsers.add_parser("inspect-research-code-source", help="Inspect one code-source candidate without downloading or executing it.")
+    inspect_code_source.add_argument("--project", required=True)
+    inspect_code_source.add_argument("--candidate-id", required=True)
+
+    fetch_code_archive = subparsers.add_parser("fetch-research-code-archive", help="Download and statically inspect one confirmed code archive; never execute it.")
+    fetch_code_archive.add_argument("--project", required=True)
+    fetch_code_archive.add_argument("--candidate-id", required=True)
+    fetch_code_archive.add_argument("--confirm-download", action="store_true", help="Explicitly authorize the download for this candidate.")
+
+    session_preflight = subparsers.add_parser("session-preflight", help="Verify source, wheel, Skill, schema, and plugin runtime identity before project work.")
+    session_preflight.add_argument("--project", required=True)
 
     score_repos = subparsers.add_parser("score-research-repos", help="Score discovered research-code repositories for reusable plugin mining.")
     score_repos.add_argument("--input", required=True, help="Path to *_repo_candidates.json.")
@@ -1145,17 +1159,17 @@ def _main_without_passport_refresh(
     try:
         registered = dispatch_registered_command(args)
     except Exception as exc:
-        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=True), file=sys.stderr)
         return 1
     if registered is not None:
         result, exit_code = registered
         if result_sink is not None:
             result_sink.append((args, dict(result), exit_code))
         output_stream = result.pop("_dpl_output_stream", "stdout")
-        print(json.dumps(result, ensure_ascii=False), file=sys.stderr if output_stream == "stderr" else sys.stdout)
+        print(json.dumps(result, ensure_ascii=True), file=sys.stderr if output_stream == "stderr" else sys.stdout)
         return exit_code
 
-    print(json.dumps({"status": "error", "message": f"Registered handler missing for {args.command}."}, ensure_ascii=False), file=sys.stderr)
+    print(json.dumps({"status": "error", "message": f"Registered handler missing for {args.command}."}, ensure_ascii=True), file=sys.stderr)
     return 1
 
 
@@ -1184,7 +1198,7 @@ def main(argv: list[str] | None = None) -> int:
     command = str(getattr(args, "command", "") or "")
     spec = command_spec(command)
     mutates_project = bool(project and (spec.mutates_project if spec else command not in _READ_ONLY_PROJECT_COMMANDS))
-    allows_preexisting_drift = command in {"sync-artifact-stale", "rebase-project-passport"}
+    allows_preexisting_drift = command in {"sync-artifact-stale", "rebase-project-passport", "session-preflight"}
     preexisting_drift = False
     if mutates_project:
         try:
@@ -1213,11 +1227,33 @@ def main(argv: list[str] | None = None) -> int:
                     "message": message,
                     "next_command": f'python -m draftpaper_cli.cli sync-artifact-stale --project "{project}"',
                 },
-                ensure_ascii=False,
+                ensure_ascii=True,
             ),
             file=sys.stderr,
         )
         return 3
+
+    if mutates_project and project and command not in {"session-preflight", "sync-artifact-stale", "rebase-project-passport"}:
+        try:
+            from .runtime_handshake import check_runtime_for_command
+
+            runtime_guard = check_runtime_for_command(project, command)
+        except (OSError, ValueError, RuntimeError) as exc:
+            runtime_guard = {"status": "error", "reason": str(exc)}
+        if runtime_guard.get("status") == "blocked":
+            print(
+                json.dumps(
+                    {
+                        "status": "blocked",
+                        "reason": "runtime_identity_mismatch",
+                        "runtime_preflight": runtime_guard,
+                        "next_command": runtime_guard.get("next_command"),
+                    },
+                    ensure_ascii=True,
+                ),
+                file=sys.stderr,
+            )
+            return 3
 
     write_guard = None
     workflow_trace = None
@@ -1225,11 +1261,11 @@ def main(argv: list[str] | None = None) -> int:
         try:
             write_guard = WriteSetGuard(project, spec)
         except (BoundaryViolation, OSError) as exc:
-            print(json.dumps({"status": "boundary_violation", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
+            print(json.dumps({"status": "boundary_violation", "message": str(exc)}, ensure_ascii=True), file=sys.stderr)
             return 4
         preflight = write_guard.preflight()
         if preflight.get("status") != "passed":
-            print(json.dumps(preflight, ensure_ascii=False), file=sys.stderr)
+            print(json.dumps(preflight, ensure_ascii=True), file=sys.stderr)
             return 4
         workflow_trace = begin_workflow_trace(project, command, vars(args))
 
@@ -1252,7 +1288,7 @@ def main(argv: list[str] | None = None) -> int:
                 from .cli_output import compact_payload
 
                 payload = json.loads(output.splitlines()[-1])
-                print(json.dumps(compact_payload(payload), ensure_ascii=False))
+                print(json.dumps(compact_payload(payload), ensure_ascii=True))
             except (json.JSONDecodeError, TypeError, ValueError):
                 print(output)
     command_args = execution_result[-1][0] if execution_result else args
@@ -1306,11 +1342,11 @@ def main(argv: list[str] | None = None) -> int:
                             else "boundary_violation_rollback_incomplete"
                         ),
                         baseline_clean=not preexisting_drift,
-                        message=json.dumps(assessment, ensure_ascii=False),
+                        message=json.dumps(assessment, ensure_ascii=True),
                     )
                 except (PassportError, ProjectStateError, OSError):
                     pass
-                print(json.dumps(assessment, ensure_ascii=False), file=sys.stderr)
+                print(json.dumps(assessment, ensure_ascii=True), file=sys.stderr)
                 if workflow_trace is not None:
                     finish_workflow_trace(
                         project,
@@ -1359,7 +1395,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             except (PassportError, ProjectStateError, OSError):
                 pass
-            print(json.dumps({"status": "error", "message": f"Command completed but passport refresh failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            print(json.dumps({"status": "error", "message": f"Command completed but passport refresh failed: {exc}"}, ensure_ascii=True), file=sys.stderr)
             return 1
         try:
             transaction_receipt = record_command_transaction(
@@ -1371,7 +1407,7 @@ def main(argv: list[str] | None = None) -> int:
                 passport_event=event,
             )
         except (PassportError, ProjectStateError, OSError) as exc:
-            print(json.dumps({"status": "error", "message": f"Command completed but transaction receipt failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            print(json.dumps({"status": "error", "message": f"Command completed but transaction receipt failed: {exc}"}, ensure_ascii=True), file=sys.stderr)
             return 1
         if workflow_trace is not None:
             finish_workflow_trace(

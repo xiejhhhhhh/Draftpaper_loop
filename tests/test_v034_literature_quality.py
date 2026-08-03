@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from draftpaper_cli.literature_benchmark import run_document_parser_benchmark, run_literature_quality_benchmark

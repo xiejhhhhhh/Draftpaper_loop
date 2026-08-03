@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.35.0.** This release adds cross-discipline query contracts, language/discipline-aware provider planning, content-based relevance and role gates, parser-neutral PDF evidence, a project-scoped literature confirmation packet, and a conditional pypdf → official MinerU Agent/custom-endpoint route. The core wheel remains local-first and does not install or deploy a local MinerU model. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
+**Current release: v0.37.0.** This release completes the quality loop around the v0.35 cross-discipline literature foundation: every human checkpoint now produces a portable Chinese stage-summary package with exact project and machine paths; source/wheel/Python/Skill/schema/plugin runtime identity is checked before project writes; semantic drift distinguishes presentation changes from evidence changes; retained literature is enriched with metadata-only GitHub and Zenodo code leads; knowledge-base mode prefers the latest stable version while reproduction mode requires an exact paper-era version; stars, forks, paper citations, and software citations are shown as time-stamped core adoption/impact ranking signals rather than validity claims; and confirmed archives pass checksum, path-safety, license, and static inspection gates before plugin promotion. The core wheel remains local-first: pypdf is the default parser, official MinerU Agent is an optional route, and self-hosted MinerU/GPU infrastructure is not installed automatically. See [Recent Updates](#recent-updates) for the release history; the rest of this README is organized by research task.
 
 ## Core Research Capabilities
 
@@ -47,6 +47,21 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 | Literature and citations | Search, Zotero, BibTeX, PDF/summary evidence, citation intent, and audit | `library.bib`, citation evidence, final audit |
 | Review and release | Post-Results discipline review, two blind reviewers, author-completion transaction, compilation, and release hash | reviewer reports, completion packet, `main.pdf` |
 
+<!-- capability:checkpoint_summary_and_runtime_handshake -->
+<!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
+**Checkpoint transparency and runtime identity.** Before any human confirmation, Draftpaper-loop writes a Chinese stage-summary HTML, artifact manifest, confirmation request, and unresolved-issues list. The Agent shows both the project-relative path and the machine-absolute path. `session-preflight` binds the source checkout, wheel, Python, command registry, schema registry, Skill copies, and plugin catalog before project writes.
+<!-- /capability:checkpoint_summary_and_runtime_handshake -->
+
+<!-- capability:metadata_first_research_code_sources -->
+<!-- capability-meta: id=metadata_first_research_code_sources; status=implemented; since=0.36 -->
+**Metadata-first research-code sources.** Retained literature can carry metadata-only GitHub and Zenodo code leads, DOI/version lineage, provider receipts, and stable literature work identity. The index distinguishes paper sources from code sources; discovery does not download, install, execute, or turn a code lead into a citation or plugin.
+<!-- /capability:metadata_first_research_code_sources -->
+
+<!-- capability:safe_research_code_archive_inspection -->
+<!-- capability-meta: id=safe_research_code_archive_inspection; status=implemented; since=0.36 -->
+**Safe archive inspection.** A separately confirmed archive download is checked for checksum, path traversal, symlink/device entries, size/compression limits, license consistency, and static structure before any plugin promotion. Third-party code is never executed by metadata enrichment or static inspection.
+<!-- /capability:safe_research_code_archive_inspection -->
+
 ### From the early releases to the current framework
 
 - **v0.1-v0.13: paper-project and research-stage foundations.** References, journal profiles, research plans, methods/results/discussion writing, artifact tracking, Zotero, observations, scientific plotting, and stage-owned code.
@@ -54,6 +69,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - **v0.21-v0.28: scientific narrative and evidence semantics.** Paper Narrative Engine, section evidence packets, free composition plus Scientific Editor, run/cohort/estimand binding, semantic figure contracts, independent review, and reproducibility bundles.
 - **v0.28.1-v0.33: transactions, release, and exact recovery.** Artifact DAG, unified CommandSpec, scientific non-zero exits, author-completion transactions, stable paragraph locators, cross-journal/cross-platform wheel regression, Result Support v3, and release-hash binding.
 - **v0.34-v0.35: cross-discipline literature quality and document evidence.** Query Contract v2 preserves multilingual topic anchors, provider routing follows discipline and language, relevance and role coverage are content-based, and local PDFs are normalized into work-bound evidence passages. pypdf remains the default; official MinerU Agent is an authorized, quality-triggered upgrade, while self-hosted CPU/GPU MinerU is represented only by a generic endpoint contract and deployment guidance.
+- **v0.36-v0.37: code sources, checkpoint transparency, and release-quality closure.** Retained literature now discovers GitHub/Zenodo metadata-only code sources while preserving version DOI, paper-era lineage, license, and provider receipts; human checkpoints produce Chinese stage packages with dual paths; runtime preflight, semantic drift governance, archive security, Ruff no-new-debt, source/wheel/Skill/schema parity, and a Definition of Done audit protect release consistency. Stars/forks and paper/software citations rank and explain candidates, but do not replace scientific validation.
 
 Version numbers explain capability origin. Daily use follows the current research question and project state; `status`, `doctor`, and `run-pipeline` recommend the next action.
 
@@ -153,6 +169,18 @@ The three concentrated human checkpoints are:
 2. **Core result and claim-support confirmation:** inspect verified runs, core figures, metrics, uncertainty, and maximum supported claim strength, then select the next route.
 3. **Final manuscript and release confirmation:** inspect the completion packet, candidate PDF, final citation audit, two blind-review reports, and release hash together.
 
+Before any of these checkpoints is presented, Draftpaper-loop writes one
+offline, Chinese review package under
+`review/checkpoints/<checkpoint_id>/`. Open
+`stage_summary.zh-CN.html` first: it summarizes what the stage generated,
+modified, deployed, and validated, what failed or remains unresolved, and the
+exact artifacts to inspect. The Agent response includes both the project
+relative path and the current machine's absolute path, plus one confirmation
+command. `stage_summary.json`, `artifact_manifest.json`, and
+`confirmation_request.json` bind the decision to semantic/evidence identities;
+an upstream scientific change invalidates the old checkpoint. See
+[Human Checkpoint Packages](docs/human_checkpoints.md).
+
 ### Two routes when result support is insufficient
 
 <!-- capability:result_support_two_routes -->
@@ -209,6 +237,17 @@ Data and method plugins produce the real figure inputs and method outputs. Match
 
 Public research code and AcademicForge use metadata-first candidate pipelines that retain repository, commit, license, dependency, input/output, runtime-level, and provenance records. Candidates enter formal discipline modules through `generalize-plugin-candidate`, `validate-plugin-candidate`, `package-plugin-contribution`, `preflight-plugin-contribution`, `review-plugin-contribution`, and human-confirmed `promote-plugin-candidate`.
 
+Retained and anchor literature can also produce metadata-only GitHub and
+Zenodo code-source leads. The records preserve the paper `work_id`, repository
+or version DOI, release/commit identity, license, checksum hints, and provider
+timestamps. `knowledge_base` prefers the latest stable release while retaining
+paper-era lineage; `reproduction` is the only mode that requires an exact
+paper-linked version. Stars, forks, paper citations, and software citations are
+separate adoption/impact signals, never proof of scientific validity. Search
+does not download or execute third-party code; archive download requires an
+explicit confirmation, checksum/license inspection, and later fixture-based
+promotion. See [Research-Code Sources](docs/research_code_sources.md).
+
 `workflow_recipe`, `paper_contract`, and `shared_capability` stay in a support layer. Their verifiable statistical, baseline, ablation, split/leakage, citation-support, and reproducibility conditions may flow into discipline-specific `review_rule_candidate` records. See the [CLI Reference](docs/cli_reference.md) for the complete command chain.
 
 `third_party/` stores upstream snapshots, immutable pointers, license notices, and provenance. The wheel-installable paper-fetch fallback lives under `draftpaper_cli/_vendor/paper_fetch_skill`.
@@ -262,6 +301,17 @@ draftpaper parse-literature-document --project <project> --input <paper.pdf> --d
 draftpaper benchmark-literature-quality --output docs/benchmarks/literature_quality.json
 draftpaper benchmark-document-parsers --output docs/benchmarks/document_parser_quality.json
 ```
+
+After literature selection, inspect possible reusable code without copying it:
+
+```powershell
+draftpaper enrich-literature-code-leads --project <project> --selection-mode knowledge_base
+draftpaper inspect-research-code-source --project <project> --candidate-id <id>
+```
+
+The literature HTML index distinguishes online, Zotero, local-PDF, GitHub, and
+Zenodo origins. Add `--include-online` only when public provider API enrichment
+is desired; metadata-only enrichment never installs or runs a repository.
 
 Local PDF folders and BibTeX/RIS/JSON files are retained as `local_import` sources; online results, Zotero items, manual records, and inherited records remain distinguishable in the HTML literature index and source filters. PDF parsing uses `pypdf` as the local default and can conditionally call the official MinerU Agent for eligible complex or scanned documents. The Agent connector is included in the core wheel, but it never uploads silently: a project-scoped consent record, public-document class, and provider limits are checked first. A user-provided MinerU endpoint takes precedence over the official route. Self-hosted MinerU and GPU deployment are not installed or operated by Draftpaper-loop; the endpoint contract and selection guidance are provided for privacy or high-volume users. MinerU is a document parser, not a search engine or reasoning model; extracted passages are candidates for metadata/evidence review and are never auto-cited solely because a PDF exists.
 
@@ -455,7 +505,29 @@ Donation supports maintenance only and does not grant commercial use rights.
 Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
 
 ## Recent Updates
-### v0.35.0 (2026-08-03) -- Cross-discipline Literature Quality Release
+### v0.37.0 (2026-08-03) -- Transparent Checkpoints and Persistent Research-Code Sources
+
+- Every human checkpoint now creates a Chinese offline stage summary, machine-readable artifact manifest, confirmation request, unresolved-issues list, and exact Agent payload. The summary explains what was generated, modified, deployed, validated, failed, and what confirmation will freeze; missing summary companions prevent checkpoint consumption.
+- Runtime preflight binds the source checkout, installed distribution, Python interpreter, command registry, schema registry, workflow Skill copies, and plugin catalog before mutating project work. Semantic artifact identity and reconciliation packets separate harmless byte/presentation changes from data, cohort, method, run, metric, figure, and claim changes.
+- Literature enrichment records GitHub and Zenodo metadata for retained, anchor, and user-selected works before plugin rescue. Version DOI, concept DOI, repository lineage, checksum, license state, provider receipts, restricted/tombstone status, and work identity remain separate and metadata-only by default.
+- Knowledge-base mode selects the newest stable and inspectable version; paper-era records remain historical lineage; reproduction mode blocks when the exact tag, commit, or Zenodo version DOI cannot be verified. Stars, forks, paper citations, and software citations are separately timestamped core adoption/impact ranking signals and never bypass task-fit, license, safety, or evidence gates.
+- Confirmed archive downloads are guarded by explicit user consent, checksum, ZIP/TAR path-safety, symlink/device, size/compression, license, and static inspection checks. Third-party code is never executed during metadata enrichment or archive inspection.
+- The final release gate requires full Ruff zero warnings, no-new-debt baseline evidence, source/wheel/Skill/schema parity, cross-platform path checks, provider failure fixtures, and isolated wheel verification. Fixtures validate workflow contracts, not live provider or scientific performance.
+- The v0.37.0 stage-package, code-source, and acceptance records are documented in [Human Checkpoint Packages](docs/human_checkpoints.md), [Research Code Sources](docs/research_code_sources.md), and the [Definition of Done audit](docs/quality/v0.37.0_definition_of_done_audit.md).
+
+### v0.36.1 (2026-08-03) -- Safe Archive Inspection and Plugin Qualification
+
+- Added explicit archive download receipts, checksum verification, ZIP/TAR path-safety inspection, license comparison, and a non-executing route from code-source metadata to a plugin candidate.
+
+### v0.36.0 (2026-08-03) -- GitHub/Zenodo Metadata-First Code Discovery
+
+- Added provider-neutral research-code records, stable literature work identity, GitHub/Zenodo version lineage, latest-stable versus paper-era selection, and adoption/impact signal audits for retained literature.
+
+### v0.35.1 (2026-08-03) -- Ruff, Semantic Drift, and Checkpoint Contracts
+
+- Added Ruff baseline/no-new-debt auditing, semantic artifact identity, runtime/Skill handshake, aggregated external-edit reconciliation, and mandatory Chinese checkpoint summaries with project-relative and absolute paths.
+
+### v0.35.0 (2026-08-03) -- Cross-discipline Literature Quality Foundation
 
 - `v0.33.2` fixes online-search flag propagation, final reference-limit enforcement for automatic candidates, and topic-anchor preservation in fallback queries. Provider execution reports distinguish skipped, degraded, empty, cached, and successful runs.
 - `v0.34.0-v0.34.1` add Query Contract v2, CJK/English tokenization, discipline/language provider planning, content-based relevance hard gates, rejection reasons, and role coverage that cannot be inferred from query context alone. Missing roles become explicit gaps in a single human confirmation packet.

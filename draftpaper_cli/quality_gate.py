@@ -169,7 +169,6 @@ def _check_methods(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
     requirements = repo.read_mapping("methods/method_requirements.json")
     if not requirements:
         issues.append(QualityIssue("error", "method_requirements_missing", "methods/method_requirements.json is required.", "methods/method_requirements.json"))
-    manifest_path = project_path / "methods" / "run_manifest.yaml"
     manifest = repo.read_mapping("methods/run_manifest.yaml")
     status = manifest.get("status")
     if status != "success":

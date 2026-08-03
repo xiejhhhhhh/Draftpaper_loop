@@ -266,7 +266,6 @@ def _bst_record(root: Path, style: str) -> dict[str, Any]:
 
 def build_reference_registry(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
-    bib_path = state.path / "references" / "library.bib"
     effective_bibtex, merge_report = materialize_effective_bibliography(state.path)
     effective_database = bibtexparser.loads(effective_bibtex)
     supplemental_keys = set(merge_report.get("accepted_supplemental_keys") or [])

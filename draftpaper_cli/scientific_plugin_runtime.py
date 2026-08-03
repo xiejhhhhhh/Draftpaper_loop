@@ -123,59 +123,122 @@ def _classification(data: dict[str, Any]) -> dict[str, Any]:
     pred = [int(item) for item in data.get("y_pred") or []]
     if not truth or len(truth) != len(pred):
         raise ValueError("y_true and y_pred must be non-empty and equal length.")
-    tp = sum(a == b == 1 for a, b in zip(truth, pred)); tn = sum(a == b == 0 for a, b in zip(truth, pred))
-    fp = sum(a == 0 and b == 1 for a, b in zip(truth, pred)); fn = sum(a == 1 and b == 0 for a, b in zip(truth, pred))
-    precision = tp / (tp + fp) if tp + fp else 0.0; recall = tp / (tp + fn) if tp + fn else 0.0
-    return {"n": len(truth), "accuracy": (tp + tn) / len(truth), "precision": precision, "recall": recall, "f1": 2 * precision * recall / (precision + recall) if precision + recall else 0.0, "confusion_matrix": [[tn, fp], [fn, tp]]}
+    tp = sum(a == b == 1 for a, b in zip(truth, pred))
+    tn = sum(a == b == 0 for a, b in zip(truth, pred))
+    fp = sum(a == 0 and b == 1 for a, b in zip(truth, pred))
+    fn = sum(a == 1 and b == 0 for a, b in zip(truth, pred))
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {
+        "n": len(truth),
+        "accuracy": (tp + tn) / len(truth),
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "confusion_matrix": [[tn, fp], [fn, tp]],
+    }
 
 
 def _linear(data: dict[str, Any]) -> dict[str, Any]:
     np = _numpy()
-    x = np.asarray(data.get("x") or [], dtype=float); y = np.asarray(data.get("y") or [], dtype=float)
+    x = np.asarray(data.get("x") or [], dtype=float)
+    y = np.asarray(data.get("y") or [], dtype=float)
     if x.size < 3 or x.size != y.size:
         raise ValueError("Regression requires at least three paired observations.")
-    slope, intercept = np.polyfit(x, y, 1); fitted = slope * x + intercept
-    ss_res = float(np.sum((y - fitted) ** 2)); ss_tot = float(np.sum((y - y.mean()) ** 2))
-    return {"n": int(x.size), "slope": float(slope), "intercept": float(intercept), "r_squared": 1.0 - ss_res / ss_tot if ss_tot else 0.0, "rmse": math.sqrt(ss_res / x.size)}
+    slope, intercept = np.polyfit(x, y, 1)
+    fitted = slope * x + intercept
+    ss_res = float(np.sum((y - fitted) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    return {
+        "n": int(x.size),
+        "slope": float(slope),
+        "intercept": float(intercept),
+        "r_squared": 1.0 - ss_res / ss_tot if ss_tot else 0.0,
+        "rmse": math.sqrt(ss_res / x.size),
+    }
 
 
 def _execute(operation: str, data: dict[str, Any]) -> dict[str, Any]:
-    if operation == "tabular_profile": return _tabular_profile(data)
-    if operation == "matrix_profile": return _matrix_profile(data)
-    if operation == "numeric_summary": return _numeric_summary(data)
-    if operation == "two_group_effect": return _two_group(data)
-    if operation == "power_analysis": return _power(data)
-    if operation == "split_audit": return _split(data)
-    if operation == "classification_metrics": return _classification(data)
-    if operation == "linear_regression": return _linear(data)
+    if operation == "tabular_profile":
+        return _tabular_profile(data)
+    if operation == "matrix_profile":
+        return _matrix_profile(data)
+    if operation == "numeric_summary":
+        return _numeric_summary(data)
+    if operation == "two_group_effect":
+        return _two_group(data)
+    if operation == "power_analysis":
+        return _power(data)
+    if operation == "split_audit":
+        return _split(data)
+    if operation == "classification_metrics":
+        return _classification(data)
+    if operation == "linear_regression":
+        return _linear(data)
     if operation == "coordinate_profile":
         np = _numpy()
         points = np.asarray(data.get("coordinates") or [], dtype=float)
-        if points.ndim != 2 or points.shape[1] != 2: raise ValueError("Coordinates must be an N x 2 array.")
-        return {"crs": data.get("crs"), "count": int(points.shape[0]), "bounds": [float(points[:,0].min()), float(points[:,1].min()), float(points[:,0].max()), float(points[:,1].max())]}
+        if points.ndim != 2 or points.shape[1] != 2:
+            raise ValueError("Coordinates must be an N x 2 array.")
+        return {
+            "crs": data.get("crs"),
+            "count": int(points.shape[0]),
+            "bounds": [
+                float(points[:, 0].min()),
+                float(points[:, 1].min()),
+                float(points[:, 0].max()),
+                float(points[:, 1].max()),
+            ],
+        }
     if operation == "count_profile":
-        counts = {str(key): int(value) for key, value in (data.get("counts") or {}).items()}; total = sum(counts.values())
-        if total <= 0: raise ValueError("Counts must have a positive total.")
+        counts = {str(key): int(value) for key, value in (data.get("counts") or {}).items()}
+        total = sum(counts.values())
+        if total <= 0:
+            raise ValueError("Counts must have a positive total.")
         return {"total_shots": total, "probabilities": {key: value / total for key, value in counts.items()}}
     if operation == "unit_conversion":
-        factor = float(data.get("factor") or 0); values = [float(item) for item in data.get("values") or []]
-        if not values or factor == 0: raise ValueError("Values and a non-zero conversion factor are required.")
-        return {"source_unit": data.get("source_unit"), "target_unit": data.get("target_unit"), "values": values, "converted_values": [value * factor for value in values]}
+        factor = float(data.get("factor") or 0)
+        values = [float(item) for item in data.get("values") or []]
+        if not values or factor == 0:
+            raise ValueError("Values and a non-zero conversion factor are required.")
+        return {
+            "source_unit": data.get("source_unit"),
+            "target_unit": data.get("target_unit"),
+            "values": values,
+            "converted_values": [value * factor for value in values],
+        }
     if operation == "ablation_effect":
-        full = [float(item) for item in data.get("full") or []]; ablated = [float(item) for item in data.get("ablated") or []]
-        if not full or not ablated: raise ValueError("Full and ablated repeated metrics are required.")
+        full = [float(item) for item in data.get("full") or []]
+        ablated = [float(item) for item in data.get("ablated") or []]
+        if not full or not ablated:
+            raise ValueError("Full and ablated repeated metrics are required.")
         return {"full_mean": mean(full), "ablated_mean": mean(ablated), "effect": mean(full) - mean(ablated)}
     if operation == "uncertainty_propagation":
         np = _numpy()
-        s = np.asarray(data.get("sensitivities") or [], dtype=float); u = np.asarray(data.get("uncertainties") or [], dtype=float)
-        if not s.size or s.size != u.size: raise ValueError("Sensitivities and uncertainties must have equal non-zero length.")
+        s = np.asarray(data.get("sensitivities") or [], dtype=float)
+        u = np.asarray(data.get("uncertainties") or [], dtype=float)
+        if not s.size or s.size != u.size:
+            raise ValueError("Sensitivities and uncertainties must have equal non-zero length.")
         return {"combined_standard_uncertainty": float(np.sqrt(np.sum((s * u) ** 2))), "component_count": int(s.size)}
     if operation == "differential_expression":
         np = _numpy()
-        control = np.asarray(data.get("control") or [], dtype=float); treatment = np.asarray(data.get("treatment") or [], dtype=float)
-        if control.ndim != 2 or treatment.shape != control.shape: raise ValueError("Control and treatment matrices must share feature x replicate shape.")
+        control = np.asarray(data.get("control") or [], dtype=float)
+        treatment = np.asarray(data.get("treatment") or [], dtype=float)
+        if control.ndim != 2 or treatment.shape != control.shape:
+            raise ValueError("Control and treatment matrices must share feature x replicate shape.")
         features = data.get("features") or [f"feature_{i}" for i in range(control.shape[0])]
-        return {"features": [{"feature": str(features[i]), "log2_fold_change": float(np.log2((treatment[i].mean()+0.5)/(control[i].mean()+0.5))), "control_mean": float(control[i].mean()), "treatment_mean": float(treatment[i].mean())} for i in range(control.shape[0])]}
+        return {
+            "features": [
+                {
+                    "feature": str(features[i]),
+                    "log2_fold_change": float(np.log2((treatment[i].mean() + 0.5) / (control[i].mean() + 0.5))),
+                    "control_mean": float(control[i].mean()),
+                    "treatment_mean": float(treatment[i].mean()),
+                }
+                for i in range(control.shape[0])
+            ]
+        }
     raise ValueError(f"Unsupported runnable operation: {operation}")
 
 

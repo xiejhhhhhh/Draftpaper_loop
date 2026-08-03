@@ -25,7 +25,6 @@ def write_observed_predicted_metrics(
     if not pairs:
         raise ValueError("No valid observed-predicted pairs")
     y = [item[0] for item in pairs]
-    yhat = [item[1] for item in pairs]
     mean_y = sum(y) / len(y)
     ss_res = sum((a - b) ** 2 for a, b in pairs)
     ss_tot = sum((a - mean_y) ** 2 for a in y)

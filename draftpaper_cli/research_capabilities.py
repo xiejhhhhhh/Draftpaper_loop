@@ -27,7 +27,7 @@ from .project_scaffold import utc_now
 from .project_state import load_project
 from .plugin_catalog import build_plugin_catalog_snapshot
 from .passport import read_jsonl
-from .plugin_runtime import RUNTIME_LEVELS, resolve_effective_runtime_level
+from .plugin_runtime import resolve_effective_runtime_level
 
 
 DISCIPLINE_CONTRACT = "research_plan/discipline_contract.json"

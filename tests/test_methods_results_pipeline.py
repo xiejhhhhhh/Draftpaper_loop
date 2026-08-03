@@ -12,9 +12,7 @@ from draftpaper_cli.analysis_code import generate_analysis_code
 from draftpaper_cli.figure_plan import plan_figures
 from draftpaper_cli.methods import verify_methods
 from draftpaper_cli.project_scaffold import create_project
-from draftpaper_cli.project_state import load_project
 from draftpaper_cli.result_validity import assess_result_validity
-from draftpaper_cli.results import inventory_results, write_results
 
 from tests.test_analysis_code_generation import prepare_codegen_project, write_passing_figure_contract_gate
 
@@ -24,7 +22,7 @@ class MethodsResultsPipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Pipeline coupling", field="astronomy machine learning")
             prepare_codegen_project(project.path)
-            figure_plan = plan_figures(project.path)
+            plan_figures(project.path)
             write_passing_figure_contract_gate(project.path)
             codegen = generate_analysis_code(project.path)
             verify_methods(

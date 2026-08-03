@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_unresolved_issues.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_id", "status", "issues"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_unresolved_issues.v1"},
+    "checkpoint_id": {"type": "string"},
+    "status": {"enum": ["none", "review_required", "blocked"]},
+    "issues": {"type": "array"},
+    "stage_summary_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

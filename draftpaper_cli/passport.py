@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .artifact_identity import compute_artifact_identity
 from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
 from .state_kernel import append_jsonl_locked, atomic_write_json
 
@@ -242,17 +243,16 @@ def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
             continue
         if not path.is_file():
             continue
+        identity = compute_artifact_identity(path, normalized)
         artifact = {
             "artifact_id": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
             "stage": _stage_from_relative(normalized),
             "path": normalized,
-            "sha256": _sha256(path),
+            "sha256": identity["byte_sha256"],
             "size_bytes": path.stat().st_size,
             "updated_at": utc_now(),
+            **identity,
         }
-        semantic = _artifact_semantic_fingerprint(path, normalized)
-        if semantic:
-            artifact["semantic_fingerprint"] = semantic
         artifacts.append(artifact)
     artifacts.sort(key=lambda item: item["path"])
     return artifacts

@@ -19,7 +19,6 @@ from .passport import (
     PassportError,
     append_checkpoint_event,
     load_project_passport,
-    project_root,
     read_jsonl,
     refresh_project_passport,
     utc_now,
@@ -1137,6 +1136,9 @@ def status_project(project: str | Path) -> dict[str, Any]:
     passport = load_project_passport(state.path)
     awaiting = passport.get("awaiting_checkpoint")
     if awaiting:
+        from .checkpoint_summary import checkpoint_path_payload
+
+        checkpoint_paths = checkpoint_path_payload(state.path, awaiting)
         return {
             "status": "reported",
             "project_path": str(state.path),
@@ -1150,6 +1152,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "command": "resume",
                 "cli": f"python -m draftpaper_cli.cli resume --project {_quote(state.path)} --checkpoint-hash {awaiting.get('hash')}",
                 "reason": "A checkpoint is waiting for explicit resume confirmation.",
+                **checkpoint_paths,
             },
         }
     core_report = _read_report(state.path, "core_evidence/core_evidence_report.json")
@@ -1285,6 +1288,9 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     passport = load_project_passport(state.path)
     if passport.get("awaiting_checkpoint"):
         raise OrchestratorError("A checkpoint is already awaiting resume.")
+    from .checkpoint_summary import agent_artifact_paths, write_stage_summary
+
+    before_artifacts = load_project_passport(state.path).get("artifacts") or []
     base = {
         "kind": "checkpoint",
         "stage": stage,
@@ -1293,6 +1299,18 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "project_id": state.metadata.get("project_id"),
         "next_action": _next_action(state.path, state.metadata),
     }
+    summary = write_stage_summary(
+        state.path,
+        stage=stage,
+        command="checkpoint",
+        payload={"status": "checkpoint_created", "next_action": base["next_action"], "note": note},
+        before_artifacts=before_artifacts,
+        publish_index=False,
+    )
+    base["checkpoint_id"] = summary["checkpoint_id"]
+    base["stage_summary_sha256"] = summary["stage_summary_sha256"]
+    base["stage_summary_json"] = summary["stage_summary_json"]
+    base["stage_summary_zh_html"] = summary["stage_summary_zh_html"]
     if stage == "core_evidence":
         try:
             subject = evidence_confirmation_subject(state.path)
@@ -1300,11 +1318,43 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
     base["hash"] = _checkpoint_hash(base)
+    final_summary = write_stage_summary(
+        state.path,
+        stage=stage,
+        command="checkpoint",
+        payload={"status": "checkpoint_created", "next_action": base["next_action"], "note": note},
+        before_artifacts=before_artifacts,
+        checkpoint_id=summary["checkpoint_id"],
+        checkpoint_hash=base["hash"],
+        publish_index=False,
+    )
     append_checkpoint_event(state.path, base)
+    from .checkpoint_summary import _publish_checkpoint_index
+
+    _publish_checkpoint_index(state.path, final_summary)
     return {
         "status": "checkpoint_created",
         "project_path": str(state.path),
         "checkpoint_hash": base["hash"],
+        "stage_summary_sha256": final_summary["stage_summary_sha256"],
+        "stage_summary_zh_html": {
+            "project_relative_path": final_summary["stage_summary_zh_html"],
+            "absolute_path": final_summary["absolute_stage_summary_zh_html"],
+            "source_semantic_sha256": final_summary["stage_summary_sha256"],
+        },
+        "checkpoint_summary": {
+            "checkpoint_id": final_summary["checkpoint_id"],
+            "project_relative_dir": final_summary["project_relative_dir"],
+            "absolute_path": final_summary["absolute_stage_summary_zh_html"],
+            "stage_summary_json": final_summary["absolute_stage_summary_json"],
+            "artifact_manifest": final_summary["absolute_artifact_manifest"],
+            "confirmation_request": final_summary["confirmation_request"],
+            "change_report": final_summary["absolute_change_report"],
+            "unresolved_issues": final_summary["absolute_unresolved_issues"],
+            "agent_payload": final_summary["absolute_agent_payload"],
+        },
+        "primary_artifacts": agent_artifact_paths(state.path, final_summary["inspection_targets"]),
+        "unresolved_issues": final_summary["unresolved_issues"],
         "checkpoint_ledger": str(state.path / PASSPORT_FILES["checkpoint_ledger"]),
         "next_action": base["next_action"],
     }
@@ -1320,6 +1370,15 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
     if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
         raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
     checkpoint = checkpoints[-1]
+    if checkpoint.get("stage_summary_sha256"):
+        from .checkpoint_summary import validate_checkpoint_summary
+
+        summary_validation = validate_checkpoint_summary(state.path, checkpoint)
+        if not summary_validation.get("valid"):
+            raise OrchestratorError(
+                "Checkpoint summary is stale; create a new human-review checkpoint. "
+                + "; ".join(str(item) for item in summary_validation.get("reasons") or [])
+            )
     if str(checkpoint.get("stage") or "") == "core_evidence":
         try:
             current_subject = evidence_confirmation_subject(state.path)

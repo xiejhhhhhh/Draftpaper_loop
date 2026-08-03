@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ..discipline import infer_discipline_from_text
-from ..project_scaffold import _write_json, utc_now
+from ..project_scaffold import utc_now
 from . import astronomy, biology, default, engineering, finance, geography, machine_learning, medicine
 from .base import (
     REVIEW_ENGINEERING_PLAN_JSON,

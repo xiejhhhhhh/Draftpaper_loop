@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,7 @@ from .data_contracts import available_data_roles, assess_role_coverage, read_jso
 from .discipline import infer_discipline_profile
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
-from .project_state import ProjectStateError, load_project, update_stage_status
+from .project_state import load_project, update_stage_status
 
 
 PREFLIGHT_JSON = "research_plan/research_preflight_feasibility.json"

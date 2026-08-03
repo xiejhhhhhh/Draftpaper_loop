@@ -802,7 +802,6 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
     reopen_request = _read_json(reopen_request_path, {})
     review_path = state.path / "review" / "result_discipline_review_report.json"
     review_report = _read_json(review_path, {})
-    review_decision = str(review_report.get("decision") or "").lower()
     review_sha256 = hashlib.sha256(review_path.read_bytes()).hexdigest() if review_path.is_file() else ""
     review_evidence_blocking = (
         str((review_report.get("figure_publication_quality") or {}).get("decision") or "").lower() in {"repair_required", "revise_required", "blocked"}

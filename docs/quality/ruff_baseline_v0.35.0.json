@@ -1,0 +1,20 @@
+{
+  "schema_version": "dpl.ruff_debt_audit.v1",
+  "baseline_version": "v0.35.0",
+  "created_at": "2026-08-03T11:58:57.900384Z",
+  "updated_at": "2026-08-03T14:03:09.674420Z",
+  "historical_count": 418,
+  "baseline_current_count": 0,
+  "baseline_current_findings": [],
+  "allowed_finding_keys": [],
+  "owners": {
+    "default": "Draftpaper maintainers"
+  },
+  "status": "retired_zero_debt",
+  "targets": [
+    "draftpaper_cli",
+    "tests",
+    "tools"
+  ],
+  "policy": "new findings fail CI; historical findings remain accountable and are never used to hide new debt"
+}

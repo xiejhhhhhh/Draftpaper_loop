@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_agent_payload.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_id", "stage", "stage_summary_zh_html", "primary_artifacts", "unresolved_issues", "confirmation_command"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_agent_payload.v1"},
+    "checkpoint_id": {"type": "string"},
+    "stage": {"type": "string"},
+    "stage_summary_zh_html": {"type": "object"},
+    "primary_artifacts": {"type": "array"},
+    "unresolved_issues": {"type": "array"},
+    "confirmation_command": {"type": "string"},
+    "stage_summary_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

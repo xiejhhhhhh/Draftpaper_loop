@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Any
 
 from .document_context_budget import ensure_context_policy, load_context_policy, select_with_budget
-from .document_identity import document_id, resolve_work_identity
-from .document_normalization import load_mineru_markdown_or_json, normalize_mineru_markdown, normalize_pypdf
+from .document_identity import resolve_work_identity
+from .document_normalization import load_mineru_markdown_or_json, normalize_pypdf
 from .document_parse_binding import bind_document_parse
 from .document_parse_quality import assess_extraction_quality, extract_pypdf_pages
 from .evidence_passages import select_evidence_passages

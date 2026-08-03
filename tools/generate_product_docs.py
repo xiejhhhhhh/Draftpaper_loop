@@ -11,9 +11,6 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from draftpaper_cli.command_registry import COMMAND_SPECS
-
-
 RISK_BOUNDARIES = {
     "read": "Read-only inspection; no project mutation.",
     "write_project": "Writes only declared project artifacts and remains subject to write-set verification.",
@@ -29,6 +26,8 @@ def _cell(value: object) -> str:
 
 
 def render_command_risk_matrix() -> str:
+    from draftpaper_cli.command_registry import COMMAND_SPECS
+
     counts = Counter(spec.risk_level for spec in COMMAND_SPECS.values())
     lines = [
         "# Draftpaper-loop Command Risk Matrix",

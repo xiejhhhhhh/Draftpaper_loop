@@ -398,7 +398,6 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         bound_records=records,
     )
     records.extend(anchor_records)
-    candidates = [item for item in records if item.get("metric_name") in METRIC_PREFERENCE]
     requirements = _read_json(state.path / "methods" / "method_requirements.json")
     configured_primary = str(requirements.get("primary_metric") or "").strip().lower()
     configured_model = str(

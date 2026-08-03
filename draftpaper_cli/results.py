@@ -217,6 +217,7 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, Any]]:
         }
     selected_input = analysis_manifest.get("selected_input_data") or "the selected local data"
     method_families = ", ".join(str(item).replace("_", " ") for item in (analysis_manifest.get("method_families") or []))
+    method_family_text = method_families or "the declared method families"
     primary_metric = analysis_manifest.get("primary_metric") or "primary metric"
     resolved_primary = resolved_evidence.get("primary_metric") or {}
     observed = resolved_primary.get("value")
@@ -232,7 +233,7 @@ def _artifact_context(project_path: Path) -> dict[str, dict[str, Any]]:
         },
         "analysis_summary.csv": {
             "caption": "Analysis summary produced by the method pipeline.",
-            "claim": "The analysis summary records selected input data, detected label column, method families, and generation metadata for traceability.",
+            "claim": f"The analysis summary records selected input data, detected label column, {method_family_text}, and generation metadata for traceability.",
         },
     })
     if not context and selected_input:

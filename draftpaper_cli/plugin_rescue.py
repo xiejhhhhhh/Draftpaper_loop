@@ -45,17 +45,29 @@ def _command(project: Path, name: str, extra: str = "") -> str:
     return f'python -m draftpaper_cli.cli {name} --project "{project}"{extra}'
 
 
-def _routes(project: Path, scope: dict[str, Any], academicforge_root: str | None, github_metadata: str | None) -> list[dict[str, Any]]:
+def _routes(
+    project: Path,
+    scope: dict[str, Any],
+    academicforge_root: str | None,
+    github_metadata: str | None,
+    zenodo_metadata: str | None,
+) -> list[dict[str, Any]]:
     discipline = str(scope.get("discipline") or "default")
     role = str(scope.get("role") or "missing_capability")
     routes = [
         {
             "route": "project_local",
+            "route_class": "local_capability",
+            "applicable": True,
+            "configured": True,
             "action": "Audit stage-owned local data and method code before searching externally; a project-local binding may support this paper without global promotion.",
             "command": _command(project, "audit-project-capabilities"),
         },
         {
             "route": "existing_registry",
+            "route_class": "installed_registry",
+            "applicable": True,
+            "configured": True,
             "action": "Re-run structured plugin sufficiency after confirming capability packs, aliases, variants, and manifest overlays.",
             "command": _command(project, "assess-plugin-sufficiency"),
         },
@@ -63,14 +75,29 @@ def _routes(project: Path, scope: dict[str, Any], academicforge_root: str | None
     if academicforge_root:
         routes.append({
             "route": "academicforge",
+            "route_class": "skill_catalog",
+            "applicable": True,
+            "configured": True,
             "action": "Inspect and classify only the skill scope needed by this missing capability; do not copy third-party source into a discipline module.",
             "command": f'python -m draftpaper_cli.cli compile-skill-source --source-root "{academicforge_root}" --adapter academicforge --discipline {discipline} --output-root "{project / "plugin_candidates"}"',
         })
     if github_metadata:
         routes.append({
             "route": "github_research_code",
+            "route_class": "live_code_host",
+            "applicable": True,
+            "configured": True,
             "action": "Discover and inspect license-aware research-code candidates for this single capability, then create a reviewable candidate instead of importing code directly.",
             "command": f'python -m draftpaper_cli.cli discover-research-repos --output-root "{project / "plugin_candidates"}" --discipline {discipline} --query "{role}" --from-json "{github_metadata}"',
+        })
+    if zenodo_metadata:
+        routes.append({
+            "route": "zenodo_research_code",
+            "route_class": "persistent_code_archive",
+            "applicable": True,
+            "configured": True,
+            "action": "Search versioned Zenodo software/data records as a persistent supplement when a live repository is unavailable or deleted.",
+            "command": f'python -m draftpaper_cli.cli discover-research-code --output-root "{project / "plugin_candidates"}" --discipline {discipline} --query "{role}" --providers zenodo --zenodo-metadata "{zenodo_metadata}" --selection-mode knowledge_base',
         })
     routes.extend([
         {
@@ -106,6 +133,7 @@ def prepare_plugin_rescue(
     *,
     academicforge_root: str | None = None,
     github_metadata: str | None = None,
+    zenodo_metadata: str | None = None,
 ) -> dict[str, Any]:
     """Write ordered, scoped rescue tasks for insufficiency gaps.
 
@@ -129,7 +157,12 @@ def prepare_plugin_rescue(
             "kind": str(item.get("kind") or "method"),
             "state": str(item.get("state") or "missing"),
             "search_scope": scope,
-            "routes": _routes(state.path, scope, academicforge_root, github_metadata),
+            "routes": _routes(state.path, scope, academicforge_root, github_metadata, zenodo_metadata),
+            "required_routes": sorted(
+                route.get("route")
+                for route in _routes(state.path, scope, academicforge_root, github_metadata, zenodo_metadata)
+                if route.get("applicable") and route.get("configured")
+            ),
             "stop_condition": "Return to assess-plugin-sufficiency only after a validated, explicitly promoted reusable plugin or a project-local method/data implementation is available.",
         })
     commands = []
@@ -178,12 +211,21 @@ def record_plugin_rescue_outcome(
     if outcome not in {"capability_found", "not_found_after_search"}:
         raise PluginRescueError("Outcome must be capability_found or not_found_after_search.")
     routes = {str(item).strip() for item in attempted_routes if str(item).strip()}
-    if outcome == "not_found_after_search" and not REQUIRED_EXHAUSTION_ROUTES.issubset(routes):
-        missing = sorted(REQUIRED_EXHAUSTION_ROUTES - routes)
+    if isinstance(route_evidence, list):
+        parsed: dict[str, str] = {}
+        for item in route_evidence:
+            text = str(item)
+            if "=" in text:
+                route, path = text.split("=", 1)
+                parsed[route.strip()] = path.strip()
+        route_evidence = parsed
+    required_routes = set(task.get("required_routes") or REQUIRED_EXHAUSTION_ROUTES)
+    if outcome == "not_found_after_search" and not required_routes.issubset(routes):
+        missing = sorted(required_routes - routes)
         raise PluginRescueError(f"Final blocking requires all required search routes; missing: {', '.join(missing)}")
     verified_evidence: dict[str, dict[str, str]] = {}
     if outcome == "not_found_after_search":
-        for route in sorted(REQUIRED_EXHAUSTION_ROUTES):
+        for route in sorted(required_routes):
             raw_path = route_evidence.get(route)
             if not raw_path:
                 raise PluginRescueError(f"Final blocking requires an evidence artifact for route: {route}")

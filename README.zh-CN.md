@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.35.0。** 当前 release 新增全学科 Query Contract、中文/英文混合检索、学科与语言感知的 provider 规划、内容相关性与角色覆盖门禁、解析器无关的 PDF 证据链、集中式文献确认包，以及按质量触发的 pypdf → 官方 MinerU Agent/自建 endpoint 路由。核心 wheel 仍保持本地优先，不安装或部署本地 MinerU 模型。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
+**当前版本：v0.37.0。** 当前版本完成了 v0.35 全学科文献基础之上的质量闭环：每个人工确认点都会生成可离线打开的中文阶段总结、产物清单、确认请求和未解决事项，并在 Agent 框中给出项目相对路径和本机绝对路径；写入前会检查源码、wheel、Python、CommandSpec、schema、workflow Skill 和插件目录的运行时身份；语义漂移会区分展示变化与数据、cohort、方法、run、指标、图表和论断证据变化；保留文献会同步补充 metadata-only 的 GitHub/Zenodo 科研代码线索；知识库模式优先选择最新稳定版本，复现模式才要求论文时期精确版本；stars、forks、论文引用量和软件引用量作为带时间戳的核心采用度/影响度排序信号展示，但不作为科学有效性证明；用户确认后的归档还必须通过 checksum、路径安全、许可证和静态检查才能进入插件晋升流程。核心 wheel 仍保持本地优先：pypdf 是默认解析器，官方 MinerU Agent 是可选路径，自建 MinerU/GPU 环境不会自动安装。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
 
 ## 核心科研能力
 
@@ -47,6 +47,21 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 | 文献与引用 | 检索、Zotero、BibTeX、PDF/摘要证据、引用意图、citation audit | `library.bib`、citation evidence、final audit |
 | 审稿与发布 | Results 后学科审查、两位独立盲评、作者补全事务、编译和 release hash | reviewer reports、completion packet、`main.pdf` |
 
+<!-- capability:checkpoint_summary_and_runtime_handshake -->
+<!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
+**确认点透明度与运行时身份。** 每次人工确认前，Draftpaper-loop 都会生成中文阶段总结 HTML、artifact manifest、confirmation request 和未解决事项，并在 Agent 框同时给出项目相对路径和本机绝对路径。`session-preflight` 会在写入项目之前绑定源码 checkout、wheel、Python、CommandSpec、schema registry、Skill 副本和 plugin catalog。
+<!-- /capability:checkpoint_summary_and_runtime_handshake -->
+
+<!-- capability:metadata_first_research_code_sources -->
+<!-- capability-meta: id=metadata_first_research_code_sources; status=implemented; since=0.36 -->
+**Metadata-first 科研代码来源。** 保留文献可以同步绑定 metadata-only 的 GitHub/Zenodo 代码线索、DOI/版本谱系、provider receipt 和稳定 literature work identity。索引会区分论文来源与代码来源；发现阶段不下载、不安装、不执行代码，也不会把代码线索自动变成正文引用或插件。
+<!-- /capability:metadata_first_research_code_sources -->
+
+<!-- capability:safe_research_code_archive_inspection -->
+<!-- capability-meta: id=safe_research_code_archive_inspection; status=implemented; since=0.36 -->
+**安全归档检查。** 用户单独确认下载后，系统会检查 checksum、路径逃逸、符号链接/设备文件、大小/压缩比、许可证一致性和静态结构，之后才允许进入插件晋升候选。metadata enrichment 和静态检查阶段永不执行第三方代码。
+<!-- /capability:safe_research_code_archive_inspection -->
+
 ### 从早期版本到当前框架
 
 - **v0.1-v0.13：论文项目与科研阶段地基。** 建立参考文献、期刊画像、research plan、方法/结果/讨论写作、artifact 追踪、Zotero、数据观察、科研绘图和阶段归属代码。
@@ -54,6 +69,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - **v0.21-v0.28：科学叙事与证据语义。** 引入 Paper Narrative Engine、章节证据包、自由写作与 Scientific Editor、run/cohort/estimand 绑定、语义图表合同、独立盲审和可复现审稿包。
 - **v0.28.1-v0.33：事务、发布与精确恢复。** 完成 artifact DAG、统一 CommandSpec、科学非零退出状态、作者补全事务、稳定段落定位、跨期刊/跨平台 wheel 回归、Result Support v3 和 release hash 绑定。
 - **v0.34-v0.35：全学科文献质量与文档证据。** Query Contract v2 保留多语言主题锚点，provider 按学科和语言规划，相关性与角色覆盖由内容证据决定，本地 PDF 规范化为绑定 work identity 的 evidence passage。pypdf 是默认路径；官方 MinerU Agent 只在授权且满足质量条件时升级；自建 CPU/GPU MinerU 只通过通用 endpoint 合同和部署建议支持。
+- **v0.36-v0.37：代码来源、阶段透明度与发布质量闭环。** 保留文献时同步发现 GitHub/Zenodo metadata-only 代码来源，保留 version DOI、paper-era lineage、许可证和 provider receipt；人工确认前生成中文阶段成果包并返回双重路径；runtime preflight、语义漂移治理、归档安全审查、Ruff no-new-debt、源码/wheel/Skill/schema parity 和 Definition of Done 审计共同保护发布一致性。stars/forks 和论文/软件引用量用于候选排序与解释，不能替代科研验证。
 
 版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
 
@@ -153,6 +169,14 @@ idea、已有数据、项目代码与文献
 2. **关键结果与论断支撑确认**：一起查看真实运行、核心图表、指标、不确定性和最大可支持论断，并决定后续路线。
 3. **最终稿与发布确认**：一起查看作者补全 packet、候选 PDF、最终引用审计、两位盲评意见和 release hash。
 
+在展示上述任一确认点之前，Draftpaper-loop 会先在
+`review/checkpoints/<checkpoint_id>/` 写出一个离线中文成果包。用户应先打开
+`stage_summary.zh-CN.html`，查看本阶段生成、修改、部署、验证、失败和未解决
+事项，以及需要检查的具体文件。Agent 同时给出项目相对路径和当前机器绝对路径，
+并提供唯一确认命令。`stage_summary.json`、`artifact_manifest.json` 和
+`confirmation_request.json` 将确认绑定到语义/evidence identity；上游科研内容
+改变后旧 checkpoint 会失效。详见[人工确认点成果包](docs/human_checkpoints.zh-CN.md)。
+
 ### 结果支撑不足时的两条路线
 
 <!-- capability:result_support_two_routes -->
@@ -209,6 +233,14 @@ research-plan claim
 
 公开科研代码和 AcademicForge 采用 metadata-first 的候选流程，保留 repository、commit、license、依赖、输入输出、运行等级和来源记录。候选通过 `generalize-plugin-candidate`、`validate-plugin-candidate`、`package-plugin-contribution`、`preflight-plugin-contribution`、`review-plugin-contribution` 和人工确认的 `promote-plugin-candidate` 后进入正式学科模块。
 
+保留文献和锚点文献还可以生成 metadata-only 的 GitHub/Zenodo 科研代码线索，
+记录论文 `work_id`、仓库或版本 DOI、release/commit、许可证、checksum 线索和
+provider 时间戳。`knowledge_base` 默认选择最新稳定版本并保留论文时期谱系；只有
+`reproduction` 模式要求论文关联的精确版本。stars、forks、论文被引量和软件引用量
+是分开的采用度/影响度信号，不能证明科学正确性。检索不会下载或执行第三方代码；
+归档下载必须经过人工确认、checksum/许可证检查和 fixture 验证后才能考虑晋升。
+详见[科研代码来源](docs/research_code_sources.zh-CN.md)。
+
 `workflow_recipe`、`paper_contract` 和 `shared_capability` 留在支撑层；其中可验证的统计、baseline、ablation、split/leakage、引用支撑和复现条件可以回流为 `review_rule_candidate`。全部命令见[CLI 命令参考](docs/cli_reference.md)。
 
 本仓库在 `third_party/` 保存上游快照、来源指针、固定 commit 和许可证说明；随 wheel 运行的 paper-fetch fallback 位于 `draftpaper_cli/_vendor/paper_fetch_skill`。
@@ -262,6 +294,17 @@ draftpaper parse-literature-document --project <project> --input <paper.pdf> --d
 draftpaper benchmark-literature-quality --output docs/benchmarks/literature_quality.json
 draftpaper benchmark-document-parsers --output docs/benchmarks/document_parser_quality.json
 ```
+
+文献确认后，可以先查看可能复用的代码来源，不复制也不执行：
+
+```powershell
+draftpaper enrich-literature-code-leads --project <project> --selection-mode knowledge_base
+draftpaper inspect-research-code-source --project <project> --candidate-id <id>
+```
+
+文献 HTML 索引会区分在线检索、Zotero、本地 PDF、GitHub 和 Zenodo 来源。只有
+明确加入 `--include-online` 时才访问公开 provider API；metadata-only enrichment
+不会安装或运行仓库代码。
 
 本地 PDF 文件夹以及 BibTeX/RIS/JSON 文件会以 `local_import` 来源保留；在线检索、Zotero、手工记录和继承记录会在 HTML 文献索引及来源筛选器中区分显示。PDF 默认优先使用本地 `pypdf`，复杂排版或扫描文档可以在满足条件时调用官方 MinerU Agent。Agent connector 已随核心 wheel 提供，但不会静默上传：必须先有项目级授权、公开文献类别和服务限制检查。用户提供的 MinerU endpoint 会优先于官方服务。自建 MinerU 和 GPU 部署不由 Draftpaper-loop 安装或运维，只提供通用 endpoint 合同、选型和利弊说明。MinerU 是文档解析器，不是检索引擎或推理模型；解析出的段落必须经过元数据和证据核验，不能因为本地存在 PDF 就自动加入引用。
 
@@ -455,7 +498,29 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 图表由 [star-history/star-history](https://github.com/star-history/star-history) 提供。
 
 ## 最近更新
-### v0.35.0（2026-08-03）-- 全学科文献质量发布
+### v0.37.0（2026-08-03）-- 阶段确认透明度与持久科研代码来源
+
+- 每个人工确认点都会生成中文离线阶段总结、机器可读 artifact manifest、confirmation request、未解决事项列表和 Agent 路径载荷。总结会说明生成、修改、部署、验证、失败和确认后冻结的内容；摘要伴随文件缺失时不能消费该 checkpoint。
+- Runtime preflight 会在项目写入前绑定源码 checkout、已安装 distribution、Python、CommandSpec、schema registry、workflow Skill 副本和 plugin catalog。语义 artifact identity 与 reconciliation packet 将无害的字节/展示变化和数据、cohort、方法、run、指标、图表及论断变化分开。
+- 文献 enrichment 会在 retained、anchor 和 user-selected 文献保留后同步记录 GitHub/Zenodo metadata-only 代码线索。version DOI、concept DOI、仓库谱系、checksum、许可证、provider receipt、restricted/tombstone 状态和 work identity 分开保存，默认不下载。
+- knowledge-base 模式选择最新且可审查的稳定版本；paper-era 记录作为历史谱系保留；reproduction 模式无法核验精确 tag、commit 或 Zenodo version DOI 时明确阻断。stars、forks、论文引用量和软件引用量分别记录并带时间戳，作为核心采用度/影响度排序信号，但不能绕过任务适配、许可证、安全或证据门禁。
+- 用户确认后的归档下载必须经过显式授权、checksum、ZIP/TAR 路径安全、符号链接/设备文件、大小/压缩比、许可证和静态检查；metadata enrichment 和归档检查阶段永不执行第三方代码。
+- 最终发布门要求全量 Ruff 零告警、no-new-debt 基线证据、源码/wheel/Skill/schema parity、跨平台路径测试、provider failure fixture 和隔离 wheel 验证。fixture 验证工作流合同，不代表在线 provider 或真实科研性能。
+- v0.37.0 的阶段成果包、代码来源合同和逐项验收记录分别见[人工确认点成果包](docs/human_checkpoints.zh-CN.md)、[科研代码来源](docs/research_code_sources.zh-CN.md)和[Definition of Done 审计](docs/quality/v0.37.0_definition_of_done_audit.md)。
+
+### v0.36.1（2026-08-03）-- 安全归档检查与插件候选资格审查
+
+- 新增显式归档下载 receipt、checksum 校验、ZIP/TAR 路径安全检查、许可证对照，以及从代码来源 metadata 到插件候选的非执行资格审查路线。
+
+### v0.36.0（2026-08-03）-- GitHub/Zenodo Metadata-First 代码发现
+
+- 新增 provider-neutral 科研代码记录、稳定 literature work identity、GitHub/Zenodo 版本谱系、latest-stable 与 paper-era 选择策略，以及保留文献的采用度/影响度信号审计。
+
+### v0.35.1（2026-08-03）-- Ruff、语义漂移与确认点合同
+
+- 新增 Ruff baseline/no-new-debt 审计、语义 artifact identity、runtime/Skill 握手、外部编辑聚合 reconciliation，以及强制中文阶段总结和项目相对/绝对路径输出。
+
+### v0.35.0（2026-08-03）-- 全学科文献质量基础
 
 - `v0.33.2` 修复在线检索开关透传、自动候选的最终文献数量限制和 fallback 查询的主题锚点保留；provider 执行报告区分跳过、降级、空结果、缓存和成功。
 - `v0.34.0-v0.34.1` 新增 Query Contract v2、中文/英文混合 tokenizer、学科/语言 provider 规划、内容相关性硬门禁、拒绝原因和基于内容的角色覆盖；缺失角色会集中写入一个人工确认包。

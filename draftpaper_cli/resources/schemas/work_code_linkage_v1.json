@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.work_code_linkage.v1",
+  "type": "object",
+  "required": ["schema_version", "work_id", "code_source_ids"],
+  "properties": {
+    "schema_version": {"const": "dpl.work_code_linkage.v1"},
+    "work_id": {"type": "string"},
+    "code_source_ids": {"type": "array", "items": {"type": "string"}},
+    "link_evidence": {"type": "array"}
+  },
+  "additionalProperties": true
+}

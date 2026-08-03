@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import re
 import struct
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,24 @@ from .project_state import load_project
 
 REPORT = "results/scientific_figure_quality_report.json"
 MINIMUM_SCORE = 0.95
+MIN_OCR_CONFIDENCE = 0.45
+MIN_OCR_TEXT_LENGTH = 10
+INTERNAL_DISPLAY_LABEL_PATTERN = re.compile(
+    r"\b(?:current_only|current_spectrum|full_fusion|naive_history|reliability_aware|quality_weighted_history|"
+    r"detection_only_history|history_only|token_transformer_reliability_gated|"
+    r"time_encoding_(?:none|fixed_sinusoidal|relative_gap|time2vec))\b",
+    re.IGNORECASE,
+)
+CODE_STYLE_LABEL_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9])(?:[a-z][a-z0-9]*_)+[a-z0-9]+(?![A-Za-z0-9])"
+)
+MODEL_ID_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
+MODEL_COLUMNS = {"model", "model_name", "comparison_model", "baseline_model"}
+
+try:
+    from rapidocr_onnxruntime import RapidOCR  # type: ignore
+except ImportError:  # pragma: no cover - optional publication-render dependency
+    RapidOCR = None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -233,17 +252,191 @@ def _values(value: object) -> set[str]:
     return {str(item).strip().lower() for item in raw if str(item).strip()}
 
 
+def _model_identifiers(project_path: Path, metadata: list[dict[str, Any]]) -> set[str]:
+    """Collect machine-readable model identifiers that require display labels."""
+    identifiers: set[str] = set()
+    for item in metadata:
+        if not isinstance(item, dict):
+            continue
+        statistics = item.get("statistics")
+        if not isinstance(statistics, dict):
+            continue
+        for value in statistics.get("models") or []:
+            candidate = str(value).strip()
+            if MODEL_ID_PATTERN.fullmatch(candidate):
+                identifiers.add(candidate)
+
+    table_paths = [
+        project_path / "results" / "tables" / "metrics.csv",
+        project_path / "results" / "tables" / "factorial_metrics.csv",
+    ]
+    table_paths.extend(sorted((project_path / "methods" / "results").glob("**/*.csv")))
+    for path in table_paths:
+        if not path.exists():
+            continue
+        try:
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.DictReader(handle)
+                field_lookup = {
+                    str(field or "").strip().lower(): str(field or "")
+                    for field in (reader.fieldnames or [])
+                }
+                model_fields = [field_lookup[field] for field in MODEL_COLUMNS if field in field_lookup]
+                for row in reader:
+                    for field in model_fields:
+                        candidate = str(row.get(field) or "").strip()
+                        if MODEL_ID_PATTERN.fullmatch(candidate):
+                            identifiers.add(candidate)
+        except (OSError, UnicodeError, csv.Error):
+            continue
+    return identifiers
+
+
+def _display_label_issues(
+    item: dict[str, Any],
+    model_identifiers: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    visible: list[str] = []
+    for key in (
+        "axis_labels",
+        "legend_labels",
+        "display_labels",
+        "text_elements",
+        "rendered_text",
+        "title",
+    ):
+        value = item.get(key)
+        if isinstance(value, str):
+            visible.append(value)
+        elif isinstance(value, dict):
+            visible.extend(str(entry) for entry in value.values())
+        elif isinstance(value, list):
+            visible.extend(str(entry) for entry in value)
+
+    issues: list[dict[str, Any]] = []
+    match = INTERNAL_DISPLAY_LABEL_PATTERN.search(" ".join(visible))
+    if match:
+        issues.append({
+            "kind": "internal_model_identifier_in_display_label",
+            "identifier": match.group(0),
+        })
+
+    if item.get("display_labels_checked") is not True:
+        return issues
+    label_map = item.get("display_label_map")
+    if not isinstance(label_map, dict) or not label_map:
+        issues.append({"kind": "display_label_dictionary_missing"})
+        return issues
+
+    raw_keys = sorted(
+        str(key) for key in label_map if INTERNAL_DISPLAY_LABEL_PATTERN.search(str(key))
+    )
+    code_values = sorted(
+        str(value) for value in label_map.values() if CODE_STYLE_LABEL_PATTERN.search(str(value))
+    )
+    if raw_keys:
+        issues.append({
+            "kind": "internal_identifier_in_display_label_dictionary",
+            "identifiers": raw_keys,
+        })
+    if code_values:
+        issues.append({"kind": "code_style_display_label_dictionary", "labels": code_values})
+
+    required = model_identifiers or set()
+    missing = sorted(identifier for identifier in required if identifier not in label_map)
+    invalid = sorted(
+        identifier
+        for identifier in required
+        if identifier in label_map
+        and (
+            not str(label_map[identifier]).strip()
+            or CODE_STYLE_LABEL_PATTERN.search(str(label_map[identifier])) is not None
+        )
+    )
+    if missing:
+        issues.append({"kind": "display_label_dictionary_incomplete", "identifiers": missing})
+    if invalid:
+        issues.append({"kind": "display_label_dictionary_invalid", "identifiers": invalid})
+    return issues
+
+
+def _ocr_png(path: Path) -> tuple[str, str, float]:
+    if RapidOCR is None or not path.exists():
+        return "", "RapidOCR unavailable", 0.0
+    try:
+        import numpy as np
+        from PIL import Image
+
+        result, _ = RapidOCR()(np.asarray(Image.open(path).convert("RGB")))
+    except Exception as exc:  # pragma: no cover - defensive render audit
+        return "", f"RapidOCR error: {type(exc).__name__}", 0.0
+    if not result:
+        return "", "rapidocr_onnxruntime", 0.0
+
+    text_parts: list[str] = []
+    scores: list[float] = []
+    for entry in result:
+        if len(entry) < 3:
+            continue
+        text = str(entry[1]).strip()
+        if not text:
+            continue
+        text_parts.append(text)
+        try:
+            scores.append(float(entry[2]))
+        except (TypeError, ValueError):
+            continue
+    mean_confidence = sum(scores) / len(scores) if scores else 0.0
+    return "\n".join(text_parts), "rapidocr_onnxruntime", float(mean_confidence)
+
+
+def _figure_code_quality(project_path: Path) -> list[dict[str, Any]]:
+    """Detect presentation leaks that pixel occupancy and metadata cannot prove."""
+    issues: list[dict[str, Any]] = []
+    roots = [project_path / "methods" / "scripts", project_path / "methods" / "src"]
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*.py")):
+            try:
+                source = path.read_text(encoding="utf-8-sig")
+            except (OSError, UnicodeError):
+                continue
+            relative = str(path.relative_to(project_path)).replace("\\", "/")
+            if re.search(
+                r"(?:plt|fig|ax|axes?|figure)(?:\s*\[[^\n\]]+\])?\s*\.\s*"
+                r"(?:suptitle|set_suptitle|set_title|title)\s*\(",
+                source,
+                re.IGNORECASE,
+            ):
+                issues.append({"kind": "figure_level_title_forbidden", "source": relative})
+            if (
+                re.search(r"MODEL_LABELS\.get\([^\n]*,\s*name\s*\)", source)
+                or re.search(r"\.map\(MODEL_LABELS\)\.fillna\(", source)
+                or re.search(
+                    r"\.fillna\(\s*(?:summary|metrics|token|combined)\s*"
+                    r"\[\s*['\"]model_name",
+                    source,
+                )
+            ):
+                issues.append({"kind": "unmapped_internal_label_fallback", "source": relative})
+    return issues
+
+
 def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     contracts_payload = _read_json(state.path / "results" / "figure_contracts.json")
     contracts = contracts_payload.get("main_contracts") or contracts_payload.get("contracts") or []
     metadata = _read_json(state.path / "results" / "figure_metadata.json").get("figures") or []
-    traces = _read_json(state.path / "results" / "figure_plugin_trace_report.json").get("figure_checks") or []
+    trace_payload = _read_json(state.path / "results" / "figure_plugin_trace_report.json")
+    traces = trace_payload.get("figure_checks") or []
     metadata_by_id = {str(item.get("figure_id") or item.get("storyboard_id") or item.get("id") or ""): item for item in metadata if isinstance(item, dict)}
     metadata_by_path = {str(item.get("path") or "").replace("\\", "/"): item for item in metadata if isinstance(item, dict) and item.get("path")}
     trace_by_id = {str(item.get("figure_id") or ""): item for item in traces if isinstance(item, dict)}
     checks = []
     all_issues = []
+    code_quality_issues = _figure_code_quality(state.path)
+    model_identifiers = _model_identifiers(state.path, metadata)
     ledger_events = _read_ledger_events(state.path)
     journal_intent = _read_json(state.path / "journal_profile" / "journal_intent.json")
     target_widths = journal_intent.get("figure_widths") if isinstance(journal_intent.get("figure_widths"), dict) else {}
@@ -257,11 +450,46 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         path = state.path / str(item.get("path") or contract.get("path") or "")
         width, height = _png_dimensions(path)
         pixels = _pixel_evidence(path)
+        ocr_text, ocr_backend, ocr_mean_confidence = _ocr_png(path)
+        ocr_raw_identifiers = sorted(set(INTERNAL_DISPLAY_LABEL_PATTERN.findall(ocr_text)))
+        ocr_code_style_labels = sorted(set(CODE_STYLE_LABEL_PATTERN.findall(ocr_text)))
         sources = _source_artifact_evidence(state.path, item, trace, ledger_events)
-        issues = []
-        artifact_integrity = 1.0 if width and height and pixels.get("nonblank") else 0.0
-        if not artifact_integrity:
+        issues = [dict(issue) for issue in code_quality_issues]
+        issues.extend(_display_label_issues(item, model_identifiers))
+        png_valid = bool(width and height and pixels.get("nonblank"))
+        if not png_valid:
             issues.append({"kind": "invalid_missing_or_blank_png", "pixel_evidence": pixels})
+        if ocr_backend != "rapidocr_onnxruntime":
+            issues.append({"kind": "rendered_ocr_unavailable", "backend": ocr_backend})
+        if len(ocr_text.strip()) < MIN_OCR_TEXT_LENGTH:
+            issues.append({
+                "kind": "rendered_ocr_text_insufficient",
+                "text_length": len(ocr_text.strip()),
+                "minimum": MIN_OCR_TEXT_LENGTH,
+            })
+        if ocr_mean_confidence < MIN_OCR_CONFIDENCE:
+            issues.append({
+                "kind": "rendered_ocr_confidence_low",
+                "mean_confidence": ocr_mean_confidence,
+                "minimum": MIN_OCR_CONFIDENCE,
+            })
+        if ocr_raw_identifiers:
+            issues.append({
+                "kind": "rendered_internal_model_identifier",
+                "identifiers": ocr_raw_identifiers,
+            })
+        if ocr_code_style_labels:
+            issues.append({"kind": "rendered_code_style_label", "labels": ocr_code_style_labels})
+        rendered_label_contract_ok = bool(
+            ocr_backend == "rapidocr_onnxruntime"
+            and len(ocr_text.strip()) >= MIN_OCR_TEXT_LENGTH
+            and ocr_mean_confidence >= MIN_OCR_CONFIDENCE
+            and not ocr_raw_identifiers
+            and not ocr_code_style_labels
+        )
+        artifact_integrity = 1.0 if (
+            png_valid and rendered_label_contract_ok and not code_quality_issues
+        ) else 0.0
         legibility = 1.0 if width >= 1200 and height >= 800 and pixels.get("axis_region_evidence") and pixels.get("text_edge_evidence") else 0.0
         if width < 1200 or height < 800:
             issues.append({"kind": "insufficient_pixel_dimensions", "width": width, "height": height})
@@ -274,6 +502,9 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
             "content_cropped": bool(item.get("content_cropped")),
             "colorblind_safe": item.get("colorblind_safe"),
             "caption_self_contained": item.get("caption_self_contained"),
+            "panel_finite_check": item.get("panel_finite_check"),
+            "global_title": item.get("global_title"),
+            "display_labels_checked": item.get("display_labels_checked"),
         }
         if render_qa["panel_overlap_detected"]:
             legibility = 0.0
@@ -284,6 +515,32 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         if isinstance(render_qa["minimum_font_points"], (int, float)) and render_qa["minimum_font_points"] < 7:
             legibility = 0.0
             issues.append({"kind": "journal_width_font_below_minimum", "minimum_font_points": render_qa["minimum_font_points"]})
+        if not isinstance(render_qa["minimum_font_points"], (int, float)):
+            legibility = 0.0
+            issues.append({"kind": "missing_render_font_measurement"})
+        if render_qa["colorblind_safe"] is not True:
+            legibility = 0.0
+            issues.append({"kind": "colorblind_safety_not_verified"})
+        caption_qa_ok = render_qa["caption_self_contained"] is True
+        if not caption_qa_ok:
+            issues.append({"kind": "caption_self_containment_not_verified"})
+        if render_qa["panel_finite_check"] is not True:
+            artifact_integrity = 0.0
+            issues.append({"kind": "panel_finite_values_not_verified"})
+        finite_count = item.get("panel_finite_value_count")
+        nonfinite_count = item.get("panel_nonfinite_value_count")
+        if not isinstance(finite_count, (int, float)) or int(finite_count) <= 0:
+            artifact_integrity = 0.0
+            issues.append({"kind": "panel_finite_value_count_missing_or_zero", "value": finite_count})
+        if not isinstance(nonfinite_count, (int, float)) or int(nonfinite_count) != 0:
+            artifact_integrity = 0.0
+            issues.append({"kind": "panel_nonfinite_value_count_nonzero", "value": nonfinite_count})
+        if render_qa["global_title"] is not False:
+            artifact_integrity = 0.0
+            issues.append({"kind": "global_title_status_not_verified"})
+        if render_qa["display_labels_checked"] is not True:
+            artifact_integrity = 0.0
+            issues.append({"kind": "display_label_mapping_not_verified"})
         if str(contract.get("plot_grammar") or item.get("plot_grammar") or "").lower() == "image_gallery":
             if float(pixels.get("textured_grid_fraction") or 0.0) < 0.5:
                 artifact_integrity = 0.0
@@ -312,9 +569,20 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
             })
 
         evidence_reporting = 1.0 if item.get("statistics") and item.get("interpretation_summary") and sources.get("statistics_bound_to_table") else 0.0
+        if not caption_qa_ok:
+            evidence_reporting = 0.0
         if not evidence_reporting:
             issues.append({"kind": "missing_statistical_or_interpretive_evidence"})
-        plugin_trace = 1.0 if trace.get("data_plugin_ids") and trace.get("method_plugin_ids") and sources.get("event_found") and sources.get("all_hashes_match") else 0.0
+        trace_decision_passes = trace.get("decision") == "pass" or (
+            not trace.get("decision") and trace_payload.get("decision") == "pass"
+        )
+        plugin_trace = 1.0 if (
+            trace_decision_passes
+            and trace.get("method_plugin_ids")
+            and trace.get("run_output_event_id")
+            and sources.get("event_found")
+            and sources.get("all_hashes_match")
+        ) else 0.0
         if not plugin_trace:
             issues.append({"kind": "missing_plugin_run_trace"})
 
@@ -334,13 +602,29 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         }
         weights = {"artifact_integrity": 0.15, "legibility": 0.15, "semantic_alignment": 0.25, "evidence_reporting": 0.15, "plugin_run_trace": 0.20, "panel_completeness": 0.10}
         score = round(sum(dimensions[key] * weights[key] for key in weights), 4)
-        check = {"figure_id": figure_id, "score": score, "decision": "pass" if score >= MINIMUM_SCORE else "repair_required", "dimensions": dimensions, "pixel_evidence": pixels, "publication_render_qa": render_qa, "source_artifact_evidence": sources, "issues": issues}
+        check = {
+            "figure_id": figure_id,
+            "score": score,
+            "decision": "pass" if score >= MINIMUM_SCORE else "repair_required",
+            "dimensions": dimensions,
+            "pixel_evidence": pixels,
+            "rendered_text_audit": {
+                "backend": ocr_backend,
+                "text_length": len(ocr_text.strip()),
+                "mean_confidence": ocr_mean_confidence,
+                "raw_internal_identifiers": ocr_raw_identifiers,
+                "code_style_labels": ocr_code_style_labels,
+            },
+            "publication_render_qa": render_qa,
+            "source_artifact_evidence": sources,
+            "issues": issues,
+        }
         checks.append(check)
         all_issues.extend({**issue, "figure_id": figure_id} for issue in issues)
     score = round(sum(item["score"] for item in checks) / max(1, len(checks)), 4)
     report = {
         "status": "written",
-        "schema_version": "dpl.scientific_figure_quality.v2",
+        "schema_version": "dpl.scientific_figure_quality.v3",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "score": score,
@@ -349,7 +633,7 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         "figure_checks": checks,
         "issues": all_issues,
         "journal_figure_widths": target_widths,
-        "policy": "Metadata is never self-proving: publication readiness requires nonblank rendered pixels, journal-width legibility, visible layout evidence, run-hashed source artifacts, table-bound statistics, semantic contracts, plugin execution, and panel completeness.",
+        "policy": "Metadata is never self-proving: publication readiness requires nonblank rendered pixels, journal-width legibility, finite panel values, human-readable display labels, no figure-level title, rendered PNG OCR with a usable backend, no raw internal identifiers or code-style labels in the raster output, explicit render QA, visible layout evidence, run-hashed source artifacts, table-bound statistics, semantic contracts, plugin execution, and panel completeness.",
     }
     _write_json(state.path / REPORT, report)
     return report

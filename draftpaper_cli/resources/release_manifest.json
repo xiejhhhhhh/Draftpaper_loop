@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.35.0",
-  "workflow_skill_sha256": "8b2c6211df6a307ba9734cc6c1c9d2cf70608586e7484ef37d0b1cc8a4ac7139",
-  "workflow_contract_sha256": "a66bb0cde9131bf76983bc59e20a32acf42cfe33b43ce7e03989a69f05dd0b2a",
+  "package_version": "0.37.0",
+  "workflow_skill_sha256": "42557153bb276d1df8730759d8f194e0dfc0dc0de806ae8ac08b2dd9dfee3aa2",
+  "workflow_contract_sha256": "43298e5512c61085649a83abcfdd120abbf01374862de319c6d31d96471a01c9",
   "plugin_count": 230,
   "fixture_count": 601,
-  "plugin_catalog_hash": "0d77ff08cf1a8787b1c972a73175907d95719dc14d648de44844a8809cff4247",
-  "command_count": 220,
+  "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
+  "command_count": 226,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -57,6 +57,46 @@
     "physics_quantum"
   ],
   "third_party_registry_sha256": "223ec5f9ac3df2a088f3c5e60e139a6a6383a625685b6ba5c8f8925cf80931d6",
+  "quality_gates": {
+    "ruff_baseline_version": "v0.35.0",
+    "ruff_status": "retired_zero_debt",
+    "ruff_current_count": 0,
+    "ruff_legacy_debt_count": 0,
+    "no_new_debt": true,
+    "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json"
+  },
+  "checkpoint_contract": {
+    "status": "passed",
+    "summary_schema": "dpl.checkpoint_summary.v1",
+    "required_companions": [
+      "stage_summary.zh-CN.html",
+      "stage_summary.json",
+      "artifact_manifest.json",
+      "confirmation_request.json",
+      "change_report.json",
+      "unresolved_issues.json",
+      "agent_payload.json"
+    ],
+    "agent_paths": [
+      "project_relative_path",
+      "absolute_path"
+    ]
+  },
+  "research_code_sources": {
+    "providers": [
+      "github",
+      "zenodo"
+    ],
+    "metadata_only_default": true,
+    "selection_modes": [
+      "knowledge_base",
+      "plugin_candidate",
+      "historical_reference",
+      "reproduction",
+      "citation_only"
+    ],
+    "archive_execution": "disabled"
+  },
   "release_security": {
     "license_identifier": "LicenseRef-Draftpaper-NonCommercial",
     "license_files": [

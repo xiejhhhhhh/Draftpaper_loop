@@ -41,8 +41,14 @@ def _png(path, width: int, height: int) -> None:
     image.save(path)
 
 
-def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tmp_path) -> None:
-    from draftpaper_cli.scientific_figure_quality import assess_scientific_figure_quality
+def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tmp_path, monkeypatch) -> None:
+    from draftpaper_cli import scientific_figure_quality as figure_quality
+
+    monkeypatch.setattr(
+        figure_quality,
+        "_ocr_png",
+        lambda _path: ("Baseline Proposed Macro F1", "rapidocr_onnxruntime", 0.97),
+    )
 
     project = create_project(root=tmp_path, idea="Model study", field="machine learning", target_journal="Test").path
     _png(project / "results" / "figures" / "fig_main.png", 1600, 1000)
@@ -60,6 +66,17 @@ def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tm
         "statistics": {"baseline_f1": 0.86, "proposed_f1": 0.81}, "interpretation_summary": "The baseline remains stronger.",
         "variable_roles": ["performance_metric"], "method_outputs": ["f1"], "panels": ["baseline", "proposed"],
         "source_tables": ["results/tables/fig_main.csv"],
+        "minimum_font_points": 8,
+        "panel_overlap_detected": False,
+        "content_cropped": False,
+        "colorblind_safe": True,
+        "caption_self_contained": True,
+        "panel_finite_check": True,
+        "panel_finite_value_count": 6,
+        "panel_nonfinite_value_count": 0,
+        "global_title": False,
+        "display_labels_checked": True,
+        "display_label_map": {"baseline": "Baseline", "proposed": "Proposed"},
         "publication_ready": True,
     }]})
     _json(project / "results" / "figure_plugin_trace_report.json", {"decision": "pass", "figure_checks": [{
@@ -70,7 +87,7 @@ def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tm
         "output_hashes": {"results/tables/fig_main.csv": table_hash},
     }) + "\n", encoding="utf-8")
 
-    report = assess_scientific_figure_quality(project)
+    report = figure_quality.assess_scientific_figure_quality(project)
 
     assert report["score"] >= 0.95
     assert report["decision"] == "pass"
@@ -164,6 +181,70 @@ def test_publication_figure_quality_rejects_gallery_with_only_panel_frames(tmp_p
 
     assert report["decision"] == "repair_required"
     assert "empty_image_gallery_panels" in {item["kind"] for item in report["issues"]}
+
+
+def test_figure_source_rejects_global_titles_and_internal_label_fallbacks(tmp_path) -> None:
+    from draftpaper_cli.scientific_figure_quality import _figure_code_quality
+
+    source = tmp_path / "methods" / "scripts" / "plot.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "fig.suptitle('internal title')\n"
+        "labels = frame.model_name.map(MODEL_LABELS).fillna(frame.model_name)\n",
+        encoding="utf-8",
+    )
+    kinds = {item["kind"] for item in _figure_code_quality(tmp_path)}
+    assert "figure_level_title_forbidden" in kinds
+    assert "unmapped_internal_label_fallback" in kinds
+
+
+def test_figure_source_rejects_subplot_titles(tmp_path) -> None:
+    from draftpaper_cli.scientific_figure_quality import _figure_code_quality
+
+    source = tmp_path / "methods" / "src" / "plot.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("axes[0].set_title('panel title')\n", encoding="utf-8")
+    kinds = {item["kind"] for item in _figure_code_quality(tmp_path)}
+    assert "figure_level_title_forbidden" in kinds
+
+
+def test_dynamic_model_dictionary_rejects_unmapped_and_code_style_labels() -> None:
+    from draftpaper_cli.scientific_figure_quality import _display_label_issues
+
+    item = {
+        "display_labels_checked": True,
+        "display_label_map": {
+            "current_spectrum": "Current and spectrum",
+            "new_history_branch": "new_history_branch",
+        },
+    }
+    kinds = {
+        issue["kind"]
+        for issue in _display_label_issues(
+            item,
+            {"current_spectrum", "new_history_branch", "unmapped_model_branch"},
+        )
+    }
+    assert "display_label_dictionary_incomplete" in kinds
+    assert "display_label_dictionary_invalid" in kinds
+
+
+def test_rendered_png_ocr_reports_visible_text_and_confidence(tmp_path, monkeypatch) -> None:
+    from PIL import Image
+    from draftpaper_cli import scientific_figure_quality as figure_quality
+
+    image_path = tmp_path / "figure.png"
+    Image.new("RGB", (24, 24), "white").save(image_path)
+
+    class FakeOCR:
+        def __call__(self, _image):
+            return ([[[0, 0], "current_only", 0.95]], None)
+
+    monkeypatch.setattr(figure_quality, "RapidOCR", lambda: FakeOCR())
+    text, backend, confidence = figure_quality._ocr_png(image_path)
+    assert text == "current_only"
+    assert backend == "rapidocr_onnxruntime"
+    assert confidence == 0.95
 
 
 def test_generic_plotter_refuses_unknown_main_result_substitution(tmp_path) -> None:

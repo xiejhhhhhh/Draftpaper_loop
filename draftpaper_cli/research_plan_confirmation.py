@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .html_utils import write_html_report
-from .pre_execution_support import REPORT_JSON as PRE_EXECUTION_REPORT, assess_pre_execution_support
+from .pre_execution_support import assess_pre_execution_support
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stage_stale
 from .state_kernel import atomic_write_text

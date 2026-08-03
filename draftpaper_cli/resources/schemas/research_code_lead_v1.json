@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.research_code_lead.v1",
+  "type": "object",
+  "required": ["schema_version", "status", "candidates"],
+  "properties": {
+    "schema_version": {"const": "dpl.research_code_lead.v1"},
+    "status": {"type": "string"},
+    "metadata_only": {"const": true},
+    "candidates": {"type": "array", "items": {"$ref": "dpl.code_source_record.v2"}}
+  },
+  "additionalProperties": true
+}

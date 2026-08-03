@@ -1031,6 +1031,8 @@ def search_literature_for_project(
     zotero_min_items: int = 20,
     zotero_supplement: bool = True,
     include_online: bool | None = None,
+    enrich_code_sources: bool = True,
+    enrich_code_sources_online: bool = False,
 ) -> dict[str, Any]:
     final_query = build_search_query(project, query)
     search_queries = build_context_search_queries(project, query)
@@ -1219,6 +1221,45 @@ def search_literature_for_project(
     search_queries["provider_execution_report"] = aggregate_provider_runs([*provider_queries, *specialized_reports])
     _write_json(state.path / "references" / "literature_source_collection.json", source_collection_report)
     result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries, limit=limit)
+    if enrich_code_sources:
+        from .literature_code_enrichment import LiteratureCodeEnrichmentError, enrich_literature_code_leads
+
+        try:
+            code_sources = enrich_literature_code_leads(
+                project,
+                providers=("github", "zenodo"),
+                selection_mode="knowledge_base",
+                metadata_only=True,
+                include_online=bool(enrich_code_sources_online),
+            )
+        except (LiteratureCodeEnrichmentError, OSError, ValueError) as exc:
+            code_sources = {
+                "status": "provider_error",
+                "message": str(exc),
+                "metadata_only": True,
+                "downloaded": False,
+                "executed": False,
+            }
+        result["code_source_enrichment"] = code_sources
+        result["code_source_outputs"] = [
+            item
+            for item in (
+                code_sources.get("code_sources"),
+                code_sources.get("code_source_provenance"),
+                code_sources.get("code_source_candidates"),
+                code_sources.get("code_source_index"),
+                code_sources.get("code_source_quality"),
+            )
+            if item
+        ]
+        if code_sources.get("status") == "written":
+            manifest_path = state.path / "references" / "stage_manifest.json"
+            try:
+                manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                manifest_payload = {}
+            manifest_payload["output_files"] = list(dict.fromkeys([*(manifest_payload.get("output_files") or []), *result["code_source_outputs"]]))
+            _write_json(manifest_path, manifest_payload)
     if from_json:
         provider_status = "offline_fallback"
         source_mode = "local_json"

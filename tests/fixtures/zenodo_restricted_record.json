@@ -1,0 +1,15 @@
+{
+  "id": 1234569,
+  "doi": "10.5281/zenodo.1234569",
+  "conceptdoi": "10.5281/zenodo.1234000",
+  "version": "1.0.0",
+  "state": "published",
+  "metadata": {
+    "title": "Restricted research code",
+    "license": "MIT",
+    "version": "1.0.0",
+    "access_right": "restricted"
+  },
+  "links": {"html": "https://zenodo.org/records/1234569"},
+  "files": [{"key": "restricted.zip", "size": 100, "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]
+}

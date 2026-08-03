@@ -11,16 +11,16 @@ from draftpaper_cli.toml_compat import tomllib
 def test_v0350_release_identity_and_literature_contracts() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     manifest = build_release_manifest()
-    assert version == "0.35.0"
+    assert version == "0.37.0"
     assert manifest["package_version"] == version
-    assert manifest["command_count"] == 220
+    assert manifest["command_count"] == 226
     assert {"benchmark-literature-quality", "benchmark-document-parsers"} <= set(manifest["required_cli_commands"])
     matrix = json.loads(Path("docs/capability_truth_matrix.json").read_text(encoding="utf-8"))
     record = next(item for item in matrix["capabilities"] if item["capability_id"] == "cross_discipline_literature_and_document_quality")
     assert record["status"] == "implemented"
     for readme in (Path("README.md"), Path("README.zh-CN.md")):
         content = readme.read_text(encoding="utf-8")
-        assert "v0.35.0" in content
+        assert "v0.37.0" in content
         assert "cross_discipline_literature_and_document_quality" in content
         assert "literature_confirmation_packet" in content
         assert "benchmark-document-parsers" in content

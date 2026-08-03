@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.35.0
+version: 0.37.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -35,21 +35,12 @@ Do not directly edit project.json. Do not directly edit stage_manifest files.
   review rules evaluate the generated Results and their evidence after Results
   exist; they do not fabricate or silently replace figures.
 
-## MCP and release boundaries
-
-- MCP science or network execution requires the short-lived capability token
-  issued for the exact project, command, arguments, and time window. A boolean
-  confirmation is not authorization.
-- Before a release, validate command contracts, plugin manifests, schema and
-  third-party registries, the generated release manifest, secret scan,
-  project-scoped dependency audit, wheel installation, and cross-discipline
-  regressions. Synthetic fixtures validate contracts, not manuscript quality.
-
 ## Required control loop
 
 Before changing a paper project:
 
 ```powershell
+python -m draftpaper_cli.cli session-preflight --project <project>
 python -m draftpaper_cli.cli status --project <project>
 python -m draftpaper_cli.cli verify-next-action --project <project>
 ```
@@ -66,15 +57,23 @@ decision request to the user and stop. Never confirm a research plan, accept
 core evidence, promote a plugin, downgrade a claim, confirm the final
 manuscript, or accept a manuscript revision on the user's behalf.
 
+Every human checkpoint must first produce a portable Chinese summary package:
+`review/checkpoints/<checkpoint_id>/stage_summary.zh-CN.html`,
+`stage_summary.json`, `artifact_manifest.json`, and
+`confirmation_request.json`. The Agent response must show both the project
+relative path and the current machine's absolute path, list primary artifacts
+and unresolved issues, and state what the confirmation means. Open the HTML
+before asking the user to confirm. A missing summary or path is a blocker, not
+a reason to fall back to a vague "please confirm" message. Use
+`show-checkpoint-summary` for a read-only copy of the exact paths.
+
 ## Scientific boundaries
 
 - Preserve the evidence-first order: literature and research plan, data and
   methods, executable figures, human core-evidence confirmation, manuscript,
   final citation audit, then independent reviews.
-- New paper projects use the configured central projects root. Large source
-  datasets remain read-only in place through private locators and public data
-  contracts; do not create the paper project next to a large dataset merely
-  because the data live there.
+- New paper projects use the configured central projects root; large datasets
+  remain read-only through private locators and public data contracts.
 - The Chinese-first research-plan and feasibility packet is a human scientific
   checkpoint. Key-figure code may execute only against the current confirmed
   plan hash. Implementation repair may not change claims, data roles, methods,
@@ -84,33 +83,27 @@ manuscript, or accept a manuscript revision on the user's behalf.
   capability audit records its inputs, outputs, hashes, and execution scope.
 - A scientific failure is not a command failure. Follow the structured rescue
   route instead of fabricating a substitute figure or weakening a gate.
-- Result Support v3 uses fixed signal adapters. Metric authority is current
-  resolved evidence, then the selected run manifest, then result tables bound
-  to that run. A pending task affects routing only when it is current and its
-  input hashes match; an unbound required data role creates an
-  `unbound_required_data_task` and routes the whole checkpoint to one route.
-- Treat `results/result_support_checkpoint.json` as a hash-bound decision
-  packet. Run either route command once without `--checkpoint-hash` to obtain
-  the current hash and complete command, then submit exactly that hash. Do not
-  mix downgrade and supplement routes within one checkpoint.
-- After Results writing, prose-only findings use
-  `prepare-results-semantic-repair`. Evidence findings write
-  `review/result_support_reopen_request.json` and return to
-  `assess-result-support` before further manuscript repair.
+- Result Support v3 is a hash-bound whole-checkpoint decision: resolve current
+  evidence first, use one downgrade or supplement route, and reopen the same
+  checkpoint for evidence findings.
 - Citation repair narrows or rewrites claims while retaining curated
   references. It must run after the final assembled manuscript.
+- Literature search may enrich retained, anchor, and user-selected works with
+  metadata-only GitHub and Zenodo code-source leads. Use
+  `enrich-literature-code-leads` or `discover-research-code`; these commands
+  do not download, extract, install, or execute third-party code. A Zenodo
+  version DOI, GitHub release, stars, forks, or paper citation count is a
+  provenance/adoption signal, not proof of scientific validity.
+- Default code-source mode is `knowledge_base`: prefer the latest stable
+  release while retaining paper-era lineage. Use `reproduction` only when the
+  user explicitly requests paper-version reproduction; never substitute the
+  latest release for an unavailable exact version.
+- Downloading an archive requires the guarded
+  `fetch-research-code-archive --confirm-download` action, checksum and
+  license inspection, and a later fixture-based human promotion. Never run
+  archive code during metadata enrichment.
 - Use `doctor` and `recover` for diagnosis. Do not edit `project.json`, stage
   manifests, passports, evidence snapshots, or append-only ledgers by hand.
-
-## Long-running work
-
-Use the persistent job commands for literature fetching, capability rescue,
-method execution, figure generation, regressions, and independent-review
-orchestration when the operation can outlive the current terminal or MCP
-session.
-
-Report the command status, scientific decision, important artifact paths, and
-the verified next action.
 
 ## Stage order
 

@@ -30,7 +30,6 @@ from .manuscript_revision import (
     REVISION_LEDGER,
     SOURCE_MAP,
     _apply_operation,
-    _classify,
     _sha_text,
     add_custom_reference,
     build_manuscript_source_map,

@@ -4,22 +4,12 @@
 
 from __future__ import annotations
 
-import json
-import hashlib
 import re
-import shutil
-import subprocess
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Any
-from ..discipline import infer_discipline_from_text, infer_discipline_profile
-from ..discipline_modules import get_discipline_module
+from ..discipline import infer_discipline_from_text
 from ..html_utils import write_html_report
 from ..project_scaffold import _write_json, utc_now
-from ..project_state import load_project
-from ..safe_fetch import SafeFetchError, fetch_text
 
 from .common import (
     CAPABILITY_IR_VERSION,
