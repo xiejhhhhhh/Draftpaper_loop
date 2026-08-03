@@ -27,7 +27,7 @@ The current control plane contains 226 commands.
 | `apply-manuscript-completion` | `human_checkpoint` | writing | yes | human_only | local_cpu | no | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+18) |
 | `apply-manuscript-revision` | `human_checkpoint` | writing | yes | human_only | local_cpu | no | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+18) |
 | `apply-orphan-adoption` | `human_checkpoint` | state | yes | human_only | local_cpu | no | `citation_audit/**`, `discussion/**`, `quality_checks/**`, `review/**`, `.draftpaper/**` |
-| `apply-result-downgrade` | `human_checkpoint` | results | yes | checkpoint_hash | local_cpu | no | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+16) |
+| `apply-result-downgrade` | `human_checkpoint` | results | yes | checkpoint_hash | local_cpu | no | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+18) |
 | `apply-revision` | `write_project` | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+19) |
 | `apply-section-revision` | `write_project` | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+18) |
 | `assemble-latex` | `write_project` | release | yes | none | local_cpu | yes | `review/**`, `quality/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**` (+17) |

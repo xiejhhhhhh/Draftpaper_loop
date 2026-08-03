@@ -91,6 +91,14 @@ jobs:
           python -m draftpaper_cli.cli validate-third-party-provenance
           python -c "from draftpaper_cli.schema_registry import schema_registry_report; assert schema_registry_report()['status'] == 'passed'"
           python -c "from draftpaper_cli.release_contract import validate_release_manifest; assert validate_release_manifest()['status'] == 'passed'"
+      - name: Run frozen literature and parser quality benchmarks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/benchmarks
+          python -m draftpaper_cli.cli benchmark-literature-quality --output build/benchmarks/literature_quality.json
+          python -m draftpaper_cli.cli benchmark-document-parsers --output build/benchmarks/document_parser_quality.json
+          python -c "import json; assert json.load(open('build/benchmarks/literature_quality.json', encoding='utf-8'))['status'] == 'passed'; assert json.load(open('build/benchmarks/document_parser_quality.json', encoding='utf-8'))['status'] == 'passed'"
       - name: Validate agent skill copy parity (Claude Code / Codex)
         run: |
           python -m pytest tests/test_claude_code_compat.py -q

@@ -63,13 +63,14 @@ def _draw_scientific_figure(path: Path, values: list[float]) -> None:
     draw = ImageDraw.Draw(image)
     draw.line((120, 70, 120, 780), fill="black", width=4)
     draw.line((120, 780, 1320, 780), fill="black", width=4)
-    colors = ("#377eb8", "#4daf4a", "#e41a1c")
+    colors = ("#0072B2", "#E69F00", "#009E73")
+    labels = ("Baseline", "Ablation", "Proposed")
     for index, value in enumerate(values):
         x = 260 + index * 350
         y = 780 - int(max(0.0, min(1.0, value)) * 700)
         draw.rectangle((x, y, x + 160, 780), fill=colors[index], outline="black", width=2)
         draw.text((x, y - 30), f"{value:.3f}", fill="black")
-    draw.text((500, 25), "Held-out scientific comparison", fill="black")
+        draw.text((x + 35, 790), labels[index], fill="black")
     draw.text((600, 840), "Analysis condition", fill="black")
     draw.text((20, 400), "Validated score", fill="black")
     for index in range(8):
@@ -257,6 +258,21 @@ def run_domain_regression(output_root: str | Path, fixture_name: str) -> dict[st
             "statistics": {spec["metric_name"]: spec["metric_value"]},
             "interpretation_summary": "The held-out comparison is interpreted within the declared cohort and uncertainty boundary.",
             "source_tables": ["results/tables/metrics.csv"],
+            "minimum_font_points": 8,
+            "panel_overlap_detected": False,
+            "content_cropped": False,
+            "colorblind_safe": True,
+            "caption_self_contained": True,
+            "panel_finite_check": True,
+            "panel_finite_value_count": 3,
+            "panel_nonfinite_value_count": 0,
+            "global_title": False,
+            "display_labels_checked": True,
+            "display_label_map": {
+                "baseline": "Baseline",
+                "ablation": "Ablation",
+                "proposed": "Proposed",
+            },
         })
         result_figures.append({
             "id": figure_id, "path": relative, "manuscript_role": "main",
