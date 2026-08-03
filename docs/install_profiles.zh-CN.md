@@ -5,7 +5,7 @@ Draftpaper-loop 将工作流控制面与可选科研运行环境分开。只安�
 | 档位 | 命令 | 能力边界 |
 |---|---|---|
 | Minimal | `python -m pip install draftpaper-cli` | 工作流控制、参考文献、PDF 检查、打包 schema/插件和内置 paper-fetch fallback |
-| Plotting | `python -m pip install "draftpaper-cli[plotting]"` | NumPy/pandas 科研插件运行、Matplotlib/SciencePlots 图表、SciPy、seaborn 和 scikit-learn |
+| Plotting | `python -m pip install "draftpaper-cli[plotting]"` | NumPy/pandas 科研插件运行、Matplotlib/SciencePlots 图表、SciPy、seaborn、scikit-learn 和输出图表的 OCR 质量检查 |
 | Full text | `python -m pip install "draftpaper-cli[fulltext]"` | 增强 PDF 解析、网页正文抽取和 metadata 规范化；未安装该 extra 时仍保留内置 paper-fetch fallback |
 | MinerU Agent | `python -m pip install "draftpaper-cli[mineru-agent]"` | 兼容性档位；官方 Agent connector 已在 core 中，该档位不安装本地模型或 GPU 运行时 |
 | MCP | `python -m pip install "draftpaper-cli[mcp]"` | 本地 stdio MCP 服务和类型化 MCP transport |

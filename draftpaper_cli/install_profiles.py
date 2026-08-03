@@ -9,7 +9,7 @@ from typing import Any
 
 PROFILE_MODULES: dict[str, tuple[str, ...]] = {
     "minimal": ("yaml", "bibtexparser", "pypdf", "PIL"),
-    "plotting": ("numpy", "pandas", "matplotlib", "scienceplots", "scipy", "seaborn", "sklearn"),
+    "plotting": ("numpy", "pandas", "matplotlib", "scienceplots", "scipy", "seaborn", "sklearn", "rapidocr_onnxruntime"),
     "fulltext": (
         "bs4",
         "cachetools",

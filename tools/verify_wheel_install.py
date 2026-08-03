@@ -24,6 +24,10 @@ EXPECTED_FIXTURE_COUNT = int(SOURCE_RELEASE_MANIFEST["fixture_count"])
 EXPECTED_PACKAGE_VERSION = str(SOURCE_RELEASE_MANIFEST["package_version"])
 EXPECTED_CLI_COMMANDS = tuple(SOURCE_RELEASE_MANIFEST["required_cli_commands"])
 EXPECTED_RELEASE_FIXTURE_IDS = tuple(SOURCE_RELEASE_MANIFEST["release_fixture_ids"])
+# Release regressions exercise the publication-render OCR gate. OCR remains an
+# optional plotting dependency and is installed here explicitly so the core
+# wheel verification does not make it a default runtime dependency.
+RENDER_QA_REQUIREMENTS = ("rapidocr_onnxruntime>=1.2",)
 
 
 def _resource_counts(root: Path) -> dict[str, int]:
@@ -108,6 +112,10 @@ def main() -> int:
         python = environment / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
         subprocess.run(
             [str(python), "-m", "pip", "install", str(wheel)],
+            check=True,
+        )
+        subprocess.run(
+            [str(python), "-m", "pip", "install", *RENDER_QA_REQUIREMENTS],
             check=True,
         )
         probe = """

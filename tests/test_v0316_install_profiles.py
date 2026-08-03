@@ -12,7 +12,7 @@ from draftpaper_cli.schema_registry import schema_family
 from draftpaper_cli.toml_compat import tomllib
 
 
-HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn"}
+HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn", "rapidocr_onnxruntime"}
 
 
 def _package_name(requirement: str) -> str:
@@ -101,6 +101,7 @@ Requires-Dist: numpy>=1.24; extra == \"plotting\"
 Requires-Dist: pandas>=2; extra == \"plotting\"
 Requires-Dist: SciencePlots>=2.1; extra == \"plotting\"
 Requires-Dist: seaborn>=0.13; extra == \"plotting\"
+Requires-Dist: rapidocr_onnxruntime>=1.2; extra == \"plotting\"
 Requires-Dist: beautifulsoup4; extra == \"fulltext\"
 Requires-Dist: mcp>=1.10; extra == \"mcp\"
 """

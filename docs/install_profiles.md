@@ -5,7 +5,7 @@ Draftpaper-loop keeps the workflow control plane separate from optional scientif
 | Profile | Command | Capability boundary |
 |---|---|---|
 | Minimal | `python -m pip install draftpaper-cli` | Workflow control, bibliography, PDF inspection, packaged schemas/plugins and vendored paper-fetch fallback |
-| Plotting | `python -m pip install "draftpaper-cli[plotting]"` | NumPy/pandas scientific plugin runtime, Matplotlib/SciencePlots figures, SciPy, seaborn and scikit-learn |
+| Plotting | `python -m pip install "draftpaper-cli[plotting]"` | NumPy/pandas scientific plugin runtime, Matplotlib/SciencePlots figures, SciPy, seaborn, scikit-learn and rendered-figure OCR quality checks |
 | Full text | `python -m pip install "draftpaper-cli[fulltext]"` | Enhanced PDF parsing, article extraction and metadata normalization; the vendored paper-fetch fallback remains available without this extra |
 | MinerU Agent | `python -m pip install "draftpaper-cli[mineru-agent]"` | Compatibility profile only; the official Agent connector is already in core and this profile installs no local model or GPU runtime |
 | MCP | `python -m pip install "draftpaper-cli[mcp]"` | Local stdio MCP server and typed MCP transport |

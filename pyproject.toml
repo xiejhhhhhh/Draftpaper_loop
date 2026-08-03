@@ -30,6 +30,7 @@ plotting = [
   "scipy>=1.11",
   "seaborn>=0.13",
   "scikit-learn>=1.4",
+  "rapidocr_onnxruntime>=1.2",
 ]
 plotting-full = [
   "numpy>=1.24",

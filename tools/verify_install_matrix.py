@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn"}
+HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn", "rapidocr-onnxruntime"}
 PROFILE_NAMES = ("minimal", "plotting", "fulltext", "mcp")
 
 
