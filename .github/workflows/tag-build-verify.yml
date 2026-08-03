@@ -29,6 +29,9 @@ jobs:
           tests/test_v026_final_confirmation.py
           tests/test_v0307_final_release_binding.py
           tests/test_v0330_release_completion.py
+          tests/test_v034_literature_quality.py
+          tests/test_multisource_literature.py
+          tests/test_v0350_literature_release.py
           tests/test_release_contract_v030.py
           tests/test_v0319_cross_platform_release.py
           tests/test_independent_review.py
@@ -41,6 +44,9 @@ jobs:
           python -m draftpaper_cli.cli validate-command-contracts
           python -m draftpaper_cli.cli validate-template-registry
           python -m draftpaper_cli.cli validate-third-party-provenance
+          python -m draftpaper_cli.cli benchmark-literature-quality --output build/benchmarks/literature_quality.json
+          python -m draftpaper_cli.cli benchmark-document-parsers --output build/benchmarks/document_parser_quality.json
+          python -c "import json; assert json.load(open('build/benchmarks/literature_quality.json', encoding='utf-8'))['status'] == 'passed'; assert json.load(open('build/benchmarks/document_parser_quality.json', encoding='utf-8'))['status'] == 'passed'"
           python tools/scan_secrets.py
       - name: Build and verify wheel
         run: |

@@ -327,6 +327,9 @@ COMMAND_SPECS = {
         CommandSpec("collect-literature", "reference_coordinator", True, "references", "literature_sources", "collect_literature_sources", (("project", "project"),)),
         CommandSpec("reconcile-literature", "reference_coordinator", True, "references", "literature_sources", "reconcile_literature_sources", (("project", "project"),)),
         CommandSpec("review-literature-coverage", "reference_coordinator", True, "references", "literature_coverage", "review_literature_coverage", (("project", "project"),)),
+        CommandSpec("record-remote-parser-consent", "reference_coordinator", True, "references", "remote_parser_consent", "record_consent", (("project", "project"), ("decision", "decision"), ("service", "service"), ("document_classes", "document_classes"))),
+        CommandSpec("benchmark-literature-quality", "release_coordinator", True, "quality_checks", "literature_benchmark", "run_literature_quality_benchmark", (("output", "output"),)),
+        CommandSpec("benchmark-document-parsers", "release_coordinator", True, "quality_checks", "literature_benchmark", "run_document_parser_benchmark", (("output", "output"),)),
         CommandSpec(
             "parse-literature-document",
             "reference_coordinator",
@@ -334,7 +337,7 @@ COMMAND_SPECS = {
             "references",
             "mineru_adapter",
             "parse_literature_document",
-            (("project", "project"), ("input_path", "input"), ("use_mineru", "use_mineru"), ("timeout_seconds", "timeout_seconds")),
+            (("project", "project"), ("input_path", "input"), ("use_mineru", "use_mineru"), ("timeout_seconds", "timeout_seconds"), ("parser", "parser"), ("mineru_route", "mineru_route"), ("purpose", "purpose"), ("work_id", "work_id"), ("remote_consent", "remote_consent"), ("document_class", "document_class"), ("custom_endpoint", "custom_endpoint")),
         ),
         CommandSpec("inspect-reference-duplicates", "reference_coordinator", True, "references", "bibliography", "inspect_reference_duplicates", (("project", "project"),)),
         CommandSpec(
@@ -392,7 +395,7 @@ assess-method-feasibility assess-paper-quality-parity assess-plugin-sufficiency 
 assess-research-plan-feasibility assess-result-support assess-result-validity assess-review-rules audit-citations
 audit-project-capabilities bootstrap-discipline-foundation build-argument-matrices build-code-provenance
 build-data-context build-method-context build-panel-contracts build-paper-narrative build-reference-registry
-add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage parse-literature-document
+add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
 compile-skill-source create-project create-project-version detect-artifact-drift diagnose-figure-execution

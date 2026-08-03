@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.33.1",
-  "workflow_skill_sha256": "46ed143e85bdb3a6ea132d5e0c33b8ee19fcbe6a6c32eee03adceb5929cf534a",
-  "workflow_contract_sha256": "3172a24b874b6259ce6c49c4ed339e53c6fa14dbb63bb0e004e0fc86772b52cc",
+  "package_version": "0.35.0",
+  "workflow_skill_sha256": "8b2c6211df6a307ba9734cc6c1c9d2cf70608586e7484ef37d0b1cc8a4ac7139",
+  "workflow_contract_sha256": "a66bb0cde9131bf76983bc59e20a32acf42cfe33b43ce7e03989a69f05dd0b2a",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "0d77ff08cf1a8787b1c972a73175907d95719dc14d648de44844a8809cff4247",
-  "command_count": 217,
+  "command_count": 220,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -34,7 +34,9 @@
     "rollback-manuscript-completion",
     "assess-result-support",
     "apply-result-downgrade",
-    "prepare-result-rescue"
+    "prepare-result-rescue",
+    "benchmark-literature-quality",
+    "benchmark-document-parsers"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "resource_schema_status": "passed",

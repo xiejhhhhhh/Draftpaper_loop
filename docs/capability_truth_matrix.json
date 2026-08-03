@@ -241,6 +241,41 @@
       ],
       "boundary_zh": "当前整单 checkpoint 选择一条路线；post-Results 证据问题回流到同一 checkpoint。",
       "boundary_en": "The whole checkpoint selects one route; post-Results evidence problems reopen the same checkpoint."
+    },
+    {
+      "capability_id": "cross_discipline_literature_and_document_quality",
+      "status": "implemented",
+      "since": "0.35",
+      "readme_anchor": "capability:cross_discipline_literature_and_document_quality",
+      "claim_zh": "全学科 Query Contract、内容相关性门禁和 parser-neutral 文档证据链共同改善文献检索与 PDF 证据审查。",
+      "claim_en": "Cross-discipline Query Contracts, content relevance gates, and parser-neutral document evidence improve literature retrieval and PDF evidence review.",
+      "commands": [
+        "search-literature",
+        "review-literature-coverage",
+        "parse-literature-document",
+        "benchmark-literature-quality",
+        "benchmark-document-parsers"
+      ],
+      "source_files": [
+        "draftpaper_cli/literature_query_contract.py",
+        "draftpaper_cli/literature_provider_planner.py",
+        "draftpaper_cli/literature_relevance.py",
+        "draftpaper_cli/mineru_adapter.py",
+        "draftpaper_cli/document_normalization.py",
+        "draftpaper_cli/literature_confirmation.py"
+      ],
+      "tests": [
+        "tests/test_v034_literature_quality.py",
+        "tests/test_multisource_literature.py"
+      ],
+      "artifacts": [
+        "references/query_contract.json",
+        "references/literature_confirmation_packet.json",
+        "references/document_parses/<hash>/normalized_document.json",
+        "references/document_parse_cost_report.json"
+      ],
+      "boundary_zh": "MinerU 只改善文档解析；官方 Agent 需要授权，自建 CPU/GPU 只通过用户提供的 endpoint 支持，冻结 benchmark 不代表在线服务或科研结论。",
+      "boundary_en": "MinerU improves document parsing only; the official Agent requires consent, self-hosted CPU/GPU is supported only through a user-provided endpoint, and frozen benchmarks do not represent live service or scientific conclusions."
     }
   ]
 }

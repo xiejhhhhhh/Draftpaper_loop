@@ -25,6 +25,7 @@ PROFILE_MODULES: dict[str, tuple[str, ...]] = {
         "trafilatura",
         "urllib3",
     ),
+    "mineru-agent": (),
     "mcp": ("mcp", "pydantic"),
 }
 
@@ -33,6 +34,7 @@ PROFILE_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "minimal": ("workflow_control", "bibliography", "pdf_inspection", "vendored_paper_fetch"),
     "plotting": ("publication_figures", "scientific_plugin_runtime", "statistical_plotting"),
     "fulltext": ("enhanced_pdf_parsing", "web_article_extraction", "metadata_normalization"),
+    "mineru-agent": ("official_mineru_agent_connector", "conditional_remote_document_parse"),
     "mcp": ("local_stdio_mcp",),
 }
 

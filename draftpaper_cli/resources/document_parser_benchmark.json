@@ -1,0 +1,41 @@
+{
+  "schema_version": "dpl.document_parser_benchmark_fixture.v1",
+  "cases": [
+    {
+      "case_id": "born_digital_single_column",
+      "expected_capabilities": ["text", "metadata"],
+      "route_capabilities": {
+        "pypdf": ["text", "metadata"],
+        "official-agent": ["text", "metadata"],
+        "custom-endpoint": ["text", "metadata"]
+      }
+    },
+    {
+      "case_id": "scientific_two_column",
+      "expected_capabilities": ["reading_order", "sections"],
+      "route_capabilities": {
+        "pypdf": ["text"],
+        "official-agent": ["text", "reading_order", "sections"],
+        "custom-endpoint": ["text", "reading_order", "sections"]
+      }
+    },
+    {
+      "case_id": "tables_formulas",
+      "expected_capabilities": ["tables", "formulas", "captions"],
+      "route_capabilities": {
+        "pypdf": ["text"],
+        "official-agent": ["text", "tables", "formulas", "captions"],
+        "custom-endpoint": ["text", "tables", "formulas", "captions"]
+      }
+    },
+    {
+      "case_id": "scanned_ocr",
+      "expected_capabilities": ["ocr", "reading_order"],
+      "route_capabilities": {
+        "pypdf": [],
+        "official-agent": ["ocr", "reading_order"],
+        "custom-endpoint": ["ocr", "reading_order"]
+      }
+    }
+  ]
+}

@@ -31,14 +31,16 @@ Local files are read in place by default. Absolute paths are not written into pu
 
 Use `--copy-attachments` only when a self-contained project copy is required. Copies are written below `references/local_attachments/`, addressed by the source hash, and the original logical locator and hash remain in the record. The option does not grant permission to copy a source library into a public repository.
 
-PDF quick reading uses the core `pypdf` path. For complex layouts, install the optional profile and run:
+PDF quick reading uses the core `pypdf` path. The core wheel also contains an official MinerU Agent connector, but it is called only after a project-scoped consent, document-class, size, and page-limit check. A user-provided custom endpoint takes precedence over the official route. The legacy `mineru` extra is a no-op compatibility alias; it does not install local models. For a connector-compatible install and a parse run:
 
 ```powershell
-python -m pip install -e ".[mineru]"
+python -m pip install -e ".[mineru-agent]"
 python -m draftpaper_cli.cli parse-literature-document --project <project> --input <paper.pdf>
 ```
 
-The adapter records the input hash, parser, parser output, fallback state, and whether the parser was available. MinerU is a document parser, not a literature index. Extracted bibliography strings are discovery candidates and require identifier resolution, metadata validation, and citation evidence before they can enter a manuscript citation plan.
+The adapter records the input hash, parser, route, consent decision, parser output, fallback state, cache state, normalized document, bounded evidence passages, and whether the parser was available. `record-remote-parser-consent` stores only a service label and allowed document classes; it never stores API keys or cookies. MinerU is a document parser, not a literature index or reasoning model. Extracted bibliography strings are discovery candidates and require identifier resolution, metadata validation, and citation evidence before they can enter a manuscript citation plan.
+
+The search stage writes `references/literature_confirmation_packet.json` and its Chinese Markdown view. Review that packet once before research-plan confirmation to retain/exclude candidates, assign ambiguous roles, accept literature gaps, and decide whether complex PDFs may be upgraded. `references/document_parse_cost_report.json` records parse routes and downstream context estimates; raw MinerU JSON is not sent to an LLM context by default.
 
 ## Coverage Review
 

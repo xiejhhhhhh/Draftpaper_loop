@@ -1,6 +1,6 @@
 {
   "schema_version": "dpl.extension_host_capabilities.v1",
-  "core_version": "0.33.1",
+  "core_version": "0.35.0",
   "abi_family": "dpl.extension",
   "abi_versions": ["1.0"],
   "stage_taxonomy_version": "1.0",

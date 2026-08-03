@@ -8,6 +8,7 @@ from typing import Any
 
 from .project_scaffold import _write_json
 from .project_state import load_project
+from .literature_relevance import classify_content_roles
 
 
 ROLE_NAMES = ("problem_gap", "data_provenance", "method", "evaluation_standard", "baseline", "limitations")
@@ -21,22 +22,8 @@ def _read_json(path: Path, fallback: Any) -> Any:
 
 
 def _roles(item: dict[str, Any]) -> set[str]:
-    roles: set[str] = set()
-    contexts = {str(value).lower() for value in (item.get("search_contexts") or [item.get("search_context") or "idea"])}
-    if contexts & {"idea", "introduction"}:
-        roles.add("problem_gap")
-    if "data" in contexts:
-        roles.add("data_provenance")
-    if "methods" in contexts:
-        roles.add("method")
-    text = " ".join(str(item.get(key) or "") for key in ("title", "abstract", "evidence_notes")).lower()
-    if any(token in text for token in ("metric", "evaluation", "benchmark", "statistical", "confidence interval")):
-        roles.add("evaluation_standard")
-    if any(token in text for token in ("baseline", "comparison", "state of the art", "benchmark")):
-        roles.add("baseline")
-    if any(token in text for token in ("limitation", "uncertainty", "future work", "caveat")):
-        roles.add("limitations")
-    return roles
+    role_evidence = item.get("role_evidence") if isinstance(item.get("role_evidence"), dict) else classify_content_roles(item)
+    return {role for role, evidence in role_evidence.items() if isinstance(evidence, dict) and evidence.get("supported")}
 
 
 def review_literature_coverage(project: str | Path) -> dict[str, Any]:
@@ -49,6 +36,7 @@ def review_literature_coverage(project: str | Path) -> dict[str, Any]:
     counts = {role: 0 for role in ROLE_NAMES}
     source_counts: dict[str, int] = {}
     records = []
+    query_intended_only = 0
     for item in items:
         source_types = set()
         for record in item.get("source_records") or []:
@@ -60,9 +48,22 @@ def review_literature_coverage(project: str | Path) -> dict[str, Any]:
         roles = sorted(_roles(item))
         for role in roles:
             counts[role] += 1
-        records.append({"citation_key": item.get("bibtex_key", ""), "title": item.get("title", ""), "roles": roles, "source_types": sorted(source_types)})
+        role_evidence = item.get("role_evidence") if isinstance(item.get("role_evidence"), dict) else classify_content_roles(item)
+        if not roles and any(str(value).lower() in {"data", "methods", "idea", "introduction"} for value in (item.get("search_contexts") or [item.get("search_context") or "idea"])):
+            query_intended_only += 1
+        records.append({
+            "citation_key": item.get("bibtex_key", ""),
+            "title": item.get("title", ""),
+            "roles": roles,
+            "role_evidence": role_evidence,
+            "source_types": sorted(source_types),
+            "candidate_state": item.get("candidate_state") or "unknown",
+        })
     gaps = [role for role, count in counts.items() if count == 0]
-    provider_report = _read_json(references_dir / "search_queries.json", {}).get("provider_router", {})
+    provider_report = _read_json(references_dir / "literature_provider_report.json", {})
+    if not provider_report:
+        provider_report = _read_json(references_dir / "search_queries.json", {}).get("provider_router", {})
+    rejection_report = _read_json(references_dir / "literature_rejection_report.json", {})
     report = {
         "schema_version": "dpl.literature_coverage.v1",
         "status": "review_required" if gaps else "covered",
@@ -71,17 +72,22 @@ def review_literature_coverage(project: str | Path) -> dict[str, Any]:
         "source_counts": source_counts,
         "gaps": gaps,
         "provider_router": provider_report,
+        "rejection_report": rejection_report,
+        "query_intended_only_count": query_intended_only,
         "records": records,
-        "policy": "role_based_review_not_total_count_gate",
+        "policy": "content_based_role_review_not_query_context_or_total_count_gate",
     }
     _write_json(references_dir / "literature_coverage.json", report)
     lines = ["# Literature Coverage Review", "", f"Status: **{report['status']}**", f"References: **{len(items)}**", "", "## Role coverage", "", "| Role | Count |", "|---|---:|"]
     lines.extend(f"| {role} | {counts[role]} |" for role in ROLE_NAMES)
     lines.extend(["", "## Source coverage", "", "| Source type | Count |", "|---|---:|"])
     lines.extend(f"| {source} | {count} |" for source, count in sorted(source_counts.items()))
+    lines.extend(["", f"Query-intended but not content-supported: **{query_intended_only}**"])
     if gaps:
         lines.extend(["", "## Gaps requiring user review", "", *[f"- `{gap}` has no supporting reference role in the current pool." for gap in gaps]])
     lines.extend(["", "This report identifies missing roles; it does not auto-cite a reference or claim that a provider failure proves absence of literature.", ""])
     (references_dir / "literature_coverage.md").write_text("\n".join(lines), encoding="utf-8")
-    return {"status": report["status"], "project_path": str(state.path), "output": "references/literature_coverage.json", "markdown": "references/literature_coverage.md", "gaps": gaps, "role_counts": counts, "source_counts": source_counts}
+    from .literature_confirmation import build_literature_confirmation_packet
 
+    build_literature_confirmation_packet(state.path)
+    return {"status": report["status"], "project_path": str(state.path), "output": "references/literature_coverage.json", "markdown": "references/literature_coverage.md", "gaps": gaps, "role_counts": counts, "source_counts": source_counts}

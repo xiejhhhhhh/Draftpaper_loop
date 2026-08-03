@@ -379,6 +379,7 @@ def dispatch_compat_command(args: Any) -> int:
                 zotero_context=args.zotero_context,
                 zotero_min_items=args.zotero_min_items,
                 zotero_supplement=not args.no_zotero_supplement,
+                include_online=args.include_online,
             )
         except (ValueError, ZoteroAdapterError) as exc:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False), file=sys.stderr)

@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.33.1。** 当前 release 强化了 Result Support v3、证据绑定的作者补全、Agent/CLI 合同同步、严格修改分类和多源文献注册表。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
+**当前版本：v0.35.0。** 当前 release 新增全学科 Query Contract、中文/英文混合检索、学科与语言感知的 provider 规划、内容相关性与角色覆盖门禁、解析器无关的 PDF 证据链、集中式文献确认包，以及按质量触发的 pypdf → 官方 MinerU Agent/自建 endpoint 路由。核心 wheel 仍保持本地优先，不安装或部署本地 MinerU 模型。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
 
 ## 核心科研能力
 
@@ -53,6 +53,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - **v0.14-v0.20：学科插件与结果支撑链。** 引入数据连接器、方法模板、review rules、插件充分性、AcademicForge/GitHub 候选补齐、跨学科执行账本和 Results 后学科审查。
 - **v0.21-v0.28：科学叙事与证据语义。** 引入 Paper Narrative Engine、章节证据包、自由写作与 Scientific Editor、run/cohort/estimand 绑定、语义图表合同、独立盲审和可复现审稿包。
 - **v0.28.1-v0.33：事务、发布与精确恢复。** 完成 artifact DAG、统一 CommandSpec、科学非零退出状态、作者补全事务、稳定段落定位、跨期刊/跨平台 wheel 回归、Result Support v3 和 release hash 绑定。
+- **v0.34-v0.35：全学科文献质量与文档证据。** Query Contract v2 保留多语言主题锚点，provider 按学科和语言规划，相关性与角色覆盖由内容证据决定，本地 PDF 规范化为绑定 work identity 的 evidence passage。pypdf 是默认路径；官方 MinerU Agent 只在授权且满足质量条件时升级；自建 CPU/GPU MinerU 只通过通用 endpoint 合同和部署建议支持。
 
 版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
 
@@ -256,9 +257,18 @@ draftpaper add-literature-source --project <project> --type local-folder --path 
 draftpaper collect-literature --project <project>
 draftpaper reconcile-literature --project <project>
 draftpaper review-literature-coverage --project <project>
+draftpaper record-remote-parser-consent --project <project> --decision project --service official-agent --document-class published-public
+draftpaper parse-literature-document --project <project> --input <paper.pdf> --document-class published-public
+draftpaper benchmark-literature-quality --output docs/benchmarks/literature_quality.json
+draftpaper benchmark-document-parsers --output docs/benchmarks/document_parser_quality.json
 ```
 
-本地 PDF 文件夹以及 BibTeX/RIS/JSON 文件会以 `local_import` 来源保留；在线检索、Zotero、手工记录和继承记录会在 HTML 文献索引及来源筛选器中区分显示。PDF 默认优先使用 `pypdf`，复杂排版或扫描文档可以选择调用 MinerU。MinerU 是可选的本地文档解析器，不是检索引擎，也不是核心 wheel 依赖；解析出的段落必须经过元数据和证据核验，不能因为本地存在 PDF 就自动加入引用。
+本地 PDF 文件夹以及 BibTeX/RIS/JSON 文件会以 `local_import` 来源保留；在线检索、Zotero、手工记录和继承记录会在 HTML 文献索引及来源筛选器中区分显示。PDF 默认优先使用本地 `pypdf`，复杂排版或扫描文档可以在满足条件时调用官方 MinerU Agent。Agent connector 已随核心 wheel 提供，但不会静默上传：必须先有项目级授权、公开文献类别和服务限制检查。用户提供的 MinerU endpoint 会优先于官方服务。自建 MinerU 和 GPU 部署不由 Draftpaper-loop 安装或运维，只提供通用 endpoint 合同、选型和利弊说明。MinerU 是文档解析器，不是检索引擎或推理模型；解析出的段落必须经过元数据和证据核验，不能因为本地存在 PDF 就自动加入引用。
+
+<!-- capability:cross_discipline_literature_and_document_quality -->
+<!-- capability-meta: id=cross_discipline_literature_and_document_quality; status=implemented; since=0.35 -->
+文献 loop 会先写入多语言 Query Contract、provider 执行报告、相关性/拒绝报告、角色覆盖报告和一个 `literature_confirmation_packet`，再进入研究蓝图。每个本地或远程解析都会写入 normalized document、parse receipt、work identity 绑定、有限 evidence passages、上下文/token 估算，并在 HTML 索引中分开显示文献来源和解析器来源。`pypdf` 是完整离线路径；MinerU 路由失败时无损回退。
+<!-- /capability:cross_discipline_literature_and_document_quality -->
 
 Zotero 示例：
 
@@ -317,6 +327,7 @@ draftpaper confirm-final-manuscript --project <project> --release-hash <sha256>
 - `pip install -e .`：minimal 控制面、项目状态、参考文献和基础 PDF/图像检查。
 - `pip install -e ".[plotting]"`：真实论文常用的 NumPy、pandas、Matplotlib 等绘图与分析入口。
 - `pip install -e ".[fulltext]"`：增强 PDF/全文提取。
+- `pip install -e ".[mineru-agent]"` 或兼容旧名的 `.[mineru]`：不安装本地模型；官方 Agent connector 已在 core 中。只有需要用户自建 endpoint 时，才由用户在 Draftpaper-loop 外部安装和部署本地 MinerU。
 - `pip install -e ".[mcp]"`：本地 stdio MCP。
 - `draftpaper doctor --json`：识别当前档位、缺失模块和恢复命令。
 - `draftpaper token-report --project <project>`：汇总已有 token/cost receipt。
@@ -444,11 +455,17 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 图表由 [star-history/star-history](https://github.com/star-history/star-history) 提供。
 
 ## 最近更新
-### v0.33.1?2026-07-25?-- ???????
+### v0.35.0（2026-08-03）-- 全学科文献质量发布
 
-- ???? `dpl.extension` ABI 1.0 capability ???entry-point ??????? workflow event??????????????????write-scope ?? receipt ????????
-- ??????????? ABI capability ????????????? Core patch??????????????????????
-- ?? Core ???????????????????????????? Pack ???? Community ??????
+- `v0.33.2` 修复在线检索开关透传、自动候选的最终文献数量限制和 fallback 查询的主题锚点保留；provider 执行报告区分跳过、降级、空结果、缓存和成功。
+- `v0.34.0-v0.34.1` 新增 Query Contract v2、中文/英文混合 tokenizer、学科/语言 provider 规划、内容相关性硬门禁、拒绝原因和基于内容的角色覆盖；缺失角色会集中写入一个人工确认包。
+- `v0.34.2-v0.34.3` 新增 parser-neutral normalized document、work identity 绑定、页/块 evidence passage、上下文预算、解析成本 receipt、项目级远程授权、官方 MinerU Agent 路由、自建 endpoint 优先级、缓存复用和 pypdf 回退；核心 wheel 不安装或部署本地 MinerU/GPU 环境。
+- M4 发布验证覆盖八个冻结学科主题、四类 PDF 版面、三条解析路由合同、wheel/安装档位、秘密信息/provenance 检查以及自动生成 CLI/风险文档。冻结 fixture 验证工作流合同，不代表在线 provider 或真实科研性能。
+### v0.33.1（2026-07-25）-- 扩展能力 ABI 与社区插件边界
+
+- 新增 `dpl.extension` ABI 1.0 capability、entry-point 发现、workflow event、write-scope 和 receipt 合同。
+- 扩展能力通过 ABI capability 注册，不要求修改 Core patch；插件可按 capability 级别声明所需权限和输出。
+- 明确 Core、Pack 和 Community 扩展的兼容边界，避免把社区插件能力误认为核心科研证据。
 
 ### v0.33.0（2026-07-19）-- Strict 作者补全与 Hash 绑定 Result Support
 

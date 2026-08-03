@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Any
 
 from .paper_fetch_adapter import enrich_with_paper_fetch
-from .literature_providers import provider_status_report, search_provider_router
+from .literature_providers import aggregate_provider_runs, provider_status_report, search_provider_router
+from .literature_language import tokenize_multilingual
+from .literature_query_contract import build_query_contract, write_query_contract
 from .literature_sources import collect_registered_sources
 from .project_state import load_project
 from .references import domain_anchor_terms, domain_title_overlap, has_sufficient_metadata_or_pdf, normalize_reference_items, tokenize_for_relevance, write_reference_outputs
@@ -53,7 +55,8 @@ def _keywords_from_text(text: str, limit: int = 14) -> str:
     }
     tokens = []
     seen = set()
-    for token in re.findall(r"[A-Za-z][A-Za-z0-9-]{2,}", text or ""):
+    raw_tokens = re.findall(r"[A-Za-z][A-Za-z0-9-]{1,}|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]{2,}", text or "")
+    for token in raw_tokens:
         lowered = token.lower()
         if lowered in stopwords or lowered in seen or len(lowered) > 36:
             continue
@@ -121,6 +124,8 @@ def _idea_phrases(text: str, *, limit: int = 6) -> list[str]:
         elif len(words) > 5:
             candidates.append(" ".join(words[:5]))
             candidates.append(" ".join(words[-4:]))
+    for span in re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]{2,}", raw):
+        candidates.append(span)
     keyword_tokens = _keywords_from_text(raw, limit=10).split()
     if len(keyword_tokens) >= 2:
         candidates.extend(
@@ -128,6 +133,9 @@ def _idea_phrases(text: str, *, limit: int = 6) -> list[str]:
             for width in (3, 2)
             for index in range(0, len(keyword_tokens) - width + 1, width)
         )
+    if not candidates:
+        multilingual = sorted(tokenize_multilingual(raw), key=lambda value: (-len(value), value))
+        candidates.extend(multilingual[:limit])
     return _unique_terms(candidates, limit=limit)
 
 
@@ -329,7 +337,7 @@ def _data_terms(data_text: str) -> str:
         "crystal structure",
     ]
     found = []
-    lowered = data_text.lower()
+    lowered = data_text.lower().replace("_", " ")
     for term in allowed:
         if term.lower() in lowered:
             found.append(term)
@@ -347,6 +355,9 @@ def _topic_data_terms(idea: str, discipline: str, extracted: str) -> list[str]:
         ("spectro", "spectroscopic measurement catalog"),
         ("x-ray", "X-ray source catalog light curve spectral features"),
         ("light curve", "irregular light curve dataset"),
+        ("light_curve", "irregular light curve dataset"),
+        ("spectrum", "spectral measurement dataset"),
+        ("multi_band", "multi-band photometric dataset"),
         ("rna", "gene expression count matrix and sample metadata"),
         ("clinical", "clinical cohort outcome table"),
         ("geograph", "geospatial raster vector observation dataset"),
@@ -453,7 +464,7 @@ def build_context_search_queries(project: str | Path, query: str | None = None) 
             query_id="data_single_01",
             context="data",
             discipline=discipline,
-            idea_terms=[],
+            idea_terms=idea_terms[:1] or [idea_query],
             data_terms=data_term_list[:1],
             combination_level="single_fallback",
         ),
@@ -461,7 +472,7 @@ def build_context_search_queries(project: str | Path, query: str | None = None) 
             query_id="methods_single_01",
             context="methods",
             discipline=discipline,
-            idea_terms=[],
+            idea_terms=idea_terms[:1] or [idea_query],
             method_terms=method_term_list[:1],
             combination_level="single_fallback",
         ),
@@ -534,7 +545,8 @@ def _query_tokens(query: str, limit: int = 6) -> list[str]:
     stopwords = {"using", "based", "with", "from", "data", "model", "models", "study", "research"}
     tokens = []
     seen = set()
-    for token in re.findall(r"[A-Za-z][A-Za-z0-9-]{2,}", query):
+    raw_tokens = re.findall(r"[A-Za-z][A-Za-z0-9-]{1,}|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]{2,}", query)
+    for token in raw_tokens:
         lowered = token.lower()
         if lowered not in stopwords and lowered not in seen:
             tokens.append(token)
@@ -823,6 +835,8 @@ def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]
     plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
     discipline = ""
     idea = ""
+    contract = search_queries.get("query_contract") if isinstance(search_queries.get("query_contract"), dict) else {}
+    anchors = [str(value).strip() for value in contract.get("must_preserve_terms") or [] if str(value).strip()]
     data_terms: list[str] = []
     method_terms: list[str] = []
     for entry in plan:
@@ -839,12 +853,15 @@ def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]
         for value in components.get("methods") or []:
             if str(value) not in method_terms:
                 method_terms.append(str(value))
+    if not idea and anchors:
+        idea = anchors[0]
     if not discipline:
         discipline = "scholarly research"
+    topic_anchor = " ".join([discipline, idea, *anchors[:2]]).strip()
     candidates = [
-        ("introduction_fallback_broad_01", "introduction", "single_fallback", f"{discipline} {idea}".strip()),
-        ("data_fallback_broad_01", "data", "single_fallback", f"{discipline} {(data_terms or ['dataset provenance sample construction'])[0]}".strip()),
-        ("methods_fallback_broad_01", "methods", "single_fallback", f"{discipline} {(method_terms or ['reproducible statistical analysis'])[0]}".strip()),
+        ("introduction_fallback_topic_01", "introduction", "topic_preserving_fallback", f"{topic_anchor}".strip()),
+        ("data_fallback_topic_01", "data", "topic_preserving_fallback", f"{topic_anchor} {(data_terms or ['data provenance sample construction'])[0]}".strip()),
+        ("methods_fallback_topic_01", "methods", "topic_preserving_fallback", f"{topic_anchor} {(method_terms or ['reproducible statistical analysis'])[0]}".strip()),
     ]
     if len(data_terms) > 1:
         candidates.append(("data_fallback_broad_02", "data", "single_fallback", f"{discipline} {data_terms[1]}".strip()))
@@ -852,12 +869,12 @@ def _fallback_query_plan(search_queries: dict[str, Any]) -> list[dict[str, Any]]
         candidates.append(("methods_fallback_broad_02", "methods", "single_fallback", f"{discipline} {method_terms[1]}".strip()))
     if "high-energy" in discipline.lower() or "x-ray" in discipline.lower():
         candidates.extend([
-            ("methods_fallback_astronomy_01", "methods", "single_fallback", "astronomical time series classification machine learning"),
-            ("methods_fallback_astronomy_02", "methods", "single_fallback", "astronomical light curve transformer classification"),
-            ("methods_fallback_astronomy_03", "methods", "single_fallback", "astronomical light curve foundation model time domain astronomy"),
-            ("data_fallback_astronomy_01", "data", "single_fallback", "Einstein Probe WXT source classification"),
-            ("data_fallback_astronomy_02", "data", "single_fallback", "X-ray transient source catalog light curve spectral feature"),
-            ("introduction_fallback_astronomy_01", "introduction", "single_fallback", "high-energy transient astronomy machine learning classification"),
+            ("methods_fallback_astronomy_01", "methods", "topic_preserving_fallback", f"{topic_anchor} astronomical time series classification machine learning"),
+            ("methods_fallback_astronomy_02", "methods", "topic_preserving_fallback", f"{topic_anchor} astronomical light curve transformer classification"),
+            ("methods_fallback_astronomy_03", "methods", "topic_preserving_fallback", f"{topic_anchor} astronomical light curve foundation model time domain astronomy"),
+            ("data_fallback_astronomy_01", "data", "topic_preserving_fallback", f"{topic_anchor} Einstein Probe WXT source classification"),
+            ("data_fallback_astronomy_02", "data", "topic_preserving_fallback", f"{topic_anchor} X-ray transient source catalog light curve spectral feature"),
+            ("introduction_fallback_astronomy_01", "introduction", "topic_preserving_fallback", f"{topic_anchor} high-energy transient astronomy machine learning classification"),
         ])
     return [
         {
@@ -1018,6 +1035,10 @@ def search_literature_for_project(
     final_query = build_search_query(project, query)
     search_queries = build_context_search_queries(project, query)
     state = load_project(project)
+    query_contract = build_query_contract(project, query)
+    query_contract_path = write_query_contract(project, query_contract)
+    search_queries["query_contract"] = query_contract
+    search_queries["query_contract_path"] = query_contract_path
     zotero_manifest: dict[str, Any] | None = None
     items: list[dict[str, Any]] = []
     source_collection_report: dict[str, Any] = {"status": "not_loaded", "item_count": 0, "source_reports": []}
@@ -1114,7 +1135,7 @@ def search_literature_for_project(
                     per_query_limit = min(limit, 2)
                 context_items = search_free_literature(context_query, limit=per_query_limit)
                 if specialized_enabled and context_query.lower() not in specialized_queries:
-                    specialized_items, provider_report = search_provider_router(context_query, limit=per_query_limit)
+                    specialized_items, provider_report = search_provider_router(context_query, limit=per_query_limit, query_contract=query_contract)
                     for specialized_item in specialized_items:
                         specialized_item["search_context"] = context
                         specialized_item["search_query"] = context_query
@@ -1160,7 +1181,7 @@ def search_literature_for_project(
                 fallback_limit = min(limit, 2) if context in {"data", "methods"} else min(limit, 6)
                 context_items = search_free_literature(context_query, limit=fallback_limit)
                 if specialized_enabled and context_query.lower() not in specialized_queries:
-                    specialized_items, provider_report = search_provider_router(context_query, limit=fallback_limit)
+                    specialized_items, provider_report = search_provider_router(context_query, limit=fallback_limit, query_contract=query_contract)
                     for specialized_item in specialized_items:
                         specialized_item["search_context"] = context
                         specialized_item["search_query"] = context_query
@@ -1194,8 +1215,10 @@ def search_literature_for_project(
     if lineage_seeds:
         items = [*lineage_seeds, *list(items or [])]
     search_queries["lineage_reference_seeds"] = lineage_report
+    specialized_reports = search_queries.get("provider_router_runs") if isinstance(search_queries.get("provider_router_runs"), list) else []
+    search_queries["provider_execution_report"] = aggregate_provider_runs([*provider_queries, *specialized_reports])
     _write_json(state.path / "references" / "literature_source_collection.json", source_collection_report)
-    result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries)
+    result = write_reference_outputs(project, list(items or []), query=final_query, search_queries=search_queries, limit=limit)
     if from_json:
         provider_status = "offline_fallback"
         source_mode = "local_json"
@@ -1219,6 +1242,7 @@ def search_literature_for_project(
         "external_item_count": external_item_count,
         "lineage_item_count": len(lineage_seeds),
         "final_item_count": int(result.get("item_count") or 0),
+        "provider_execution": search_queries.get("provider_execution_report"),
         "queries": provider_queries,
     }
     provider_report_path = state.path / "references" / "literature_provider_report.json"

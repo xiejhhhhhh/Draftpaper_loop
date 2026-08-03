@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.33.1"
+version = "0.35.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
@@ -43,9 +43,10 @@ plotting-full = [
   "reportlab>=4",
   "scikit-plot>=0.3.7",
 ]
-mineru = [
-  "mineru",
-]
+# The official MinerU Agent connector is part of the core package.  This
+# compatibility alias intentionally installs no local model or GPU runtime.
+mineru = []
+mineru-agent = []
 fulltext = [
   "beautifulsoup4",
   "cachetools",

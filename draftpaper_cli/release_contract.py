@@ -42,6 +42,8 @@ REQUIRED_CLI_COMMANDS = (
     "assess-result-support",
     "apply-result-downgrade",
     "prepare-result-rescue",
+    "benchmark-literature-quality",
+    "benchmark-document-parsers",
 )
 
 

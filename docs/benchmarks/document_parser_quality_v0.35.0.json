@@ -1,0 +1,202 @@
+{
+  "schema_version": "dpl.document_parser_benchmark.v1",
+  "status": "passed",
+  "case_count": 4,
+  "routes": [
+    "pypdf",
+    "official-agent",
+    "custom-endpoint"
+  ],
+  "route_summary": {
+    "pypdf": {
+      "capability_recall": 0.2222,
+      "schema_valid_case_rate": 1.0,
+      "evidence_locator_count": 12
+    },
+    "official-agent": {
+      "capability_recall": 1.0,
+      "schema_valid_case_rate": 1.0,
+      "evidence_locator_count": 16
+    },
+    "custom-endpoint": {
+      "capability_recall": 1.0,
+      "schema_valid_case_rate": 1.0,
+      "evidence_locator_count": 16
+    }
+  },
+  "cases": [
+    {
+      "case_id": "born_digital_single_column",
+      "expected_capabilities": [
+        "metadata",
+        "text"
+      ],
+      "routes": {
+        "pypdf": {
+          "provided_capabilities": [
+            "metadata",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 3,
+          "mode": "frozen_route_contract"
+        },
+        "official-agent": {
+          "provided_capabilities": [
+            "metadata",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        },
+        "custom-endpoint": {
+          "provided_capabilities": [
+            "metadata",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        }
+      }
+    },
+    {
+      "case_id": "scientific_two_column",
+      "expected_capabilities": [
+        "reading_order",
+        "sections"
+      ],
+      "routes": {
+        "pypdf": {
+          "provided_capabilities": [
+            "text"
+          ],
+          "capability_recall": 0.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 3,
+          "mode": "frozen_route_contract"
+        },
+        "official-agent": {
+          "provided_capabilities": [
+            "reading_order",
+            "sections",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        },
+        "custom-endpoint": {
+          "provided_capabilities": [
+            "reading_order",
+            "sections",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        }
+      }
+    },
+    {
+      "case_id": "tables_formulas",
+      "expected_capabilities": [
+        "captions",
+        "formulas",
+        "tables"
+      ],
+      "routes": {
+        "pypdf": {
+          "provided_capabilities": [
+            "text"
+          ],
+          "capability_recall": 0.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 3,
+          "mode": "frozen_route_contract"
+        },
+        "official-agent": {
+          "provided_capabilities": [
+            "captions",
+            "formulas",
+            "tables",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        },
+        "custom-endpoint": {
+          "provided_capabilities": [
+            "captions",
+            "formulas",
+            "tables",
+            "text"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        }
+      }
+    },
+    {
+      "case_id": "scanned_ocr",
+      "expected_capabilities": [
+        "ocr",
+        "reading_order"
+      ],
+      "routes": {
+        "pypdf": {
+          "provided_capabilities": [],
+          "capability_recall": 0.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 3,
+          "mode": "frozen_route_contract"
+        },
+        "official-agent": {
+          "provided_capabilities": [
+            "ocr",
+            "reading_order"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        },
+        "custom-endpoint": {
+          "provided_capabilities": [
+            "ocr",
+            "reading_order"
+          ],
+          "capability_recall": 1.0,
+          "normalized_schema": "dpl.normalized_document.v1",
+          "schema_valid": true,
+          "evidence_locator_count": 4,
+          "mode": "frozen_route_contract"
+        }
+      }
+    }
+  ],
+  "deployment_required": false,
+  "mode": "frozen_route_contract",
+  "note": "This deterministic fixture measures route capability declarations and normalized-schema/evidence-locator contracts; it is not a live MinerU accuracy benchmark and does not require MinerU deployment."
+}

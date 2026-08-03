@@ -1,0 +1,103 @@
+{
+  "schema_version": "dpl.literature_quality_benchmark.v1",
+  "status": "passed",
+  "topic_count": 8,
+  "mean_precision_at_10": 1.0,
+  "mean_off_discipline_contamination_rate": 0.0,
+  "thresholds": {
+    "precision_at_10": 0.8,
+    "off_discipline_contamination_rate": 0.1
+  },
+  "topics": [
+    {
+      "topic_id": "zh_digital_village",
+      "candidate_count": 3,
+      "selected_count": 2,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Digital village development and rural governance",
+        "数字乡村建设与农村治理现代化"
+      ]
+    },
+    {
+      "topic_id": "medicine_checkpoint",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Immune checkpoint inhibitor adverse events"
+      ]
+    },
+    {
+      "topic_id": "ml_molecular",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Graph neural networks for molecular property prediction"
+      ]
+    },
+    {
+      "topic_id": "astronomy_tde",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "X-ray tidal disruption event inference"
+      ]
+    },
+    {
+      "topic_id": "remote_sensing_crop",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Satellite crop yield estimation"
+      ]
+    },
+    {
+      "topic_id": "materials_stability",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Perovskite solar cell stability"
+      ]
+    },
+    {
+      "topic_id": "economics_digital_finance",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Digital finance and rural household income"
+      ]
+    },
+    {
+      "topic_id": "law_algorithmic_governance",
+      "candidate_count": 2,
+      "selected_count": 1,
+      "rejected_count": 1,
+      "precision_at_10": 1.0,
+      "off_discipline_contamination_rate": 0.0,
+      "selected_titles": [
+        "Algorithmic governance and administrative accountability"
+      ]
+    }
+  ],
+  "mode": "offline_frozen_fixture"
+}

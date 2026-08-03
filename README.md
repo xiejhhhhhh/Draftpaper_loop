@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.33.1.** This release adds a capability-negotiated extension host, non-blocking workflow events, scoped artifact reads, extension status projection, and the multi-source literature registry while retaining the v0.33.0 evidence and author-completion protections. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
+**Current release: v0.35.0.** This release adds cross-discipline query contracts, language/discipline-aware provider planning, content-based relevance and role gates, parser-neutral PDF evidence, a project-scoped literature confirmation packet, and a conditional pypdf → official MinerU Agent/custom-endpoint route. The core wheel remains local-first and does not install or deploy a local MinerU model. See [Recent Updates](#recent-updates) for release history; the rest of this README is organized by research task.
 
 ## Core Research Capabilities
 
@@ -53,6 +53,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - **v0.14-v0.20: discipline plugins and result support.** Data connectors, method templates, review rules, plugin sufficiency, AcademicForge/GitHub candidate rescue, cross-discipline execution ledgers, and post-Results discipline review.
 - **v0.21-v0.28: scientific narrative and evidence semantics.** Paper Narrative Engine, section evidence packets, free composition plus Scientific Editor, run/cohort/estimand binding, semantic figure contracts, independent review, and reproducibility bundles.
 - **v0.28.1-v0.33: transactions, release, and exact recovery.** Artifact DAG, unified CommandSpec, scientific non-zero exits, author-completion transactions, stable paragraph locators, cross-journal/cross-platform wheel regression, Result Support v3, and release-hash binding.
+- **v0.34-v0.35: cross-discipline literature quality and document evidence.** Query Contract v2 preserves multilingual topic anchors, provider routing follows discipline and language, relevance and role coverage are content-based, and local PDFs are normalized into work-bound evidence passages. pypdf remains the default; official MinerU Agent is an authorized, quality-triggered upgrade, while self-hosted CPU/GPU MinerU is represented only by a generic endpoint contract and deployment guidance.
 
 Version numbers explain capability origin. Daily use follows the current research question and project state; `status`, `doctor`, and `run-pipeline` recommend the next action.
 
@@ -256,9 +257,18 @@ draftpaper add-literature-source --project <project> --type local-folder --path 
 draftpaper collect-literature --project <project>
 draftpaper reconcile-literature --project <project>
 draftpaper review-literature-coverage --project <project>
+draftpaper record-remote-parser-consent --project <project> --decision project --service official-agent --document-class published-public
+draftpaper parse-literature-document --project <project> --input <paper.pdf> --document-class published-public
+draftpaper benchmark-literature-quality --output docs/benchmarks/literature_quality.json
+draftpaper benchmark-document-parsers --output docs/benchmarks/document_parser_quality.json
 ```
 
-Local PDF folders and BibTeX/RIS/JSON files are retained as `local_import` sources; online results, Zotero items, manual records, and inherited records remain distinguishable in the HTML literature index and source filters. PDF parsing uses `pypdf` when sufficient and can optionally call MinerU for complex or scanned documents. MinerU is an optional local document parser, not a search engine and not a core wheel dependency; extracted passages are candidates for metadata/evidence review and are never auto-cited solely because a PDF exists.
+Local PDF folders and BibTeX/RIS/JSON files are retained as `local_import` sources; online results, Zotero items, manual records, and inherited records remain distinguishable in the HTML literature index and source filters. PDF parsing uses `pypdf` as the local default and can conditionally call the official MinerU Agent for eligible complex or scanned documents. The Agent connector is included in the core wheel, but it never uploads silently: a project-scoped consent record, public-document class, and provider limits are checked first. A user-provided MinerU endpoint takes precedence over the official route. Self-hosted MinerU and GPU deployment are not installed or operated by Draftpaper-loop; the endpoint contract and selection guidance are provided for privacy or high-volume users. MinerU is a document parser, not a search engine or reasoning model; extracted passages are candidates for metadata/evidence review and are never auto-cited solely because a PDF exists.
+
+<!-- capability:cross_discipline_literature_and_document_quality -->
+<!-- capability-meta: id=cross_discipline_literature_and_document_quality; status=implemented; since=0.35 -->
+The literature loop writes a multilingual Query Contract, provider execution report, relevance/rejection report, role-coverage report, and one `literature_confirmation_packet` before planning. Every local or remote parse writes a normalized document, a parser receipt, a work-identity binding, bounded evidence passages, context/token estimates, and a source/parser distinction in the HTML index. `pypdf` is the complete offline path; MinerU routes are conditional and failure-safe.
+<!-- /capability:cross_discipline_literature_and_document_quality -->
 
 Zotero example:
 
@@ -317,6 +327,7 @@ Release order is author completion and precise revision → final citation audit
 - `pip install -e .`: minimal control plane, project state, references, and basic PDF/image inspection.
 - `pip install -e ".[plotting]"`: NumPy, pandas, Matplotlib, and standard scientific plotting/analysis entry points.
 - `pip install -e ".[fulltext]"`: enhanced PDF and full-text extraction.
+- `pip install -e ".[mineru-agent]"` or the legacy `.[mineru]` alias: no extra local model; the official Agent connector is already in core. Install and deploy a local MinerU runtime separately only when a user-managed endpoint is needed.
 - `pip install -e ".[mcp]"`: local stdio MCP.
 - `draftpaper doctor --json`: detect the current profile, missing modules, and recovery commands.
 - `draftpaper token-report --project <project>`: summarize recorded token/cost receipts.
@@ -444,6 +455,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
 
 ## Recent Updates
+### v0.35.0 (2026-08-03) -- Cross-discipline Literature Quality Release
+
+- `v0.33.2` fixes online-search flag propagation, final reference-limit enforcement for automatic candidates, and topic-anchor preservation in fallback queries. Provider execution reports distinguish skipped, degraded, empty, cached, and successful runs.
+- `v0.34.0-v0.34.1` add Query Contract v2, CJK/English tokenization, discipline/language provider planning, content-based relevance hard gates, rejection reasons, and role coverage that cannot be inferred from query context alone. Missing roles become explicit gaps in a single human confirmation packet.
+- `v0.34.2-v0.34.3` add parser-neutral normalized documents, work-identity binding, page/block evidence passages, context budgets, parse-cost receipts, project-scoped remote consent, official MinerU Agent routing, custom-endpoint precedence, cache reuse, and pypdf fallback for remote failures. The core wheel does not install or deploy local MinerU/GPU infrastructure.
+- M4 release validation includes eight frozen discipline topics, four PDF layout classes, three parser-route contract reports, wheel/install-profile checks, secret/provenance checks, and generated CLI/risk documentation. Frozen fixtures validate workflow contracts and are not claims about live provider or scientific performance.
+
 ### v0.33.1 (2026-07-25) -- Evolutionary Extension Host
 
 - Added the public `dpl.extension` ABI 1.0 capability document, entry-point discovery, semantic workflow events, project-confined read grants, non-blocking extension dispatch, write-scope audit receipts, and extension status projection.

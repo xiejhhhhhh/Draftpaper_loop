@@ -15,6 +15,8 @@ from html import unescape
 from pathlib import Path
 from typing import Any
 
+from .literature_language import tokenize_multilingual
+
 from .html_utils import write_html_report
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -34,6 +36,13 @@ REFERENCE_OUTPUTS = [
     "references/reference_duplicate_report.json",
     "references/literature_source_registry.json",
     "references/literature_source_collection.json",
+    "references/query_contract.json",
+    "references/literature_candidates.jsonl",
+    "references/literature_relevance_report.json",
+    "references/literature_rejection_report.json",
+    "references/literature_confirmation_packet.json",
+    "references/literature_confirmation_packet.zh-CN.md",
+    "references/unresolved_reference_tasks.json",
 ]
 
 MAX_REFERENCE_ITEMS = 30
@@ -160,6 +169,17 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "lineage_title_domain_overlap": [str(value) for value in (item.get("lineage_title_domain_overlap") or []) if str(value)],
         "lineage_requires_current_citation_audit": bool(item.get("lineage_requires_current_citation_audit")),
         "_lineage_runtime_verified": bool(item.get("_lineage_runtime_verified")),
+        "candidate_state": str(item.get("candidate_state") or "").strip(),
+        "rejection_codes": [str(value) for value in (item.get("rejection_codes") or []) if str(value).strip()],
+        "topic_relevance_score": float(item.get("topic_relevance_score") or 0),
+        "discipline_match_score": float(item.get("discipline_match_score") or 0),
+        "role_evidence_score": float(item.get("role_evidence_score") or 0),
+        "metadata_completeness_score": float(item.get("metadata_completeness_score") or 0),
+        "evidence_readiness_score": float(item.get("evidence_readiness_score") or 0),
+        "topic_hits": [str(value) for value in (item.get("topic_hits") or []) if str(value).strip()],
+        "discipline_hypotheses": [str(value) for value in (item.get("discipline_hypotheses") or []) if str(value).strip()],
+        "role_evidence": item.get("role_evidence") if isinstance(item.get("role_evidence"), dict) else {},
+        "evidence_passages": [dict(value) for value in (item.get("evidence_passages") or []) if isinstance(value, dict)],
     }
     if normalized["reference_origin"] == "parent_lineage_curated" and not normalized["_lineage_runtime_verified"]:
         normalized["reference_origin"] = normalized["lineage_previous_origin"] or "unverified_lineage_carryover"
@@ -226,11 +246,7 @@ def tokenize_for_relevance(text: str) -> set[str]:
         "study", "research", "paper", "method", "methods", "model", "models",
         "data", "analysis", "classification", "framework",
     }
-    return {
-        token
-        for token in re.findall(r"[a-zA-Z][a-zA-Z0-9-]{2,}", (text or "").lower())
-        if token not in stopwords
-    }
+    return {token for token in tokenize_multilingual(text) if token not in stopwords and len(token) >= 2}
 
 
 def rank_text_to_score(rank_text: str) -> float:
@@ -1031,6 +1047,9 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
         )
         field_provenance = json.dumps(item.get("field_provenance") or {}, ensure_ascii=False, sort_keys=True)
         parse_receipts = json.dumps(item.get("document_parses") or [], ensure_ascii=False, sort_keys=True)
+        parse_route = "n/a"
+        if item.get("document_parses") and isinstance(item.get("document_parses")[0], dict):
+            parse_route = str(item.get("document_parses")[0].get("route") or item.get("document_parses")[0].get("parser") or "n/a")
         filename = f"{index:02d}_{_safe_filename(item.get('bibtex_key', ''), 'paper')}.html"
         relative = f"references/literature_summaries/{filename}"
         html = f"""<!doctype html>
@@ -1058,6 +1077,8 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Local file ID</th><td>{escape(item.get('local_file_id') or 'n/a')}</td></tr>
     <tr><th>Metadata status</th><td>{escape(item.get('metadata_status') or 'unknown')}</td></tr>
     <tr><th>PDF/parser status</th><td>{escape(item.get('pdf_read_status') or 'not_parsed')} ({escape(item.get('local_parser_version') or item.get('local_parser') or 'n/a')})</td></tr>
+    <tr><th>Parser route</th><td>{escape(parse_route)}</td></tr>
+    <tr><th>Candidate state</th><td>{escape(item.get('candidate_state') or 'unknown')}</td></tr>
     <tr><th>Selection policy</th><td>{escape(item.get('selection_policy') or 'ranked_by_relevance_and_authority')}</td></tr>
     <tr><th>Authors/year</th><td>{escape(', '.join(item.get('authors') or ['Unknown author']))} ({escape(str(item.get('year') or 'n.d.'))})</td></tr>
     <tr><th>Venue</th><td>{escape(item.get('publication') or 'n/a')}</td></tr>
@@ -1071,6 +1092,7 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Relevance to Study</th><td>{escape(str(item.get('relevance_score', 0)))}</td></tr>
     <tr><th>Journal authority</th><td>{escape(str(item.get('journal_score', 0)))} {escape(', '.join(item.get('journal_rank_labels') or []))}</td></tr>
     <tr><th>Citation authority</th><td>{escape(str(item.get('citation_authority_score', 0)))}</td></tr>
+    <tr><th>Topic / discipline / role evidence</th><td>{escape(str(item.get('topic_relevance_score', 0)))} / {escape(str(item.get('discipline_match_score', 0)))} / {escape(str(item.get('role_evidence_score', 0)))}</td></tr>
     <tr><th>DOI / URL</th><td>{_reference_links_html(item)}</td></tr>
   </table>
   <h2>Query provenance</h2>
@@ -1106,6 +1128,8 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
             f"<td>{escape(item.get('local_file_id') or 'n/a')}</td>"
             f"<td>{escape(item.get('metadata_status') or 'unknown')}</td>"
             f"<td>{escape(item.get('pdf_read_status') or 'not_parsed')}</td>"
+            f"<td>{escape(parse_route)}</td>"
+            f"<td>{escape(item.get('candidate_state') or 'unknown')}</td>"
             f"<td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td>"
             f"<td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td>"
             f"<td>{escape(item.get('search_query_id') or 'n/a')}</td>"
@@ -1135,7 +1159,7 @@ function filterSources() {{
 <label for="source-filter">Filter by source: </label>
 <select id="source-filter" onchange="filterSources()"><option value="">all</option>{source_options_html}</select>
 <table border="1" cellpadding="6" cellspacing="0">
-<thead><tr><th>#</th><th>Title</th><th>Citation key</th><th>Source categories</th><th>Origin</th><th>Zotero collection</th><th>Local locator</th><th>File ID</th><th>Metadata</th><th>PDF/parser</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Retention</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr></thead>
+<thead><tr><th>#</th><th>Title</th><th>Citation key</th><th>Source categories</th><th>Origin</th><th>Zotero collection</th><th>Local locator</th><th>File ID</th><th>Metadata</th><th>PDF/parser</th><th>Parser route</th><th>Candidate state</th><th>Context</th><th>Search query</th><th>Query ID</th><th>Combination</th><th>Retention</th><th>Citation weight</th><th>Relevance</th><th>Journal authority</th></tr></thead>
 <tbody>
 """ + "\n".join(index_rows) + "\n</tbody></table>\n</body>\n</html>\n"
     (summary_dir / "index.html").write_text(index_html, encoding="utf-8")
@@ -1158,24 +1182,65 @@ def _set_reference_manifest_outputs(project_path: Path) -> None:
     _write_json(manifest_path, manifest)
 
 
-def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *, query: str = "", search_queries: dict[str, Any] | None = None) -> dict[str, Any]:
+def write_reference_outputs(
+    project: str | Path,
+    items: list[dict[str, Any]],
+    *,
+    query: str = "",
+    search_queries: dict[str, Any] | None = None,
+    limit: int = MAX_REFERENCE_ITEMS,
+) -> dict[str, Any]:
     """Write normalized references, BibTeX, citation evidence, and review notes."""
     state = load_project(project)
     references_dir = state.path / "references"
     references_dir.mkdir(parents=True, exist_ok=True)
 
     project_text = " ".join([state.metadata.get("idea", ""), state.metadata.get("field", ""), query])
+    active_search_queries = search_queries or {"idea": query}
+    candidates = list(items or [])
+    rejected: list[dict[str, Any]] = []
+    contract = active_search_queries.get("query_contract") if isinstance(active_search_queries, dict) else None
+    if isinstance(contract, dict):
+        from .literature_relevance import apply_relevance_gate
+
+        candidates, rejected = apply_relevance_gate(candidates, contract)
+    _write_json(references_dir / "literature_relevance_report.json", {
+        "schema_version": "dpl.literature_relevance_report.v1",
+        "contract_schema": contract.get("schema_version") if isinstance(contract, dict) else None,
+        "candidate_count": len(candidates) + len(rejected),
+        "accepted_count": len(candidates),
+        "rejected_count": len(rejected),
+        "accepted": [
+            {
+                "title": item.get("title", ""),
+                "candidate_state": item.get("candidate_state", ""),
+                "topic_relevance_score": item.get("topic_relevance_score", 0),
+                "discipline_match_score": item.get("discipline_match_score", 0),
+                "role_evidence_score": item.get("role_evidence_score", 0),
+            }
+            for item in candidates
+        ],
+    })
     normalized = select_references_by_context(
-        items,
+        candidates,
         project_text=project_text,
         target_journal=state.metadata.get("target_journal", ""),
-        limit=MAX_REFERENCE_ITEMS,
+        limit=max(0, int(limit)),
     )
     normalized = [enrich_pdf_text(item) for item in normalized]
     normalized = [item for item in normalized if has_readable_evidence(item) or _is_zotero_reference(item)]
     normalized = [{**item, "deep_summary": analyze_reference_item(item)} for item in normalized]
     _write_json(references_dir / "literature_items.json", normalized)
-    _write_json(references_dir / "search_queries.json", search_queries or {"idea": query})
+    (references_dir / "literature_candidates.jsonl").write_text(
+        "\n".join(json.dumps(item, ensure_ascii=False, sort_keys=True) for item in candidates) + ("\n" if candidates else ""),
+        encoding="utf-8",
+    )
+    _write_json(references_dir / "literature_rejection_report.json", {
+        "schema_version": "dpl.literature_rejection_report.v1",
+        "rejected_count": len(rejected),
+        "rejections": rejected,
+    })
+    _write_json(references_dir / "search_queries.json", active_search_queries)
     source_registry = references_dir / "literature_source_registry.json"
     if not source_registry.exists():
         _write_json(source_registry, {"schema_version": "dpl.literature_source_registry.v1", "sources": [], "source_count": 0})
@@ -1189,6 +1254,10 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
     write_html_report(references_dir / "literature_review_notes.html", review_notes, title="Literature Review Notes")
     html_outputs = write_literature_html_summaries(references_dir, normalized)
 
+    from .literature_confirmation import build_literature_confirmation_packet
+
+    build_literature_confirmation_packet(state.path)
+
     update_stage_status(state.path, "references", "draft")
     from .bibliography import build_reference_registry
 
@@ -1199,5 +1268,9 @@ def write_reference_outputs(project: str | Path, items: list[dict[str, Any]], *,
         "project_path": str(state.path),
         "item_count": len(normalized),
         "bibliography": bibliography,
-        "outputs": REFERENCE_OUTPUTS + [item for item in html_outputs if item not in REFERENCE_OUTPUTS],
+        "outputs": REFERENCE_OUTPUTS + [item for item in html_outputs if item not in REFERENCE_OUTPUTS] + [
+            "references/literature_candidates.jsonl",
+            "references/literature_relevance_report.json",
+            "references/literature_rejection_report.json",
+        ],
     }

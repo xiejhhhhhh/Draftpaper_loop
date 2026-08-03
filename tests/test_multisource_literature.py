@@ -34,7 +34,7 @@ def test_search_aggregates_json_zotero_local_and_online_sources() -> None:
         json_file = root / "manual.json"
         json_file.write_text(json.dumps([_reference("Manual source", "10.1000/manual", "manual")]), encoding="utf-8")
         zotero = dict(_reference("Zotero source", "10.1000/zotero", "zotero_collection"), reference_origin="existing_zotero")
-        online = _reference("Online source", "10.1000/online", "openalex")
+        online = _reference("Online image classification benchmark", "10.1000/online", "openalex")
         with patch("draftpaper_cli.literature_search.fetch_zotero_collection_items", return_value=([zotero], {"status": "loaded", "matched_collection": "C", "usable_item_count": 1})), patch(
             "draftpaper_cli.literature_search.search_free_literature", return_value=[]
         ), patch("draftpaper_cli.literature_search.search_provider_router", return_value=([online], {"status": "loaded"})), patch(
@@ -42,7 +42,7 @@ def test_search_aggregates_json_zotero_local_and_online_sources() -> None:
         ):
             search_literature_for_project(project, from_json=json_file, zotero_collection="C", zotero_supplement=False, include_online=True)
         items = json.loads((project / "references" / "literature_items.json").read_text(encoding="utf-8"))
-        assert {item["title"] for item in items} == {"Local source", "Manual source", "Zotero source", "Online source"}
+        assert {item["title"] for item in items} == {"Local source", "Manual source", "Zotero source", "Online image classification benchmark"}
         source_categories = {category for item in items for category in item["source_records"][0].get("source_type", "").split("|")}
         assert {"local_import", "manual", "zotero", "online_search"} <= source_categories
         index = (project / "references" / "literature_summaries" / "index.html").read_text(encoding="utf-8")

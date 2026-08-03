@@ -14,13 +14,15 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable
 
+from .literature_provider_planner import PROVIDER_PROFILES, plan_provider_ids
+
 
 PROVIDER_MANIFEST: tuple[dict[str, Any], ...] = (
-    {"id": "openalex", "disciplines": ["general", "social_science", "humanities"], "identifier_types": ["doi", "openalex_id"], "credential": None},
-    {"id": "pubmed", "disciplines": ["medicine", "life_science", "bioinformatics"], "identifier_types": ["pmid", "doi"], "credential": None},
-    {"id": "europe_pmc", "disciplines": ["medicine", "life_science", "bioinformatics"], "identifier_types": ["pmid", "pmcid", "doi"], "credential": None},
-    {"id": "dblp", "disciplines": ["computer_science", "machine_learning"], "identifier_types": ["dblp_key", "doi"], "credential": None},
-    {"id": "nasa_ads", "disciplines": ["astronomy", "astrophysics", "physics"], "identifier_types": ["bibcode", "doi", "arxiv"], "credential": "NASA_ADS_API_TOKEN"},
+    {"id": "openalex", "disciplines": ["general", "social_science", "economics", "humanities", "geography", "law", "materials_science"], "languages": ["zh-CN", "en"], "roles": PROVIDER_PROFILES["openalex"]["roles"], "identifier_types": ["doi", "openalex_id"], "credential": None, "default_enabled": True},
+    {"id": "pubmed", "disciplines": ["medicine", "life_science", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["pubmed"]["roles"], "identifier_types": ["pmid", "doi"], "credential": None, "default_enabled": False},
+    {"id": "europe_pmc", "disciplines": ["medicine", "life_science", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["europe_pmc"]["roles"], "identifier_types": ["pmid", "pmcid", "doi"], "credential": None, "default_enabled": False},
+    {"id": "dblp", "disciplines": ["computer_science", "machine_learning"], "languages": ["en"], "roles": PROVIDER_PROFILES["dblp"]["roles"], "identifier_types": ["dblp_key", "doi"], "credential": None, "default_enabled": False},
+    {"id": "nasa_ads", "disciplines": ["astronomy", "astrophysics", "physics"], "languages": ["en"], "roles": PROVIDER_PROFILES["nasa_ads"]["roles"], "identifier_types": ["bibcode", "doi", "arxiv"], "credential": "NASA_ADS_API_TOKEN", "default_enabled": False},
 )
 
 
@@ -222,11 +224,28 @@ _PROVIDERS: dict[str, Callable[[str, int], list[dict[str, Any]]]] = {
 }
 
 
-def search_provider_router(query: str, *, limit: int = 10, providers: list[str] | None = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    selected = providers or [manifest["id"] for manifest in PROVIDER_MANIFEST]
+def search_provider_router(
+    query: str,
+    *,
+    limit: int = 10,
+    providers: list[str] | None = None,
+    query_contract: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    manifest_ids = [manifest["id"] for manifest in PROVIDER_MANIFEST]
+    if providers is not None:
+        selected = list(providers)
+        decisions = {provider_id: ("planned" if provider_id in selected else "not_selected") for provider_id in manifest_ids}
+    elif query_contract:
+        selected, decisions = plan_provider_ids(query_contract, manifest_ids)
+    else:
+        selected = [manifest["id"] for manifest in PROVIDER_MANIFEST if manifest.get("default_enabled")]
+        decisions = {provider_id: ("planned" if provider_id in selected else "skipped_default_disabled") for provider_id in manifest_ids}
     items: list[dict[str, Any]] = []
     statuses = []
-    for provider_id in selected:
+    for provider_id in manifest_ids:
+        if provider_id not in selected:
+            statuses.append({"provider": provider_id, "status": decisions.get(provider_id, "not_selected"), "item_count": 0})
+            continue
         function = _PROVIDERS.get(provider_id)
         if function is None:
             statuses.append({"provider": provider_id, "status": "unknown_provider", "item_count": 0})
@@ -239,13 +258,39 @@ def search_provider_router(query: str, *, limit: int = 10, providers: list[str] 
         try:
             found = function(query, min(limit, 20))
             items.extend(found)
-            statuses.append({"provider": provider_id, "status": "loaded", "item_count": len(found)})
+            statuses.append({"provider": provider_id, "status": "loaded" if found else "success_empty", "item_count": len(found)})
         except Exception as exc:  # provider failures are a normal degraded mode
             statuses.append({"provider": provider_id, "status": "degraded", "item_count": 0, "error_type": type(exc).__name__})
     return items, {
         "schema_version": "dpl.literature_provider_router.v1",
         "query": query,
+        "selected_providers": selected,
+        "execution_plan": decisions,
         "provider_status": statuses,
         "item_count": len(items),
-        "degraded": any(status.get("status") in {"degraded", "credential_missing"} for status in statuses),
+        "degraded": any(status.get("status") in {"degraded", "credential_missing", "rate_limited"} for status in statuses),
+    }
+
+
+def aggregate_provider_runs(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    """Collapse legacy and specialized router reports into one auditable view."""
+    by_provider: dict[str, dict[str, Any]] = {}
+    for report in reports:
+        if not isinstance(report, dict):
+            continue
+        rows = report.get("provider_status") or report.get("providers") or []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            provider = str(row.get("provider") or row.get("id") or "unknown")
+            target = by_provider.setdefault(provider, {"provider": provider, "runs": 0, "statuses": {}, "returned_count": 0})
+            status = str(row.get("status") or "unknown")
+            target["runs"] += 1
+            target["statuses"][status] = int(target["statuses"].get(status, 0)) + 1
+            target["returned_count"] += int(row.get("item_count") or 0)
+    return {
+        "schema_version": "dpl.literature_provider_execution.v2",
+        "run_count": len(reports),
+        "providers": sorted(by_provider.values(), key=lambda item: item["provider"]),
+        "policy": "provider_success_does_not_imply_topic_relevance",
     }
