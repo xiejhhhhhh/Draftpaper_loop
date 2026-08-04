@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="480" viewBox="0 0 1000 480" role="img" aria-labelledby="title desc">
+  <title id="title">Draftpaper_loop GitHub star history snapshot</title>
+  <desc id="desc">Cumulative GitHub stars for Draftpaper_loop from 2026-06-08 through 2026-08-04 UTC. The snapshot contains 350 stars.</desc>
+  <rect width="1000" height="480" fill="#ffffff"/>
+  <text x="86" y="27" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="600" fill="#0f172a">Draftpaper_loop GitHub star history</text>
+  <text x="966" y="27" text-anchor="end" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#64748b">snapshot: 2026-08-04 UTC</text>
+  <line x1="86" y1="392.0" x2="966" y2="392.0" stroke="#e5e7eb" stroke-width="1"/><text x="72" y="397.0" text-anchor="end" font-size="14" fill="#64748b">0</text>
+  <line x1="86" y1="294.9" x2="966" y2="294.9" stroke="#e5e7eb" stroke-width="1"/><text x="72" y="299.9" text-anchor="end" font-size="14" fill="#64748b">100</text>
+  <line x1="86" y1="197.7" x2="966" y2="197.7" stroke="#e5e7eb" stroke-width="1"/><text x="72" y="202.7" text-anchor="end" font-size="14" fill="#64748b">200</text>
+  <line x1="86" y1="100.6" x2="966" y2="100.6" stroke="#e5e7eb" stroke-width="1"/><text x="72" y="105.6" text-anchor="end" font-size="14" fill="#64748b">300</text>
+  <line x1="86" y1="52.0" x2="966" y2="52.0" stroke="#e5e7eb" stroke-width="1"/><text x="72" y="57.0" text-anchor="end" font-size="14" fill="#64748b">350</text>
+  <line x1="86" y1="392" x2="966" y2="392" stroke="#64748b" stroke-width="1"/>
+  <line x1="86" y1="52" x2="86" y2="392" stroke="#64748b" stroke-width="1"/>
+  <line x1="101.4" y1="392" x2="101.4" y2="399" stroke="#64748b" stroke-width="1"/><text x="101.4" y="422" text-anchor="middle" font-size="14" fill="#64748b">Jun 09</text>
+  <line x1="441.1" y1="392" x2="441.1" y2="399" stroke="#64748b" stroke-width="1"/><text x="441.1" y="422" text-anchor="middle" font-size="14" fill="#64748b">Jul 01</text>
+  <line x1="657.2" y1="392" x2="657.2" y2="399" stroke="#64748b" stroke-width="1"/><text x="657.2" y="422" text-anchor="middle" font-size="14" fill="#64748b">Jul 15</text>
+  <line x1="966.0" y1="392" x2="966.0" y2="399" stroke="#64748b" stroke-width="1"/><text x="966.0" y="422" text-anchor="middle" font-size="14" fill="#64748b">Aug 04</text>
+  <polyline fill="none" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" points="86.0,392.0 101.4,390.1 163.2,389.1 178.6,386.2 224.9,380.3 240.4,363.8 255.8,354.1 271.3,342.5 286.7,337.6 302.1,327.9 317.6,316.2 333.0,292.9 348.5,277.4 363.9,261.8 379.3,254.1 394.8,243.4 410.2,226.9 425.6,213.3 441.1,203.5 456.5,191.9 472.0,188.0 487.4,181.2 502.8,175.4 518.3,168.6 533.7,158.9 549.2,155.0 564.6,150.1 580.0,145.3 595.5,134.6 610.9,129.7 626.4,125.8 641.8,117.1 657.2,108.3 672.7,101.5 688.1,96.7 703.5,90.9 719.0,87.0 734.4,86.0 749.9,84.1 765.3,83.1 780.7,80.2 796.2,75.3 811.6,73.4 827.1,67.5 842.5,66.6 857.9,65.6 873.4,62.7 888.8,60.7 919.7,58.8 950.6,53.9 966.0,52.0"/>
+  <circle cx="966.0" cy="52.0" r="5" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+  <text x="956" y="38" text-anchor="end" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="600" fill="#166534">350 stars</text>
+  <text x="500" y="468" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#64748b">Date (UTC)</text>
+  <text x="20" y="222.0" text-anchor="middle" transform="rotate(-90 20 222.0)" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#64748b">Cumulative stars</text>
+</svg>

@@ -495,14 +495,10 @@ Donation supports maintenance only and does not grant commercial use rights.
 ## Star History
 
 <a href="https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&theme=dark&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
- </picture>
+  <img alt="Draftpaper_loop GitHub star history snapshot" src="./docs/assets/star-history.svg" />
 </a>
 
-Chart powered by [star-history/star-history](https://github.com/star-history/star-history).
+The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
 ### v0.37.0 (2026-08-03) -- Transparent Checkpoints and Persistent Research-Code Sources

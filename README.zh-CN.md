@@ -487,15 +487,10 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&theme=dark&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=xiejhhhhhh/Draftpaper_loop&type=date&legend=top-left&sealed_token=dN1CtctMslTFeZ1LeZWQ4_T83BRMc0kIUoiQ8p6ZkXn9NrCTuVJtGVUApL1pW3_Po3Lc8-veuyauYcxHsTO3w1sjrU9MLHTHApw9K__MRIyYH-5imlH7KQ" />
- </picture>
+  <img alt="Draftpaper_loop GitHub star history snapshot" src="./docs/assets/star-history.svg" />
 </a>
 
-图表由 [star-history/star-history](https://github.com/star-history/star-history) 提供。
+该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
 ### v0.37.0（2026-08-03）-- 阶段确认透明度与持久科研代码来源
