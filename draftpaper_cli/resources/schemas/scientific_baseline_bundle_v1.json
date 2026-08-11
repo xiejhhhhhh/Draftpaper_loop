@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "baseline_id", "parent_baseline_id", "project_id", "revision_cycle_id", "artifact_hashes", "baseline_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.scientific_baseline_bundle.v1"},
+    "baseline_id": {"type": "string"},
+    "artifact_hashes": {"type": "object"},
+    "baseline_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

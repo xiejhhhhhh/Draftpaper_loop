@@ -6,6 +6,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import hashlib
+import json
+import uuid
 
 from .change_impact import affected_stages, artifact_role_for_path, classify_change
 from .passport import (
@@ -15,11 +18,15 @@ from .passport import (
     collect_artifacts,
     load_project_passport,
     project_root,
+    read_jsonl,
     refresh_project_passport,
     utc_now,
 )
 from .project_scaffold import STAGE_ORDER
 from .project_state import ProjectStateError, load_project, mark_stages_stale
+from .scientific_baseline import load_active_baseline
+from .revision_cycle import load_active_revision_cycle
+from .state_kernel import atomic_write_json
 
 
 class ArtifactDriftError(RuntimeError):
@@ -31,6 +38,39 @@ MANAGED_STATE_ARTIFACTS = {
     "project.yaml",
     "project_system_of_record.json",
 }
+
+
+def _managed_change_metadata(root: Path) -> dict[str, dict[str, Any]]:
+    """Return declared managed-edit ownership without trusting arbitrary paths."""
+
+    rows = read_jsonl(root / ".draftpaper" / "managed_change_ledger.jsonl")
+    metadata: dict[str, dict[str, Any]] = {}
+    for receipt in rows:
+        if not isinstance(receipt, dict) or receipt.get("status") != "committed":
+            continue
+        raw_packet = str(receipt.get("packet_path") or "")
+        if not raw_packet:
+            continue
+        packet_path = (root / raw_packet).resolve()
+        try:
+            packet_path.relative_to(root.resolve())
+            packet = json.loads(packet_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(packet, dict):
+            continue
+        for relative in receipt.get("changed_paths") or []:
+            path = str(relative).replace("\\", "/")
+            if not path:
+                continue
+            metadata[path] = {
+                "writer_identity": "managed_agent_or_cli",
+                "managed_change_packet_id": packet.get("packet_id"),
+                "managed_change_packet_hash": receipt.get("packet_hash"),
+                "declared_change_class": packet.get("change_class"),
+                "revision_cycle_id": packet.get("revision_cycle_id"),
+            }
+    return metadata
 
 
 def _is_managed_state_artifact(path: str) -> bool:
@@ -196,6 +236,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
 
     stale_stages: list[str] = []
     classified_changes: list[dict[str, Any]] = []
+    managed_metadata = _managed_change_metadata(project_path)
     drift_items = [
         *drift.get("changed_artifacts", []),
         *drift.get("missing_artifacts", []),
@@ -205,6 +246,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
         path = str(item.get("path") or "")
         role, owner_stage = artifact_role_for_path(path)
         drift_kind = str(item.get("drift_kind") or "semantic_drift")
+        ownership = managed_metadata.get(path, {})
         if drift_kind == "byte_only_drift":
             classified_changes.append({
                 "path": path,
@@ -213,6 +255,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
                 "affected_stages": [],
                 "scientific_semantics_changed": False,
                 "reason": "File bytes changed while the schema-aware semantic identity remained unchanged.",
+                **ownership,
             })
             continue
         if drift_kind == "unresolved_artifact":
@@ -223,6 +266,7 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
                 "affected_stages": [],
                 "scientific_semantics_changed": None,
                 "reason": "The artifact is not registered in the role map; it is isolated for manual classification.",
+                **ownership,
             })
             continue
         before_identity = item.get("previous_semantic_sha256") or item.get("previous_sha256")
@@ -249,12 +293,59 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
             "presentation_changed": change.presentation_changed,
             "drift_kind": drift_kind,
             "reason": change.reason,
+            **ownership,
         })
         for stage in impacted:
             if stage in (state.metadata.get("stages") or {}) and stage not in stale_stages:
                 stale_stages.append(stage)
 
     stale_stages = mark_stages_stale(project_path, stale_stages)
+
+    baseline = load_active_baseline(project_path)
+    cycle = load_active_revision_cycle(project_path)
+    reconciliation_id = "reconciliation-" + uuid.uuid4().hex
+    reconciliation = {
+        "schema_version": "dpl.drift_reconciliation.v2",
+        "reconciliation_id": reconciliation_id,
+        "project_id": state.metadata.get("project_id"),
+        "compared_against_baseline_id": (baseline or {}).get("baseline_id"),
+        "compared_against_baseline_sha256": (baseline or {}).get("baseline_sha256"),
+        "status": "pending_reconciliation",
+        "changes": [
+            {
+                **item,
+                "writer_identity": item.get("writer_identity") or "external_or_unknown",
+                "expected_by_revision_cycle": bool(
+                    cycle
+                    and item.get("declared_change_class")
+                    and (
+                        not cycle.get("allowed_change_classes")
+                        or item.get("declared_change_class") in set(cycle.get("allowed_change_classes") or [])
+                    )
+                ),
+                "requires_agent_review": item.get("change_class") in {"unregistered_artifact", "unclassified"},
+                "requires_human_confirmation": item.get("change_class") in {
+                    "data_change",
+                    "method_change",
+                    "cohort_change",
+                    "cohort_or_split_change",
+                    "metric_or_count_change",
+                    "metrics_change",
+                    "claim_boundary_change",
+                    "run_change",
+                },
+                "recommended_route": "reopen_scientific_stage" if item.get("scientific_semantics_changed") else "rebuild_derived_artifacts",
+            }
+            for item in classified_changes
+        ],
+        "revision_cycle_id": (cycle or {}).get("revision_cycle_id"),
+        "affected_stages": sorted(stale_stages, key=_stage_sort_key),
+        "created_at": utc_now(),
+    }
+    reconciliation["reconciliation_sha256"] = hashlib.sha256(json.dumps(reconciliation, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    reconciliation_dir = project_path / "review" / "drift" / reconciliation_id
+    reconciliation_path = reconciliation_dir / "drift_reconciliation.json"
+    atomic_write_json(reconciliation_path, reconciliation)
 
     event = {
         "kind": "artifact_drift",
@@ -266,15 +357,107 @@ def sync_artifact_stale(project: str | Path) -> dict[str, Any]:
         "added_artifacts": drift.get("added_artifacts") or [],
         "classified_changes": classified_changes,
     }
-    append_integrity_event(project_path, event)
-    passport = refresh_project_passport(project_path, event="artifact_drift_synced")
+    append_integrity_event(project_path, event, refresh_passport=False)
+    requires_reconciliation = any(
+        item.get("change_class") not in {"byte_only_drift"}
+        for item in classified_changes
+    )
+    passport = None
+    if not requires_reconciliation:
+        passport = refresh_project_passport(project_path, event="artifact_drift_byte_only_synced")
     return {
-        "status": "synced",
+        "status": "reconciliation_required" if requires_reconciliation else "synced",
         "project_path": str(project_path),
         "stale_stages": sorted(stale_stages, key=_stage_sort_key),
         "drift": drift,
         "classified_changes": classified_changes,
+        "reconciliation_id": reconciliation_id,
+        "reconciliation_path": str(reconciliation_path.resolve()),
+        "compared_against_baseline_id": (baseline or {}).get("baseline_id"),
         "passport": str(project_path / PASSPORT_FILES["passport"]),
+        "passport_refreshed": passport is not None,
+        "artifact_count": (passport or {}).get("artifact_count", 0),
+        "preserve_pending_drift": requires_reconciliation,
+    }
+
+
+def reconcile_project_drift(
+    project: str | Path,
+    *,
+    route: str,
+    reconciliation_id: str | None = None,
+) -> dict[str, Any]:
+    """Record a guarded resolution for one external-edit reconciliation packet."""
+
+    if route not in {"adopt_as_expected_change", "rebuild_derived_artifacts", "reopen_scientific_stage"}:
+        raise ArtifactDriftError(f"Unsupported reconciliation route: {route}")
+    root = project_root(project)
+    candidates = []
+    if reconciliation_id:
+        candidates = [root / "review" / "drift" / reconciliation_id / "drift_reconciliation.json"]
+    else:
+        candidates = sorted((root / "review" / "drift").glob("*/drift_reconciliation.json"), key=lambda path: path.stat().st_mtime if path.exists() else 0)
+    if not candidates or not candidates[-1].is_file():
+        raise ArtifactDriftError("No drift reconciliation packet is available.")
+    packet_path = candidates[-1]
+    try:
+        packet = json.loads(packet_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        raise ArtifactDriftError(f"Invalid reconciliation packet: {packet_path}") from exc
+    if packet.get("status") != "pending_reconciliation":
+        raise ArtifactDriftError("Drift reconciliation packet is no longer pending.")
+    existing_resolution = packet_path.parent / "resolution_receipt.json"
+    if existing_resolution.is_file():
+        raise ArtifactDriftError("Drift reconciliation packet already has a resolution receipt.")
+    changes = [item for item in packet.get("changes") or [] if isinstance(item, dict)]
+    semantic_changes = [item for item in changes if item.get("scientific_semantics_changed") is True]
+    if route == "rebuild_derived_artifacts" and semantic_changes:
+        raise ArtifactDriftError("Derived-artifact rebuild cannot resolve data, method, run, cohort, metric, or claim drift.")
+    cycle = load_active_revision_cycle(root)
+    if route == "adopt_as_expected_change":
+        if not cycle:
+            raise ArtifactDriftError("Adopting an external change requires an open revision cycle with a declared scope.")
+        allowed = set(cycle.get("allowed_change_classes") or [])
+        undeclared = [
+            item for item in changes
+            if item.get("scientific_semantics_changed") is True
+            and (not item.get("change_class") or (allowed and item.get("change_class") not in allowed))
+        ]
+        if undeclared:
+            raise ArtifactDriftError("External scientific changes fall outside the active revision-cycle change-class scope.")
+    resolution = {
+        "schema_version": "dpl.drift_reconciliation_resolution.v1",
+        "reconciliation_id": packet.get("reconciliation_id"),
+        "reconciliation_sha256": packet.get("reconciliation_sha256"),
+        "route": route,
+        "status": "resolved" if route != "reopen_scientific_stage" else "reopen_required",
+        "requires_human_confirmation": bool(semantic_changes) or route == "reopen_scientific_stage",
+        "revision_cycle_id": (cycle or {}).get("revision_cycle_id"),
+        "created_at": utc_now(),
+    }
+    resolution["resolution_sha256"] = hashlib.sha256(json.dumps(resolution, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    resolution_path = packet_path.parent / "resolution_receipt.json"
+    atomic_write_json(resolution_path, resolution)
+    passport = refresh_project_passport(root, event=f"drift_reconciled:{route}")
+    append_integrity_event(
+        root,
+        {
+            "kind": "artifact_drift_reconciled",
+            "recorded_at": utc_now(),
+            "reconciliation_id": packet.get("reconciliation_id"),
+            "route": route,
+            "resolution_receipt": str(resolution_path.relative_to(root).as_posix()),
+            "compared_against_baseline_id": packet.get("compared_against_baseline_id"),
+        },
+    )
+    return {
+        "status": resolution["status"],
+        "project_path": str(root),
+        "route": route,
+        "reconciliation_id": packet.get("reconciliation_id"),
+        "resolution_path": str(resolution_path.resolve()),
+        "stale_stages": packet.get("affected_stages") or [],
+        "passport": str(root / PASSPORT_FILES["passport"]),
         "artifact_count": passport.get("artifact_count", 0),
     }
 

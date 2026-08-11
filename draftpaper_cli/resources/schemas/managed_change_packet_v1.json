@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "packet_id", "intent", "change_class", "changes", "packet_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.managed_change_packet.v1"},
+    "changes": {"type": "array"},
+    "packet_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

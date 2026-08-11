@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from draftpaper_cli.project_scaffold import create_project
 
@@ -26,6 +27,57 @@ def write_passing_result_support(project_path: Path) -> None:
         json.dumps({"decision": "pass", "support_level": "pass", "requires_user_decision": False}),
         encoding="utf-8",
     )
+
+
+def write_confirmable_core_evidence(project_path: Path) -> None:
+    """Build the smallest current v4 evidence set accepted by a C3 checkpoint."""
+
+    from draftpaper_cli.code_ownership import trace_figures_to_code
+    from draftpaper_cli.evidence_snapshot import confirmation_artifact_hash
+    from draftpaper_cli.passport import refresh_project_passport
+    from draftpaper_cli.project_state import update_stage_status
+
+    run_manifest = project_path / "methods" / "run_manifest.yaml"
+    run_manifest.write_text(json.dumps({"status": "success", "run_id": "run-core-test"}), encoding="utf-8")
+    plotting = project_path / "methods" / "plotting" / "make_figure.py"
+    plotting.parent.mkdir(parents=True, exist_ok=True)
+    plotting.write_text("print('figure')\n", encoding="utf-8")
+    figure = project_path / "results" / "figures" / "main.png"
+    figure.parent.mkdir(parents=True, exist_ok=True)
+    figure.write_bytes(b"approved")
+    (project_path / "results" / "figure_metadata.json").write_text(
+        json.dumps({"figures": [{"path": "results/figures/main.png", "figure_id": "Figure 1"}]}),
+        encoding="utf-8",
+    )
+    (project_path / "results" / "count_identity_report.json").write_text(
+        json.dumps({"status": "passed", "records": [{"count_record_id": "count-core-test"}]}),
+        encoding="utf-8",
+    )
+    validity_path = project_path / "results" / "result_validity_report.json"
+    validity_path.write_text(json.dumps({"decision": "pass", "resolved_run_id": "run-core-test"}), encoding="utf-8")
+    write_passing_result_support(project_path)
+    trace_figures_to_code(project_path)
+    (project_path / "core_evidence" / "core_evidence_report.json").write_text(
+        json.dumps(
+            {
+                "decision": "pass",
+                "evidence_ready_for_manuscript": True,
+                "requires_user_confirmation": True,
+                "reviewable_figures": [{"path": "results/figures/main.png"}],
+                "input_artifact_hashes": {
+                    "results/result_validity_report.json": confirmation_artifact_hash(validity_path),
+                },
+                "issues": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    # The fixture represents outputs from a completed canonical run. The
+    # trace generator correctly invalidates Methods while it writes the trace,
+    # so restore the completed state before asking for a core-evidence review.
+    for stage in ("code", "methods", "result_validity", "result_support", "core_evidence"):
+        update_stage_status(project_path, stage, "completed")
+    refresh_project_passport(project_path, event="test_confirmable_core_evidence")
 
 
 def write_formal_writing_release(project_path: Path) -> None:
@@ -71,20 +123,6 @@ def write_formal_writing_release(project_path: Path) -> None:
         "decision": "pass", "accepted_candidate_hashes": accepted_hashes,
         "evidence_snapshot_ids": [snapshot_id],
     }), encoding="utf-8")
-    (project_path / "results" / "result_support_checkpoint.md").write_text("# Result support\n", encoding="utf-8")
-    (project_path / "results" / "result_support_checkpoint.html").write_text("<html></html>", encoding="utf-8")
-    (project_path / "result_support" / "stage_manifest.json").write_text(
-        json.dumps(
-            {
-                "output_files": [
-                    "results/result_support_checkpoint.json",
-                    "results/result_support_checkpoint.md",
-                    "results/result_support_checkpoint.html",
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
 
 
 class OrchestratorPassportTests(unittest.TestCase):
@@ -202,22 +240,7 @@ class OrchestratorPassportTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Core evidence approval", field="astronomy")
-            (project.path / "results" / "figures" / "main.png").write_bytes(b"approved")
-            (project.path / "core_evidence" / "core_evidence_report.json").write_text(
-                json.dumps(
-                    {
-                        "decision": "pass",
-                        "evidence_ready_for_manuscript": True,
-                        "requires_user_confirmation": True,
-                        "reviewable_figures": [{"path": "results/figures/main.png"}],
-                        "input_artifact_hashes": {
-                            "results/figures/main.png": hashlib.sha256(b"approved").hexdigest(),
-                        },
-                        "issues": [],
-                    }
-                ),
-                encoding="utf-8",
-            )
+            write_confirmable_core_evidence(project.path)
 
             checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Review figures.")
             self.assertTrue(checkpoint["checkpoint_hash"])
@@ -372,36 +395,40 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
-            write_passing_result_support(project.path)
-            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True, "input_artifact_hashes": {"methods/run_manifest.yaml": hashlib.sha256(b'{"status":"success"}').hexdigest()}})
-            (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
-            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
-            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
-            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
+            write_confirmable_core_evidence(project.path)
+            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
+            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             write_formal_writing_release(project.path)
+            for stage in ("results", "introduction", "data_writing", "methods_writing", "discussion", "latex"):
+                update_stage_status(project.path, stage, "completed")
             refresh_project_passport(project.path, event="test_status_ready")
 
-            status = status_project(project.path)
+            # This test isolates final quality-gate routing. Its compact
+            # fixture intentionally does not reproduce every upstream Data
+            # and Methods artifact needed by the full v0.39 readiness check.
+            with mock.patch("draftpaper_cli.orchestrator._next_stage", return_value="quality_checks"):
+                status = status_project(project.path)
 
-            self.assertEqual(status["next_action"]["stage"], "quality_checks")
-            self.assertEqual(status["next_action"]["command"], "run-integrity-gate")
+                self.assertEqual(status["next_action"]["stage"], "quality_checks")
+                self.assertEqual(status["next_action"]["command"], "run-integrity-gate")
 
-            _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
-            status_after_integrity = status_project(project.path)
+                _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
+                status_after_integrity = status_project(project.path)
 
-            self.assertEqual(status_after_integrity["next_action"]["stage"], "quality_checks")
-            self.assertEqual(status_after_integrity["next_action"]["command"], "audit-citations")
+                self.assertEqual(status_after_integrity["next_action"]["stage"], "quality_checks")
+                self.assertEqual(status_after_integrity["next_action"]["command"], "audit-citations")
 
-            (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
-            _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
-            status_after_citation_audit = status_project(project.path)
+                (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
+                _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
+                status_after_citation_audit = status_project(project.path)
 
-            self.assertEqual(status_after_citation_audit["next_action"]["stage"], "quality_checks")
-            self.assertEqual(status_after_citation_audit["next_action"]["command"], "quality-check")
+                self.assertEqual(status_after_citation_audit["next_action"]["stage"], "quality_checks")
+                self.assertEqual(status_after_citation_audit["next_action"]["command"], "quality-check")
 
     def test_status_recommends_citation_repair_loop_before_quality_check(self) -> None:
         from draftpaper_cli.orchestrator import run_pipeline
@@ -440,41 +467,44 @@ class OrchestratorPassportTests(unittest.TestCase):
             _write_json(project.path / "methods" / "method_writing_context.json", {"narrative_summary": "ready"})
             (project.path / "methods" / "methods.tex").write_text("\\section{Methods}\nReady.\n", encoding="utf-8")
             (project.path / "methods" / "run_manifest.yaml").write_text('{"status":"success"}', encoding="utf-8")
-            write_passing_result_support(project.path)
-            _write_json(project.path / "core_evidence" / "core_evidence_report.json", {"decision": "pass", "workflow_coverage": {"data_supplementation": True, "data_integration": True, "method_analysis": True, "figure_production": True, "result_validity": True}, "requires_user_confirmation": True, "input_artifact_hashes": {"methods/run_manifest.yaml": hashlib.sha256(b'{"status":"success"}').hexdigest()}})
-            (project.path / "core_evidence" / "core_evidence_report.html").write_text("<html></html>", encoding="utf-8")
-            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
-            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
-            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "results" / "result_manifest.yaml", {"figures": [], "tables": [{"id": "t1", "path": "results/tables/t1.csv", "caption_draft": "T", "result_claim": "C"}]})
             (project.path / "results" / "tables" / "t1.csv").write_text("a,b\n1,2\n", encoding="utf-8")
             (project.path / "results" / "results.tex").write_text("\\section{Results}\nReady.\n", encoding="utf-8")
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
+            write_confirmable_core_evidence(project.path)
+            from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
+            resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})
             write_formal_writing_release(project.path)
+            for stage in ("results", "introduction", "data_writing", "methods_writing", "discussion", "latex"):
+                update_stage_status(project.path, stage, "completed")
             refresh_project_passport(project.path, event="test_integrity_passed_no_citation_audit")
 
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "audit-citations")
+            # Keep the test focused on the citation-repair state machine; the
+            # full upstream readiness contract is covered elsewhere.
+            with mock.patch("draftpaper_cli.orchestrator._next_stage", return_value="quality_checks"):
+                self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "audit-citations")
 
-            (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
-            _write_json(project.path / "citation_audit" / "citation_audit_report.json", {
-                "status": "failed",
-                "summary": {"unsupported": 1, "unverifiable": 0},
-            })
-            refresh_project_passport(project.path, event="test_citation_audit_failed")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "generate-citation-repair-plan")
+                (project.path / "citation_audit").mkdir(parents=True, exist_ok=True)
+                _write_json(project.path / "citation_audit" / "citation_audit_report.json", {
+                    "status": "failed",
+                    "summary": {"unsupported": 1, "unverifiable": 0},
+                })
+                refresh_project_passport(project.path, event="test_citation_audit_failed")
+                self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "generate-citation-repair-plan")
 
-            _write_json(project.path / "citation_audit" / "citation_repair_plan.json", {"status": "repair_plan_written", "issues": []})
-            refresh_project_passport(project.path, event="test_citation_repair_plan")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "apply-citation-repair")
+                _write_json(project.path / "citation_audit" / "citation_repair_plan.json", {"status": "repair_plan_written", "issues": []})
+                refresh_project_passport(project.path, event="test_citation_repair_plan")
+                self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "apply-citation-repair")
 
-            _write_json(project.path / "citation_audit" / "citation_repair_ledger.json", {"status": "applied", "applied_action_count": 1})
-            refresh_project_passport(project.path, event="test_citation_repair_applied")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "re-audit-citations")
+                _write_json(project.path / "citation_audit" / "citation_repair_ledger.json", {"status": "applied", "applied_action_count": 1})
+                refresh_project_passport(project.path, event="test_citation_repair_applied")
+                self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "re-audit-citations")
 
-            _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
-            refresh_project_passport(project.path, event="test_citation_final_passed")
-            self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "quality-check")
+                _write_json(project.path / "citation_audit" / "final_citation_audit_report.json", {"status": "passed"})
+                refresh_project_passport(project.path, event="test_citation_final_passed")
+                self.assertEqual(run_pipeline(project.path)["next_action"]["command"], "quality-check")
 
     def test_status_recommends_gate_failure_diagnosis_after_integrity_failure(self) -> None:
         from draftpaper_cli.orchestrator import status_project

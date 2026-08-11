@@ -1288,7 +1288,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     passport = load_project_passport(state.path)
     if passport.get("awaiting_checkpoint"):
         raise OrchestratorError("A checkpoint is already awaiting resume.")
-    from .checkpoint_summary import agent_artifact_paths, write_stage_summary
+    from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v4
 
     before_artifacts = load_project_passport(state.path).get("artifacts") or []
     base = {
@@ -1299,7 +1299,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "project_id": state.metadata.get("project_id"),
         "next_action": _next_action(state.path, state.metadata),
     }
-    summary = write_stage_summary(
+    summary = write_stage_summary_v4(
         state.path,
         stage=stage,
         command="checkpoint",
@@ -1318,7 +1318,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
     base["hash"] = _checkpoint_hash(base)
-    final_summary = write_stage_summary(
+    final_summary = write_stage_summary_v4(
         state.path,
         stage=stage,
         command="checkpoint",
@@ -1403,6 +1403,13 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
             raise OrchestratorError(
                 "Core evidence changed after the checkpoint was created; create and review a new checkpoint."
             )
+    from .review_policy import record_user_checkpoint_confirmation
+
+    user_receipt = record_user_checkpoint_confirmation(
+        state.path,
+        checkpoint_hash=checkpoint_hash,
+        note=note,
+    )
     resume_event = {
         "kind": "resume",
         "consumes_hash": checkpoint_hash,
@@ -1410,6 +1417,10 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         "note": note,
         "created_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
+        "decision_status": "user_confirmed",
+        "actor_type": "user",
+        "actor_id": user_receipt["receipt"].get("actor_id"),
+        "decision_receipt_id": user_receipt["receipt"].get("receipt_id"),
     }
     append_checkpoint_event(state.path, resume_event)
     promoted_snapshot = None
@@ -1426,13 +1437,124 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
             core_report["human_confirmation_subject_id"] = checkpoint.get("confirmation_subject_id")
             core_report_path.write_text(json.dumps(core_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         refresh_project_passport(state.path, event="core_evidence_resume")
+    from .scientific_baseline import create_scientific_baseline
+
+    revision_cycle_id = None
+    try:
+        from .revision_cycle import load_active_revision_cycle
+
+        active_cycle = load_active_revision_cycle(state.path)
+        if active_cycle and active_cycle.get("status") == "open":
+            revision_cycle_id = active_cycle.get("revision_cycle_id")
+    except Exception:
+        pass
+    baseline_result = create_scientific_baseline(
+        state.path,
+        decision_receipt_id=str(user_receipt["receipt"].get("receipt_id")),
+        revision_cycle_id=revision_cycle_id,
+        reason="user_confirmed_checkpoint",
+    )
+    if revision_cycle_id:
+        try:
+            from .revision_cycle import close_revision_cycle
+
+            close_revision_cycle(
+                state.path,
+                decision_receipt_id=str(user_receipt["receipt"].get("receipt_id")),
+                candidate_baseline_id=baseline_result["baseline"].get("baseline_id"),
+            )
+        except Exception:
+            # A receipt and baseline are still valid if a legacy cycle cannot
+            # be closed; the next consistency audit will expose that state.
+            pass
     status = status_project(state.path)
     return {
         "status": "resumed",
         "project_path": str(state.path),
         "consumed_checkpoint_hash": checkpoint_hash,
         "evidence_snapshot_id": (promoted_snapshot or {}).get("snapshot_id"),
+        "scientific_baseline": baseline_result,
+        "decision_receipt": user_receipt["receipt"],
         "next_action": status["next_action"],
+    }
+
+
+def resume_after_agent_review(project: str | Path, *, checkpoint_hash: str, receipt_id: str) -> dict[str, Any]:
+    """Consume only a checkpoint already approved by an active Agent delegation."""
+
+    return _resume_after_review_receipt(
+        project,
+        checkpoint_hash=checkpoint_hash,
+        receipt_id=receipt_id,
+        expected_status="agent_approved",
+        event_name="agent_review_resume",
+    )
+
+
+def resume_after_system_acknowledgement(project: str | Path, *, checkpoint_hash: str, receipt_id: str) -> dict[str, Any]:
+    """Consume a C0 notification checkpoint after its system receipt is recorded."""
+
+    return _resume_after_review_receipt(
+        project,
+        checkpoint_hash=checkpoint_hash,
+        receipt_id=receipt_id,
+        expected_status="system_acknowledged",
+        event_name="notification_checkpoint_resume",
+    )
+
+
+def _resume_after_review_receipt(
+    project: str | Path,
+    *,
+    checkpoint_hash: str,
+    receipt_id: str,
+    expected_status: str,
+    event_name: str,
+) -> dict[str, Any]:
+    state = load_project(project)
+    events = read_jsonl(state.path / PASSPORT_FILES["checkpoint_ledger"])
+    checkpoints = [event for event in events if event.get("kind") == "checkpoint" and event.get("hash") == checkpoint_hash]
+    if not checkpoints:
+        raise OrchestratorError(f"Checkpoint hash not found: {checkpoint_hash}")
+    if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
+        raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
+    from .review_policy import decision_receipt_for_checkpoint, evaluate_checkpoint_authority
+
+    authority = evaluate_checkpoint_authority(state.path, checkpoint_hash=checkpoint_hash)
+    if expected_status == "agent_approved" and not authority.get("can_agent_review"):
+        raise OrchestratorError("Agent resume is not authorized for this checkpoint.")
+    if expected_status == "system_acknowledged" and authority.get("status") != "notify_only":
+        raise OrchestratorError("Only a notify-only checkpoint can auto-continue after system acknowledgement.")
+    receipt = decision_receipt_for_checkpoint(state.path, checkpoint_hash)
+    if not receipt or receipt.get("receipt_id") != receipt_id or receipt.get("decision_status") != expected_status:
+        raise OrchestratorError(f"Resume requires the matching {expected_status} decision receipt.")
+    checkpoint = checkpoints[-1]
+    from .checkpoint_summary import validate_checkpoint_summary
+
+    validation = validate_checkpoint_summary(state.path, checkpoint)
+    if not validation.get("valid"):
+        raise OrchestratorError("Checkpoint summary is stale; create a new review package before automatic resume.")
+    resume_event = {
+        "kind": "resume",
+        "consumes_hash": checkpoint_hash,
+        "stage": checkpoint.get("stage"),
+        "note": "continued after delegated Agent review" if expected_status == "agent_approved" else "continued after notification acknowledgement",
+        "created_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "decision_status": expected_status,
+        "actor_type": receipt.get("actor_type"),
+        "actor_id": receipt.get("actor_id"),
+        "decision_receipt_id": receipt_id,
+    }
+    append_checkpoint_event(state.path, resume_event)
+    refresh_project_passport(state.path, event=event_name)
+    return {
+        "status": "resumed_after_agent_review" if expected_status == "agent_approved" else "resumed_after_system_acknowledgement",
+        "project_path": str(state.path),
+        "consumed_checkpoint_hash": checkpoint_hash,
+        "decision_status": expected_status,
+        "decision_receipt_id": receipt_id,
+        "next_action": status_project(state.path)["next_action"],
     }
 
 

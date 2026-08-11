@@ -26,7 +26,7 @@ def _core_version() -> str:
     try:
         return version("draftpaper-cli")
     except PackageNotFoundError:
-        return "0.37.0"
+        return "0.39.0"
 
 
 def build_host_capabilities(*, core_version: str | None = None) -> HostCapabilities:

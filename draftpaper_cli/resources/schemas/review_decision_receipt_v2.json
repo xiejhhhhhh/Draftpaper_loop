@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "receipt_id", "checkpoint_hash", "decision_status", "actor_type", "authority_source", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.review_decision_receipt.v2"},
+    "decision_status": {"enum": ["system_acknowledged", "agent_approved", "user_confirmed", "rejected", "refinement_required"]},
+    "actor_type": {"enum": ["agent", "user", "system"]},
+    "summary_sha256": {"type": ["string", "null"]},
+    "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
+    "stage": {"type": "string"},
+    "runtime_fingerprint": {"type": ["string", "null"]},
+    "receipt_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

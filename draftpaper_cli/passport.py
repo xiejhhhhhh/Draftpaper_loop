@@ -376,7 +376,8 @@ def append_checkpoint_event(project: str | Path, event: dict[str, Any]) -> None:
     _write_passport(project_path, event=str(event.get("kind") or "checkpoint"))
 
 
-def append_integrity_event(project: str | Path, event: dict[str, Any]) -> None:
+def append_integrity_event(project: str | Path, event: dict[str, Any], *, refresh_passport: bool = True) -> None:
     project_path = project_root(project)
     _append_jsonl(project_path / PASSPORT_FILES["integrity_ledger"], event)
-    _write_passport(project_path, event=str(event.get("kind") or "integrity"))
+    if refresh_passport:
+        _write_passport(project_path, event=str(event.get("kind") or "integrity"))

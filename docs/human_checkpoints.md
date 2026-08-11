@@ -1,8 +1,9 @@
 # Human Checkpoint Packages
 
-The current checkpoint contract is `dpl.checkpoint_summary.v3`. v1/v2
-summaries remain readable for audit, but are `legacy_unqualified` and cannot
-provide a confirmation command or resume old scientific state.
+The current checkpoint contract is `dpl.checkpoint_summary.v4`. v1/v2
+summaries remain readable for audit, and v3 packages remain read-compatible;
+legacy packages are not upgraded in place. v4 adds review requirement,
+decision actor, StageActivityBundle, and scientific-baseline references.
 
 Draftpaper-loop pauses for a human decision only after it has written one
 portable checkpoint package. The package is offline and reviewable without the
@@ -12,6 +13,7 @@ CLI or a web service:
 review/checkpoints/<checkpoint_id>/
 ├── stage_summary.zh-CN.html
 ├── stage_summary.json
+├── stage_activity_bundle.json
 ├── artifact_manifest.json
 ├── confirmation_request.json
 ├── change_report.json
@@ -26,11 +28,25 @@ targets, confirmation meaning, rejection route, and the exact confirmation
 command. Each path is shown relative to the project and, in the Agent response,
 as an absolute path on the current machine.
 
-The v3 summary explicitly records `identity`, `core_metrics`, `sample_flow`,
-`review_state`, `confirmation_contract`, and the recovery route. The HTML,
-JSON, and Agent payload are projections of the same summary facts. `confirmable`
-means that the machine contract passed; it does not mean that the user has
-confirmed the scientific interpretation.
+The v4 summary explicitly records `identity`, `core_metrics`, `sample_flow`,
+`review_state`, `review_requirement`, `decision_status`, `decision_actor_type`,
+`stage_activity_bundle`, `baseline_refs`, `confirmation_contract`, and the
+recovery route. The HTML, JSON, and Agent payload are projections of the same
+summary facts. `confirmable` means that the machine contract passed; it does
+not mean that the user has confirmed the scientific interpretation. An
+authorized Agent decision is `agent_approved`, never `user_confirmed`; C3
+remains human-only.
+
+Checkpoint state and decision authority are separate. C0 notification packages
+are system-acknowledged and may continue automatically while remaining fully
+inspectable. C1 packages may be reviewed by an Agent only under a current,
+hash-bound delegation. C2 packages additionally require explicit scientific-
+freeze authority and an independent reviewer Agent. C3 scientific routes,
+external side effects, licenses, author identity, and release remain human-only.
+Delegation eligibility is rechecked against the policy hash, runtime identity,
+scope, revision cycle, expiry, change-class boundary, unresolved items, and
+summary validation before every Agent decision. Revocation writes a separate
+receipt and never rewrites the original delegation file.
 
 The checkpoint binds semantic and evidence identities, not report timestamps,
 HTML styling, or machine-specific absolute paths. Changing an upstream data,

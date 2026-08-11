@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.37.0
+version: 0.39.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -56,10 +56,11 @@ this writes only a migration receipt and runtime lock. If a transaction reports
 Every checkpoint must produce the portable package
 `review/checkpoints/<checkpoint_id>/stage_summary.zh-CN.html`,
 `stage_summary.json`, `artifact_manifest.json`, and `confirmation_request.json`.
-The current summary contract is `dpl.checkpoint_summary.v3`; v1/v2 packages are
-read-only legacy records and cannot be confirmed. The v3 summary, HTML, and
-Agent payload must expose the same identity, sample-flow, review state, and
-recovery route.
+The current summary contract is `dpl.checkpoint_summary.v4`; v1/v2 packages are
+read-only legacy records and v3 packages remain read-compatible. The v4
+summary, HTML, and Agent payload must expose the same identity, sample-flow,
+review requirement, decision actor, StageActivityBundle, baseline references,
+and recovery route.
 The Agent response must show project-relative and absolute paths, primary
 artifacts, unresolved issues, and the meaning of confirmation. Open the HTML
 before asking the user to confirm. It must separate unchanged deliverables
@@ -69,10 +70,19 @@ creates a non-consumable preview that changes no ledger or index and exposes no
 resume command. Stale, blocked, identity-missing, and preview pages cannot be
 confirmed.
 
-Never confirm a research plan, core evidence, claim route, plugin promotion,
-final manuscript, or revision on the user's behalf. An anonymous fixture may
-record `test_auto_confirmation=true` while testing HTML; that marker must never
-confirm a real research result or change real project state.
+Agent review may continue only inside an active, hash-bound delegation and
+must record `agent_approved`; it must never write `user_confirmed`. C0
+notification checkpoints may record a `system_acknowledged` receipt and
+continue automatically. C1 review must revalidate the policy, runtime,
+summary, scope, expiry, revision cycle, change class, unresolved-item, and
+side-effect boundaries. C2 additionally needs explicit scientific-freeze
+permission and a reviewer Agent independent of the recorded producer. C3
+scientific routes, mutually exclusive claim choices, plugin promotion,
+licenses, author identity, final manuscript, and release remain human-only.
+An anonymous fixture may record `test_auto_confirmation=true` while testing
+HTML; that marker must never confirm a real research result or change real
+project state. New projects may use `balanced`; existing projects remain
+`manual` until the owner opts in.
 
 ## Scientific boundaries and order
 

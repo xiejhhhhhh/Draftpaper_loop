@@ -18,8 +18,9 @@ from .state_kernel import atomic_write_json, atomic_write_text
 
 
 CHECKPOINT_SUMMARY_SCHEMA = "dpl.checkpoint_summary.v3"
+CHECKPOINT_SUMMARY_V4_SCHEMA = "dpl.checkpoint_summary.v4"
 LEGACY_CHECKPOINT_SUMMARY_SCHEMAS = frozenset({"dpl.checkpoint_summary.v1", "dpl.checkpoint_summary.v2"})
-CHECKPOINT_REVIEW_STATES = frozenset({"confirmable", "stale", "blocked", "preview_only"})
+CHECKPOINT_REVIEW_STATES = frozenset({"confirmable", "stale", "blocked", "preview_only", "legacy_unqualified"})
 ARTIFACT_MANIFEST_SCHEMA = "dpl.checkpoint_artifact_manifest.v2"
 CONFIRMATION_REQUEST_SCHEMA = "dpl.confirmation_request.v1"
 CHANGE_REPORT_SCHEMA = "dpl.checkpoint_change_report.v1"
@@ -73,7 +74,7 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
     schema = str(summary.get("schema_version") or "")
     if schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS:
         return [] if allow_legacy else [f"Legacy checkpoint summary is read-only: {schema}."]
-    if schema != CHECKPOINT_SUMMARY_SCHEMA:
+    if schema not in {CHECKPOINT_SUMMARY_SCHEMA, CHECKPOINT_SUMMARY_V4_SCHEMA}:
         return [f"Unsupported checkpoint summary schema: {schema or 'missing'}."]
 
     required = (
@@ -117,6 +118,8 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
         "stage_summary_sha256",
         "created_at",
     )
+    if schema == CHECKPOINT_SUMMARY_V4_SCHEMA:
+        required = (*required, "review_requirement", "decision_status", "decision_actor_type", "authority_source", "risk_class", "stage_activity_bundle", "activity_bundle_sha256", "baseline_refs", "revision_cycle_id")
     issues = [f"Missing required checkpoint summary field: {key}" for key in required if key not in summary]
     if issues:
         return issues
@@ -155,7 +158,7 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
     issues.extend(f"Checkpoint summary field must be an array: {key}" for key in list_fields if not isinstance(summary.get(key), list))
     dict_fields = ("transaction_changes", "deliverable_counts", "identity", "core_metrics", "decision_route_state", "artifact_manifest", "confirmation_contract")
     issues.extend(f"Checkpoint summary field must be an object: {key}" for key in dict_fields if not isinstance(summary.get(key), dict))
-    if summary.get("stage_status") not in {"ready_for_human_review", "blocked"}:
+    if summary.get("stage_status") not in {"ready_for_human_review", "blocked", "auto_continued"}:
         issues.append("Checkpoint summary stage_status is not recognized.")
     if summary.get("review_state") not in CHECKPOINT_REVIEW_STATES:
         issues.append("Checkpoint summary review_state is not recognized.")
@@ -166,18 +169,35 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
         for key in ("requires_user_decision", "confirmation_command_allowed", "source_of_truth", "test_auto_confirmation"):
             if key not in confirmation_contract:
                 issues.append(f"Confirmation contract is missing: {key}")
-        if confirmation_contract.get("requires_user_decision") is not True:
+        if schema == CHECKPOINT_SUMMARY_SCHEMA and confirmation_contract.get("requires_user_decision") is not True:
             issues.append("Checkpoint confirmation must always require a user decision.")
+        if schema == CHECKPOINT_SUMMARY_V4_SCHEMA and not isinstance(confirmation_contract.get("requires_user_decision"), bool):
+            issues.append("v4 confirmation requires requires_user_decision to be boolean.")
         if confirmation_contract.get("source_of_truth") != "canonical_evidence":
             issues.append("Checkpoint confirmation source_of_truth must be canonical_evidence.")
-        if confirmation_contract.get("confirmation_command_allowed") is not (summary.get("review_state") == "confirmable"):
+        expected_command_allowed = summary.get("review_state") == "confirmable" and (
+            schema == CHECKPOINT_SUMMARY_SCHEMA or summary.get("review_requirement") != "notify_only"
+        )
+        if confirmation_contract.get("confirmation_command_allowed") is not expected_command_allowed:
             issues.append("Confirmation command permission does not match review_state.")
         if confirmation_contract.get("test_auto_confirmation") is not summary.get("test_auto_confirmation"):
             issues.append("Confirmation contract test marker does not match summary.")
     if summary.get("test_auto_confirmation") and not summary.get("test_mode"):
         issues.append("test_auto_confirmation requires test_mode=true.")
     if summary.get("review_state") == "confirmable" and summary.get("stage_status") != "ready_for_human_review":
-        issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
+        if schema == CHECKPOINT_SUMMARY_SCHEMA:
+            issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
+    if schema == CHECKPOINT_SUMMARY_V4_SCHEMA:
+        if summary.get("review_requirement") not in {"notify_only", "agent_delegable", "human_required"}:
+            issues.append("v4 review_requirement is not recognized.")
+        if summary.get("decision_status") not in {"not_required", "pending", "system_acknowledged", "agent_approved", "user_confirmed", "rejected", "refinement_required"}:
+            issues.append("v4 decision_status is not recognized.")
+        if summary.get("decision_actor_type") not in {"none", "system", "agent", "user"}:
+            issues.append("v4 decision_actor_type is not recognized.")
+        if not isinstance(summary.get("stage_activity_bundle"), dict):
+            issues.append("v4 stage_activity_bundle must be an object.")
+        if not isinstance(summary.get("baseline_refs"), dict):
+            issues.append("v4 baseline_refs must be an object.")
     if summary.get("review_state") != "confirmable" and summary.get("confirmation_contract", {}).get("confirmation_command_allowed"):
         issues.append("Non-confirmable summary cannot allow a confirmation command.")
     return issues
@@ -727,6 +747,147 @@ def write_stage_summary(
     }
 
 
+def write_stage_summary_v4(
+    project: str | Path,
+    *,
+    stage: str,
+    command: str,
+    payload: dict[str, Any] | None = None,
+    before_artifacts: list[dict[str, Any]] | None = None,
+    checkpoint_id: str | None = None,
+    checkpoint_hash: str | None = None,
+    publish_index: bool = True,
+) -> dict[str, Any]:
+    """Write the current v4 review package while preserving v3 compatibility.
+
+    The v3 writer remains available for read-only legacy fixtures.  Production
+    checkpoint entry points call this adapter so JSON, HTML, and Agent output
+    share one activity bundle and one semantic summary hash.
+    """
+
+    root = project_root(project)
+    data = dict(payload or {})
+    from .stage_activity import build_stage_activity_bundle
+    from .review_policy import classify_checkpoint_risk, classify_review_requirement
+    from .scientific_baseline import load_active_baseline
+    from .revision_cycle import load_active_revision_cycle
+
+    base = write_stage_summary(
+        root,
+        stage=stage,
+        command=command,
+        payload=data,
+        before_artifacts=before_artifacts,
+        checkpoint_id=checkpoint_id,
+        checkpoint_hash=checkpoint_hash,
+        publish_index=False,
+    )
+    output_dir = root / base["project_relative_dir"]
+    summary_path = output_dir / "stage_summary.json"
+    request_path = output_dir / "confirmation_request.json"
+    agent_path = output_dir / "agent_payload.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
+    request = json.loads(request_path.read_text(encoding="utf-8-sig"))
+    activity = build_stage_activity_bundle(
+        root,
+        stage=stage,
+        command=command,
+        before_artifacts=before_artifacts,
+        activity_rows=data.get("activity_rows") if isinstance(data.get("activity_rows"), list) else None,
+        stage_goal_zh=str(summary.get("stage_purpose_zh") or ""),
+    )
+    activity_path = output_dir / "stage_activity_bundle.json"
+    atomic_write_json(activity_path, activity)
+    baseline = load_active_baseline(root)
+    cycle = load_active_revision_cycle(root)
+    from .review_policy import decision_receipt_for_checkpoint
+
+    receipt = decision_receipt_for_checkpoint(root, checkpoint_hash) if checkpoint_hash else None
+    risk_class = classify_checkpoint_risk(summary)
+    requirement = classify_review_requirement(summary)
+    decision_status = str((receipt or {}).get("decision_status") or "pending")
+    decision_actor_type = str((receipt or {}).get("actor_type") or "none")
+    authority_source = (receipt or {}).get("authority_source") or {"policy": "review_policy", "policy_mode": "manual"}
+    summary["schema_version"] = CHECKPOINT_SUMMARY_V4_SCHEMA
+    summary["stage_narrative_zh"] = activity.get("narrative_zh") or summary.get("stage_narrative_zh")
+    summary["scientific_summary_zh"] = [summary["stage_narrative_zh"]]
+    summary["review_requirement"] = requirement
+    summary["decision_status"] = decision_status
+    summary["decision_actor_type"] = decision_actor_type
+    summary["authority_source"] = authority_source
+    summary["risk_class"] = risk_class
+    summary["stage_activity_bundle"] = activity
+    summary["activity_bundle_sha256"] = activity["bundle_sha256"]
+    summary["baseline_refs"] = {
+        "active_baseline_id": (baseline or {}).get("baseline_id"),
+        "active_baseline_sha256": (baseline or {}).get("baseline_sha256"),
+        "parent_baseline_id": (baseline or {}).get("parent_baseline_id"),
+        "revision_cycle_id": (cycle or {}).get("revision_cycle_id"),
+        "revision_cycle_sha256": (cycle or {}).get("revision_cycle_sha256"),
+    }
+    summary["revision_cycle_id"] = (cycle or {}).get("revision_cycle_id")
+    summary["activity_summary_zh"] = activity.get("narrative_zh")
+    summary["generated"] = activity.get("generated") or summary.get("generated") or []
+    summary["modified"] = activity.get("modified") or summary.get("modified") or []
+    summary["unresolved"] = sorted({json.dumps(item, ensure_ascii=False, sort_keys=True) for item in [*(summary.get("unresolved") or []), *(activity.get("unresolved") or [])]})
+    summary["unresolved"] = [json.loads(item) for item in summary["unresolved"]]
+    summary["confirmation_contract"] = {
+        "requires_user_decision": requirement != "notify_only" and decision_status not in {"agent_approved", "user_confirmed", "system_acknowledged"},
+        "confirmation_command_allowed": summary.get("review_state") == "confirmable" and requirement != "notify_only" and decision_status not in {"agent_approved", "user_confirmed"},
+        "source_of_truth": "canonical_evidence",
+        "test_auto_confirmation": bool(summary.get("test_auto_confirmation")),
+    }
+    summary["stage_status"] = "auto_continued" if requirement == "notify_only" else summary.get("stage_status")
+    summary.pop("stage_summary_sha256", None)
+    summary_hash = _hash_payload(summary)
+    summary["stage_summary_sha256"] = summary_hash
+    request["summary_schema"] = CHECKPOINT_SUMMARY_V4_SCHEMA
+    request["stage_summary_sha256"] = summary_hash
+    request["review_requirement"] = requirement
+    request["decision_status"] = decision_status
+    request["requires_user_decision"] = summary["confirmation_contract"]["requires_user_decision"]
+    if not summary["confirmation_contract"]["confirmation_command_allowed"]:
+        request["confirmation_command"] = None
+    agent = json.loads(agent_path.read_text(encoding="utf-8-sig"))
+    agent.update(
+        {
+            "summary_schema": CHECKPOINT_SUMMARY_V4_SCHEMA,
+            "stage_narrative_zh": summary["stage_narrative_zh"],
+            "review_requirement": requirement,
+            "decision_status": decision_status,
+            "decision_actor_type": decision_actor_type,
+            "risk_class": risk_class,
+            "authority_source": authority_source,
+            "stage_activity_bundle": str(activity_path.resolve()),
+            "activity_bundle_sha256": activity["bundle_sha256"],
+            "baseline_refs": summary["baseline_refs"],
+            "revision_cycle_id": summary.get("revision_cycle_id"),
+            "stage_summary_sha256": summary_hash,
+            "confirmation_contract": summary["confirmation_contract"],
+        }
+    )
+    atomic_write_json(summary_path, summary)
+    atomic_write_json(request_path, request)
+    atomic_write_json(agent_path, agent)
+    atomic_write_text(output_dir / "stage_summary.zh-CN.html", _render_html(root, output_dir, summary, request))
+    if publish_index:
+        _publish_checkpoint_index(root, {**summary, "checkpoint_type": stage})
+    return {
+        **base,
+        "stage_summary_sha256": summary_hash,
+        "absolute_stage_summary_zh_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
+        "absolute_stage_summary_json": str(summary_path.resolve()),
+        "absolute_agent_payload": str(agent_path.resolve()),
+        "absolute_confirmation_request": str(request_path.resolve()),
+        "stage_activity_bundle": str(activity_path.resolve()),
+        "activity_bundle_sha256": activity["bundle_sha256"],
+        "review_requirement": requirement,
+        "decision_status": decision_status,
+        "decision_actor_type": decision_actor_type,
+        "risk_class": risk_class,
+    }
+
+
 def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = None, language: str = "zh-CN") -> dict[str, Any]:
     """Read one checkpoint summary and expose exact local paths without writing state."""
 
@@ -747,8 +908,18 @@ def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = N
     if not summary_path or not all(path is not None and path.is_file() for path in required):
         return {"status": "not_found", "project_path": str(root), "checkpoint_hash": checkpoint_hash, "language": language}
     summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
-    request_path = summary_path.parent / "confirmation_request.json"
     schema = str(summary.get("schema_version") or "")
+    request_path = summary_path.parent / "confirmation_request.json"
+    if schema == CHECKPOINT_SUMMARY_V4_SCHEMA and not (summary_path.parent / "stage_activity_bundle.json").is_file():
+        return {
+            "status": "invalid_summary",
+            "project_path": str(root),
+            "checkpoint_hash": _checkpoint_record_hash(root, selected) or checkpoint_hash,
+            "language": language,
+            "review_state": summary.get("review_state") or "unknown",
+            "reasons": ["Missing v4 stage_activity_bundle.json companion."],
+            "summary": summary,
+        }
     legacy = schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS
     contract_issues = _checkpoint_summary_contract_issues(summary)
     if not legacy and contract_issues:
@@ -786,6 +957,17 @@ def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = N
         "change_report": str(summary_path.parent.joinpath("change_report.json").resolve()),
         "unresolved_issues_report": str(summary_path.parent.joinpath("unresolved_issues.json").resolve()),
         "agent_payload": str(summary_path.parent.joinpath("agent_payload.json").resolve()),
+        "stage_activity_bundle": (
+            str(summary_path.parent.joinpath("stage_activity_bundle.json").resolve())
+            if schema == CHECKPOINT_SUMMARY_V4_SCHEMA
+            else None
+        ),
+        "review_decision_receipt": (
+            str(summary_path.parent.joinpath("review_decision_receipt.json").resolve())
+            if summary_path.parent.joinpath("review_decision_receipt.json").is_file()
+            else None
+        ),
+        "decision_status": summary.get("decision_status") or "pending",
         "primary_artifacts": summary.get("inspection_targets") or [],
         "unresolved_issues": summary.get("unresolved") or [],
     }
@@ -927,7 +1109,10 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
             reasons.append("Confirmation request is not bound to the stage summary hash.")
         if request.get("summary_schema") != summary.get("schema_version"):
             reasons.append("Confirmation request is not bound to the current summary schema.")
-        if (request.get("confirmation_command") is not None) != (summary.get("review_state") == "confirmable"):
+        expected_request_command = summary.get("review_state") == "confirmable" and (
+            schema == CHECKPOINT_SUMMARY_SCHEMA or summary.get("review_requirement") != "notify_only"
+        ) and summary.get("decision_status") not in {"agent_approved", "user_confirmed"}
+        if (request.get("confirmation_command") is not None) != expected_request_command:
             reasons.append("Confirmation request command permission does not match review_state.")
         if agent.get("stage_summary_sha256") != summary.get("stage_summary_sha256"):
             reasons.append("Agent payload is not bound to the stage summary hash.")
@@ -937,6 +1122,22 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
             reasons.append("Agent payload review_state differs from stage summary.")
         if agent.get("stage_narrative_zh") != summary.get("stage_narrative_zh"):
             reasons.append("Agent payload narrative differs from stage summary.")
+        if schema == CHECKPOINT_SUMMARY_V4_SCHEMA:
+            activity_path = path.parent / "stage_activity_bundle.json"
+            if not activity_path.is_file():
+                reasons.append("Missing v4 stage activity bundle companion.")
+            else:
+                try:
+                    stored_activity = json.loads(activity_path.read_text(encoding="utf-8-sig"))
+                except (OSError, ValueError) as exc:
+                    reasons.append(f"Invalid v4 stage activity bundle: {exc}")
+                else:
+                    if stored_activity != summary.get("stage_activity_bundle"):
+                        reasons.append("Stage activity bundle file differs from stage summary.")
+                    if stored_activity.get("bundle_sha256") != summary.get("activity_bundle_sha256"):
+                        reasons.append("Stage activity bundle hash differs from stage summary.")
+                    if agent.get("activity_bundle_sha256") != summary.get("activity_bundle_sha256"):
+                        reasons.append("Agent payload activity bundle hash differs from stage summary.")
     current = {str(item.get("path")): item for item in collect_artifacts(root) if isinstance(item, dict)}
     for item in (summary.get("artifact_manifest") or {}).get("artifacts") or []:
         relative_artifact = str(item.get("project_relative_path") or "")
@@ -971,7 +1172,7 @@ def attach_checkpoint_summary(
 
     if payload.get("stage_summary_zh_html"):
         return payload
-    report = write_stage_summary(
+    report = write_stage_summary_v4(
         project,
         stage=stage,
         command=command,

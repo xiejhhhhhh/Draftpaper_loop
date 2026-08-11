@@ -10,6 +10,8 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
+from .passport import project_root
+
 
 @dataclass(frozen=True)
 class CommandSpec:
@@ -80,6 +82,9 @@ _COMMON_MANAGED_WRITES = (
     "stage_manifests/**",
     "project_system_of_record.json",
     "review/checkpoints/**",
+    "review/consistency/**",
+    "review/drift/**",
+    "lineage/**",
     ".draftpaper/extensions/**",
 )
 
@@ -562,8 +567,19 @@ COMMAND_SPECS.update({
         protected_action=True,
         manual_only=True,
         allowed_write_globs=(
+            "idea/**",
+            "research_plan/**",
+            "references/**",
+            "data/**",
+            "methods/**",
+            "code/**",
+            "results/**",
+            "writing/**",
+            "latex/**",
+            "review/**",
             "core_evidence/**",
             "results/promoted_evidence_snapshot.json",
+            ".draftpaper/**",
             *_COMMON_MANAGED_WRITES,
         ),
     ),
@@ -664,7 +680,7 @@ COMMAND_SPECS.update({
     "verify-next-action": CommandSpec("verify-next-action", "state_kernel", False, "state", "doctor", "verify_next_action", (("project", "project"),), "status_passed"),
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),
     "start": CommandSpec("start", "state_kernel", True, "state", "workflow_macros", "start_workflow", (("root", "root"), ("idea", "idea"), ("field", "field"), ("target_journal", "target_journal"))),
-    "continue": CommandSpec("continue", "state_kernel", False, "state", "workflow_macros", "continue_workflow", (("project", "project"),)),
+    "continue": CommandSpec("continue", "state_kernel", True, "state", "workflow_macros", "continue_workflow", (("project", "project"),), allowed_write_globs=(".draftpaper/**", "review/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
     "extension-doctor": CommandSpec(
         "extension-doctor",
         "state_kernel",
@@ -751,6 +767,20 @@ COMMAND_SPECS.update({
     "record-plugin-rescue-outcome": CommandSpec("record-plugin-rescue-outcome", "capability_coordinator", True, "capabilities", "plugin_rescue", "record_plugin_rescue_outcome", (("project", "project"), ("requirement_id", "requirement_id"), ("outcome", "outcome"), ("attempted_routes", "attempted_route"), ("route_evidence", "route_evidence"), ("evidence_note", "evidence_note"))),
     "validate-command-contracts": CommandSpec("validate-command-contracts", "state_kernel", False, "state", "command_contracts", "validate_command_contracts"),
     "run-integrity-gate": CommandSpec("run-integrity-gate", "release_coordinator", True, "quality_checks", "gate_handlers", "run_integrity_gate", (("project", "project"),), "decision_pass"),
+    "configure-review-policy": CommandSpec("configure-review-policy", "state_kernel", True, "state", "review_policy", "configure_review_policy", (("project", "project"), ("mode", "mode")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", "review/**", *_COMMON_MANAGED_WRITES)),
+    "grant-agent-review": CommandSpec("grant-agent-review", "state_kernel", True, "state", "review_policy", "grant_agent_review", (("project", "project"), ("scope", "scope"), ("max_risk", "max_risk"), ("actor_id", "actor_id"), ("require_independent_agent", "require_independent_agent"), ("revision_cycle_id", "revision_cycle_id"), ("expires_at", "expires_at"), ("allowed_change_classes", "allowed_change_classes"), ("allow_scientific_freeze", "allow_scientific_freeze"), ("forbid_external_side_effects", "forbid_external_side_effects"), ("forbid_unresolved_items", "forbid_unresolved_items"), ("max_checkpoint_count", "max_checkpoint_count"), ("producer_actor_id", "producer_agent_id")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "review-policy-status": CommandSpec("review-policy-status", "state_kernel", False, "state", "review_policy", "review_policy_status", (("project", "project"),)),
+    "review-authority-shadow": CommandSpec("review-authority-shadow", "state_kernel", True, "state", "review_policy", "build_review_authority_shadow", (("project", "project"),), allowed_write_globs=("review/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "revoke-agent-review": CommandSpec("revoke-agent-review", "state_kernel", True, "state", "review_policy", "revoke_agent_review", (("project", "project"), ("reason", "reason")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "evaluate-checkpoint-authority": CommandSpec("evaluate-checkpoint-authority", "state_kernel", False, "state", "review_policy", "evaluate_checkpoint_authority", (("project", "project"), ("checkpoint_hash", "checkpoint_hash"))),
+    "review-checkpoint": CommandSpec("review-checkpoint", "state_kernel", True, "state", "review_policy", "review_checkpoint", (("project", "project"), ("checkpoint_hash", "checkpoint_hash"), ("actor", "actor"), ("actor_id", "actor_id"), ("delegation_hash", "delegation_hash"), ("reviewer_agent_id", "reviewer_agent_id"), ("decision", "decision")), allowed_write_globs=(".draftpaper/**", "review/checkpoints/**", *_COMMON_MANAGED_WRITES)),
+    "show-stage-activity": CommandSpec("show-stage-activity", "state_kernel", False, "state", "stage_activity", "show_stage_activity", (("project", "project"), ("stage", "stage"))),
+    "begin-managed-change": CommandSpec("begin-managed-change", "state_kernel", True, "state", "managed_change", "begin_managed_change", (("project", "project"), ("intent", "intent"), ("change_class", "change_class"), ("paths", "paths"), ("content_file", "content_file")), allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "apply-managed-change": CommandSpec("apply-managed-change", "state_kernel", True, "state", "managed_change", "apply_managed_change", (("project", "project"), ("packet_id", "packet_id"), ("packet_hash", "packet_hash")), allowed_write_globs=("idea/**", "research_plan/**", "references/**", "data/**", "methods/**", "code/**", "results/**", "writing/**", "latex/**", "review/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "begin-revision-cycle": CommandSpec("begin-revision-cycle", "state_kernel", True, "state", "revision_cycle", "begin_revision_cycle", (("project", "project"), ("reason", "reason"), ("requested_changes", "requested_changes"), ("allowed_change_classes", "allowed_change_classes"), ("protected_facts", "protected_facts"), ("expected_artifacts", "expected_artifacts"), ("started_by", "started_by"), ("baseline_id", "baseline_id")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "audit-longitudinal-consistency": CommandSpec("audit-longitudinal-consistency", "state_kernel", True, "quality_checks", "longitudinal_consistency", "audit_longitudinal_consistency", (("project", "project"), ("output_root", "output_root")), allowed_write_globs=("review/consistency/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "reconcile-project-drift": CommandSpec("reconcile-project-drift", "state_kernel", True, "state", "stale_sync", "reconcile_project_drift", (("project", "project"), ("route", "route"), ("reconciliation_id", "reconciliation_id")), protected_action=True, manual_only=True, allowed_write_globs=("review/drift/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "show-scientific-baseline": CommandSpec("show-scientific-baseline", "state_kernel", False, "state", "scientific_baseline", "show_scientific_baseline", (("project", "project"), ("baseline_id", "baseline_id"))),
 })
 
 
@@ -884,10 +914,28 @@ def _attach_human_checkpoint_summary(
         # Read-only diagnostics may expose an existing package, but must never
         # create or republish a checkpoint as a side effect of inspection.
         return payload
-    from .checkpoint_summary import attach_checkpoint_summary
+    from .checkpoint_summary import _payload_paths, attach_checkpoint_summary
 
+    activity_payload = dict(payload)
+    activity_payload.setdefault(
+        "activity_rows",
+        [
+            {
+                "schema_version": "dpl.workflow_trace.v2",
+                "command": command,
+                "stage": _checkpoint_stage(spec, command, payload),
+                "actor_type": "agent",
+                "actor_id": "workflow-agent",
+                "action_kind": "validate" if command.startswith(("review", "assess", "validate", "audit")) else "generate" if spec.mutates_project else "read",
+                "process_status": "completed" if status not in {"error", "failed", "blocked"} else status,
+                "output_artifact_refs": [f"artifact:{path}" for path in _payload_paths(project_root(project), payload)],
+                "validation_result_refs": [f"command:{command}"] if command.startswith(("review", "assess", "validate", "audit")) else [],
+                "user_visible_summary_fragment_zh": str(payload.get("summary") or payload.get("message") or ""),
+            }
+        ],
+    )
     return attach_checkpoint_summary(
-        payload,
+        activity_payload,
         project=project,
         stage=_checkpoint_stage(spec, command, payload),
         command=command,

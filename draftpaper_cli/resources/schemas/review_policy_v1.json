@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Draftpaper review policy",
+  "type": "object",
+  "required": ["schema_version", "mode", "agent_delegation_enabled"],
+  "properties": {
+    "schema_version": {"const": "dpl.review_policy.v1"},
+    "mode": {"enum": ["manual", "balanced", "delegated"]},
+    "agent_delegation_enabled": {"type": "boolean"},
+    "delegations": {"type": "array"}
+  },
+  "additionalProperties": true
+}

@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.37.0。** 当前版本完成了 v0.35 全学科文献基础之上的质量闭环：每个人工确认点都会生成可离线打开的中文阶段总结、产物清单、确认请求和未解决事项，并在 Agent 框中给出项目相对路径和本机绝对路径；写入前会检查源码、wheel、Python、CommandSpec、schema、workflow Skill 和插件目录的运行时身份；语义漂移会区分展示变化与数据、cohort、方法、run、指标、图表和论断证据变化；保留文献会同步补充 metadata-only 的 GitHub/Zenodo 科研代码线索；知识库模式优先选择最新稳定版本，复现模式才要求论文时期精确版本；stars、forks、论文引用量和软件引用量作为带时间戳的核心采用度/影响度排序信号展示，但不作为科学有效性证明；用户确认后的归档还必须通过 checksum、路径安全、许可证和静态检查才能进入插件晋升流程。核心 wheel 仍保持本地优先：pypdf 是默认解析器，官方 MinerU Agent 是可选路径，自建 MinerU/GPU 环境不会自动安装。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
+**当前版本：v0.39.0。** Draftpaper-loop 在已有证据优先科研工作流之上，新增分级审查权限、基于活动事实的阶段叙事和纵向漂移治理。新项目默认使用 `balanced`：通知型阶段可以自动继续；C1 需要有效的、带 hash 的 Agent delegation；C2 还需要明确的科学冻结授权和与记录中的生成者独立的审查 Agent；C3 科学选择和最终发布仍必须由人工完成。Agent 收据始终是 `agent_approved`，绝不会伪装为 `user_confirmed`。checkpoint 使用 `dpl.checkpoint_summary.v4`，通过 `StageActivityBundle` 生成由活动事实支撑的阶段叙事，说明 Agent 实际读取、分析、生成、修改、复用、验证、重试、跳过和失败的内容。不可变科学基线、修订周期、canonical fact ID、受管编辑和漂移 reconciliation 保护多轮返修，避免前后版本静默混用。核心 wheel 仍保持本地优先：pypdf 是默认解析器，官方 MinerU Agent 是可选路径，自建 MinerU/GPU 环境不会自动安装。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
 
 ## 核心科研能力
 
@@ -62,7 +62,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 **安全归档检查。** 用户单独确认下载后，系统会检查 checksum、路径逃逸、符号链接/设备文件、大小/压缩比、许可证一致性和静态结构，之后才允许进入插件晋升候选。metadata enrichment 和静态检查阶段永不执行第三方代码。
 <!-- /capability:safe_research_code_archive_inspection -->
 
-**证据身份与完整阶段审查。** 当前框架工作树会在 Result Support 或人工确认前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v3` 阶段包会通过同源的 JSON/HTML/Agent 载荷展示完整阶段产物、事务变化、sample-flow、证据身份、验证状态、恢复路线、hash，以及项目相对路径和本机绝对路径。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
+**证据身份与完整阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v4` 阶段包通过同源的 JSON/HTML/Agent 载荷展示完整阶段产物、事务变化、实际 Agent 活动、审查要求、决定主体、科学基线、证据身份、验证状态、恢复路线、hash，以及项目相对路径和本机绝对路径。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
 
 ### 从早期版本到当前框架
 
@@ -495,17 +495,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
-### v0.37.0 之后的当前工作树（尚未打 tag）-- 证据完整性与阶段审查加固
+### v0.37.1-v0.39.0（2026-08-11）-- Agent 委托审查、阶段工作叙事与纵向漂移治理
 
-package 版本仍为 `v0.37.0`；本条记录当前框架工作树的改动，不代表已经发布新的正式版本。
-
-- 新增指标、计数、聚合、主指标选择、运行证据包生命周期和图表代码追踪合同。失败的 candidate run 不能覆盖 active evidence bundle；当代码、输入、图像、metadata 或运行事务变化时，figure trace 会变为 stale。
-- 新增 identity-first 比较和 Result Support 阻断。只有 task、model、cohort、sample unit、validation design、split、metric definition 和 aggregation identity 一致时才比较数值；否则区分 non-comparable、missing、stale 和 conflict。
-- checkpoint 摘要升级为 `dpl.checkpoint_summary.v3`。中文 HTML、机器摘要、artifact manifest、confirmation request、未解决事项报告和 Agent payload 共享同一个 summary hash，并完整列出阶段范围内未变化的 manifest、生成的代码、图表、表格、报告和运行证据。
-- 新增框架级阶段作用域解析，防止 checkpoint 误吸收其他阶段的历史页面、失败 candidate、缓存结果或嵌套 checkpoint 产物。`blocked`、`stale`、`preview` 和身份缺失页面不提供确认路线；只有匿名 fixture 可以使用 `test_auto_confirmation=true` 进行界面测试。
-- 新增六阶段匿名 HTML showcase，覆盖 research plan、data、methods、Result Support、core evidence 和 quality checks。Result Support 在存在两条互斥路线时保持 blocked，证明框架不会替用户选择科学路线。
-- 验证结果：分组全量测试 `1179 passed, 2 skipped`；证据/HTML 重点回归 `25 passed`；Ruff、compileall、命令合同、release manifest、安装矩阵、隔离 wheel 安装、五领域 fixture 和对抗语义检查均通过。
-- 边界说明：fixture 和 showcase 验证的是工作流合同，不是在线 provider 输出或科研结论。正式 tag/release、CI 跨平台发布验收和真实项目人工确认仍需单独完成。
+- `v0.37.1` 将 `WorkflowTrace` 升级为 `dpl.workflow_trace.v2`，将命令事务升级为 `dpl.command_transaction.v3`，记录 Agent 实际读取、分析、生成、修改、复用、验证、重试、跳过和失败的活动事实；同时生成审查权限 shadow 报告、不可变科学基线候选和修订周期记录，默认不改变旧项目的人工决定。
+- `v0.38.0` 将 checkpoint 成果包升级为 `dpl.checkpoint_summary.v4`。中文 HTML 首屏先用有证据引用的一段话说明 Agent 本阶段做了什么，再展开逐项动作、完整产物、文件变更、验证、未解决问题、审查主体、基线和恢复路线；完整图表、表格、代码、报告与运行证据清单仍可展开查看。
+- `v0.38.0` 新增 `manual`、`balanced` 和 `delegated` 三种审查模式、项目/修订周期范围的 Agent delegation、`evaluate-checkpoint-authority`、`review-checkpoint` 和 `agent_approved` receipt。`continue` 只消费有效授权下的 C1/C2 审查；C2 还要求明确的科学冻结授权和与记录中的生成者独立的审查 Agent。C3 科学路线、最终稿、作者身份、许可证和发布仍必须由用户确认，Agent 不会伪装成 `user_confirmed`。
+- `v0.38.1` 新增 `CanonicalFactRegistry v2`、不可变 `ScientificBaselineBundle`、`RevisionCycle`、受管修改 packet、`dpl.drift_reconciliation.v2` 和跨修订一致性报告。相同事实身份的数值冲突、不同 cohort/run/split 的不可比较结果、超出本轮范围的外部修改，会分别进入冲突、不可比较或重新打开上游的恢复路线；刷新 passport 不能隐藏历史漂移。
+- `v0.39.0` 将源码、wheel、Skill 副本、schema registry、CLI 合同、README 和 release manifest 对齐为同一发布身份。发布清单登记 242 条命令、v4 checkpoint companion、v2/v3 trace 与 transaction 合同，以及跨修订治理合同。
+- 验证范围包括治理重点回归、compileall、Ruff、命令合同、release manifest 和隔离工作流 smoke test；完整 pytest、wheel 和跨平台矩阵仍需在正式 tag 前完成。fixture、shadow 报告、Agent receipt 和 HTML 成果包验证的是工作流合同与可追溯性，不代表真实科研结论，也不替代受保护科学决定的作者确认。
 
 ### v0.37.0（2026-08-03）-- 阶段确认透明度与持久科研代码来源
 

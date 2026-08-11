@@ -44,6 +44,20 @@ REQUIRED_CLI_COMMANDS = (
     "prepare-result-rescue",
     "benchmark-literature-quality",
     "benchmark-document-parsers",
+    "configure-review-policy",
+    "grant-agent-review",
+    "review-policy-status",
+    "review-authority-shadow",
+    "revoke-agent-review",
+    "evaluate-checkpoint-authority",
+    "review-checkpoint",
+    "show-stage-activity",
+    "begin-managed-change",
+    "apply-managed-change",
+    "begin-revision-cycle",
+    "audit-longitudinal-consistency",
+    "reconcile-project-drift",
+    "show-scientific-baseline",
 )
 
 
@@ -198,7 +212,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         {"status": "not_packaged", "baseline_version": "unknown", "current_count": None, "legacy_debt_count": None},
     )
     checkpoint_schema_ids = {
-        "summary": "dpl.checkpoint_summary.v3",
+        "summary": "dpl.checkpoint_summary.v4",
         "artifact_manifest": "dpl.checkpoint_artifact_manifest.v2",
         "confirmation_request": "dpl.confirmation_request.v1",
         "change_report": "dpl.checkpoint_change_report.v1",
@@ -206,7 +220,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         "agent_payload": "dpl.checkpoint_agent_payload.v1",
     }
     checkpoint_schema_files = {
-        "summary": "resources/schemas/checkpoint_summary_v3.json",
+        "summary": "resources/schemas/checkpoint_summary_v4.json",
         "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
         "confirmation_request": "resources/schemas/confirmation_request_v1.json",
         "change_report": "resources/schemas/checkpoint_change_report_v1.json",
@@ -258,6 +272,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "required_companions": [
                 "stage_summary.zh-CN.html",
                 "stage_summary.json",
+                "stage_activity_bundle.json",
                 "artifact_manifest.json",
                 "confirmation_request.json",
                 "change_report.json",
@@ -265,6 +280,18 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
                 "agent_payload.json",
             ],
             "agent_paths": ["project_relative_path", "absolute_path"],
+        },
+        "review_governance": {
+            "summary_schema": "dpl.checkpoint_summary.v4",
+            "workflow_trace_schema": "dpl.workflow_trace.v2",
+            "command_transaction_schema": "dpl.command_transaction.v3",
+            "modes": ["manual", "balanced", "delegated"],
+            "agent_decision_status": "agent_approved",
+            "user_decision_status": "user_confirmed",
+            "c3_human_only": True,
+            "immutable_baseline_schema": "dpl.scientific_baseline_bundle.v1",
+            "revision_cycle_schema": "dpl.revision_cycle.v1",
+            "fact_registry_schema": "dpl.canonical_fact_registry.v2",
         },
         "research_code_sources": {
             "providers": ["github", "zenodo"],

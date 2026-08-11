@@ -1,15 +1,21 @@
-# 人工确认点成果包
+# 分级审查点成果包
 
-当前阶段摘要合同为 `dpl.checkpoint_summary.v3`。v1/v2 摘要仍可被只读读取和审计，
-但属于 `legacy_unqualified`，不能直接生成确认命令或继续消费旧科学状态。
+当前阶段摘要合同为 `dpl.checkpoint_summary.v4`。v1/v2 只能只读审计；v3 仍可
+读取以保持旧项目兼容，但不会原地重写 hash。v4 把“证据是否健康”“谁应审查”和
+“谁已经决定”拆为 `review_state`、`review_requirement` 与 `decision_status`，因此
+并非每个 checkpoint 都需要用户手动点击确认。
 
-Draftpaper-loop 只有在写出一个可离线审阅的阶段成果包后，才会要求用户
-做人工确认。成果包位于：
+每个 checkpoint 都会写出一个可离线审阅的阶段成果包。只有需要作者判断的 C3
+科学路线、互斥选择、作者身份、许可证、第三方代码执行、最终稿与发布才会强制
+停在用户面前；C0 通知型阶段会保留成果包后自动继续，C1/C2 只有在用户事先授予
+有效 delegation 时才可由 Agent 审查。Agent 决定永远记为 `agent_approved`，不会
+冒充 `user_confirmed`。成果包位于：
 
 ```text
 review/checkpoints/<checkpoint_id>/
 ├── stage_summary.zh-CN.html
 ├── stage_summary.json
+├── stage_activity_bundle.json
 ├── artifact_manifest.json
 ├── confirmation_request.json
 ├── change_report.json
@@ -17,15 +23,16 @@ review/checkpoints/<checkpoint_id>/
 └── agent_payload.json
 ```
 
-中文 HTML 是面向用户的主入口，必须说明：阶段目的、科研总结、新生成的
-文件、被修改的文件、部署与绑定、验证结果、失败事项、未解决事项、重点
-检查文件、确认意味着什么、拒绝后的修复路线和唯一确认命令。Agent 返回
-中同时显示项目相对路径和当前机器绝对路径。
+中文 HTML 是面向用户的主入口。第一屏先用一段有收据支撑的中文说明 Agent
+实际读取、分析、生成、修改、复用、验证、重试、跳过和失败了什么；随后展示
+完整图表、表格、代码、报告、运行证据、相对上一快照的变化、未解决事项、审查
+主体、纵向基线和恢复路线。Agent 返回中同时显示项目相对路径和当前机器绝对路径。
 
-v3 还要求 `stage_summary.json` 明确登记 `identity`、`core_metrics`、
-`sample_flow`、`review_state`、`confirmation_contract` 和恢复路线；HTML、JSON
-和 Agent payload 必须从同一摘要事实生成。`confirmable` 只表示机器合同通过，
-不表示用户已经确认科学含义。
+v4 的 `stage_summary.json` 明确登记 `identity`、`core_metrics`、`sample_flow`、
+`review_state`、`review_requirement`、`decision_status`、`decision_actor_type`、
+`StageActivityBundle`、`baseline_refs`、`confirmation_contract` 和恢复路线。HTML、
+JSON、Agent payload 和 `stage_activity_bundle.json` 必须从同一事实层生成。`confirmable`
+只表示机器合同通过，不表示用户已经确认科学含义。
 
 checkpoint 绑定的是语义 identity 和 evidence identity，不绑定报告时间戳、
 HTML 样式或机器绝对路径。数据、方法、运行、指标、cohort 或证据上游发生
@@ -38,21 +45,34 @@ python -m draftpaper_cli.cli show-checkpoint-summary --project <project>
 python -m draftpaper_cli.cli resume --project <project> --checkpoint-hash <hash>
 ```
 
-Agent 必须给出摘要路径、重点产物路径、未解决事项数量、确认含义和一条
-命令，不能只显示“请确认”。当前版本按阶段或一次外部编辑批次生成一个
-原子确认点；多 claim 分治暂不属于当前版本。
+启用受控 Agent 审查时，先由用户显式配置一次策略和授权范围：
+
+```powershell
+python -m draftpaper_cli.cli configure-review-policy --project <project> --mode balanced
+python -m draftpaper_cli.cli grant-agent-review --project <project> --scope data,methods --max-risk C1 --expires-at <ISO-8601 时间>
+python -m draftpaper_cli.cli evaluate-checkpoint-authority --project <project> --checkpoint-hash <hash>
+```
+
+delegation 会绑定项目、策略 hash、运行时身份、风险等级、阶段、可选修订周期、
+过期时间和允许的 change class。过期、撤销、篡改、summary hash 改变、运行时不一致、
+未解决阻断项或外部副作用都会阻止 Agent 审查；撤销会写独立 receipt，不会改写原授权
+文件。
+
+Agent 必须给出摘要路径、重点产物路径、未解决事项数量、审查主体、确认含义和一条
+合法命令，不能只显示“请确认”。当前版本按阶段或一次外部编辑批次生成一个原子
+确认点；多 claim 独立分治仍不属于当前版本。
 
 `blocked`、`stale`、`preview_only`、身份缺失和 `legacy_unqualified` 页面不得
 提供确认命令。匿名 fixture showcase 可以同时记录 `test_mode=true` 和
 `test_auto_confirmation=true` 以测试页面流程，但该标记不能进入真实项目的
 确认记录、ledger 或 active pointer。
 
-其中 `change_report.json` 汇总本阶段生成、修改、部署、验证和失败的内容；
-`unresolved_issues.json` 是未解决事项的机器可读投影；`agent_payload.json`
-保存 Agent 需要展示的项目相对路径、本机绝对路径、重点产物和确认含义。它们
-与摘要、artifact manifest 和 confirmation request 一起缺一不可。摘要样式、
-时间戳和本机绝对路径变化不会改变科学 checkpoint hash，但上游证据变化会使
-旧 checkpoint 失效。
+其中 `stage_activity_bundle.json` 是 Agent/CLI 活动、事务和 artifact diff 的事实汇总；
+`change_report.json` 汇总本阶段生成、修改、部署、验证和失败的内容；
+`unresolved_issues.json` 是未解决事项的机器可读投影；`agent_payload.json` 保存
+Agent 需要展示的项目相对路径、本机绝对路径、重点产物和审查含义。它们与摘要、
+artifact manifest 和 confirmation request 一起缺一不可。摘要样式、时间戳和本机
+绝对路径变化不会改变科学 checkpoint hash，但上游证据变化会使旧 checkpoint 失效。
 
 ## 完整阶段产物与事务变更
 

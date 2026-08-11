@@ -22,11 +22,35 @@ def start_workflow(idea: str, field: str, target_journal: str = "General Academi
 def continue_workflow(project: str | Path) -> dict[str, Any]:
     from .extensions.status_projection import extension_status
 
+    automatic_review = None
+    current = status_project(project)
+    awaiting = current.get("awaiting_checkpoint")
+    if isinstance(awaiting, dict) and awaiting.get("hash"):
+        from .orchestrator import resume_after_agent_review, resume_after_system_acknowledgement
+        from .review_policy import acknowledge_notification_checkpoint, evaluate_checkpoint_authority, review_checkpoint
+
+        checkpoint_hash = str(awaiting["hash"])
+        authority = evaluate_checkpoint_authority(project, checkpoint_hash=checkpoint_hash)
+        if authority.get("status") == "notify_only":
+            acknowledged = acknowledge_notification_checkpoint(project, checkpoint_hash=checkpoint_hash)
+            automatic_review = resume_after_system_acknowledgement(
+                project,
+                checkpoint_hash=checkpoint_hash,
+                receipt_id=acknowledged["receipt"]["receipt_id"],
+            )
+            current = status_project(project)
+        elif authority.get("can_agent_review"):
+            reviewed = review_checkpoint(project, checkpoint_hash=checkpoint_hash, actor_id="workflow-agent")
+            automatic_review = resume_after_agent_review(project, checkpoint_hash=checkpoint_hash, receipt_id=reviewed["receipt"]["receipt_id"])
+            current = status_project(project)
+
     return {
         "status": "reported",
         "pipeline": run_pipeline(project),
         "verification": verify_next_action(project),
         "extensions": extension_status(project),
+        "automatic_review": automatic_review,
+        "status_after_review": current,
     }
 
 

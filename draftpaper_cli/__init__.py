@@ -125,6 +125,22 @@ from .scientific_fact_ledger import (
     load_or_build_scientific_fact_ledger as load_or_build_scientific_fact_ledger,
 )
 from .stale_sync import ArtifactDriftError, detect_artifact_drift, sync_artifact_stale
+from .review_policy import (
+    ReviewPolicyError,
+    build_review_authority_shadow,
+    configure_review_policy,
+    evaluate_checkpoint_authority,
+    grant_agent_review,
+    review_checkpoint,
+    review_policy_status,
+    revoke_agent_review,
+)
+from .canonical_fact_registry import CanonicalFactError, create_fact_registry, load_fact_registry
+from .scientific_baseline import ScientificBaselineError, create_scientific_baseline, load_active_baseline, show_scientific_baseline
+from .revision_cycle import RevisionCycleError, begin_revision_cycle, close_revision_cycle, load_active_revision_cycle
+from .longitudinal_consistency import audit_longitudinal_consistency, compare_fact_registries
+from .managed_change import ManagedChangeError, apply_managed_change, begin_managed_change
+from .stage_activity import build_stage_activity_bundle, show_stage_activity
 from .writing_style import WritingStyleError, learn_writing_style_from_draft
 
 __all__ = [
@@ -148,6 +164,11 @@ __all__ = [
     "WritingArchitectureError",
     "CitationRepairError",
     "ArtifactDriftError",
+    "ReviewPolicyError",
+    "CanonicalFactError",
+    "ScientificBaselineError",
+    "RevisionCycleError",
+    "ManagedChangeError",
     "LatexAssemblyError",
     "LatexCitationError",
     "MethodBlueprintError",
@@ -202,6 +223,27 @@ __all__ = [
     "write_github_contribution_guide",
     "detect_artifact_drift",
     "sync_artifact_stale",
+    "configure_review_policy",
+    "grant_agent_review",
+    "review_policy_status",
+    "revoke_agent_review",
+    "evaluate_checkpoint_authority",
+    "review_checkpoint",
+    "build_review_authority_shadow",
+    "create_fact_registry",
+    "load_fact_registry",
+    "create_scientific_baseline",
+    "load_active_baseline",
+    "show_scientific_baseline",
+    "begin_revision_cycle",
+    "close_revision_cycle",
+    "load_active_revision_cycle",
+    "audit_longitudinal_consistency",
+    "compare_fact_registries",
+    "begin_managed_change",
+    "apply_managed_change",
+    "build_stage_activity_bundle",
+    "show_stage_activity",
     "generate_analysis_code",
     "classify_change",
     "affected_stages",

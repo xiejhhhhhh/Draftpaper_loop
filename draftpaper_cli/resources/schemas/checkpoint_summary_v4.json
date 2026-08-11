@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "review_requirement", "decision_status", "decision_actor_type", "risk_class", "stage_activity_bundle", "activity_bundle_sha256", "baseline_refs", "revision_cycle_id"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_summary.v4"},
+    "review_requirement": {"enum": ["notify_only", "agent_delegable", "human_required"]},
+    "decision_status": {"type": "string"},
+    "decision_actor_type": {"enum": ["none", "system", "agent", "user"]},
+    "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
+    "stage_activity_bundle": {"type": "object"},
+    "baseline_refs": {"type": "object"}
+  },
+  "additionalProperties": true
+}

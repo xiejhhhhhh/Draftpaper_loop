@@ -294,6 +294,11 @@ def create_project(
     _write_stage_manifests(project_path, metadata)
     _write_idea_note(project_path, metadata)
     _write_project_gitignore(project_path)
+    from .review_policy import initialize_review_policy
+
+    # New projects expose one policy choice up front; existing projects remain
+    # manual until their owner explicitly opts into delegation.
+    initialize_review_policy(project_path, mode="balanced")
     from .project_system_of_record import initialize_project_system_of_record
 
     initialize_project_system_of_record(project_path, str(metadata["project_id"]))

@@ -11,7 +11,7 @@ from draftpaper_cli.release_contract import build_release_manifest
 from draftpaper_cli.toml_compat import tomllib
 
 
-VERSION = "0.37.0"
+VERSION = "0.39.0"
 
 
 def _skill_version(path: Path) -> str:

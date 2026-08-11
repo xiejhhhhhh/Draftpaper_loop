@@ -312,6 +312,74 @@ def build_parser() -> argparse.ArgumentParser:
     status = subparsers.add_parser("status", help="Report orchestrated pipeline status and next action.")
     status.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
+    review_policy = subparsers.add_parser("configure-review-policy", help="Choose manual, balanced, or delegated checkpoint review.")
+    review_policy.add_argument("--project", required=True)
+    review_policy.add_argument("--mode", required=True, choices=["manual", "balanced", "delegated"])
+    grant_review = subparsers.add_parser("grant-agent-review", help="Grant a scoped, hashed Agent review delegation.")
+    grant_review.add_argument("--project", required=True)
+    grant_review.add_argument("--scope", required=True, help="Comma-separated stages or *.")
+    grant_review.add_argument("--max-risk", dest="max_risk", default="C1", choices=["C0", "C1", "C2", "C3"])
+    grant_review.add_argument("--actor-id", default="agent")
+    grant_review.add_argument("--require-independent-agent", action="store_true")
+    grant_review.add_argument("--revision-cycle-id", default=None)
+    grant_review.add_argument("--expires-at", default=None)
+    grant_review.add_argument("--allowed-change-class", dest="allowed_change_classes", action="append", default=[])
+    grant_review.add_argument("--allow-scientific-freeze", action="store_true")
+    grant_review.add_argument("--allow-external-side-effects", dest="forbid_external_side_effects", action="store_false")
+    grant_review.add_argument("--allow-unresolved-items", dest="forbid_unresolved_items", action="store_false")
+    grant_review.add_argument("--max-checkpoints", dest="max_checkpoint_count", type=int, default=None)
+    grant_review.add_argument("--producer-agent-id", default=None)
+    policy_status = subparsers.add_parser("review-policy-status", help="Show review mode and active delegations.")
+    policy_status.add_argument("--project", required=True)
+    shadow = subparsers.add_parser("review-authority-shadow", help="Report the new authority policy without changing decisions.")
+    shadow.add_argument("--project", required=True)
+    revoke_review = subparsers.add_parser("revoke-agent-review", help="Revoke all active Agent review delegations.")
+    revoke_review.add_argument("--project", required=True)
+    revoke_review.add_argument("--reason", required=True)
+    authority = subparsers.add_parser("evaluate-checkpoint-authority", help="Evaluate whether a checkpoint is notification, delegable, or human-only.")
+    authority.add_argument("--project", required=True)
+    authority.add_argument("--checkpoint-hash", required=True)
+    review_checkpoint = subparsers.add_parser("review-checkpoint", help="Record an authorized Agent review decision without impersonating the user.")
+    review_checkpoint.add_argument("--project", required=True)
+    review_checkpoint.add_argument("--checkpoint-hash", required=True)
+    review_checkpoint.add_argument("--actor", default="agent", choices=["agent"])
+    review_checkpoint.add_argument("--actor-id", default="agent")
+    review_checkpoint.add_argument("--delegation-hash", default=None)
+    review_checkpoint.add_argument("--reviewer-agent-id", default=None)
+    review_checkpoint.add_argument("--decision", default="approve", choices=["approve", "reject", "refine"])
+    stage_activity = subparsers.add_parser("show-stage-activity", help="Show the evidence-backed activity bundle for one stage.")
+    stage_activity.add_argument("--project", required=True)
+    stage_activity.add_argument("--stage", required=True)
+    managed_begin = subparsers.add_parser("begin-managed-change", help="Create a hash-bound scoped edit packet.")
+    managed_begin.add_argument("--project", required=True)
+    managed_begin.add_argument("--intent", required=True)
+    managed_begin.add_argument("--change-class", dest="change_class", required=True)
+    managed_begin.add_argument("--path", dest="paths", action="append", default=[])
+    managed_begin.add_argument("--content-file", default=None)
+    managed_apply = subparsers.add_parser("apply-managed-change", help="Apply a previously previewed managed edit packet.")
+    managed_apply.add_argument("--project", required=True)
+    managed_apply.add_argument("--packet-id", required=True)
+    managed_apply.add_argument("--packet-hash", required=True)
+    revision_cycle = subparsers.add_parser("begin-revision-cycle", help="Open a revision cycle from the active immutable baseline.")
+    revision_cycle.add_argument("--project", required=True)
+    revision_cycle.add_argument("--reason", default="author_update")
+    revision_cycle.add_argument("--requested-change", dest="requested_changes", action="append", default=[])
+    revision_cycle.add_argument("--allowed-change-class", dest="allowed_change_classes", action="append", default=[])
+    revision_cycle.add_argument("--protected-fact", dest="protected_facts", action="append", default=[])
+    revision_cycle.add_argument("--expected-artifact", dest="expected_artifacts", action="append", default=[])
+    revision_cycle.add_argument("--started-by", default="user")
+    revision_cycle.add_argument("--baseline-id", default=None)
+    consistency = subparsers.add_parser("audit-longitudinal-consistency", help="Audit facts and manuscript references across revision cycles.")
+    consistency.add_argument("--project", required=True)
+    consistency.add_argument("--output-root", default=None)
+    reconcile = subparsers.add_parser("reconcile-project-drift", help="Resolve one recorded external-edit reconciliation route.")
+    reconcile.add_argument("--project", required=True)
+    reconcile.add_argument("--route", required=True, choices=["adopt_as_expected_change", "rebuild_derived_artifacts", "reopen_scientific_stage"])
+    reconcile.add_argument("--reconciliation-id", default=None)
+    baseline = subparsers.add_parser("show-scientific-baseline", help="Show the active or named immutable scientific baseline.")
+    baseline.add_argument("--project", required=True)
+    baseline.add_argument("--baseline-id", default=None)
+
     extension_doctor = subparsers.add_parser(
         "extension-doctor",
         help="Report installed extension compatibility and non-blocking event receipts.",
@@ -1200,6 +1268,10 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "status",
     "run-pipeline",
     "detect-artifact-drift",
+    "review-policy-status",
+    "evaluate-checkpoint-authority",
+    "show-stage-activity",
+    "show-scientific-baseline",
 }
 
 
@@ -1284,7 +1356,13 @@ def main(argv: list[str] | None = None) -> int:
         if preflight.get("status") != "passed":
             print(json.dumps(preflight, ensure_ascii=True), file=sys.stderr)
             return 4
-        workflow_trace = begin_workflow_trace(project, command, vars(args))
+        workflow_trace = begin_workflow_trace(
+            project,
+            command,
+            vars(args),
+            stage=spec.pipeline_stage or spec.formal_stage,
+            action_kind="command",
+        )
 
     captured = io.StringIO()
     execution_result: list[tuple[Any, dict[str, Any], int]] = []
@@ -1373,6 +1451,7 @@ def main(argv: list[str] | None = None) -> int:
                         transaction_status=assessment["rollback"].get("status"),
                         scientific_decision="not_committed",
                         failure_class="write_boundary_violation",
+                        action_kind="rollback",
                     )
                 return 4 if assessment["rollback"].get("status") == "rolled_back" else 5
             actual_write_set = tuple(
@@ -1397,8 +1476,10 @@ def main(argv: list[str] | None = None) -> int:
                 pass
             return exit_code
         event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
+        preserve_pending_drift = bool(command_payload.get("preserve_pending_drift"))
         try:
-            refresh_project_passport(project, event=event)
+            if not preserve_pending_drift:
+                refresh_project_passport(project, event=event)
         except (PassportError, ProjectStateError, OSError) as exc:
             try:
                 record_command_transaction(
@@ -1407,7 +1488,7 @@ def main(argv: list[str] | None = None) -> int:
                     scientific_exit_code=exit_code,
                     transaction_status="passport_refresh_failed",
                     baseline_clean=not preexisting_drift,
-                    passport_event=event,
+                    passport_event=None if preserve_pending_drift else event,
                     message=str(exc),
                 )
             except (PassportError, ProjectStateError, OSError):
@@ -1419,9 +1500,14 @@ def main(argv: list[str] | None = None) -> int:
                 project,
                 command=command,
                 scientific_exit_code=exit_code,
-                transaction_status="committed",
+                transaction_status="committed_pending_reconciliation" if preserve_pending_drift else "committed",
                 baseline_clean=not preexisting_drift,
-                passport_event=event,
+                passport_event=None if preserve_pending_drift else event,
+                stage=spec.pipeline_stage or spec.formal_stage if spec is not None else None,
+                actual_write_set=actual_write_set,
+                modified_paths=actual_write_set,
+                reopen_required=bool(command_payload.get("reopen_required")),
+                baseline_changed=bool(command_payload.get("baseline_changed")),
             )
         except (PassportError, ProjectStateError, OSError) as exc:
             print(json.dumps({"status": "error", "message": f"Command completed but transaction receipt failed: {exc}"}, ensure_ascii=True), file=sys.stderr)
@@ -1432,9 +1518,14 @@ def main(argv: list[str] | None = None) -> int:
                 workflow_trace,
                 process_status="completed",
                 command_exit_code=exit_code,
-                transaction_status="committed",
+                transaction_status="committed_pending_reconciliation" if preserve_pending_drift else "committed",
                 scientific_decision="pass" if exit_code == 0 else "non_passing",
                 failure_class=None if exit_code == 0 else "scientific_or_command_nonzero",
+                action_kind="validate" if command.startswith(("validate", "assess", "audit", "review")) else "command",
+                changed_paths=list(actual_write_set),
+                validation_result_refs=[f"command:{command}"] if command.startswith(("validate", "assess", "audit")) else [],
+                decision_refs=[f"transaction:{transaction_receipt.get('command_id')}"] if transaction_receipt.get("command_id") else [],
+                user_visible_summary_fragment_zh=str(command_payload.get("summary") or command_payload.get("message") or ""),
             )
         if spec is not None:
             dispatch_extensions_nonblocking(

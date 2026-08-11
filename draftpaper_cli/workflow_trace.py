@@ -18,12 +18,24 @@ from .state_kernel import append_jsonl_locked
 TRACE_PATH = "workflow_trace.jsonl"
 
 
-def begin_workflow_trace(project: str | Path, command: str, arguments: dict[str, Any], *, parent_command_id: str | None = None, attempt: int = 1) -> dict[str, Any]:
+def begin_workflow_trace(
+    project: str | Path,
+    command: str,
+    arguments: dict[str, Any],
+    *,
+    parent_command_id: str | None = None,
+    attempt: int = 1,
+    actor_type: str | None = None,
+    actor_id: str | None = None,
+    stage: str | None = None,
+    intent_id: str | None = None,
+    action_kind: str = "command",
+) -> dict[str, Any]:
     safe = redact_sensitive(arguments)
     canonical = json.dumps(safe, sort_keys=True, ensure_ascii=True, default=str)
     now = utc_now()
     return {
-        "schema_version": "dpl.workflow_trace.v1",
+        "schema_version": "dpl.workflow_trace.v2",
         "run_id": str(arguments.get("run_id") or uuid.uuid4().hex),
         "command_id": uuid.uuid4().hex,
         "parent_command_id": parent_command_id,
@@ -33,6 +45,21 @@ def begin_workflow_trace(project: str | Path, command: str, arguments: dict[str,
         "started_monotonic": time.monotonic(),
         "input_hash": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
         "argument_keys": sorted(str(key) for key in arguments if key not in {"password", "token", "api_key", "secret"}),
+        "actor_type": actor_type or str(arguments.get("actor_type") or "cli"),
+        "actor_id": actor_id or str(arguments.get("actor_id") or "draftpaper-cli"),
+        "agent_session_id": arguments.get("agent_session_id"),
+        "stage": stage,
+        "intent_id": intent_id,
+        "parent_intent_id": arguments.get("parent_intent_id"),
+        "action_kind": action_kind,
+        "input_artifact_refs": list(arguments.get("input_artifact_refs") or []),
+        "output_artifact_refs": [],
+        "artifact_change_summary": {},
+        "validation_result_refs": [],
+        "decision_refs": [],
+        "reason_codes": [],
+        "user_visible_summary_fragment_zh": "",
+        "retry_of": arguments.get("retry_of"),
     }
 
 
@@ -48,6 +75,14 @@ def finish_workflow_trace(
     next_action_after: str | None = None,
     failure_class: str | None = None,
     output_hash: str | None = None,
+    action_kind: str | None = None,
+    changed_paths: list[str] | tuple[str, ...] | None = None,
+    input_artifact_refs: list[str] | tuple[str, ...] | None = None,
+    output_artifact_refs: list[str] | tuple[str, ...] | None = None,
+    validation_result_refs: list[str] | tuple[str, ...] | None = None,
+    decision_refs: list[str] | tuple[str, ...] | None = None,
+    reason_codes: list[str] | tuple[str, ...] | None = None,
+    user_visible_summary_fragment_zh: str | None = None,
 ) -> dict[str, Any]:
     payload = {key: value for key, value in trace.items() if key != "started_monotonic"}
     payload.update({
@@ -61,6 +96,17 @@ def finish_workflow_trace(
         "next_action_after": next_action_after,
         "failure_class": failure_class,
         "output_hash": output_hash,
+        "action_kind": action_kind or trace.get("action_kind") or "command",
+        "input_artifact_refs": list(input_artifact_refs or trace.get("input_artifact_refs") or []),
+        "output_artifact_refs": list(output_artifact_refs or [f"artifact:{item}" for item in (changed_paths or [])]),
+        "artifact_change_summary": {
+            **(trace.get("artifact_change_summary") or {}),
+            "changed_paths": list(changed_paths or []),
+        },
+        "validation_result_refs": list(validation_result_refs or []),
+        "decision_refs": list(decision_refs or []),
+        "reason_codes": list(reason_codes or ([failure_class] if failure_class else [])),
+        "user_visible_summary_fragment_zh": user_visible_summary_fragment_zh or trace.get("user_visible_summary_fragment_zh") or "",
     })
     append_jsonl_locked(load_project(project).path / TRACE_PATH, payload)
     return payload

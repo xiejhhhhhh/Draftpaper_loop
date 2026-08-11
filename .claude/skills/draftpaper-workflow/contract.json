@@ -1,9 +1,9 @@
 {
   "schema_version": "dpl.workflow_skill.v1",
   "skill_id": "draftpaper-workflow",
-  "skill_version": "0.37.0",
+  "skill_version": "0.39.0",
   "canonical_resource": "draftpaper_cli/resources/draftpaper_workflow/SKILL.md",
-  "required_control_commands": ["session-preflight", "status", "verify-next-action", "continue", "show-checkpoint-summary", "preview-checkpoint-summary", "audit-evidence-identity"],
+  "required_control_commands": ["session-preflight", "status", "verify-next-action", "continue", "show-checkpoint-summary", "preview-checkpoint-summary", "audit-evidence-identity", "review-policy-status", "evaluate-checkpoint-authority", "show-stage-activity", "audit-longitudinal-consistency", "show-scientific-baseline"],
   "protected_actions": [
     "checkpoint",
     "resume",

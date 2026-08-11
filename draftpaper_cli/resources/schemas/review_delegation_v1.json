@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "delegation_id", "scope", "max_risk", "status", "delegation_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.review_delegation.v1"},
+    "delegation_id": {"type": "string"},
+    "scope": {"type": "array", "items": {"type": "string"}},
+    "max_risk": {"enum": ["C0", "C1", "C2", "C3"]},
+    "status": {"enum": ["active", "revoked", "expired"]},
+    "revision_cycle_id": {"type": ["string", "null"]},
+    "expires_at": {"type": ["string", "null"]},
+    "max_checkpoint_count": {"type": ["integer", "null"], "minimum": 1},
+    "allowed_change_classes": {"type": "array", "items": {"type": "string"}},
+    "allow_scientific_freeze": {"type": "boolean"},
+    "forbid_external_side_effects": {"type": "boolean"},
+    "forbid_unresolved_items": {"type": "boolean"},
+    "policy_sha256": {"type": "string"},
+    "runtime_fingerprint": {"type": ["string", "null"]},
+    "delegation_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

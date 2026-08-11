@@ -43,10 +43,9 @@
     "research_code_lead": {"current": "dpl.research_code_lead.v1", "accepted": []},
     "work_code_linkage": {"current": "dpl.work_code_linkage.v1", "accepted": []},
     "runtime_lock": {"current": "dpl.runtime_lock.v1", "accepted": []},
-    "checkpoint_summary": {"current": "dpl.checkpoint_summary.v3", "accepted": ["dpl.checkpoint_summary.v2", "dpl.checkpoint_summary.v1"], "adapters": {"dpl.checkpoint_summary.v1": "legacy_checkpoint_summary_read_only", "dpl.checkpoint_summary.v2": "legacy_checkpoint_summary_read_only"}},
+    "checkpoint_summary": {"current": "dpl.checkpoint_summary.v4", "accepted": ["dpl.checkpoint_summary.v3", "dpl.checkpoint_summary.v2", "dpl.checkpoint_summary.v1"], "adapters": {"dpl.checkpoint_summary.v1": "legacy_checkpoint_summary_read_only", "dpl.checkpoint_summary.v2": "legacy_checkpoint_summary_read_only", "dpl.checkpoint_summary.v3": "checkpoint_summary_v3_read_compatible"}},
     "checkpoint_artifact_manifest": {"current": "dpl.checkpoint_artifact_manifest.v2", "accepted": ["dpl.checkpoint_artifact_manifest.v1"]},
     "confirmation_request": {"current": "dpl.confirmation_request.v1", "accepted": []},
-    "drift_reconciliation": {"current": "dpl.drift_reconciliation.v1", "accepted": []},
     "checkpoint_change_report": {"current": "dpl.checkpoint_change_report.v1", "accepted": []},
     "checkpoint_unresolved_issues": {"current": "dpl.checkpoint_unresolved_issues.v1", "accepted": []},
     "checkpoint_agent_payload": {"current": "dpl.checkpoint_agent_payload.v1", "accepted": []},
@@ -58,6 +57,16 @@
     "run_evidence_bundle": {"current": "dpl.run_evidence_bundle.v1", "accepted": []},
     "figure_code_trace": {"current": "dpl.figure_code_trace.v2", "accepted": []},
     "evidence_comparison_result": {"current": "dpl.evidence_comparison_result.v1", "accepted": []},
-    "evidence_identity_audit": {"current": "dpl.evidence_identity_audit.v1", "accepted": []}
+    "evidence_identity_audit": {"current": "dpl.evidence_identity_audit.v1", "accepted": []},
+    "review_policy": {"current": "dpl.review_policy.v1", "accepted": []},
+    "review_delegation": {"current": "dpl.review_delegation.v1", "accepted": []},
+    "review_decision_receipt": {"current": "dpl.review_decision_receipt.v2", "accepted": ["dpl.review_decision_receipt.v1"]},
+    "stage_activity_bundle": {"current": "dpl.stage_activity_bundle.v1", "accepted": []},
+    "scientific_baseline_bundle": {"current": "dpl.scientific_baseline_bundle.v1", "accepted": []},
+    "canonical_fact_registry": {"current": "dpl.canonical_fact_registry.v2", "accepted": ["dpl.legacy_scientific_fact_ledger.v1"]},
+    "revision_cycle": {"current": "dpl.revision_cycle.v1", "accepted": []},
+    "longitudinal_consistency_report": {"current": "dpl.longitudinal_consistency_report.v1", "accepted": []},
+    "drift_reconciliation": {"current": "dpl.drift_reconciliation.v2", "accepted": ["dpl.drift_reconciliation.v1"]},
+    "managed_change_packet": {"current": "dpl.managed_change_packet.v1", "accepted": []}
   }
 }

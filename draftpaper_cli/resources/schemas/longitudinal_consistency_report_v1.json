@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "report_id", "status", "fact_change_matrix", "recovery_plan", "report_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.longitudinal_consistency_report.v1"},
+    "status": {"enum": ["passed", "needs_review", "blocked"]},
+    "fact_change_matrix": {"type": "array"},
+    "report_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

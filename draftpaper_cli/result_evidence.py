@@ -173,6 +173,9 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
     seed_column = next((item for item in ["seed", "random_seed"] if item in columns), "")
     repeat_column = next((item for item in ["repeat", "repetition", "repeated_split_id"] if item in columns), "")
     cohort_column = next((item for item in ["cohort_id", "cohort"] if item in columns), "")
+    cohort_view_column = next((item for item in ["cohort_view_id", "analysis_view_id"] if item in columns), "")
+    estimand_column = "estimand_id" if "estimand_id" in columns else ""
+    analysis_spec_column = "analysis_spec_id" if "analysis_spec_id" in columns else ""
     sample_unit_column = "sample_unit" if "sample_unit" in columns else ""
     task_column = next((item for item in ["task_id", "task", "target_id", "target"] if item in columns), "")
     aggregation_contract_column = next((item for item in ["aggregation_contract_id", "aggregation_id"] if item in columns), "")
@@ -207,6 +210,9 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                     "analysis_variant": analysis_variant,
                     "run_id": str(row.get("run_id") or run_id).strip(),
                     "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
+                    "cohort_view_id": str(row.get(cohort_view_column) or "").strip() if cohort_view_column else "",
+                    "estimand_id": str(row.get(estimand_column) or "").strip() if estimand_column else "",
+                    "analysis_spec_id": str(row.get(analysis_spec_column) or "").strip() if analysis_spec_column else "",
                     "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
                     "task_id": str(row.get(task_column) or "").strip() if task_column else "",
                     "sample_count": _numeric(row.get("sample_count")),
@@ -243,6 +249,9 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                 "analysis_variant": analysis_variant,
                 "run_id": run_id,
                 "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
+                "cohort_view_id": str(row.get(cohort_view_column) or "").strip() if cohort_view_column else "",
+                "estimand_id": str(row.get(estimand_column) or "").strip() if estimand_column else "",
+                "analysis_spec_id": str(row.get(analysis_spec_column) or "").strip() if analysis_spec_column else "",
                 "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
                 "task_id": str(row.get(task_column) or "").strip() if task_column else "",
                 "source_artifact": relative,

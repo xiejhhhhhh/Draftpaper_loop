@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.37.0",
-  "workflow_skill_sha256": "b180531076facf0d73b4a6869f237ac3a9146993bfccbeddbb60816cb476b3ec",
-  "workflow_contract_sha256": "865ca402a8190d7394a56f449cebc32027515e871f8e0d42aca2a713b4f3cd94",
+  "package_version": "0.39.0",
+  "workflow_skill_sha256": "9d70c3dfdf80eedf76043e2fefcd14635708083987c4cd8b5516c42ca0485dfc",
+  "workflow_contract_sha256": "e15e82eff8d68eda5c680e8df9ecf2176f2447ecbc431f32c11d5f5d4e55cc6d",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 228,
+  "command_count": 242,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -36,7 +36,21 @@
     "apply-result-downgrade",
     "prepare-result-rescue",
     "benchmark-literature-quality",
-    "benchmark-document-parsers"
+    "benchmark-document-parsers",
+    "configure-review-policy",
+    "grant-agent-review",
+    "review-policy-status",
+    "review-authority-shadow",
+    "revoke-agent-review",
+    "evaluate-checkpoint-authority",
+    "review-checkpoint",
+    "show-stage-activity",
+    "begin-managed-change",
+    "apply-managed-change",
+    "begin-revision-cycle",
+    "audit-longitudinal-consistency",
+    "reconcile-project-drift",
+    "show-scientific-baseline"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "resource_schema_status": "passed",
@@ -67,9 +81,9 @@
   },
   "checkpoint_contract": {
     "status": "passed",
-    "summary_schema": "dpl.checkpoint_summary.v3",
+    "summary_schema": "dpl.checkpoint_summary.v4",
     "schema_files": {
-      "summary": "resources/schemas/checkpoint_summary_v3.json",
+      "summary": "resources/schemas/checkpoint_summary_v4.json",
       "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
       "confirmation_request": "resources/schemas/confirmation_request_v1.json",
       "change_report": "resources/schemas/checkpoint_change_report_v1.json",
@@ -80,6 +94,7 @@
     "required_companions": [
       "stage_summary.zh-CN.html",
       "stage_summary.json",
+      "stage_activity_bundle.json",
       "artifact_manifest.json",
       "confirmation_request.json",
       "change_report.json",
@@ -90,6 +105,22 @@
       "project_relative_path",
       "absolute_path"
     ]
+  },
+  "review_governance": {
+    "summary_schema": "dpl.checkpoint_summary.v4",
+    "workflow_trace_schema": "dpl.workflow_trace.v2",
+    "command_transaction_schema": "dpl.command_transaction.v3",
+    "modes": [
+      "manual",
+      "balanced",
+      "delegated"
+    ],
+    "agent_decision_status": "agent_approved",
+    "user_decision_status": "user_confirmed",
+    "c3_human_only": true,
+    "immutable_baseline_schema": "dpl.scientific_baseline_bundle.v1",
+    "revision_cycle_schema": "dpl.revision_cycle.v1",
+    "fact_registry_schema": "dpl.canonical_fact_registry.v2"
   },
   "research_code_sources": {
     "providers": [

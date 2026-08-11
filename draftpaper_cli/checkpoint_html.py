@@ -248,6 +248,63 @@ def _render_selected_route(state: dict[str, Any]) -> str:
     )
 
 
+def _render_activity(summary: dict[str, Any]) -> str:
+    """Render recorded Agent/CLI actions before the complete artifact list."""
+
+    activity = summary.get("stage_activity_bundle") if isinstance(summary.get("stage_activity_bundle"), dict) else {}
+    actions = activity.get("actions") or []
+    if not actions:
+        return '<section class="section warning"><h2>Agent实际工作</h2><p>未找到可追溯的活动或事务 receipt；不能仅凭目录产物推断本阶段做了什么。</p></section>'
+    rows = []
+    for item in actions[:120]:
+        evidence = ", ".join(str(ref) for ref in item.get("evidence_refs") or [])
+        fragment = str(item.get("user_visible_summary_fragment_zh") or "")
+        rows.append(
+            f'<tr><td>{_text(item.get("action_label_zh") or item.get("action_kind"))}</td>'
+            f'<td>{_text(item.get("actor_type"))} / {_text(item.get("actor_id"))}</td>'
+            f'<td>{_text(item.get("command"))}</td><td>{_text(item.get("status"))}</td>'
+            f'<td>{_text(fragment or evidence)}</td></tr>'
+        )
+    coverage = activity.get("coverage") or {}
+    return (
+        '<section class="section activity"><h2>Agent实际工作与本阶段总结</h2>'
+        f'<p class="narrative">{_text(activity.get("narrative_zh") or summary.get("activity_summary_zh"))}</p>'
+        f'<p class="muted">活动 {coverage.get("activity_count", len(actions))} 项，其中 '
+        f'{coverage.get("activity_with_evidence_refs", 0)} 项有证据引用；每一行均来自 workflow trace 或 transaction receipt。</p>'
+        '<div class="preview-table"><table><thead><tr><th>动作</th><th>主体</th><th>命令</th><th>结果</th><th>实际内容/证据引用</th></tr></thead><tbody>'
+        + "".join(rows)
+        + '</tbody></table></div></section>'
+    )
+
+
+def _render_baseline_refs(summary: dict[str, Any], output_dir: Path) -> str:
+    refs = summary.get("baseline_refs") if isinstance(summary.get("baseline_refs"), dict) else {}
+    requirement = summary.get("review_requirement") or "human_required"
+    decision = summary.get("decision_status") or "pending"
+    actor = summary.get("decision_actor_type") or "none"
+    rows = "".join(f"<tr><th>{_text(key)}</th><td><code>{_text(value or '未登记')}</code></td></tr>" for key, value in refs.items())
+    receipt_path = output_dir / "review_decision_receipt.json"
+    receipt_html = ""
+    if receipt_path.is_file():
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            receipt = {}
+        if isinstance(receipt, dict):
+            receipt_html = (
+                f'<p><strong>最近一次审查 receipt：</strong>{_text(receipt.get("decision_status"))}；'
+                f'主体 {_text(receipt.get("actor_type"))}/{_text(receipt.get("actor_id"))}；'
+                f'<code>{_text(receipt.get("receipt_sha256"))}</code></p>'
+            )
+    return (
+        '<section class="section"><h2>审查主体、自动继续与纵向基线</h2>'
+        f'<p><strong>审查要求：</strong>{_text(requirement)}　<strong>决策状态：</strong>{_text(decision)}　<strong>决策主体：</strong>{_text(actor)}</p>'
+        + receipt_html
+        + (f'<table><tbody>{rows}</tbody></table>' if rows else '<p class="muted">当前尚未绑定科学基线；这是首轮或旧项目迁移状态。</p>')
+        + '</section>'
+    )
+
+
 def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
     """Render one portable, self-contained Chinese checkpoint review page."""
 
@@ -265,8 +322,12 @@ def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any]
             "command": request.get("confirmation_command"),
             "refinement_route_zh": summary.get("rejection_or_refinement_route_zh") or "拒绝后重新打开受影响的上游阶段。",
         }
-    confirmation_command = confirmation.get("command") if confirmable else None
-    warning = "" if confirmable else '<p class="blocking-note">当前页面只能用于审阅，不能用于哈希确认。请先处理页面中的阻断问题并生成新的 checkpoint。</p>'
+    confirmation_allowed = bool((summary.get("confirmation_contract") or {}).get("confirmation_command_allowed", confirmable))
+    confirmation_command = confirmation.get("command") if confirmable and confirmation_allowed else None
+    requirement = str(summary.get("review_requirement") or "human_required")
+    warning = "" if confirmation_allowed else '<p class="blocking-note">当前页面用于审阅和提醒，不能直接确认。请先处理阻断问题，或按页面显示的 Agent 委托/人工决策路径继续。</p>'
+    if requirement == "notify_only":
+        warning = '<p class="testing-note">本阶段为通知型审查：系统已记录摘要并自动继续，仍保留完整产物和审计路径供复核。</p>'
     test_note = (
         '<p class="testing-note">当前为匿名 fixture 测试模式：测试流程跳过人工确认动作；这不代表任何真实科研结果已被用户确认。</p>'
         if summary.get("test_auto_confirmation")
@@ -290,6 +351,8 @@ def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any]
     selected_route = _render_selected_route(summary.get("decision_route_state") or {})
     boundaries = _simple_list("论断边界", summary.get("claim_boundaries") or [], class_name="boundary")
     unresolved = _simple_list("未解决事项", summary.get("unresolved") or [], class_name="warning")
+    activity_html = _render_activity(summary)
+    baseline_html = _render_baseline_refs(summary, output_dir)
     primary = summary.get("inspection_targets") or []
     primary_rows = []
     for item in primary:
@@ -377,6 +440,8 @@ th {{ background:#eef2f7; white-space:nowrap; }}
 <div><strong>checkpoint hash：</strong><code>{_text(request.get("checkpoint_hash") or identity.get("checkpoint_hash") or "未登记")}</code></div>
 </div>
 </header>
+{activity_html}
+{baseline_html}
 {key_findings}
 {decision_routes}
 {selected_route}

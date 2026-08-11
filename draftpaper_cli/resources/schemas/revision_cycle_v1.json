@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "revision_cycle_id", "parent_baseline_id", "status", "revision_cycle_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.revision_cycle.v1"},
+    "status": {"enum": ["open", "closed", "superseded", "rejected"]},
+    "revision_cycle_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}
