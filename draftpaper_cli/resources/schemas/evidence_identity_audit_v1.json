@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_identity_audit.v1",
+  "title": "Draftpaper-loop evidence identity audit",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "read_only",
+    "writes_performed",
+    "checks",
+    "missing_identity",
+    "legacy_compatibility",
+    "stale_traces",
+    "derived_rebuild",
+    "requires_scientific_rerun"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_identity_audit.v1"},
+    "status": {"enum": ["passed", "needs_review", "blocked"]},
+    "read_only": {"const": true},
+    "writes_performed": {"type": "array", "maxItems": 0},
+    "checks": {"type": "array", "items": {"type": "object"}},
+    "missing_identity": {"type": "array", "items": {"type": "object"}},
+    "legacy_compatibility": {"type": "array", "items": {"type": "object"}},
+    "ambiguous_counts": {"type": "array", "items": {"type": "object"}},
+    "stale_traces": {"type": "array", "items": {"type": "object"}},
+    "deterministic_migrations": {"type": "array", "items": {"type": "object"}},
+    "derived_rebuild": {"type": "array", "items": {"type": "object"}},
+    "requires_scientific_rerun": {"type": "array", "items": {"type": "object"}},
+    "project_id": {"type": ["string", "null"]},
+    "project_relative_root": {"type": "string"},
+    "policy": {"type": "string"}
+  },
+  "additionalProperties": true
+}

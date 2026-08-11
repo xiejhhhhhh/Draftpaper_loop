@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_context.v1",
+  "title": "Draftpaper Evidence Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_id", "plan_hash", "run_id", "dataset_id", "cohort_id", "task_id", "sample_unit", "validation_design_id", "split_id", "analysis_spec_id", "evidence_snapshot_id"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_context.v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "plan_hash": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "run_transaction_id": {"type": "string"},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "cohort_id": {"type": "string", "minLength": 1},
+    "cohort_view_id": {"type": "string"},
+    "task_id": {"type": "string", "minLength": 1},
+    "sample_unit": {"type": "string", "minLength": 1},
+    "validation_design_id": {"type": "string", "minLength": 1},
+    "split_id": {"type": "string", "minLength": 1},
+    "analysis_spec_id": {"type": "string", "minLength": 1},
+    "evidence_snapshot_id": {"type": "string", "minLength": 1}
+  }
+}

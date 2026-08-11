@@ -195,6 +195,37 @@ def _metric_record(
     }
 
 
+def _strict_primary_support_record(
+    record: dict[str, Any],
+    *,
+    source: str,
+    defaults: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep the contract-selected MetricEvidence identity in Result Support records."""
+
+    identity = record.get("identity") if isinstance(record.get("identity"), dict) else record
+    metric_name = record.get("metric_definition_id") or identity.get("metric_definition_id")
+    model_id = record.get("model_id") or identity.get("model_id")
+    value = _numeric(record.get("value"))
+    return {
+        **record,
+        "key": _metric_key(metric_name, model_id),
+        "metric_name": _normalise_key(metric_name),
+        "metric_dimension": "score",
+        "model": _normalise_key(model_id),
+        "comparison_role": _comparison_role(model_id, metric_name),
+        "context": {
+            "run_id": str(record.get("run_id") or defaults.get("run_id") or "").strip(),
+            "cohort": str(record.get("cohort_id") or identity.get("cohort_id") or defaults.get("cohort_id") or "").strip(),
+            "split": str(record.get("split_id") or identity.get("split_id") or defaults.get("split_id") or "").strip(),
+            "sample_unit": str(record.get("sample_unit") or identity.get("sample_unit") or defaults.get("sample_unit") or "").strip(),
+        },
+        "adapter": "strict_primary_metric_contract",
+        "source": source,
+        "value": value if value is not None else record.get("value"),
+    }
+
+
 def _selected_run_id(run_manifest: dict[str, Any]) -> str:
     if str(run_manifest.get("status") or "").lower() != "success":
         return ""
@@ -335,6 +366,17 @@ def _resolved_metrics(
                     adapter="current_resolved_evidence_metrics",
                     source=relative,
                 ))
+        strict_primary = payload.get("scientific_primary_metric")
+        if (
+            isinstance(strict_primary, dict)
+            and str(payload.get("strict_status") or "").lower() == "passed"
+            and str(strict_primary.get("metric_record_id") or "").strip()
+        ):
+            records.append(_strict_primary_support_record(
+                strict_primary,
+                source=relative,
+                defaults={**run_manifest, **payload},
+            ))
     return metrics, records, {
         "adapter": "current_resolved_evidence_metrics",
         "current": current,

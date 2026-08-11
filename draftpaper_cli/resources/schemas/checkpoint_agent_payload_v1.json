@@ -10,8 +10,17 @@
     "stage_summary_zh_html": {"type": "object"},
     "primary_artifacts": {"type": "array"},
     "unresolved_issues": {"type": "array"},
-    "confirmation_command": {"type": "string"},
-    "stage_summary_sha256": {"type": "string"}
+    "confirmation_command": {"type": ["string", "null"]},
+    "stage_summary_sha256": {"type": "string"},
+    "summary_schema": {"type": "string"},
+    "stage_status": {"type": "string"},
+    "review_state": {"type": "string"},
+    "stage_purpose_zh": {"type": "string"},
+    "stage_narrative_zh": {"type": "string"},
+    "deliverable_counts": {"type": "object"},
+    "sample_flow": {"type": "array"},
+    "confirmation_contract": {"type": "object"},
+    "test_mode": {"type": "boolean"}
   },
   "additionalProperties": true
 }

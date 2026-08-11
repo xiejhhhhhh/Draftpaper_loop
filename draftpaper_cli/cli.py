@@ -335,6 +335,13 @@ def build_parser() -> argparse.ArgumentParser:
     show_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional checkpoint hash; defaults to the latest checkpoint.")
     show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN"], help="Summary language.")
 
+    preview_checkpoint = subparsers.add_parser(
+        "preview-checkpoint-summary",
+        help="Render an enriched offline checkpoint view without changing ledger or confirmation state.",
+    )
+    preview_checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
+    preview_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional source checkpoint hash; defaults to the latest checkpoint.")
+
     run = subparsers.add_parser("run-pipeline", help="Plan the next orchestrated pipeline action.")
     run.add_argument("--project", required=True, help="Path to a project directory or project.json.")
 
@@ -789,6 +796,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     session_preflight = subparsers.add_parser("session-preflight", help="Verify source, wheel, Skill, schema, and plugin runtime identity before project work.")
     session_preflight.add_argument("--project", required=True)
+    session_preflight.add_argument(
+        "--accept-runtime-update",
+        action="store_true",
+        help="Explicitly accept the current runtime identity and write a migration receipt when the project lock differs.",
+    )
 
     score_repos = subparsers.add_parser("score-research-repos", help="Score discovered research-code repositories for reusable plugin mining.")
     score_repos.add_argument("--input", required=True, help="Path to *_repo_candidates.json.")
@@ -969,6 +981,11 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--project", default=None)
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
     doctor.add_argument("--explain", action="store_true", help="Include artifact dependency and failure-route details.")
+    evidence_audit = subparsers.add_parser(
+        "audit-evidence-identity",
+        help="Read-only audit of metric, count, run-bundle, and figure-trace identity with migration routing.",
+    )
+    evidence_audit.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     token_report = subparsers.add_parser("token-report", help="Summarize recorded and estimated project token usage without inventing provider prices.")
     token_report.add_argument("--project", required=True)
     start = subparsers.add_parser("start", help="Create a project and report the first executable workflow action.")

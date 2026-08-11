@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_artifact_manifest.v2",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_stage", "artifacts"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_artifact_manifest.v2"},
+    "checkpoint_stage": {"type": "string"},
+    "artifacts": {"type": "array"}
+  },
+  "additionalProperties": true
+}

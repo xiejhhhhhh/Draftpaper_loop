@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.metric_evidence.v3",
+  "title": "Draftpaper Metric Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "metric_record_id", "metric_definition_id", "task_id", "cohort_id", "sample_unit", "model_id", "validation_design_id", "split_id", "aggregation_id", "uncertainty_definition_id", "value", "evidence_role"],
+  "properties": {
+    "schema_version": {"const": "dpl.metric_evidence.v3"},
+    "metric_record_id": {"type": "string", "minLength": 1},
+    "metric_definition_id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "cohort_id": {"type": "string", "minLength": 1},
+    "sample_unit": {"type": "string", "minLength": 1},
+    "model_id": {"type": "string", "minLength": 1},
+    "validation_design_id": {"type": "string", "minLength": 1},
+    "split_id": {"type": "string", "minLength": 1},
+    "aggregation_id": {"type": "string", "minLength": 1},
+    "uncertainty_definition_id": {"type": "string", "minLength": 1},
+    "value": {},
+    "replicate_axis": {"type": "string"},
+    "replicate_ids": {"type": "array", "items": {"type": "string"}},
+    "aggregation_contract_id": {"type": "string"},
+    "source_artifact": {"type": "string"},
+    "source_sha256": {"type": "string"},
+    "producer_id": {"type": "string"},
+    "producer_version": {"type": "string"},
+    "evidence_role": {"enum": ["primary", "secondary", "sensitivity", "presentation_only"]},
+    "parent_record_refs": {"type": "array", "items": {"type": "string"}}
+  }
+}

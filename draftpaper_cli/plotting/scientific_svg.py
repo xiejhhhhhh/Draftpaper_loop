@@ -248,10 +248,9 @@ def _try_matplotlib() -> tuple[Any, str] | tuple[None, None]:
     return plt, backend
 
 
-def _finish_matplotlib(plt: Any, path: Path, title: str) -> tuple[float, float]:
+def _finish_matplotlib(plt: Any, path: Path, _title: str) -> tuple[float, float]:
     figure = plt.gcf()
-    figure.suptitle(title, fontsize=12, y=0.99)
-    figure.tight_layout(rect=(0, 0, 1, 0.96))
+    figure.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(path, dpi=180, bbox_inches="tight")
     size = tuple(float(value) for value in figure.get_size_inches())
@@ -620,7 +619,6 @@ def _strong_wheat_contract_figure(
         )
         axes[0].set_xlabel("Longitude (degrees E)")
         axes[0].set_ylabel("Latitude (degrees N)")
-        axes[0].set_title("Registered reference and mapped distribution")
         fig.colorbar(scatter, ax=axes[0], label="Mapped distribution (0/1)", fraction=0.046, pad=0.04)
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
         for label, color in [(0, PUBLICATION_COLORS[0]), (1, PUBLICATION_COLORS[1])]:
@@ -635,7 +633,6 @@ def _strong_wheat_contract_figure(
             axes[1].plot(months, means, marker="o", color=color, label=f"Phenology proxy class {label}")
         axes[1].set_xlabel("Phenology month")
         axes[1].set_ylabel("Mean NDVI")
-        axes[1].set_title("Phenology-aligned signal")
         axes[1].legend(frameon=False)
         mapped_count = sum(item[2] for item in points)
         statistics = {"sample_count": len(points), "mapped_count": mapped_count, "mapped_fraction": mapped_count / len(points)}
@@ -663,7 +660,6 @@ def _strong_wheat_contract_figure(
         axes[0].set_yticks([0, 1], labels=["Reference 0", "Reference 1"])
         axes[0].set_xlabel("Mapped class")
         axes[0].set_ylabel("Reference/proxy class")
-        axes[0].set_title("Cross-source agreement matrix")
         fig.colorbar(image, ax=axes[0], label="Sample count", fraction=0.046, pad=0.04)
 
         def accuracy_from(column: str, threshold: float) -> float:
@@ -686,7 +682,6 @@ def _strong_wheat_contract_figure(
         axes[1].set_xlim(0, 1)
         axes[1].set_xlabel("Agreement accuracy")
         axes[1].set_ylabel("Predictor set")
-        axes[1].set_title("Transparent ablation comparison")
         axes[1].grid(True, axis="x", alpha=0.25)
         statistics = {"sample_count": len(pairs), "agreement_matrix": matrix, **{name: score for name, score in scores}}
         variables = {"reference": "class", "mapped": "prediction_class", "ablations": ["NDVI_Apr", "seasonal_ndvi_amplitude"]}
@@ -706,7 +701,6 @@ def _strong_wheat_contract_figure(
         scatter = axes[0].scatter([x for x, _, _ in triples], [y for _, y, _ in triples], c=[z for _, _, z in triples], cmap="viridis", s=10, alpha=0.6, linewidths=0)
         axes[0].set_xlabel("Mean growing degree-day index")
         axes[0].set_ylabel("Mean rainy-day count")
-        axes[0].set_title("Observed agroclimatic domain")
         fig.colorbar(scatter, ax=axes[0], label="Suitability class", fraction=0.046, pad=0.04)
         ordered = sorted(triples, key=lambda item: item[0])
         bins = []
@@ -719,7 +713,6 @@ def _strong_wheat_contract_figure(
         axes[1].fill_between([item[0] for item in bins], [item[2] for item in bins], [item[3] for item in bins], color=PUBLICATION_COLORS[2], alpha=0.2, label="Observed range")
         axes[1].set_xlabel("Mean growing degree-day index")
         axes[1].set_ylabel("Climate suitability class")
-        axes[1].set_title("Conditional suitability response")
         axes[1].legend(frameon=False)
         correlation = _pearson([(x, z) for x, _, z in triples])
         statistics = {"complete_sample_count": len(triples), "gdd_suitability_correlation": correlation, "suitability_min": min(z for _, _, z in triples), "suitability_max": max(z for _, _, z in triples)}
@@ -742,7 +735,6 @@ def _strong_wheat_contract_figure(
         scatter = axes[0].scatter([p[0] for p in points], [p[1] for p in points], c=[p[2] for p in points], cmap="RdYlGn", vmin=0, vmax=4, s=10, alpha=0.68, linewidths=0)
         axes[0].set_xlabel("Longitude (degrees E)")
         axes[0].set_ylabel("Latitude (degrees N)")
-        axes[0].set_title("Evidence-constrained zone classes")
         fig.colorbar(scatter, ax=axes[0], label="Zone class (0–4)", fraction=0.046, pad=0.04)
         thresholds = [2.0, 2.5, 3.0]
         fractions = [sum(suit >= threshold and zone > 0 for _, _, zone, suit in points) / len(points) for threshold in thresholds]
@@ -750,7 +742,6 @@ def _strong_wheat_contract_figure(
         axes[1].set_ylim(0, 1)
         axes[1].set_xlabel("Suitability threshold")
         axes[1].set_ylabel("Fraction of sampled locations")
-        axes[1].set_title("Threshold sensitivity")
         axes[1].legend(frameon=False)
         zone_counts = Counter(zone for _, _, zone, _ in points)
         statistics = {"sample_count": len(points), "zone_counts": dict(zone_counts), "threshold_fractions": dict(zip([str(v) for v in thresholds], fractions))}
@@ -772,7 +763,6 @@ def _strong_wheat_contract_figure(
         scatter = axes[0].scatter([p[0] for p in points], [p[1] for p in points], c=[p[2] for p in points], cmap="YlOrBr", s=10, alpha=0.68, linewidths=0)
         axes[0].set_xlabel("Longitude (degrees E)")
         axes[0].set_ylabel("Latitude (degrees N)")
-        axes[0].set_title("Conditional production-potential proxy")
         fig.colorbar(scatter, ax=axes[0], label="Production-potential proxy", fraction=0.046, pad=0.04)
         grouped: dict[str, list[float]] = {}
         for _, _, value, block in points:
@@ -781,7 +771,6 @@ def _strong_wheat_contract_figure(
         axes[1].barh([item[0] for item in summaries][::-1], [item[1] for item in summaries][::-1], color=PUBLICATION_COLORS[4])
         axes[1].set_xlabel("Mean production-potential proxy")
         axes[1].set_ylabel("One-degree spatial reporting unit")
-        axes[1].set_title("Administrative-summary proxy")
         axes[1].grid(True, axis="x", alpha=0.25)
         statistics = {"sample_count": len(points), "reporting_unit_count": len(grouped), "overall_mean": _mean([p[2] for p in points]), "top_reporting_units": summaries}
         variables = {"map": ["longitude", "latitude", "production_potential_proxy"], "summary_unit": "spatial_block"}
@@ -803,7 +792,12 @@ def _strong_wheat_contract_figure(
             axis_labels={"x": "contract-specific horizontal scale", "y": "contract-specific vertical scale"},
             legend_present=legend_present,
             colorbar_present=colorbar_present,
-            text_elements=[str(figure.get("title") or "Strong-wheat evidence contract"), *[ax.get_title() for ax in axes]],
+            text_elements=[
+                label
+                for ax in axes
+                for label in (ax.get_xlabel(), ax.get_ylabel())
+                if label
+            ],
             figure_size_inches=figure_size,
         ),
     }

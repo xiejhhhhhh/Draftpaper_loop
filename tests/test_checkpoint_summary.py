@@ -9,7 +9,11 @@ from unittest import mock
 from pathlib import Path
 
 from draftpaper_cli.checkpoint_summary import validate_checkpoint_summary
-from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+from draftpaper_cli.orchestrator import (
+    _is_confirmed_research_plan_packet_compatibility_case,
+    checkpoint_project,
+    resume_project,
+)
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -109,6 +113,34 @@ class CheckpointSummaryTests(unittest.TestCase):
 
             result = resume_project(project.path, checkpoint_hash=checkpoint["checkpoint_hash"])
             self.assertEqual(result["status"], "resumed")
+
+    def test_research_plan_packet_compatibility_requires_current_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Research plan compatibility", field="astronomy")
+            packet = project.path / "research_plan" / "research_plan_review_packet.html"
+            packet.parent.mkdir(parents=True, exist_ok=True)
+            packet.write_text("<html>review packet</html>\n", encoding="utf-8")
+            checkpoint = {
+                "stage": "research_plan",
+                "next_action": {"plan_hash": "confirmed-plan"},
+            }
+            reasons = ["Bound artifact is missing: research_plan/research_plan_review_packet.html"]
+            with mock.patch(
+                "draftpaper_cli.research_plan_confirmation.confirmation_state",
+                return_value={"status": "confirmed", "current": True, "confirmed_plan_hash": "confirmed-plan"},
+            ), mock.patch(
+                "draftpaper_cli.research_plan_confirmation.current_plan_hash",
+                return_value="confirmed-plan",
+            ):
+                self.assertTrue(_is_confirmed_research_plan_packet_compatibility_case(project.path, checkpoint, reasons))
+
+            self.assertFalse(
+                _is_confirmed_research_plan_packet_compatibility_case(
+                    project.path,
+                    checkpoint,
+                    [*reasons, "Checkpoint summary hash changed."],
+                )
+            )
 
     def test_checkpoint_index_is_published_only_after_ledger_commit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

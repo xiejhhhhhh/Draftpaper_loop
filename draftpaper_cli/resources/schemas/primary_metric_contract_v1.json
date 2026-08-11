@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.primary_metric_contract.v1",
+  "title": "Draftpaper Primary Metric Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "metric_definition_id", "task_id", "cohort_id", "sample_unit", "model_id", "validation_design_id", "split_id", "aggregation_id", "uncertainty_definition_id"],
+  "properties": {
+    "schema_version": {"const": "dpl.primary_metric_contract.v1"},
+    "metric_definition_id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "cohort_id": {"type": "string", "minLength": 1},
+    "sample_unit": {"type": "string", "minLength": 1},
+    "model_id": {"type": "string", "minLength": 1},
+    "validation_design_id": {"type": "string", "minLength": 1},
+    "split_id": {"type": "string", "minLength": 1},
+    "aggregation_id": {"type": "string", "minLength": 1},
+    "uncertainty_definition_id": {"type": "string", "minLength": 1},
+    "contract_source": {"type": "string"}
+  }
+}

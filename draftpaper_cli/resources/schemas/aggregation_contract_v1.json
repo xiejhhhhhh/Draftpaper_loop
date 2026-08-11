@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.aggregation_contract.v1",
+  "title": "Draftpaper Aggregation Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "aggregation_contract_id", "replicate_axis", "reducer", "missing_replicate_policy", "output_metric_definition_id"],
+  "properties": {
+    "schema_version": {"const": "dpl.aggregation_contract.v1"},
+    "aggregation_contract_id": {"type": "string", "minLength": 1},
+    "aggregation_id": {"type": "string"},
+    "input_record_selector": {"type": "object"},
+    "replicate_axis": {"type": "string", "minLength": 1},
+    "required_replicate_ids": {"type": "array", "items": {"type": "string"}},
+    "reducer": {"type": "string", "minLength": 1},
+    "missing_replicate_policy": {"enum": ["block", "warn", "drop"]},
+    "weighting": {"type": "string"},
+    "output_metric_definition_id": {"type": "string", "minLength": 1}
+  }
+}

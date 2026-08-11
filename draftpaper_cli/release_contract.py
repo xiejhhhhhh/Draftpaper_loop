@@ -198,14 +198,30 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         {"status": "not_packaged", "baseline_version": "unknown", "current_count": None, "legacy_debt_count": None},
     )
     checkpoint_schema_ids = {
-        "summary": "dpl.checkpoint_summary.v1",
-        "artifact_manifest": "dpl.checkpoint_artifact_manifest.v1",
+        "summary": "dpl.checkpoint_summary.v3",
+        "artifact_manifest": "dpl.checkpoint_artifact_manifest.v2",
         "confirmation_request": "dpl.confirmation_request.v1",
         "change_report": "dpl.checkpoint_change_report.v1",
         "unresolved_issues": "dpl.checkpoint_unresolved_issues.v1",
         "agent_payload": "dpl.checkpoint_agent_payload.v1",
     }
-    checkpoint_contract_status = "passed" if all(_schema_family(schema_registry, schema_id) for schema_id in checkpoint_schema_ids.values()) else "failed"
+    checkpoint_schema_files = {
+        "summary": "resources/schemas/checkpoint_summary_v3.json",
+        "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
+        "confirmation_request": "resources/schemas/confirmation_request_v1.json",
+        "change_report": "resources/schemas/checkpoint_change_report_v1.json",
+        "unresolved_issues": "resources/schemas/checkpoint_unresolved_issues_v1.json",
+        "agent_payload": "resources/schemas/checkpoint_agent_payload_v1.json",
+    }
+    missing_checkpoint_schema_files = [
+        relative for relative in checkpoint_schema_files.values() if not (repository / "draftpaper_cli" / relative).is_file()
+    ]
+    checkpoint_contract_status = (
+        "passed"
+        if all(_schema_family(schema_registry, schema_id) for schema_id in checkpoint_schema_ids.values())
+        and not missing_checkpoint_schema_files
+        else "failed"
+    )
     missing_commands = sorted(set(REQUIRED_CLI_COMMANDS) - set(COMMAND_SPECS))
     if missing_commands:
         raise ValueError("Required release commands are not registered in CommandSpec: " + ", ".join(missing_commands))
@@ -237,6 +253,8 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         "checkpoint_contract": {
             "status": checkpoint_contract_status,
             "summary_schema": checkpoint_schema_ids["summary"],
+            "schema_files": checkpoint_schema_files,
+            "missing_schema_files": missing_checkpoint_schema_files,
             "required_companions": [
                 "stage_summary.zh-CN.html",
                 "stage_summary.json",

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .html_utils import write_html_report
+from .artifact_identity import compute_artifact_identity, sha256_file
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
 
@@ -379,6 +380,18 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
         for path in _scan_python_files(state.path)
         if _project_relative(state.path, path).startswith(("methods/plotting/", "methods/scripts/"))
     ]
+    run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
+    resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json", {})
+    count_report = _read_json(state.path / "results" / "count_identity_report.json", {})
+    metric_records = resolved_evidence.get("metric_evidence_records") if isinstance(resolved_evidence, dict) else []
+    metric_refs = [str(item.get("metric_record_id")) for item in metric_records or [] if isinstance(item, dict) and item.get("metric_record_id")]
+    count_records = count_report.get("records") if isinstance(count_report, dict) else []
+    count_refs = [str(item.get("count_record_id")) for item in count_records or [] if isinstance(item, dict) and item.get("count_record_id")]
+    metadata_identity = None
+    metadata_path = state.path / "results" / "figure_metadata.json"
+    if metadata_path.is_file():
+        metadata_identity = compute_artifact_identity(metadata_path, "results/figure_metadata.json")
+    transaction_id = str(run_manifest.get("run_transaction_id") or run_manifest.get("transaction_id") or run_manifest.get("run_id") or "").strip()
     traces = []
     for item in figures or []:
         figure_id = str(item.get("figure_id") or item.get("storyboard_id") or Path(str(item.get("path") or "")).stem)
@@ -389,18 +402,50 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
                 matched.append(relative)
         if not matched and plotting_files:
             matched = [plotting_files[0]]
+        figure_relative = str(item.get("path") or "").replace("\\", "/")
+        figure_path = state.path / figure_relative
+        figure_identity = compute_artifact_identity(figure_path, figure_relative) if figure_path.is_file() else {}
+        code_hashes = {
+            relative: sha256_file(state.path / relative)
+            for relative in matched
+            if (state.path / relative).is_file()
+        }
+        input_hashes = {}
+        for raw in run_manifest.get("input_artifacts") or run_manifest.get("input_files") or []:
+            raw_relative = str(raw.get("path") if isinstance(raw, dict) else raw).replace("\\", "/")
+            raw_path = state.path / raw_relative
+            if raw_relative and raw_path.is_file():
+                input_hashes[raw_relative] = sha256_file(raw_path)
         traces.append({
+            "schema_version": "dpl.figure_code_trace.v2",
             "figure_id": figure_id,
-            "figure_path": item.get("path"),
+            "figure_path": figure_relative,
             "code_files": matched,
             "interpretation_summary": item.get("interpretation_summary") or "",
             "statistics": item.get("statistics") or {},
+            "figure_hash": figure_identity.get("byte_sha256"),
+            "semantic_hash": figure_identity.get("semantic_sha256"),
+            "metadata_hash": metadata_identity.get("byte_sha256") if metadata_identity else None,
+            "producer_code_hashes": code_hashes,
+            "input_artifact_hashes": input_hashes,
+            "run_transaction_id": transaction_id,
+            "run_id": str(run_manifest.get("run_id") or ""),
+            "cohort_id": str(run_manifest.get("cohort_id") or run_manifest.get("cohort") or ""),
+            "metric_record_refs": metric_refs,
+            "count_record_refs": count_refs,
+            "caption_contract_ref": str(item.get("caption_contract_ref") or ""),
+            "producer_fingerprint": {"module": "draftpaper_cli.code_ownership", "version": "v2"},
+            "trace_status": "current" if figure_identity and transaction_id else "legacy_unqualified",
         })
     payload = {
         "status": "written",
+        "schema_version": "dpl.figure_code_trace.v2",
         "generated_at": utc_now(),
         "trace_count": len(traces),
         "traces": traces,
+        "run_transaction_id": transaction_id,
+        "run_id": str(run_manifest.get("run_id") or ""),
+        "policy": "Figure traces are current only when image, metadata, code, inputs, run transaction, and evidence references are bound.",
     }
     _write_json(state.path / FIGURE_CODE_TRACE, payload)
     lines = ["# Figure Code Trace", "", "| Figure | Code files |", "| --- | --- |"]
@@ -409,8 +454,70 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
     write_html_report(state.path / "results" / "figure_code_trace.html", "\n".join(lines), title="Figure Code Trace")
     return {
         "status": "written",
+        "schema_version": "dpl.figure_code_trace.v2",
         "project_path": str(state.path),
         "figure_code_trace": str(state.path / FIGURE_CODE_TRACE),
         "trace_count": len(traces),
         "traces": traces,
     }
+
+
+def assess_figure_code_trace(project: str | Path) -> dict[str, Any]:
+    """Recompute v2 bindings without rewriting the trace or project state."""
+
+    state = load_project(project)
+    payload = _read_json(state.path / FIGURE_CODE_TRACE, {})
+    traces = payload.get("traces") if isinstance(payload, dict) else []
+    checks: list[dict[str, Any]] = []
+    for item in traces or []:
+        if not isinstance(item, dict):
+            continue
+        figure_relative = str(item.get("figure_path") or "").replace("\\", "/")
+        issues: list[dict[str, Any]] = []
+        if str(item.get("schema_version") or payload.get("schema_version") or "") != "dpl.figure_code_trace.v2":
+            issues.append({"kind": "legacy_unqualified", "detail": "Trace does not use FigureCodeTrace v2."})
+        figure_path = state.path / figure_relative
+        if not figure_path.is_file():
+            issues.append({"kind": "missing_figure", "detail": figure_relative})
+        else:
+            identity = compute_artifact_identity(figure_path, figure_relative)
+            if item.get("figure_hash") != identity.get("byte_sha256") or item.get("semantic_hash") != identity.get("semantic_sha256"):
+                issues.append({"kind": "figure_hash_changed", "detail": figure_relative})
+        metadata_path = state.path / "results" / "figure_metadata.json"
+        if metadata_path.is_file() and item.get("metadata_hash"):
+            metadata_identity = compute_artifact_identity(metadata_path, "results/figure_metadata.json")
+            if item.get("metadata_hash") != metadata_identity.get("byte_sha256"):
+                issues.append({"kind": "metadata_hash_changed", "detail": "results/figure_metadata.json"})
+        for relative, expected in (item.get("producer_code_hashes") or {}).items():
+            path = state.path / str(relative)
+            if not path.is_file() or sha256_file(path) != expected:
+                issues.append({"kind": "producer_code_hash_changed", "detail": str(relative)})
+        for relative, expected in (item.get("input_artifact_hashes") or {}).items():
+            path = state.path / str(relative)
+            if not path.is_file() or sha256_file(path) != expected:
+                issues.append({"kind": "input_artifact_hash_changed", "detail": str(relative)})
+        if not str(item.get("run_transaction_id") or ""):
+            issues.append({"kind": "missing_run_transaction", "detail": "run_transaction_id"})
+        checks.append({
+            "figure_id": item.get("figure_id"),
+            "figure_path": figure_relative,
+            "status": "current" if not issues else "stale",
+            "issues": issues,
+        })
+    status = "current" if checks and all(item["status"] == "current" for item in checks) else "stale" if checks else "missing"
+    return {
+        "schema_version": "dpl.figure_code_trace_validation.v1",
+        "status": status,
+        "trace_schema_version": payload.get("schema_version") if isinstance(payload, dict) else None,
+        "checks": checks,
+        "policy": "A trace is current only when every bound artifact hash and run transaction remains current.",
+    }
+
+
+def validate_figure_code_trace(project: str | Path) -> dict[str, Any]:
+    """Write a read-only validation receipt for FigureCodeTrace v2."""
+
+    state = load_project(project)
+    report = assess_figure_code_trace(state.path)
+    _write_json(state.path / "results" / "figure_code_trace_validation.json", report)
+    return report

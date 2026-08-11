@@ -62,6 +62,8 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 **安全归档检查。** 用户单独确认下载后，系统会检查 checksum、路径逃逸、符号链接/设备文件、大小/压缩比、许可证一致性和静态结构，之后才允许进入插件晋升候选。metadata enrichment 和静态检查阶段永不执行第三方代码。
 <!-- /capability:safe_research_code_archive_inspection -->
 
+**证据身份与完整阶段审查。** 当前框架工作树会在 Result Support 或人工确认前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v3` 阶段包会通过同源的 JSON/HTML/Agent 载荷展示完整阶段产物、事务变化、sample-flow、证据身份、验证状态、恢复路线、hash，以及项目相对路径和本机绝对路径。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
+
 ### 从早期版本到当前框架
 
 - **v0.1-v0.13：论文项目与科研阶段地基。** 建立参考文献、期刊画像、research plan、方法/结果/讨论写作、artifact 追踪、Zotero、数据观察、科研绘图和阶段归属代码。
@@ -493,6 +495,18 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.37.0 之后的当前工作树（尚未打 tag）-- 证据完整性与阶段审查加固
+
+package 版本仍为 `v0.37.0`；本条记录当前框架工作树的改动，不代表已经发布新的正式版本。
+
+- 新增指标、计数、聚合、主指标选择、运行证据包生命周期和图表代码追踪合同。失败的 candidate run 不能覆盖 active evidence bundle；当代码、输入、图像、metadata 或运行事务变化时，figure trace 会变为 stale。
+- 新增 identity-first 比较和 Result Support 阻断。只有 task、model、cohort、sample unit、validation design、split、metric definition 和 aggregation identity 一致时才比较数值；否则区分 non-comparable、missing、stale 和 conflict。
+- checkpoint 摘要升级为 `dpl.checkpoint_summary.v3`。中文 HTML、机器摘要、artifact manifest、confirmation request、未解决事项报告和 Agent payload 共享同一个 summary hash，并完整列出阶段范围内未变化的 manifest、生成的代码、图表、表格、报告和运行证据。
+- 新增框架级阶段作用域解析，防止 checkpoint 误吸收其他阶段的历史页面、失败 candidate、缓存结果或嵌套 checkpoint 产物。`blocked`、`stale`、`preview` 和身份缺失页面不提供确认路线；只有匿名 fixture 可以使用 `test_auto_confirmation=true` 进行界面测试。
+- 新增六阶段匿名 HTML showcase，覆盖 research plan、data、methods、Result Support、core evidence 和 quality checks。Result Support 在存在两条互斥路线时保持 blocked，证明框架不会替用户选择科学路线。
+- 验证结果：分组全量测试 `1179 passed, 2 skipped`；证据/HTML 重点回归 `25 passed`；Ruff、compileall、命令合同、release manifest、安装矩阵、隔离 wheel 安装、五领域 fixture 和对抗语义检查均通过。
+- 边界说明：fixture 和 showcase 验证的是工作流合同，不是在线 provider 输出或科研结论。正式 tag/release、CI 跨平台发布验收和真实项目人工确认仍需单独完成。
+
 ### v0.37.0（2026-08-03）-- 阶段确认透明度与持久科研代码来源
 
 - 每个人工确认点都会生成中文离线阶段总结、机器可读 artifact manifest、confirmation request、未解决事项列表和 Agent 路径载荷。总结会说明生成、修改、部署、验证、失败和确认后冻结的内容；摘要伴随文件缺失时不能消费该 checkpoint。

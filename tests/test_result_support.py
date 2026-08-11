@@ -16,6 +16,7 @@ from draftpaper_cli.project_state import load_project
 from draftpaper_cli.result_rescue import ResultRescueError, prepare_result_rescue
 from draftpaper_cli.result_support import assess_result_support
 from draftpaper_cli.results import ResultsGateError, write_results
+from draftpaper_cli.doctor import verify_next_action
 
 
 def _write_validity_inputs(project_path) -> None:
@@ -194,6 +195,14 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             status = status_project(project.path)
             self.assertEqual(status["pipeline_state"], "awaiting_result_route")
             self.assertEqual(status["next_action"]["command"], "choose-result-route")
+            checkpoint_index = project.path / "review" / "checkpoints" / "index.json"
+            index_before = checkpoint_index.read_bytes() if checkpoint_index.is_file() else None
+            verification = verify_next_action(project.path)
+            self.assertEqual(verification["status"], "passed")
+            self.assertEqual(verification["action_mode"], "human_decision")
+            self.assertEqual(len(verification["route_options"]), 2)
+            index_after = checkpoint_index.read_bytes() if checkpoint_index.is_file() else None
+            self.assertEqual(index_after, index_before)
             self.assertEqual(run_pipeline(project.path)["status"], "awaiting_result_route")
             report = json.loads((project.path / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8"))
             self.assertEqual(report["schema_version"], "dpl.result_support_checkpoint.v3")
@@ -1014,6 +1023,28 @@ class ResultSupportCheckpointTests(unittest.TestCase):
 
             self.assertEqual(report["skipped_tasks"][0]["task_id"], "optional-task")
             self.assertEqual(report["warnings"][0]["code"], "optional_task_skipped")
+
+
+def test_result_support_blocks_non_strict_metric_identity(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="metric identity gate", field="machine learning").path
+    _write_validity_inputs(project)
+    (project / "research_plan" / "claim_contract.json").write_text(
+        json.dumps({"claims": [{"claim_id": "claim-1", "claim_text": "The result is exploratory."}]}),
+        encoding="utf-8",
+    )
+    (project / "methods" / "run_manifest.yaml").write_text(
+        json.dumps({"status": "success", "run_id": "run-current"}),
+        encoding="utf-8",
+    )
+    (project / "results" / "metric_identity_report.json").write_text(
+        json.dumps({"status": "blocked", "blocking_reasons": [{"status": "blocked_missing_primary_metric_contract"}]}),
+        encoding="utf-8",
+    )
+
+    result = assess_result_support(project)
+    report = json.loads((project / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8"))
+    assert result["decision"] == "route_decision_required"
+    assert any(item["failure_type"] == "metric_identity_gate" for item in report["claim_assessments"])
 
 
 if __name__ == "__main__":

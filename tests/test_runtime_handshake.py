@@ -22,3 +22,8 @@ def test_session_preflight_initializes_and_detects_runtime_mismatch(tmp_path: Pa
     second = session_preflight(project)
     assert second["status"] == "blocked"
     assert (project / RUNTIME_LOCK).read_text(encoding="utf-8").find("old-runtime") >= 0
+
+    migrated = session_preflight(project, accept_runtime_update=True)
+    assert migrated["status"] == "updated"
+    assert migrated["migration_receipt"]
+    assert (project / RUNTIME_LOCK).read_text(encoding="utf-8").find("old-runtime") == -1

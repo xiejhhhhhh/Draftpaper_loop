@@ -9,7 +9,9 @@
     "stage_summary_sha256": {"type": "string"},
     "allowed_decisions": {"type": "array"},
     "requires_user_decision": {"const": true},
-    "confirmation_command": {"type": "string"}
+    "confirmation_command": {"type": ["string", "null"]},
+    "summary_schema": {"type": "string"},
+    "review_state": {"type": "string"}
   },
   "additionalProperties": true
 }

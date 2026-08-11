@@ -1328,6 +1328,10 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         checkpoint_hash=base["hash"],
         publish_index=False,
     )
+    # The final summary is rendered after the checkpoint hash is known.  Bind
+    # the ledger event to that final semantic summary, not the provisional
+    # pre-hash summary written during the first pass.
+    base["stage_summary_sha256"] = final_summary["stage_summary_sha256"]
     append_checkpoint_event(state.path, base)
     from .checkpoint_summary import _publish_checkpoint_index
 
@@ -1375,10 +1379,17 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
 
         summary_validation = validate_checkpoint_summary(state.path, checkpoint)
         if not summary_validation.get("valid"):
-            raise OrchestratorError(
-                "Checkpoint summary is stale; create a new human-review checkpoint. "
-                + "; ".join(str(item) for item in summary_validation.get("reasons") or [])
-            )
+            reasons = [str(item) for item in summary_validation.get("reasons") or []]
+            # Older research-plan checkpoints could bind the review packet as an
+            # explicit artifact before it was registered by the project-wide
+            # artifact collector.  Once the user has confirmed the exact plan,
+            # that presentation-only binding is safe to consume if the packet
+            # still exists and no other integrity reason is present.
+            if not _is_confirmed_research_plan_packet_compatibility_case(state.path, checkpoint, reasons):
+                raise OrchestratorError(
+                    "Checkpoint summary is stale; create a new human-review checkpoint. "
+                    + "; ".join(reasons)
+                )
     if str(checkpoint.get("stage") or "") == "core_evidence":
         try:
             current_subject = evidence_confirmation_subject(state.path)
@@ -1423,6 +1434,37 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         "evidence_snapshot_id": (promoted_snapshot or {}).get("snapshot_id"),
         "next_action": status["next_action"],
     }
+
+
+def _is_confirmed_research_plan_packet_compatibility_case(
+    project: Path,
+    checkpoint: dict[str, Any],
+    reasons: list[str],
+) -> bool:
+    """Allow only the known pre-v0.37 review-packet binding mismatch."""
+
+    expected_reason = "Bound artifact is missing: research_plan/research_plan_review_packet.html"
+    if str(checkpoint.get("stage") or "") != "research_plan" or reasons != [expected_reason]:
+        return False
+    packet_path = project / "research_plan" / "research_plan_review_packet.html"
+    if not packet_path.is_file():
+        return False
+    next_action = checkpoint.get("next_action")
+    checkpoint_plan_hash = str(next_action.get("plan_hash") or "") if isinstance(next_action, dict) else ""
+    if not checkpoint_plan_hash:
+        return False
+    try:
+        from .research_plan_confirmation import confirmation_state, current_plan_hash
+
+        confirmed = confirmation_state(project)
+        return (
+            confirmed.get("status") == "confirmed"
+            and confirmed.get("current") is True
+            and str(confirmed.get("confirmed_plan_hash") or "") == checkpoint_plan_hash
+            and current_plan_hash(project) == checkpoint_plan_hash
+        )
+    except Exception:
+        return False
 
 
 def run_pipeline(project: str | Path) -> dict[str, Any]:

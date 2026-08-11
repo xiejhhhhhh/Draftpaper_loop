@@ -62,6 +62,8 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 **Safe archive inspection.** A separately confirmed archive download is checked for checksum, path traversal, symlink/device entries, size/compression limits, license consistency, and static structure before any plugin promotion. Third-party code is never executed by metadata enrichment or static inspection.
 <!-- /capability:safe_research_code_archive_inspection -->
 
+**Evidence identity and complete stage review.** The current framework worktree validates typed `MetricEvidence`, `CountEvidence`, `AggregationContract`, `PrimaryMetricContract`, `RunEvidenceBundle`, and `FigureCodeTrace v2` before Result Support or human confirmation. A `dpl.checkpoint_summary.v3` package now exposes the complete stage deliverables, transaction changes, sample-flow, evidence identity, validation state, recovery route, hashes, and both project-relative and machine-absolute paths through one synchronized JSON/HTML/Agent payload. Identity is checked before values are compared, so different cohorts, runs, models, validation designs, or denominators are reported as non-comparable rather than silently merged.
+
 ### From the early releases to the current framework
 
 - **v0.1-v0.13: paper-project and research-stage foundations.** References, journal profiles, research plans, methods/results/discussion writing, artifact tracking, Zotero, observations, scientific plotting, and stage-owned code.
@@ -501,6 +503,18 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### Current working tree after v0.37.0 (not yet tagged) -- Evidence Integrity and Complete Stage Review
+
+The package version remains `v0.37.0`; this entry records the current framework worktree and is not a formal release claim.
+
+- Added typed evidence contracts for metrics, counts, aggregation, primary-metric selection, run-bundle lifecycle, and figure-code trace. A failed candidate run cannot replace the active evidence bundle, and a figure trace becomes stale when its code, inputs, image, metadata, or run transaction changes.
+- Added identity-first comparison and Result Support blocking. Values are compared only after task, model, cohort, sample unit, validation design, split, metric definition, and aggregation identity agree; otherwise the report distinguishes non-comparable, missing, stale, and conflicting evidence.
+- Promoted checkpoint summaries to `dpl.checkpoint_summary.v3`. The Chinese HTML, machine summary, artifact manifest, confirmation request, unresolved-issues report, and Agent payload share one summary hash and list every in-scope deliverable, including unchanged manifests and generated code, figures, tables, reports, and run evidence.
+- Added a framework-level stage scope resolver so a checkpoint cannot accidentally absorb another stage's historical page, failed candidate, cached output, or nested checkpoint artifact. `blocked`, `stale`, `preview`, and identity-missing pages expose no confirmation route; only anonymous fixtures may carry `test_auto_confirmation=true` for UX tests.
+- Added an anonymous six-stage HTML showcase covering research plan, data, methods, Result Support, core evidence, and quality checks. The Result Support page remains blocked when two mutually exclusive routes exist, demonstrating that the framework does not choose a scientific route for the user.
+- Verification: grouped full test matrix `1179 passed, 2 skipped`; focused evidence/HTML regression `25 passed`; Ruff, compileall, command contracts, release manifest, install matrix, isolated wheel installation, five-domain fixtures, and adversarial semantic checks passed.
+- Boundary: fixtures and the showcase validate workflow contracts, not live provider output or scientific conclusions. Formal tag/release, CI cross-platform release acceptance, and real-project human confirmation remain separate steps.
+
 ### v0.37.0 (2026-08-03) -- Transparent Checkpoints and Persistent Research-Code Sources
 
 - Every human checkpoint now creates a Chinese offline stage summary, machine-readable artifact manifest, confirmation request, unresolved-issues list, and exact Agent payload. The summary explains what was generated, modified, deployed, validated, failed, and what confirmation will freeze; missing summary companions prevent checkpoint consumption.

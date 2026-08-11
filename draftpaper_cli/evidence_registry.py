@@ -356,10 +356,33 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         records.extend(_records_from_result_manifest(result_manifest, state.path))
     resolved = _read_json(state.path / "results" / "resolved_result_evidence.json")
     primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
+    typed_metric_report = _read_json(state.path / "results" / "metric_identity_report.json")
+    typed_count_report = _read_json(state.path / "results" / "count_identity_report.json")
+    active_bundle = _read_json(state.path / "results" / "active_run_evidence_bundle.json")
+    if not typed_metric_report and isinstance(resolved.get("metric_identity_report"), dict):
+        typed_metric_report = dict(resolved["metric_identity_report"])
+    if not typed_count_report and isinstance(resolved.get("count_identity_report"), dict):
+        typed_count_report = dict(resolved["count_identity_report"])
     conflicts = _conflicts(records)
     incomplete = [record for record in records if not record.get("binding_complete")]
+    typed_metric_records = [
+        item for item in typed_metric_report.get("records") or []
+        if isinstance(item, dict)
+    ]
+    typed_count_records = [
+        item for item in typed_count_report.get("records") or []
+        if isinstance(item, dict)
+    ]
+    typed_statuses = [
+        str(typed_metric_report.get("status") or "missing"),
+        str(typed_count_report.get("status") or "missing"),
+    ]
+    typed_blocking = [
+        status for status in typed_statuses
+        if status in {"blocked", "blocked_missing_primary_metric", "blocked_ambiguous_primary_metric"}
+    ]
     registry = {
-        "status": "blocked" if conflicts else "ready",
+        "status": "blocked" if conflicts or typed_blocking else "ready",
         "schema_version": "dpl.scientific_evidence_registry.v2",
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
@@ -371,6 +394,18 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         "incomplete_binding_count": len(incomplete),
         "incomplete_binding_evidence_ids": [record.get("evidence_id") for record in incomplete],
         "conflicts": conflicts,
+        "typed_evidence": {
+            "metric_identity_report": typed_metric_report,
+            "count_identity_report": typed_count_report,
+            "active_run_bundle_pointer": active_bundle,
+            "metric_record_count": len(typed_metric_records),
+            "count_record_count": len(typed_count_records),
+            "metric_status": str(typed_metric_report.get("status") or "missing"),
+            "count_status": str(typed_count_report.get("status") or "missing"),
+            "active_bundle_status": "active" if active_bundle.get("status") == "active" else "missing_or_stale",
+            "policy": "Typed identity reports are the canonical quantitative bridge; legacy records remain visible for manuscript coverage but cannot override them.",
+        },
+        "typed_blocking_statuses": typed_blocking,
         "required_binding_fields": list(REQUIRED_BINDING_FIELDS),
         "semantic_key": ["estimand_id", "cohort_view_id", "analysis_spec_id", "run_id", "model_id", "split_id", "aggregation", "metric_dimension"],
         "policy": "Only structured evidence bound to estimand/cohort-view/analysis-spec/run/model/split/aggregation/dimension may guide quantitative manuscript claims; numeric value and free text are not identity keys.",

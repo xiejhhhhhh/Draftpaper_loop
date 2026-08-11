@@ -10,14 +10,17 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from .artifact_identity import canonical_json
+from .artifact_identity import canonical_json, compute_artifact_identity
+from .checkpoint_digest import STAGE_SCOPE_PREFIXES, build_stage_digest, discover_stage_paths
 from .execution_policy import redact_sensitive
-from .passport import collect_artifacts, project_root, read_jsonl, utc_now
+from .passport import collect_artifacts, load_project_passport, project_root, read_jsonl, utc_now
 from .state_kernel import atomic_write_json, atomic_write_text
 
 
-CHECKPOINT_SUMMARY_SCHEMA = "dpl.checkpoint_summary.v1"
-ARTIFACT_MANIFEST_SCHEMA = "dpl.checkpoint_artifact_manifest.v1"
+CHECKPOINT_SUMMARY_SCHEMA = "dpl.checkpoint_summary.v3"
+LEGACY_CHECKPOINT_SUMMARY_SCHEMAS = frozenset({"dpl.checkpoint_summary.v1", "dpl.checkpoint_summary.v2"})
+CHECKPOINT_REVIEW_STATES = frozenset({"confirmable", "stale", "blocked", "preview_only"})
+ARTIFACT_MANIFEST_SCHEMA = "dpl.checkpoint_artifact_manifest.v2"
 CONFIRMATION_REQUEST_SCHEMA = "dpl.confirmation_request.v1"
 CHANGE_REPORT_SCHEMA = "dpl.checkpoint_change_report.v1"
 UNRESOLVED_ISSUES_SCHEMA = "dpl.checkpoint_unresolved_issues.v1"
@@ -37,18 +40,7 @@ _STAGE_TITLES = {
     "writing": "论文内容补全确认",
 }
 
-_STAGE_PREFIXES = {
-    "research_plan": ("research_plan/", "journal_profile/", "plugins/"),
-    "research_plan_feasibility": ("research_plan/", "data/", "methods/", "review/"),
-    "data": ("data/", "review/"),
-    "method_plan": ("methods/", "research_plan/", "review/"),
-    "methods": ("methods/", "code/", "results/", "review/"),
-    "result_support": ("results/", "review/", "methods/", "data/"),
-    "core_evidence": ("core_evidence/", "results/", "review/"),
-    "plugin": ("plugins/", "research_plan/", "review/"),
-    "quality_checks": ("quality_checks/", "quality/", "integrity/", "citation_audit/", "review/", "latex/"),
-    "writing": ("writing/", "latex/", "review/"),
-}
+_STAGE_PREFIXES = STAGE_SCOPE_PREFIXES
 
 _PATH_KEY_TOKENS = (
     "path",
@@ -67,6 +59,130 @@ class CheckpointSummaryError(RuntimeError):
     """Raised when a reviewable checkpoint summary cannot be committed."""
 
 
+def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = False) -> list[str]:
+    """Return deterministic structural issues for a checkpoint summary package.
+
+    v1/v2 summaries remain readable for migration and audit, but they are never
+    treated as current confirmation packages.  The v3 contract deliberately
+    validates the fields that make a page reviewable without trying to infer
+    scientific meaning from arbitrary project files.
+    """
+
+    if not isinstance(summary, dict):
+        return ["Checkpoint summary is not a JSON object."]
+    schema = str(summary.get("schema_version") or "")
+    if schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS:
+        return [] if allow_legacy else [f"Legacy checkpoint summary is read-only: {schema}."]
+    if schema != CHECKPOINT_SUMMARY_SCHEMA:
+        return [f"Unsupported checkpoint summary schema: {schema or 'missing'}."]
+
+    required = (
+        "schema_version",
+        "checkpoint_id",
+        "checkpoint_type",
+        "completed_stage",
+        "stage_status",
+        "review_state",
+        "stage_purpose_zh",
+        "stage_narrative_zh",
+        "stage_deliverables",
+        "transaction_changes",
+        "deliverable_groups",
+        "deliverable_counts",
+        "identity",
+        "core_metrics",
+        "sample_flow",
+        "validation_summary",
+        "consistency_checks",
+        "decision_routes",
+        "decision_route_state",
+        "inspection_targets",
+        "artifact_manifest",
+        "artifact_manifest_sha256",
+        "confirmation_contract",
+        "confirmation_meaning_zh",
+        "rejection_or_refinement_route_zh",
+        "generated",
+        "modified",
+        "deployed",
+        "validated",
+        "failed",
+        "unresolved",
+        "scientific_summary_zh",
+        "scientific_impact",
+        "test_mode",
+        "test_auto_confirmation",
+        "stage_summary_path",
+        "artifact_manifest_path",
+        "stage_summary_sha256",
+        "created_at",
+    )
+    issues = [f"Missing required checkpoint summary field: {key}" for key in required if key not in summary]
+    if issues:
+        return issues
+    string_fields = (
+        "checkpoint_id",
+        "checkpoint_type",
+        "completed_stage",
+        "stage_purpose_zh",
+        "stage_narrative_zh",
+        "artifact_manifest_sha256",
+        "confirmation_meaning_zh",
+        "rejection_or_refinement_route_zh",
+        "stage_summary_path",
+        "artifact_manifest_path",
+        "stage_summary_sha256",
+        "created_at",
+    )
+    issues.extend(f"Checkpoint summary field must be a non-empty string: {key}" for key in string_fields if not isinstance(summary.get(key), str) or not summary.get(key).strip())
+    list_fields = (
+        "stage_deliverables",
+        "deliverable_groups",
+        "sample_flow",
+        "validation_summary",
+        "consistency_checks",
+        "decision_routes",
+        "inspection_targets",
+        "generated",
+        "modified",
+        "deployed",
+        "validated",
+        "failed",
+        "unresolved",
+        "scientific_summary_zh",
+        "scientific_impact",
+    )
+    issues.extend(f"Checkpoint summary field must be an array: {key}" for key in list_fields if not isinstance(summary.get(key), list))
+    dict_fields = ("transaction_changes", "deliverable_counts", "identity", "core_metrics", "decision_route_state", "artifact_manifest", "confirmation_contract")
+    issues.extend(f"Checkpoint summary field must be an object: {key}" for key in dict_fields if not isinstance(summary.get(key), dict))
+    if summary.get("stage_status") not in {"ready_for_human_review", "blocked"}:
+        issues.append("Checkpoint summary stage_status is not recognized.")
+    if summary.get("review_state") not in CHECKPOINT_REVIEW_STATES:
+        issues.append("Checkpoint summary review_state is not recognized.")
+    if not isinstance(summary.get("test_mode"), bool) or not isinstance(summary.get("test_auto_confirmation"), bool):
+        issues.append("Checkpoint summary test_mode and test_auto_confirmation must be booleans.")
+    confirmation_contract = summary.get("confirmation_contract")
+    if isinstance(confirmation_contract, dict):
+        for key in ("requires_user_decision", "confirmation_command_allowed", "source_of_truth", "test_auto_confirmation"):
+            if key not in confirmation_contract:
+                issues.append(f"Confirmation contract is missing: {key}")
+        if confirmation_contract.get("requires_user_decision") is not True:
+            issues.append("Checkpoint confirmation must always require a user decision.")
+        if confirmation_contract.get("source_of_truth") != "canonical_evidence":
+            issues.append("Checkpoint confirmation source_of_truth must be canonical_evidence.")
+        if confirmation_contract.get("confirmation_command_allowed") is not (summary.get("review_state") == "confirmable"):
+            issues.append("Confirmation command permission does not match review_state.")
+        if confirmation_contract.get("test_auto_confirmation") is not summary.get("test_auto_confirmation"):
+            issues.append("Confirmation contract test marker does not match summary.")
+    if summary.get("test_auto_confirmation") and not summary.get("test_mode"):
+        issues.append("test_auto_confirmation requires test_mode=true.")
+    if summary.get("review_state") == "confirmable" and summary.get("stage_status") != "ready_for_human_review":
+        issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
+    if summary.get("review_state") != "confirmable" and summary.get("confirmation_contract", {}).get("confirmation_command_allowed"):
+        issues.append("Non-confirmable summary cannot allow a confirmation command.")
+    return issues
+
+
 def _hash_payload(payload: Any) -> str:
     return hashlib.sha256(canonical_json(payload, volatile_fields=frozenset({"created_at", "generated_at"})).encode("utf-8")).hexdigest()
 
@@ -75,17 +191,13 @@ def _relative_project_path(root: Path, raw: str) -> str | None:
     candidate = Path(str(raw).strip().strip('"'))
     if not str(candidate) or "://" in str(candidate):
         return None
-    if candidate.is_absolute():
-        try:
-            return candidate.resolve().relative_to(root.resolve()).as_posix()
-        except ValueError:
-            return None
-    normalized = str(candidate).replace("\\", "/").lstrip("./")
-    if not normalized or normalized == "." or normalized.startswith("../"):
+    try:
+        root_resolved = root.resolve()
+        resolved = candidate.resolve() if candidate.is_absolute() else (root / candidate).resolve()
+        relative = resolved.relative_to(root_resolved).as_posix()
+    except (OSError, ValueError):
         return None
-    if (root / normalized).exists():
-        return normalized
-    return None
+    return relative if relative and relative != "." and (root_resolved / relative).exists() else None
 
 
 def _payload_paths(root: Path, payload: Any) -> list[str]:
@@ -124,7 +236,7 @@ def _stage_artifacts(root: Path, stage: str, explicit_paths: list[str], artifact
     for relative in explicit_paths:
         if not any(str(item.get("path")) == relative for item in selected):
             selected.append({"path": relative, "missing": not (root / relative).is_file()})
-    return sorted(selected, key=lambda item: str(item.get("path") or ""))[:160]
+    return sorted(selected, key=lambda item: str(item.get("path") or ""))
 
 
 def _artifact_manifest(
@@ -138,6 +250,10 @@ def _artifact_manifest(
     rows: list[dict[str, Any]] = []
     for item in _stage_artifacts(root, stage, explicit_paths, current):
         relative = str(item.get("path") or "")
+        if not item.get("missing") and not (item.get("byte_sha256") or item.get("sha256")):
+            path = root / relative
+            if path.is_file():
+                item = {**item, **compute_artifact_identity(path, relative)}
         previous = before.get(relative)
         if item.get("missing"):
             operation = "failed"
@@ -236,63 +352,9 @@ def _html_link(output_dir: Path, root: Path, relative: str) -> str:
 
 
 def _render_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
-    def list_section(title: str, items: list[Any], *, paths: bool = False) -> str:
-        if not items:
-            return f"<section><h2>{escape(title)}</h2><p>无。</p></section>"
-        rows: list[str] = []
-        for item in items:
-            if paths and isinstance(item, dict) and item.get("project_relative_path"):
-                relative = str(item["project_relative_path"])
-                rows.append(
-                    f"<li><a href=\"{_html_link(output_dir, root, relative)}\">{escape(relative)}</a>"
-                    f"<br><small>{escape(str(item.get('purpose_zh') or item.get('summary_zh') or ''))}</small></li>"
-                )
-            else:
-                rows.append(f"<li>{escape(str(item.get('summary_zh') if isinstance(item, dict) else item))}</li>")
-        return f"<section><h2>{escape(title)}</h2><ul>{''.join(rows)}</ul></section>"
+    from .checkpoint_html import render_checkpoint_html
 
-    manifest = summary.get("artifact_manifest") or {}
-    artifact_rows = []
-    for item in manifest.get("artifacts") or []:
-        relative = str(item.get("project_relative_path") or "")
-        link = _html_link(output_dir, root, relative) if relative else ""
-        artifact_rows.append(
-            "<tr>"
-            f"<td><a href=\"{link}\">{escape(relative)}</a></td>"
-            f"<td>{escape(str(item.get('operation') or ''))}</td>"
-            f"<td>{escape(str(item.get('semantic_changed')))}</td>"
-            f"<td>{escape(str(item.get('user_attention') or ''))}</td>"
-            "</tr>"
-        )
-    return f"""<!doctype html>
-<html lang="zh-CN">
-<head><meta charset="utf-8"><title>{escape(str(summary.get('checkpoint_title_zh') or 'Draftpaper 阶段总结'))}</title>
-<style>
-body {{ font-family: "Microsoft YaHei", Arial, sans-serif; max-width: 1100px; margin: 28px auto; padding: 0 20px; line-height: 1.6; color: #1f2937; }}
-h1 {{ color: #0f172a; }} h2 {{ border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; color: #334155; }}
-.meta {{ background: #f1f5f9; padding: 12px 16px; border-left: 4px solid #2563eb; }}
-table {{ border-collapse: collapse; width: 100%; }} th, td {{ border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }}
-th {{ background: #e2e8f0; }} code {{ background: #f1f5f9; padding: 2px 4px; }}
-.warning {{ background: #fff7ed; border-left: 4px solid #ea580c; padding: 10px 14px; }}
-</style></head>
-<body>
-<h1>{escape(str(summary.get('checkpoint_title_zh') or 'Draftpaper 阶段总结'))}</h1>
-<div class="meta"><strong>阶段：</strong>{escape(str(summary.get('completed_stage') or ''))}<br>
-<strong>状态：</strong>{escape(str(summary.get('stage_status') or ''))}<br>
-<strong>摘要 hash：</strong><code>{escape(str(summary.get('stage_summary_sha256') or request.get('stage_summary_sha256') or ''))}</code></div>
-{list_section('本阶段做了什么', summary.get('scientific_summary_zh') or [])}
-{list_section('生成内容', summary.get('generated') or [], paths=True)}
-{list_section('修改内容', summary.get('modified') or [], paths=True)}
-{list_section('部署与绑定', summary.get('deployed') or [])}
-{list_section('验证结果', summary.get('validated') or [])}
-{list_section('失败事项', summary.get('failed') or [])}
-<div class="warning">{list_section('未解决事项', summary.get('unresolved') or [])}</div>
-{list_section('请重点检查', summary.get('inspection_targets') or [], paths=True)}
-<section><h2>本次确认意味着什么</h2><p>{escape(str(summary.get('confirmation_meaning_zh') or ''))}</p></section>
-<section><h2>拒绝或要求修改</h2><p>{escape(str(summary.get('rejection_or_refinement_route_zh') or ''))}</p></section>
-<section><h2>产物明细</h2><table><thead><tr><th>路径</th><th>操作</th><th>科学语义变化</th><th>注意级别</th></tr></thead><tbody>{''.join(artifact_rows) or '<tr><td colspan="4">无已登记产物。</td></tr>'}</tbody></table></section>
-<section><h2>确认命令</h2><p><code>{escape(str(request.get('confirmation_command') or ''))}</code></p></section>
-</body></html>\n"""
+    return render_checkpoint_html(root, output_dir, summary, request)
 
 
 def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:
@@ -330,6 +392,99 @@ def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:
     )
 
 
+def _checkpoint_index_records(root: Path) -> list[dict[str, Any]]:
+    """Read derived checkpoint records without treating them as scientific truth."""
+
+    index_path = root / CHECKPOINT_ROOT / "index.json"
+    if not index_path.is_file():
+        return []
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return []
+    records = payload.get("checkpoints") if isinstance(payload, dict) else []
+    return [item for item in records if isinstance(item, dict)]
+
+
+def _latest_checkpoint_record(root: Path) -> dict[str, Any] | None:
+    """Return the record named by the latest pointer, if it is still readable."""
+
+    latest_path = root / CHECKPOINT_ROOT / "latest_checkpoint.json"
+    if not latest_path.is_file():
+        return None
+    try:
+        pointer = json.loads(latest_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(pointer, dict):
+        return None
+    relative = str(pointer.get("stage_summary_json") or "")
+    if not relative:
+        return None
+    normalized = _relative_project_path(root, relative)
+    if not normalized:
+        return None
+    for record in reversed(_checkpoint_index_records(root)):
+        if str(record.get("stage_summary_json") or "").replace("\\", "/") == normalized:
+            return {**record, **pointer}
+    return {**pointer, "stage_summary_json": normalized}
+
+
+def _checkpoint_record_hash(root: Path, record: dict[str, Any] | None) -> str | None:
+    """Resolve a source checkpoint hash from ledger, index, or stage evidence."""
+
+    if not record:
+        return None
+    if str(record.get("checkpoint_type") or record.get("stage") or "") == "result_support":
+        report_path = root / "results" / "result_support_checkpoint.json"
+        if report_path.is_file():
+            try:
+                report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+            except (OSError, ValueError):
+                report = {}
+            if isinstance(report, dict) and report.get("checkpoint_sha256"):
+                return str(report["checkpoint_sha256"])
+    for key in ("hash", "checkpoint_hash", "checkpoint_sha256"):
+        value = record.get(key)
+        if value:
+            return str(value)
+    relative = str(record.get("stage_summary_json") or "")
+    summary_path = root / relative if relative else None
+    if summary_path and summary_path.is_file():
+        try:
+            summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            summary = {}
+        identity = summary.get("identity") if isinstance(summary, dict) else {}
+        if isinstance(identity, dict) and identity.get("checkpoint_hash"):
+            return str(identity["checkpoint_hash"])
+    return None
+
+
+def _select_checkpoint_record(root: Path, checkpoint_hash: str | None = None) -> dict[str, Any] | None:
+    """Select the current checkpoint, preferring the derived latest pointer."""
+
+    events = [item for item in read_jsonl(root / "checkpoint_ledger.jsonl") if item.get("kind") == "checkpoint"]
+    index_records = _checkpoint_index_records(root)
+    latest = _latest_checkpoint_record(root)
+    candidates = [*reversed(events), *reversed(index_records)]
+    if checkpoint_hash:
+        for record in candidates:
+            if str(record.get("hash") or "") == checkpoint_hash or str(record.get("stage_summary_sha256") or "") == checkpoint_hash:
+                return record
+        if latest and _checkpoint_record_hash(root, latest) == checkpoint_hash:
+            return latest
+        for record in candidates:
+            if _checkpoint_record_hash(root, record) == checkpoint_hash:
+                return record
+        return None
+    if latest:
+        return latest
+    if index_records:
+        return index_records[-1]
+    return events[-1] if events else None
+
+
 def write_stage_summary(
     project: str | Path,
     *,
@@ -345,7 +500,8 @@ def write_stage_summary(
 
     root = project_root(project)
     data = dict(payload or {})
-    explicit_paths = _payload_paths(root, data)
+    test_auto_confirmation = bool(data.get("test_mode") is True and data.get("test_auto_confirmation") is True)
+    explicit_paths = sorted(set(_payload_paths(root, data) + discover_stage_paths(root, stage)))
     current = collect_artifacts(root)
     identity_seed = {
         "stage": stage,
@@ -357,14 +513,26 @@ def write_stage_summary(
         raise CheckpointSummaryError("checkpoint_id contains unsafe path characters")
     output_dir = root / CHECKPOINT_ROOT / stable_id
     manifest = _artifact_manifest(root, stage, explicit_paths, before_artifacts)
-    operations = manifest.get("artifacts") or []
-    generated = [item for item in operations if item.get("operation") == "generated"]
-    modified = [item for item in operations if item.get("operation") == "modified"]
+    digest = build_stage_digest(
+        root,
+        stage=stage,
+        command=command,
+        payload=data,
+        artifact_manifest=manifest,
+        checkpoint_hash=checkpoint_hash,
+        preview_only=bool(data.get("preview_only")),
+    )
+    manifest["artifacts"] = digest["stage_deliverables"]
+    generated = digest["transaction_changes"].get("generated") or []
+    modified = digest["transaction_changes"].get("modified") or []
     status = _decision_status(data)
     failed_values = _payload_items(data, ("errors", "error", "failure", "failure_reason"))
     if status in {"error", "failed", "blocked", "failure"} and not failed_values:
         failed_values = [f"命令返回状态：{status}"]
     unresolved_values = _payload_items(data, ("unresolved", "unresolved_issues", "pending", "pending_tasks", "missing", "warnings"))
+    unresolved_values.extend(digest.get("unresolved") or [])
+    review_state = str(digest.get("review_state") or "confirmable")
+    stage_status = "ready_for_human_review" if review_state == "confirmable" and status not in {"error", "failed", "blocked"} else "blocked"
     summary: dict[str, Any] = {
         "schema_version": CHECKPOINT_SUMMARY_SCHEMA,
         "checkpoint_id": stable_id,
@@ -372,46 +540,89 @@ def write_stage_summary(
         "checkpoint_title_zh": _STAGE_TITLES.get(stage, f"{stage} 阶段人工确认"),
         "completed_stage": stage,
         "command": command,
-        "stage_status": "ready_for_human_review" if status not in {"error", "failed", "blocked"} else "blocked",
+        "stage_status": stage_status,
+        "review_state": review_state,
+        "stage_purpose_zh": digest.get("stage_purpose_zh"),
+        "stage_narrative_zh": digest.get("stage_narrative_zh"),
+        "stage_deliverables": digest.get("stage_deliverables") or [],
+        "transaction_changes": digest.get("transaction_changes") or {},
+        "deliverable_groups": digest.get("deliverable_groups") or [],
+        "deliverable_counts": digest.get("deliverable_counts") or {},
+        "key_findings": digest.get("key_findings") or [],
+        "claim_boundaries": digest.get("claim_boundaries") or [],
+        "decision_routes": digest.get("decision_routes") or [],
+        "decision_route_state": digest.get("decision_route_state") or {},
+        "validation_summary": digest.get("validation_summary") or [],
+        "consistency_checks": digest.get("consistency_checks") or [],
+        "identity": digest.get("identity") or {},
+        "core_metrics": digest.get("core_metrics") or {},
+        "sample_flow": (digest.get("core_metrics") or {}).get("sample_flow") or [],
         "generated": generated,
         "modified": modified,
         "deployed": [_short_item(item) for item in _payload_items(data, ("deployed", "deployment", "deployment_state"))],
         "validated": ([{"summary_zh": f"{command} 返回 `{status}`，请结合下方产物检查。"}] if status in {"pass", "passed", "success", "completed", "written", "review_required", "confirmation_required", "checkpoint_created"} else []),
         "failed": [_short_item(item) for item in failed_values],
         "unresolved": [_short_item(item) for item in unresolved_values],
-        "scientific_summary_zh": _scientific_summary(stage, command, data),
+        "scientific_summary_zh": [digest.get("stage_narrative_zh") or item for item in _scientific_summary(stage, command, data)[:1]],
         "scientific_impact": [
             "本摘要只描述当前阶段的产物和状态，不把候选、fixture 或 metadata 误写成论文证据。",
             f"下游影响由当前命令 `{command}` 的状态和确认决定。",
         ],
-        "inspection_targets": _inspection_targets(manifest, explicit_paths, root),
+        "inspection_targets": digest.get("inspection_targets") or _inspection_targets(manifest, explicit_paths, root),
         "artifact_manifest": manifest,
         "upstream_bindings": data.get("upstream_bindings") or data.get("bindings") or {},
         "runtime_fingerprint": data.get("runtime_fingerprint"),
-        "confirmation_meaning_zh": f"确认后将冻结 `{stage}` 阶段当前产物及其证据身份，并允许状态机按照该阶段的下游路线继续。确认不等于替用户判断科学结论正确。",
+        "test_mode": bool(data.get("test_mode")),
+        "test_auto_confirmation": test_auto_confirmation,
+        "confirmation_contract": {
+            "requires_user_decision": True,
+            "confirmation_command_allowed": review_state == "confirmable",
+            "source_of_truth": "canonical_evidence",
+            "test_auto_confirmation": test_auto_confirmation,
+        },
+        "confirmation_meaning_zh": (
+            f"确认后将冻结 `{stage}` 阶段当前产物及其证据身份，并允许状态机按照该阶段的下游路线继续。"
+            if review_state == "confirmable"
+            else f"当前 `{stage}` 阶段存在证据身份或完整性问题，只能审阅，不能确认；需先按恢复路线生成新的摘要。"
+        ) + "确认不等于替用户判断科学结论正确。",
         "rejection_or_refinement_route_zh": "拒绝或要求修改后保留本次摘要和审计记录，先按下一步修复路线更新上游内容，再生成新的摘要和 hash；不直接覆盖本次确认版本。",
         "created_at": utc_now(),
     }
     manifest_hash = _hash_payload(manifest)
+    relative_dir = (Path(CHECKPOINT_ROOT) / stable_id).as_posix()
+    summary["stage_summary_path"] = f"{relative_dir}/stage_summary.json"
+    summary["artifact_manifest_path"] = f"{relative_dir}/artifact_manifest.json"
     summary["artifact_manifest_sha256"] = manifest_hash
     summary_hash = _hash_payload(summary)
     summary["stage_summary_sha256"] = summary_hash
+    contract_issues = _checkpoint_summary_contract_issues(summary)
+    if contract_issues:
+        raise CheckpointSummaryError("Checkpoint summary contract failed: " + "; ".join(contract_issues))
     next_action = data.get("next_action") if isinstance(data.get("next_action"), dict) else {}
-    confirmation_command = data.get("confirmation_command") or next_action.get("cli")
+    if checkpoint_hash:
+        confirmation_command = f'python -m draftpaper_cli.cli resume --project "{root}" --checkpoint-hash {checkpoint_hash}'
+    else:
+        confirmation_command = data.get("confirmation_command") or next_action.get("cli")
     refinement_command = data.get("refinement_command") or next_action.get("cli")
+    if review_state != "confirmable":
+        confirmation_command = None
     request: dict[str, Any] = {
         "schema_version": CONFIRMATION_REQUEST_SCHEMA,
         "checkpoint_id": stable_id,
         "checkpoint_type": stage,
         "stage_summary_sha256": summary_hash,
+        "summary_schema": CHECKPOINT_SUMMARY_SCHEMA,
         "checkpoint_hash": checkpoint_hash,
         "allowed_decisions": ["confirm", "refine", "reject"],
         "confirmation_command": confirmation_command,
         "refinement_command": refinement_command,
+        "recovery_command": next_action.get("cli"),
+        "review_state": review_state,
         "requires_user_decision": True,
+        "test_auto_confirmation": test_auto_confirmation,
         "created_at": utc_now(),
     }
-    if not request.get("confirmation_command"):
+    if review_state == "confirmable" and not request.get("confirmation_command"):
         request["confirmation_command"] = f"python -m draftpaper_cli.cli resume --project <project> --checkpoint-hash {checkpoint_hash or summary_hash[:12]}"
     relative_dir = (Path(CHECKPOINT_ROOT) / stable_id).as_posix()
     change_report = {
@@ -436,8 +647,15 @@ def write_stage_summary(
     }
     agent_payload = {
         "schema_version": AGENT_PAYLOAD_SCHEMA,
+        "summary_schema": summary["schema_version"],
         "checkpoint_id": stable_id,
         "stage": stage,
+        "stage_status": summary["stage_status"],
+        "review_state": summary["review_state"],
+        "stage_purpose_zh": summary["stage_purpose_zh"],
+        "stage_narrative_zh": summary["stage_narrative_zh"],
+        "deliverable_counts": summary["deliverable_counts"],
+        "sample_flow": summary["sample_flow"],
         "stage_summary_zh_html": {
             "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
             "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
@@ -456,6 +674,9 @@ def write_stage_summary(
         "unresolved_issues": summary["unresolved"],
         "confirmation_command": request["confirmation_command"],
         "confirmation_meaning_zh": summary["confirmation_meaning_zh"],
+        "confirmation_contract": summary["confirmation_contract"],
+        "test_mode": summary["test_mode"],
+        "test_auto_confirmation": test_auto_confirmation,
         "stage_summary_sha256": summary_hash,
     }
     atomic_write_json(output_dir / "artifact_manifest.json", manifest)
@@ -495,6 +716,7 @@ def write_stage_summary(
         "absolute_stage_summary_zh_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
         "absolute_stage_summary_json": str((output_dir / "stage_summary.json").resolve()),
         "absolute_artifact_manifest": str((output_dir / "artifact_manifest.json").resolve()),
+        "absolute_confirmation_request": str((output_dir / "confirmation_request.json").resolve()),
         "absolute_change_report": str((output_dir / "change_report.json").resolve()),
         "absolute_unresolved_issues": str((output_dir / "unresolved_issues.json").resolve()),
         "absolute_agent_payload": str((output_dir / "agent_payload.json").resolve()),
@@ -509,21 +731,9 @@ def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = N
     """Read one checkpoint summary and expose exact local paths without writing state."""
 
     root = project_root(project)
-    events = read_jsonl(root / "checkpoint_ledger.jsonl")
-    selected: dict[str, Any] | None = None
-    if checkpoint_hash:
-        selected = next((item for item in reversed(events) if item.get("kind") == "checkpoint" and item.get("hash") == checkpoint_hash), None)
-    if selected is None:
-        selected = next((item for item in reversed(events) if item.get("kind") == "checkpoint"), None)
+    selected = _select_checkpoint_record(root, checkpoint_hash)
     relative = str((selected or {}).get("stage_summary_json") or "")
-    if not relative:
-        latest_path = root / CHECKPOINT_ROOT / "latest_checkpoint.json"
-        if latest_path.is_file():
-            try:
-                latest = json.loads(latest_path.read_text(encoding="utf-8-sig"))
-                relative = str(latest.get("stage_summary_json") or "")
-            except (OSError, ValueError):
-                relative = ""
+    relative = _relative_project_path(root, relative) if relative else None
     summary_path = root / relative if relative else None
     required = (
         summary_path,
@@ -538,12 +748,34 @@ def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = N
         return {"status": "not_found", "project_path": str(root), "checkpoint_hash": checkpoint_hash, "language": language}
     summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
     request_path = summary_path.parent / "confirmation_request.json"
+    schema = str(summary.get("schema_version") or "")
+    legacy = schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS
+    contract_issues = _checkpoint_summary_contract_issues(summary)
+    if not legacy and contract_issues:
+        return {
+            "status": "invalid_summary",
+            "project_path": str(root),
+            "checkpoint_hash": _checkpoint_record_hash(root, selected) or checkpoint_hash,
+            "language": language,
+            "review_state": summary.get("review_state") or "unknown",
+            "reasons": contract_issues,
+            "summary": summary,
+        }
     return {
-        "status": "ready_for_human_review",
+        "status": "legacy_summary" if legacy else "ready_for_human_review",
         "project_path": str(root),
-        "checkpoint_hash": (selected or {}).get("hash") or checkpoint_hash,
+        "checkpoint_hash": _checkpoint_record_hash(root, selected) or checkpoint_hash,
         "language": language,
+        "review_state": summary.get("review_state") or ("legacy" if legacy else "unknown"),
+        "requires_preview": legacy,
+        "preview_command": (
+            f'python -m draftpaper_cli.cli preview-checkpoint-summary --project "{root}"'
+            if legacy
+            else None
+        ),
         "summary": summary,
+        "summary_schema": schema,
+        "contract_issues": [],
         "stage_summary_zh_html": {
             "project_relative_path": summary_path.parent.joinpath("stage_summary.zh-CN.html").relative_to(root).as_posix(),
             "absolute_path": str(summary_path.parent.joinpath("stage_summary.zh-CN.html").resolve()),
@@ -556,6 +788,47 @@ def show_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = N
         "agent_payload": str(summary_path.parent.joinpath("agent_payload.json").resolve()),
         "primary_artifacts": summary.get("inspection_targets") or [],
         "unresolved_issues": summary.get("unresolved") or [],
+    }
+
+
+def preview_checkpoint_summary(project: str | Path, checkpoint_hash: str | None = None) -> dict[str, Any]:
+    """Render an enriched, non-consumable view without changing checkpoint state."""
+
+    root = project_root(project)
+    selected = _select_checkpoint_record(root, checkpoint_hash)
+    if not selected:
+        return {"status": "not_found", "project_path": str(root)}
+    stage = str(selected.get("stage") or "")
+    stage = stage or str(selected.get("checkpoint_type") or "")
+    checkpoint_id = str(selected.get("checkpoint_id") or f"{stage}-preview") + "-preview"
+    source_hash = _checkpoint_record_hash(root, selected) or checkpoint_hash
+    preview = write_stage_summary(
+        root,
+        stage=stage,
+        command="preview-checkpoint-summary",
+        payload={
+            "status": "preview_only",
+            "preview_only": True,
+            "next_action": selected.get("next_action") or {},
+            "source_checkpoint_hash": source_hash,
+        },
+        before_artifacts=load_project_passport(root).get("artifacts") or [],
+        checkpoint_id=checkpoint_id,
+        publish_index=False,
+    )
+    return {
+        "status": "preview_only",
+        "project_path": str(root),
+        "source_checkpoint_hash": source_hash,
+        "review_state": "preview_only",
+        "stage_summary_zh_html": {
+            "project_relative_path": preview["stage_summary_zh_html"],
+            "absolute_path": preview["absolute_stage_summary_zh_html"],
+        },
+        "stage_summary_json": preview["absolute_stage_summary_json"],
+        "artifact_manifest": preview["absolute_artifact_manifest"],
+        "confirmation_request": preview["absolute_confirmation_request"],
+        "unresolved_issues": preview["unresolved_issues"],
     }
 
 
@@ -621,6 +894,16 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
     except (OSError, ValueError) as exc:
         return {"status": "invalid", "valid": False, "reasons": [f"Invalid checkpoint summary: {exc}"]}
     reasons: list[str] = []
+    schema = str(summary.get("schema_version") or "")
+    if schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS:
+        return {
+            "status": "legacy_unqualified",
+            "valid": False,
+            "reasons": [f"Legacy checkpoint summary {schema} is read-only; create a v3 summary before confirmation."],
+        }
+    reasons.extend(_checkpoint_summary_contract_issues(summary))
+    if reasons:
+        return {"status": "invalid", "valid": False, "reasons": reasons}
     expected_summary_hash = str(checkpoint.get("stage_summary_sha256") or summary.get("stage_summary_sha256") or "")
     if expected_summary_hash and expected_summary_hash != str(summary.get("stage_summary_sha256") or ""):
         reasons.append("Checkpoint summary hash changed.")
@@ -634,6 +917,7 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
     try:
         stored_manifest = json.loads(companion_files["artifact_manifest.json"].read_text(encoding="utf-8-sig"))
         request = json.loads(companion_files["confirmation_request.json"].read_text(encoding="utf-8-sig"))
+        agent = json.loads(companion_files["agent_payload.json"].read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         reasons.append(f"Checkpoint companion JSON is invalid: {exc}")
     else:
@@ -641,6 +925,18 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
             reasons.append("Checkpoint artifact manifest file differs from stage summary.")
         if request.get("stage_summary_sha256") != summary.get("stage_summary_sha256"):
             reasons.append("Confirmation request is not bound to the stage summary hash.")
+        if request.get("summary_schema") != summary.get("schema_version"):
+            reasons.append("Confirmation request is not bound to the current summary schema.")
+        if (request.get("confirmation_command") is not None) != (summary.get("review_state") == "confirmable"):
+            reasons.append("Confirmation request command permission does not match review_state.")
+        if agent.get("stage_summary_sha256") != summary.get("stage_summary_sha256"):
+            reasons.append("Agent payload is not bound to the stage summary hash.")
+        if agent.get("summary_schema") != summary.get("schema_version"):
+            reasons.append("Agent payload is not bound to the current summary schema.")
+        if agent.get("review_state") != summary.get("review_state"):
+            reasons.append("Agent payload review_state differs from stage summary.")
+        if agent.get("stage_narrative_zh") != summary.get("stage_narrative_zh"):
+            reasons.append("Agent payload narrative differs from stage summary.")
     current = {str(item.get("path")): item for item in collect_artifacts(root) if isinstance(item, dict)}
     for item in (summary.get("artifact_manifest") or {}).get("artifacts") or []:
         relative_artifact = str(item.get("project_relative_path") or "")
@@ -648,14 +944,18 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
             continue
         current_item = current.get(relative_artifact)
         if current_item is None:
+            candidate = root / relative_artifact
+            if candidate.is_file():
+                current_item = compute_artifact_identity(candidate, relative_artifact)
+        if current_item is None:
             reasons.append(f"Bound artifact is missing: {relative_artifact}")
             continue
         expected_semantic = item.get("after_semantic_sha256")
         if expected_semantic and current_item.get("semantic_sha256") != expected_semantic:
-            reasons.append(f"Bound artifact semantic identity changed: {relative_artifact}")
+            reasons.append(f"Bound artifact changed after assessment (semantic identity): {relative_artifact}")
         expected_evidence = item.get("evidence_sha256")
         if expected_evidence and current_item.get("evidence_sha256") != expected_evidence:
-            reasons.append(f"Bound artifact evidence identity changed: {relative_artifact}")
+            reasons.append(f"Bound artifact changed after assessment (evidence identity): {relative_artifact}")
     return {"status": "valid" if not reasons else "invalid", "valid": not reasons, "reasons": reasons}
 
 

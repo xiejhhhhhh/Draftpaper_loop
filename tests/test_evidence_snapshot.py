@@ -16,6 +16,7 @@ from draftpaper_cli.evidence_snapshot import (
     validate_citation_audit_snapshot,
     validate_evidence_snapshot,
 )
+from draftpaper_cli.passport import append_checkpoint_event, load_project_passport
 from draftpaper_cli.project_scaffold import create_project
 
 
@@ -83,6 +84,30 @@ class EvidenceSnapshotTests(unittest.TestCase):
             self.assertEqual(report["archived_snapshot_id"], snapshot["snapshot_id"])
             self.assertFalse((project.path / "results" / "promoted_evidence_snapshot.json").exists())
             self.assertTrue((project.path / "results" / "evidence_snapshots" / f"{snapshot['snapshot_id']}.json").exists())
+
+    def test_reopen_supersedes_unapproved_core_evidence_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Repair pending evidence", field="astronomy")
+            append_checkpoint_event(project.path, {
+                "kind": "checkpoint",
+                "stage": "core_evidence",
+                "hash": "pending-core-123",
+                "project_id": project.metadata.get("project_id"),
+            })
+            self.assertEqual(
+                load_project_passport(project.path)["awaiting_checkpoint"]["hash"],
+                "pending-core-123",
+            )
+
+            report = reopen_evidence_snapshot(
+                project.path,
+                reason="The unapproved figure mixed validation designs.",
+            )
+
+            self.assertEqual(report["status"], "reopened_pending_checkpoint")
+            self.assertEqual(report["superseded_checkpoint_hash"], "pending-core-123")
+            self.assertEqual(report["confirmation_status"], "not_approved")
+            self.assertIsNone(load_project_passport(project.path)["awaiting_checkpoint"])
 
     def test_orchestrator_requires_reopen_before_upstream_scientific_regeneration(self) -> None:
         from draftpaper_cli.orchestrator import _next_action

@@ -23,6 +23,7 @@ from .result_support_signals import (
     build_result_support_input_bindings,
     collect_result_support_signals,
 )
+from .run_evidence_bundle import load_active_run_evidence_bundle
 from .state_kernel import file_lock
 
 
@@ -837,6 +838,19 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
     signal_report = collect_result_support_signals(state.path)
     metrics = signal_report["metrics"]
     metric_records = signal_report["metric_records"]
+    resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json", {})
+    metric_identity_report = _read_json(state.path / "results" / "metric_identity_report.json", {})
+    metric_identity_status = str(
+        metric_identity_report.get("status")
+        or resolved_evidence.get("strict_status")
+        or ""
+    ) if isinstance(metric_identity_report, dict) and isinstance(resolved_evidence, dict) else ""
+    active_bundle = load_active_run_evidence_bundle(state.path)
+    evidence_identity_gate = bool(metric_identity_report) and metric_identity_status != "passed"
+    bundle_gate = bool(
+        (state.path / "results" / "active_run_evidence_bundle.json").is_file()
+        or (state.path / "results" / "run_evidence_bundle.json").is_file()
+    ) and active_bundle.get("status") != "active"
     _attach_explicit_optimization_directions(state.path, metric_records)
     claim_assessments = [
         _assess_claim(claim, metric_records=metric_records, validity=validity)
@@ -891,6 +905,27 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
             "failure_type": diagnostic.get("code"),
             "diagnosis": diagnostic,
         })
+    if evidence_identity_gate:
+        claim_assessments.append({
+            "claim_id": "metric_identity_gate",
+            "planned_claim": "The primary result must have a complete metric identity and an explicit primary metric contract.",
+            "source": "results/metric_identity_report.json",
+            "support_status": "not_supported",
+            "failure_type": "metric_identity_gate",
+            "diagnosis": {
+                "status": metric_identity_status,
+                "policy": "Legacy or ambiguous metric records remain visible for diagnosis but cannot support manuscript claims.",
+            },
+        })
+    if bundle_gate:
+        claim_assessments.append({
+            "claim_id": "run_evidence_bundle_gate",
+            "planned_claim": "All consumed results must belong to one active validated run evidence bundle.",
+            "source": "results/active_run_evidence_bundle.json",
+            "support_status": "not_supported",
+            "failure_type": "run_evidence_bundle_gate",
+            "diagnosis": active_bundle,
+        })
     if reopen_pending:
         claim_assessments.append({
             "claim_id": "post_results_evidence_reopen_pending",
@@ -925,6 +960,9 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
         "evidence_strength": validity.get("evidence_strength"),
         "metrics": metrics,
         "metric_records": metric_records,
+        "metric_identity_status": metric_identity_status or None,
+        "metric_identity_report": metric_identity_report if metric_identity_report else None,
+        "active_run_evidence_bundle": active_bundle if (state.path / "results/active_run_evidence_bundle.json").is_file() else None,
         "metric_sources": signal_report["metric_sources"],
         "claim_assessments": claim_assessments,
         "failed_claims": failed_claims,

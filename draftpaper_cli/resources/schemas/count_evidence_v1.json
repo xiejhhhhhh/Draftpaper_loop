@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.count_evidence.v1",
+  "title": "Draftpaper Count Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "count_record_id", "count_definition_id", "entity_type", "count_mode", "cohort_id", "filter_contract_id", "value", "evidence_role"],
+  "properties": {
+    "schema_version": {"const": "dpl.count_evidence.v1"},
+    "count_record_id": {"type": "string", "minLength": 1},
+    "count_definition_id": {"type": "string", "minLength": 1},
+    "entity_type": {"type": "string", "minLength": 1},
+    "count_mode": {"type": "string", "minLength": 1},
+    "cohort_id": {"type": "string", "minLength": 1},
+    "filter_contract_id": {"type": "string", "minLength": 1},
+    "sample_unit": {"type": "string"},
+    "value": {},
+    "parent_count_record_id": {"type": ["string", "null"]},
+    "exclusion_reason_table_ref": {"type": "string"},
+    "source_artifact": {"type": "string"},
+    "source_sha256": {"type": "string"},
+    "evidence_role": {"enum": ["sample_flow", "model_cohort", "split_count", "presentation_only"]}
+  }
+}

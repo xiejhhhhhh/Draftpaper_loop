@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .passport import append_checkpoint_event, load_project_passport
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, mark_stages_stale
 
@@ -249,7 +250,46 @@ def reopen_evidence_snapshot(project: str | Path, *, reason: str) -> dict[str, A
     state = load_project(project)
     snapshot_path = state.path / PROMOTED_EVIDENCE_SNAPSHOT_JSON
     if not snapshot_path.exists():
-        raise EvidenceSnapshotMismatch("No promoted evidence snapshot is available to reopen.")
+        awaiting = load_project_passport(state.path).get("awaiting_checkpoint")
+        if not isinstance(awaiting, dict) or str(awaiting.get("stage") or "") != "core_evidence":
+            raise EvidenceSnapshotMismatch("No promoted evidence snapshot or pending core-evidence checkpoint is available to reopen.")
+        checkpoint_hash = str(awaiting.get("hash") or "").strip()
+        if not checkpoint_hash:
+            raise EvidenceSnapshotMismatch("The pending core-evidence checkpoint has no auditable hash.")
+        append_checkpoint_event(state.path, {
+            "kind": "checkpoint_superseded",
+            "supersedes_hash": checkpoint_hash,
+            "stage": "core_evidence",
+            "reason": str(reason or "").strip(),
+            "created_at": utc_now(),
+            "project_id": state.metadata.get("project_id"),
+            "confirmation_status": "not_approved",
+        })
+        affected = [
+            "result_validity",
+            "result_support",
+            "core_evidence",
+            "results",
+            "introduction",
+            "data_writing",
+            "methods_writing",
+            "discussion",
+            "citation_audit",
+            "latex",
+            "quality_checks",
+        ]
+        changed = mark_stages_stale(state.path, affected)
+        report = {
+            "status": "reopened_pending_checkpoint",
+            "reopened_at": utc_now(),
+            "reason": str(reason or "").strip(),
+            "superseded_checkpoint_hash": checkpoint_hash,
+            "confirmation_status": "not_approved",
+            "affected_stages": affected,
+            "stale_stages": changed,
+        }
+        _write_json(state.path / "results" / "evidence_snapshot_reopen_report.json", report)
+        return report
     payload = json.loads(snapshot_path.read_text(encoding="utf-8-sig"))
     snapshot_id = str(payload.get("snapshot_id") or "unknown")
     archive_dir = state.path / "results" / "evidence_snapshots"

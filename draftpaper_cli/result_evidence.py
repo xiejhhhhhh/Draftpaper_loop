@@ -14,6 +14,14 @@ from typing import Any
 
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
+from .run_evidence_bundle import build_run_evidence_bundle, publish_run_evidence_bundle
+from .evidence_identity import (
+    build_count_identity_report,
+    build_metric_identity_report,
+    load_primary_metric_contract,
+    normalize_count_evidence,
+    normalize_metric_evidence,
+)
 
 
 RESOLVED_RESULT_EVIDENCE_JSON = "results/resolved_result_evidence.json"
@@ -156,10 +164,22 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
     source_hash = _source_hash(path)
     analysis_variant = _analysis_variant(relative)
     model_column = next((item for item in ["model_id", "model", "model_name", "model_variant", "variant"] if item in columns), "")
-    split_column = next((item for item in ["split", "split_type"] if item in columns), "")
+    split_column = next((item for item in ["split_id", "split", "split_type"] if item in columns), "")
+    validation_column = next(
+        (item for item in ["validation_design_id", "validation_design", "evaluation_design", "holdout_scheme", "split_strategy"] if item in columns),
+        "",
+    )
     fold_column = next((item for item in ["fold", "fold_id"] if item in columns), "")
+    seed_column = next((item for item in ["seed", "random_seed"] if item in columns), "")
+    repeat_column = next((item for item in ["repeat", "repetition", "repeated_split_id"] if item in columns), "")
     cohort_column = next((item for item in ["cohort_id", "cohort"] if item in columns), "")
     sample_unit_column = "sample_unit" if "sample_unit" in columns else ""
+    task_column = next((item for item in ["task_id", "task", "target_id", "target"] if item in columns), "")
+    aggregation_contract_column = next((item for item in ["aggregation_contract_id", "aggregation_id"] if item in columns), "")
+    aggregation_id_column = next((item for item in ["aggregation_id", "aggregation", "reducer", "aggregation_method"] if item in columns), "")
+    uncertainty_column = next((item for item in ["uncertainty_definition_id", "uncertainty_definition"] if item in columns), "")
+    evidence_role_column = "evidence_role" if "evidence_role" in columns else ""
+    reducer_column = next((item for item in ["reducer", "aggregation", "aggregation_method"] if item in columns), "")
     records: list[dict[str, Any]] = []
     metric_value_column = next(
         (item for item in ["value", "mean", "score", "metric_value"] if item in columns),
@@ -175,12 +195,20 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                     "value": value,
                     "model": str(row.get(model_column) or "").strip() if model_column else "",
                     "split": str(row.get(split_column) or "").strip() if split_column else "",
+                    "validation_design": str(row.get(validation_column) or "").strip() if validation_column else "",
                     "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
-                    "aggregation": "reported_scalar",
+                    "seed": str(row.get(seed_column) or "").strip() if seed_column else "",
+                    "repetition": str(row.get(repeat_column) or "").strip() if repeat_column else "",
+                    "aggregation": str(row.get(aggregation_id_column) or "").strip() if aggregation_id_column else "",
+                    "aggregation_contract_id": str(row.get(aggregation_contract_column) or "").strip() if aggregation_contract_column else "",
+                    "uncertainty_definition_id": str(row.get(uncertainty_column) or "").strip() if uncertainty_column else "",
+                    "evidence_role": str(row.get(evidence_role_column) or "").strip() if evidence_role_column else "",
+                    "reducer": str(row.get(reducer_column) or "").strip() if reducer_column else "",
                     "analysis_variant": analysis_variant,
                     "run_id": str(row.get("run_id") or run_id).strip(),
                     "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
                     "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
+                    "task_id": str(row.get(task_column) or "").strip() if task_column else "",
                     "sample_count": _numeric(row.get("sample_count")),
                     "metric_dimension": str(row.get("metric_dimension") or "score").strip(),
                     "source_artifact": relative,
@@ -203,12 +231,20 @@ def _metric_rows_from_csv(path: Path, relative: str, run_id: str) -> list[dict[s
                 "value": value,
                 "model": str(row.get(model_column) or "").strip() if model_column else "",
                 "split": str(row.get(split_column) or "").strip() if split_column else "",
+                "validation_design": str(row.get(validation_column) or "").strip() if validation_column else "",
                 "fold": str(row.get(fold_column) or "").strip() if fold_column else "",
-                "aggregation": "fold_value" if fold_column else "reported_value",
+                "seed": str(row.get(seed_column) or "").strip() if seed_column else "",
+                "repetition": str(row.get(repeat_column) or "").strip() if repeat_column else "",
+                "aggregation": str(row.get(aggregation_id_column) or "").strip() if aggregation_id_column else "",
+                "aggregation_contract_id": str(row.get(aggregation_contract_column) or "").strip() if aggregation_contract_column else "",
+                "uncertainty_definition_id": str(row.get(uncertainty_column) or "").strip() if uncertainty_column else "",
+                "evidence_role": str(row.get(evidence_role_column) or "").strip() if evidence_role_column else "",
+                "reducer": str(row.get(reducer_column) or "").strip() if reducer_column else "",
                 "analysis_variant": analysis_variant,
                 "run_id": run_id,
                 "cohort_id": str(row.get(cohort_column) or "").strip() if cohort_column else "",
                 "sample_unit": str(row.get(sample_unit_column) or "").strip() if sample_unit_column else "",
+                "task_id": str(row.get(task_column) or "").strip() if task_column else "",
                 "source_artifact": relative,
                 "source_hash": source_hash,
                 "priority": 100 if model_column else 40,
@@ -233,10 +269,11 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         values = [float(item["value"]) for item in items]
         item = dict(items[0])
         item["value"] = mean(values)
-        item["aggregation"] = _aggregation_scope(
+        explicit_aggregation = str(item.get("aggregation") or "").strip()
+        item["aggregation"] = explicit_aggregation or _aggregation_scope(
             source_artifact,
             value_count=len(values),
-            fallback=str(item.get("aggregation") or "reported_value"),
+            fallback="reported_value",
         )
         item["fold_count"] = len(values)
         item["metric_name"] = metric_name
@@ -246,6 +283,16 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         item["source_artifact"] = source_artifact
         item["cohort_id"] = cohort_id
         item["sample_unit"] = sample_unit
+        item["replicate_axis"] = "fold" if any(str(value.get("fold") or "").strip() for value in items) else "none"
+        item["replicate_ids"] = [
+            str(value.get("fold") or value.get("seed") or value.get("repetition") or "")
+            for value in items
+            if str(value.get("fold") or value.get("seed") or value.get("repetition") or "").strip()
+        ]
+        item["aggregation_contract_id"] = str(item.get("aggregation_contract_id") or "")
+        item["uncertainty_definition_id"] = str(item.get("uncertainty_definition_id") or "")
+        item["evidence_role"] = str(item.get("evidence_role") or "")
+        item["aggregation_inferred"] = len(values) > 1 and not item["aggregation_contract_id"]
         item.pop("fold", None)
         aggregated.append(item)
     return aggregated
@@ -324,6 +371,39 @@ def _matches_anchor(value: float, anchors: list[float]) -> bool:
     return any(abs(value - anchor) <= max(1e-8, abs(anchor) * 5e-4) for anchor in anchors)
 
 
+def _legacy_primary_metric_record(record: dict[str, Any], *, run_id: str) -> dict[str, Any]:
+    """Expose the strict contract-selected metric through the legacy report shape."""
+
+    identity = record.get("identity") if isinstance(record.get("identity"), dict) else record
+    return {
+        "metric_name": record.get("metric_definition_id") or identity.get("metric_definition_id"),
+        "value": record.get("value"),
+        "model": record.get("model_id") or identity.get("model_id"),
+        "split": record.get("split_id") or identity.get("split_id"),
+        "validation_design": record.get("validation_design_id") or identity.get("validation_design_id"),
+        "fold": "",
+        "seed": "",
+        "repetition": "",
+        "aggregation": record.get("aggregation_id") or identity.get("aggregation_id") or "none",
+        "aggregation_contract_id": record.get("aggregation_contract_id") or "",
+        "uncertainty_definition_id": record.get("uncertainty_definition_id") or identity.get("uncertainty_definition_id") or "none",
+        "evidence_role": record.get("evidence_role") or "primary",
+        "reducer": "",
+        "analysis_variant": "primary",
+        "run_id": run_id,
+        "cohort_id": record.get("cohort_id") or identity.get("cohort_id"),
+        "sample_unit": record.get("sample_unit") or identity.get("sample_unit"),
+        "task_id": record.get("task_id") or identity.get("task_id"),
+        "metric_dimension": "score",
+        "source_artifact": record.get("source_artifact") or "",
+        "source_hash": record.get("source_sha256") or "",
+        "priority": 200,
+        "replicate_axis": record.get("replicate_axis") or "none",
+        "replicate_ids": record.get("replicate_ids") or [],
+        "aggregation_inferred": bool(record.get("aggregation_inferred")),
+    }
+
+
 def _anchor_verified_metric_tables(
     project_path: Path,
     *,
@@ -357,6 +437,56 @@ def _anchor_verified_metric_tables(
     return verified_records, verified_sources
 
 
+def _count_records_from_payload(
+    payload: dict[str, Any],
+    *,
+    source_artifact: str,
+    context: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Read explicitly typed counts and retain legacy scalar counts as unqualified."""
+
+    records: list[dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
+    for key in ("count_evidence", "count_records", "sample_flow", "counts"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            entries.extend(item for item in value if isinstance(item, dict))
+        elif isinstance(value, dict):
+            for name, child in value.items():
+                if isinstance(child, dict):
+                    entries.append({"count_definition_id": name, **child})
+                else:
+                    entries.append({"count_definition_id": name, "value": child})
+    legacy_map = {
+        "source_rows": ("catalog_row_count", "row", "rows"),
+        "train_sources": ("train_entity_count", "entity", "split_members"),
+        "test_sources": ("test_entity_count", "entity", "split_members"),
+        "sample_count": ("model_sample_count", "entity", "rows"),
+    }
+    for key, (definition, entity_type, count_mode) in legacy_map.items():
+        if key in payload and not any(str(item.get("count_definition_id") or item.get("count_definition") or "") == definition for item in entries):
+            entries.append({
+                "count_definition_id": definition,
+                "entity_type": entity_type,
+                "count_mode": count_mode,
+                "value": payload.get(key),
+                "evidence_role": "presentation_only",
+            })
+    for index, entry in enumerate(entries, start=1):
+        value = entry.get("value") if "value" in entry else entry.get("count")
+        if value is None or value == "":
+            continue
+        records.append(
+            normalize_count_evidence(
+                entry,
+                context=context,
+                source_artifact=source_artifact,
+                row_index=index,
+            )
+        )
+    return records
+
+
 def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
     """Resolve quantitative evidence only from outputs bound to a successful run."""
     state = load_project(project)
@@ -382,15 +512,15 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             if str(item).strip()
         )
     )
-    records: list[dict[str, Any]] = []
+    raw_records: list[dict[str, Any]] = []
     bound_sources: list[str] = []
     for relative in outputs:
         path = _safe_project_path(state.path, relative)
         if path is None or not path.is_file() or path.suffix.lower() != ".csv":
             continue
         bound_sources.append(relative)
-        records.extend(_metric_rows_from_csv(path, relative, run_id))
-    records = _aggregate(records)
+        raw_records.extend(_metric_rows_from_csv(path, relative, run_id))
+    records = _aggregate(raw_records)
     anchor_records, anchor_verified_sources = _anchor_verified_metric_tables(
         state.path,
         run_id=run_id,
@@ -445,6 +575,103 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             "model_id": item.get("model") or run_manifest.get("model_id") or "run_summary",
             "sample_count": item.get("sample_count"),
         })
+    identity_context = {
+        "project_id": state.metadata.get("project_id"),
+        "run_id": run_id,
+        "cohort_id": run_manifest.get("cohort_id") or run_manifest.get("cohort"),
+        "task_id": run_manifest.get("task_id") or run_manifest.get("target_id") or requirements.get("task_id"),
+        "sample_unit": run_manifest.get("sample_unit"),
+        "validation_design_id": run_manifest.get("validation_design_id") or run_manifest.get("validation_design"),
+        "split_id": run_manifest.get("split_id") or run_manifest.get("evaluation_split"),
+    }
+    metric_evidence_records = []
+    for index, item in enumerate(records, start=1):
+        source_artifact = str(item.get("source_artifact") or "")
+        is_generic_compatibility = Path(source_artifact).name.lower() in {"metrics.csv", "analysis_summary.csv"}
+        metric_evidence_records.append(
+            normalize_metric_evidence(
+                item,
+                context=identity_context,
+                source_artifact=source_artifact,
+                source_hash=str(item.get("source_hash") or ""),
+                row_index=index,
+                evidence_role="presentation_only" if is_generic_compatibility else str(item.get("evidence_role") or "primary"),
+            )
+        )
+    primary_contract = load_primary_metric_contract(state.path)
+    metric_identity_report = build_metric_identity_report(metric_evidence_records, primary_contract)
+    strict_primary = metric_identity_report.get("primary_metric", {}).get("record")
+    if metric_identity_report.get("status") == "passed" and isinstance(strict_primary, dict):
+        primary_metric = _legacy_primary_metric_record(strict_primary, run_id=run_id)
+        primary_selection = "strict_primary_metric_contract"
+    identity_report_path = state.path / "results" / "metric_identity_report.json"
+    identity_report_payload = {
+        **metric_identity_report,
+        "generated_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "run_id": run_id,
+        "primary_metric_contract": {
+            key: primary_contract.get(key)
+            for key in ("contract_source", "contract_sha256", "contract_present", "contract_fields", "contract_missing_fields")
+        },
+    }
+    identity_fingerprint = hashlib.sha256(
+        json.dumps({key: value for key, value in identity_report_payload.items() if key != "generated_at"}, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    identity_report_payload["report_fingerprint"] = identity_fingerprint
+    existing_identity = _read_json(identity_report_path)
+    if existing_identity.get("report_fingerprint") != identity_fingerprint:
+        _write_json(identity_report_path, identity_report_payload)
+    binding_payload = _read_json(state.path / "data" / "formal_data_run_binding.json")
+    count_evidence_records = _count_records_from_payload(
+        binding_payload,
+        source_artifact="data/formal_data_run_binding.json",
+        context=identity_context,
+    )
+    count_evidence_records.extend(
+        _count_records_from_payload(
+            run_manifest,
+            source_artifact="methods/run_manifest.yaml",
+            context=identity_context,
+        )
+    )
+    result_manifest_payload = _read_json(state.path / "results" / "result_manifest.yaml")
+    if result_manifest_payload:
+        count_evidence_records.extend(
+            _count_records_from_payload(
+                result_manifest_payload,
+                source_artifact="results/result_manifest.yaml",
+                context=identity_context,
+            )
+        )
+    count_identity_report = build_count_identity_report(count_evidence_records) if count_evidence_records else {
+        "schema_version": "dpl.count_identity_report.v1",
+        "status": "not_registered",
+        "record_count": 0,
+        "identity_group_count": 0,
+        "records": [],
+        "conflicts": [],
+        "missing_identity_records": [],
+        "blocking_reasons": [],
+    }
+    count_report_path = state.path / "results" / "count_identity_report.json"
+    count_report_payload = {**count_identity_report, "generated_at": utc_now(), "project_id": state.metadata.get("project_id"), "run_id": run_id}
+    count_fingerprint = hashlib.sha256(
+        json.dumps({key: value for key, value in count_report_payload.items() if key != "generated_at"}, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    count_report_payload["report_fingerprint"] = count_fingerprint
+    existing_count = _read_json(count_report_path)
+    if existing_count.get("report_fingerprint") != count_fingerprint:
+        _write_json(count_report_path, count_report_payload)
+    figure_trace_payload = _read_json(state.path / "results" / "figure_code_trace.json")
+    run_bundle = build_run_evidence_bundle(
+        state.path,
+        metric_identity=metric_identity_report,
+        count_identity=count_identity_report,
+        figure_trace=figure_trace_payload,
+        generated_at="",
+    )
+    published_bundle = publish_run_evidence_bundle(state.path, run_bundle)
     report = {
         "status": "resolved" if primary_metric else "no_primary_metric",
         "schema_version": "dpl.resolved_result_evidence.v2",
@@ -458,6 +685,20 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
         "primary_metric": primary_metric,
         "primary_metric_selection": primary_selection,
         "evidence_records": evidence_records,
+        "metric_evidence_records": metric_evidence_records,
+        "metric_identity_report": metric_identity_report,
+        "metric_identity_report_path": "results/metric_identity_report.json",
+        "count_evidence_records": count_evidence_records,
+        "count_identity_report": count_identity_report,
+        "count_identity_report_path": "results/count_identity_report.json",
+        "run_evidence_bundle": published_bundle,
+        "run_evidence_bundle_path": published_bundle.get("bundle_path"),
+        "primary_metric_contract": {
+            key: primary_contract.get(key)
+            for key in ("contract_source", "contract_sha256", "contract_present", "contract_fields", "contract_missing_fields")
+        },
+        "scientific_primary_metric": metric_identity_report.get("primary_metric", {}).get("record"),
+        "strict_status": metric_identity_report.get("status"),
         "analysis_spec_resolution": {
             "candidate_count": len(analysis_specs),
             "selected_analysis_spec_id": default_spec.get("analysis_spec_id"),

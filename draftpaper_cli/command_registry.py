@@ -423,14 +423,14 @@ recommend-statistical-revision record-observation record-plugin-rescue-outcome
 record-scientific-editor-revision record-stage-receipt render-reference-proof render-third-party-notices
 reopen-core-evidence repair-figure-data repair-figure-method resolve-figure-evidence resolve-journal-template
 resolve-paragraph-evidence resolve-reference-version resolve-research-capabilities resolve-result-evidence
-resolve-venue-writing-style resume review-draft review-plugin-contribution review-results-with-discipline-rules
-revise-research-plan route-stage-code run-citation-repair-loop run-integrity-gate run-pipeline score-research-repos
-search-literature snapshot-skill-source status submit-figure-semantic-annotations submit-section-draft
-summarize-plugin-candidates sync-artifact-stale trace-figures-to-code update-stage-status validate-bibliography
+  resolve-venue-writing-style resume review-draft review-plugin-contribution review-results-with-discipline-rules
+  revise-research-plan route-stage-code run-citation-repair-loop run-integrity-gate run-pipeline score-research-repos
+  search-literature snapshot-skill-source status submit-figure-semantic-annotations submit-section-draft
+  summarize-plugin-candidates sync-artifact-stale trace-figures-to-code update-stage-status validate-bibliography
 validate-figure-plugin-trace validate-plugin-candidate validate-project validate-project-version
 validate-template-registry validate-third-party-provenance verify-methods write-data write-discussion
 write-github-contribution-guide write-introduction write-methods write-results
-doctor start continue extension-doctor review recover revise verify-next-action rebuild-derived rebase-project-passport
+  audit-evidence-identity doctor start continue extension-doctor review recover revise verify-next-action rebuild-derived rebase-project-passport
 prepare-independent-manuscript-review record-independent-manuscript-review assess-manuscript-quality-release
 build-manuscript-source-map preview-manuscript-revision apply-manuscript-revision rollback-manuscript-revision
 set-manuscript-metadata add-custom-reference import-review-findings list-revision-tasks prepare-revision
@@ -444,6 +444,7 @@ mcp-install mcp-doctor
 
 
 READ_ONLY_COMMANDS = {
+    "audit-evidence-identity",
     "detect-artifact-drift",
     "path-budget-check",
     "doctor-project-layout",
@@ -575,6 +576,25 @@ COMMAND_SPECS.update({
         "show_checkpoint_summary",
         (("project", "project"), ("checkpoint_hash", "checkpoint_hash"), ("language", "language")),
     ),
+    "audit-evidence-identity": CommandSpec(
+        "audit-evidence-identity",
+        "state_kernel",
+        False,
+        "state",
+        "evidence_audit",
+        "audit_evidence_identity",
+        (("project", "project"),),
+        "status_passed",
+    ),
+    "preview-checkpoint-summary": CommandSpec(
+        "preview-checkpoint-summary",
+        "state_kernel",
+        False,
+        "state",
+        "checkpoint_summary",
+        "preview_checkpoint_summary",
+        (("project", "project"), ("checkpoint_hash", "checkpoint_hash")),
+    ),
     "session-preflight": CommandSpec(
         "session-preflight",
         "state_kernel",
@@ -582,7 +602,7 @@ COMMAND_SPECS.update({
         "state",
         "runtime_handshake",
         "session_preflight",
-        (("project", "project"),),
+        (("project", "project"), ("accept_runtime_update", "accept_runtime_update")),
         allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES),
     ),
     "enrich-literature-code-leads": CommandSpec(
@@ -859,6 +879,10 @@ def _attach_human_checkpoint_summary(
     }
     project = getattr(args, "project", None)
     if not needs_summary or not project or payload.get("stage_summary_zh_html"):
+        return payload
+    if not spec.mutates_project and spec.risk_level != "human_checkpoint":
+        # Read-only diagnostics may expose an existing package, but must never
+        # create or republish a checkpoint as a side effect of inspection.
         return payload
     from .checkpoint_summary import attach_checkpoint_summary
 

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.run_evidence_bundle.v1",
+  "title": "Draftpaper Run Evidence Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_transaction_id", "run_id", "status", "context", "input_artifacts", "output_artifacts", "validation_receipts", "bundle_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.run_evidence_bundle.v1"},
+    "run_transaction_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["candidate", "validated", "active", "failed", "superseded"]},
+    "context": {"type": "object"},
+    "producer_fingerprint": {"type": "object"},
+    "input_artifacts": {"type": "array"},
+    "output_artifacts": {"type": "array"},
+    "metric_record_refs": {"type": "array", "items": {"type": "string"}},
+    "count_record_refs": {"type": "array", "items": {"type": "string"}},
+    "figure_trace_refs": {"type": "array", "items": {"type": "string"}},
+    "validation_receipts": {"type": "array"},
+    "bundle_sha256": {"type": "string", "minLength": 1}
+  }
+}

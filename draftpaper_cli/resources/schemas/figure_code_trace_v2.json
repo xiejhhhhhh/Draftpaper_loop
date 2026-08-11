@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.figure_code_trace.v2",
+  "title": "Draftpaper Figure Code Trace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "figure_id", "figure_hash", "metadata_hash", "producer_code_hashes", "input_artifact_hashes", "run_transaction_id", "metric_record_refs", "count_record_refs", "trace_status"],
+  "properties": {
+    "schema_version": {"const": "dpl.figure_code_trace.v2"},
+    "figure_id": {"type": "string", "minLength": 1},
+    "figure_path": {"type": "string"},
+    "figure_hash": {"type": "string", "minLength": 1},
+    "semantic_hash": {"type": "string"},
+    "metadata_hash": {"type": "string", "minLength": 1},
+    "producer_code_hashes": {"type": "object"},
+    "input_artifact_hashes": {"type": "object"},
+    "run_transaction_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string"},
+    "cohort_id": {"type": "string"},
+    "metric_record_refs": {"type": "array", "items": {"type": "string"}},
+    "count_record_refs": {"type": "array", "items": {"type": "string"}},
+    "caption_contract_ref": {"type": "string"},
+    "producer_fingerprint": {"type": "object"},
+    "trace_status": {"enum": ["current", "stale", "legacy_unqualified"]}
+  }
+}

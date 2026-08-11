@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_comparison_result.v1",
+  "title": "Draftpaper Evidence Comparison Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "kind"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_comparison_result.v1"},
+    "status": {"enum": ["same_identity_same_value", "same_identity_value_conflict", "different_identity_non_comparable", "parent_aggregate_relation", "missing_required_identity", "stale_source", "presentation_only_ignored"]},
+    "kind": {"enum": ["metric", "count", "figure"]},
+    "left_id": {"type": "string"},
+    "right_id": {"type": "string"},
+    "identity_hash": {"type": "string"},
+    "missing": {"type": "object"}
+  }
+}

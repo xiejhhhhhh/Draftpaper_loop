@@ -153,7 +153,12 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def session_preflight(project: str | Path, *, write: bool = True) -> dict[str, Any]:
+def session_preflight(
+    project: str | Path,
+    *,
+    write: bool = True,
+    accept_runtime_update: bool = False,
+) -> dict[str, Any]:
     """Compare the active project lock with the current runtime.
 
     A first invocation initializes the lock. A mismatch never overwrites the
@@ -165,12 +170,33 @@ def session_preflight(project: str | Path, *, write: bool = True) -> dict[str, A
     current = runtime_identity()
     previous = _read_json(lock_path)
     mismatches = _mismatches(previous, current) if previous else []
+    migration_receipt: str | None = None
     if not previous:
         status = "initialized"
         reason = "runtime_lock_created"
     elif mismatches:
-        status = "blocked"
-        reason = "runtime_identity_mismatch"
+        if accept_runtime_update and write:
+            migration_root = root / ".draftpaper" / "runtime_migrations"
+            migration_root.mkdir(parents=True, exist_ok=True)
+            migration_receipt_path = migration_root / f"runtime-{_sha256_bytes(json.dumps(current, sort_keys=True).encode('utf-8'))[:12]}.json"
+            migration_receipt = str(migration_receipt_path)
+            _write_json(
+                migration_receipt_path,
+                {
+                    "schema_version": "dpl.runtime_migration_receipt.v1",
+                    "project_path": str(root),
+                    "previous_identity": _identity_view(previous),
+                    "current_identity": _identity_view(current),
+                    "mismatches": mismatches,
+                    "reason": "explicit_runtime_update",
+                    "created_at": utc_now(),
+                },
+            )
+            status = "updated"
+            reason = "runtime_identity_updated"
+        else:
+            status = "blocked"
+            reason = "runtime_identity_mismatch"
     else:
         status = "passed"
         reason = "runtime_identity_matches"
@@ -184,13 +210,20 @@ def session_preflight(project: str | Path, *, write: bool = True) -> dict[str, A
         "previous_identity": _identity_view(previous) if previous else None,
         "current_identity": _identity_view(current),
         "mismatches": mismatches,
-        "next_command": None if status in {"initialized", "passed"} else f'draftpaper session-preflight --project "{root}"',
+        "next_command": (
+            None
+            if status in {"initialized", "passed", "updated"}
+            else f'draftpaper session-preflight --project "{root}" --accept-runtime-update'
+        ),
+        "migration_receipt": migration_receipt,
     }
     if write:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         _write_json(report_path, report)
-        if status in {"initialized", "passed"}:
+        if status in {"initialized", "passed", "updated"}:
             lock = {**current, "last_verified_at": utc_now()}
+            if migration_receipt:
+                lock["last_migration_receipt"] = migration_receipt
             _write_json(lock_path, lock)
     return report
 

@@ -261,6 +261,11 @@ def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
 def _latest_unconsumed_checkpoint(project_path: Path) -> dict[str, Any] | None:
     events = read_jsonl(project_path / PASSPORT_FILES["checkpoint_ledger"])
     consumed = {str(event.get("consumes_hash")) for event in events if event.get("kind") == "resume"}
+    consumed.update(
+        str(event.get("supersedes_hash"))
+        for event in events
+        if event.get("kind") == "checkpoint_superseded"
+    )
     for event in reversed(events):
         if event.get("kind") == "checkpoint" and str(event.get("hash")) not in consumed:
             return event

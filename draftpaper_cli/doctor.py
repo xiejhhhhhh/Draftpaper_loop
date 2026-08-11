@@ -112,6 +112,37 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
             "missing_required_options": [],
             "reason": action.get("reason"),
         }
+    if command == "choose-result-route":
+        result = {
+            "status": "passed",
+            "action_mode": "human_decision",
+            "command": command,
+            "registered": True,
+            "mutates_project": True,
+            "protected_action": True,
+            "manual_only": True,
+            "cli_present": False,
+            "missing_required_options": [],
+            "requires_user_decision": True,
+            "checkpoint_sha256": action.get("checkpoint_sha256"),
+            "route_options": action.get("route_options") or [],
+            "reason": action.get("reason"),
+        }
+        from .checkpoint_summary import show_checkpoint_summary
+
+        existing = show_checkpoint_summary(project)
+        if existing.get("status") != "not_found":
+            result["stage_summary_zh_html"] = existing.get("stage_summary_zh_html")
+            result["checkpoint_summary"] = {
+                "checkpoint_id": existing.get("summary", {}).get("checkpoint_id"),
+                "absolute_path": existing.get("stage_summary_zh_html", {}).get("absolute_path"),
+                "stage_summary_json": existing.get("summary", {}).get("stage_summary_path"),
+                "requires_preview": existing.get("requires_preview", False),
+                "preview_command": existing.get("preview_command"),
+            }
+            result["requires_preview"] = existing.get("requires_preview", False)
+            result["preview_command"] = existing.get("preview_command")
+        return result
     spec = command_spec(command) if command else None
     required = _required_options(command) if spec else []
     missing = [option for option in required if option not in cli]
