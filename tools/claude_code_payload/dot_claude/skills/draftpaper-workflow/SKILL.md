@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.39.0
+version: 0.40.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -100,6 +100,23 @@ forks, and citation counts are provenance or adoption signals, not validity
 proof. Archive download requires the guarded confirmation, checksum, license,
 and static inspection route; never execute third-party archive code during
 metadata enrichment.
+
+Literature discovery, identity resolution, and evidence fetching are separate
+contracts. A discovery provider proposes candidates; it does not prove paper
+identity or citation fitness. `search-literature` applies symmetric discipline
+and tiered topic gates, resolves shortlist DOI/title/author/year identity, and
+uses the vendored paper-fetch adapter only for evidence-on-demand full text.
+Ambiguous or mismatched identities never trigger automatic full-text fetching.
+Fetched metadata and text are scored again before a work becomes active.
+Review-required, topic-mismatched, discipline-mismatched, identity-mismatched,
+and orphan artifacts stay outside the active literature snapshot, citation
+pool, summaries consumed by Agents, and writing context. Historical orphan
+files require `quarantine-orphan-literature` preview, packet-hash apply, and a
+hash-verified rollback route. Use `audit-literature-integrity` to verify active
+work reachability; never infer active evidence from files merely existing under
+`references/fulltext/`. The external Agent `paper-fetch-skill` is useful for
+interactive single-paper work, but Core availability depends on the pinned
+vendored adapter rather than a user-installed Agent skill.
 
 The CLI owns the exact next action. When references change, regenerate the
 affected plan and writing. When results change, reopen core evidence and

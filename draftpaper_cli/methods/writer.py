@@ -351,11 +351,26 @@ def _safe_ast_literal(node: ast.AST) -> Any:
         value = ast.literal_eval(node)
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
         return None
-    if isinstance(value, str) and (re.search(r"[A-Za-z]:[\\/]", value) or value.startswith(("/", "\\\\"))):
+    def json_safe(item: Any) -> Any:
+        """Return a deterministic JSON-compatible representation of a literal."""
+        if isinstance(item, str):
+            if re.search(r"[A-Za-z]:[\\/]", item) or item.startswith(("/", "\\\\")):
+                return None
+            return item
+        if item is None or isinstance(item, (int, float, bool)):
+            return item
+        if isinstance(item, dict):
+            return {str(key): json_safe(val) for key, val in item.items()}
+        if isinstance(item, (list, tuple, set, frozenset)):
+            values = list(item)
+            if isinstance(item, (set, frozenset)):
+                values.sort(key=repr)
+            return [json_safe(val) for val in values]
         return None
-    if isinstance(value, (list, tuple, dict, set)) and len(value) > 40:
+
+    if isinstance(value, (list, tuple, dict, set, frozenset)) and len(value) > 40:
         return None
-    return value if isinstance(value, (str, int, float, bool, list, tuple, dict, set, type(None))) else None
+    return json_safe(value)
 
 
 def _method_reproducibility_contract(project_path: Path) -> dict[str, Any]:

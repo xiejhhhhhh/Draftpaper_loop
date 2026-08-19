@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
@@ -153,6 +154,32 @@ class ArtifactDriftTests(unittest.TestCase):
                     route="adopt_as_expected_change",
                     reconciliation_id=result["reconciliation_id"],
                 )
+
+    def test_confirmed_baseline_restoration_can_use_derived_rebuild_route(self) -> None:
+        from draftpaper_cli.passport import refresh_project_passport
+        from draftpaper_cli.scientific_baseline import create_scientific_baseline
+        from draftpaper_cli.stale_sync import reconcile_project_drift, sync_artifact_stale
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Baseline restoration", field="workflow engineering")
+            idea_path = project.path / "idea" / "idea.md"
+            confirmed_content = idea_path.read_text(encoding="utf-8")
+            create_scientific_baseline(project.path, reason="confirmed_checkpoint")
+
+            idea_path.write_text("# Research Idea\n\nAccidental replacement.\n", encoding="utf-8")
+            refresh_project_passport(project.path, event="accepted_accidental_state")
+            idea_path.write_text(confirmed_content, encoding="utf-8")
+
+            result = sync_artifact_stale(project.path)
+            resolution = reconcile_project_drift(
+                project.path,
+                route="rebuild_derived_artifacts",
+                reconciliation_id=result["reconciliation_id"],
+            )
+
+            self.assertEqual(resolution["status"], "resolved")
+            receipt = json.loads(Path(resolution["resolution_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(receipt["baseline_restored_paths"], ["idea/idea.md"])
 
     def test_successful_mutating_cli_command_refreshes_its_own_passport(self) -> None:
         from draftpaper_cli.orchestrator import status_project

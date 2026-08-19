@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.39.0。** Draftpaper-loop 在已有证据优先科研工作流之上，新增分级审查权限、基于活动事实的阶段叙事和纵向漂移治理。新项目默认使用 `balanced`：通知型阶段可以自动继续；C1 需要有效的、带 hash 的 Agent delegation；C2 还需要明确的科学冻结授权和与记录中的生成者独立的审查 Agent；C3 科学选择和最终发布仍必须由人工完成。Agent 收据始终是 `agent_approved`，绝不会伪装为 `user_confirmed`。checkpoint 使用 `dpl.checkpoint_summary.v4`，通过 `StageActivityBundle` 生成由活动事实支撑的阶段叙事，说明 Agent 实际读取、分析、生成、修改、复用、验证、重试、跳过和失败的内容。不可变科学基线、修订周期、canonical fact ID、受管编辑和漂移 reconciliation 保护多轮返修，避免前后版本静默混用。核心 wheel 仍保持本地优先：pypdf 是默认解析器，官方 MinerU Agent 是可选路径，自建 MinerU/GPU 环境不会自动安装。完整版本记录见[最近更新](#最近更新)；项目能力按科研任务组织在下文。
+**当前版本：v0.40.0。** Draftpaper-loop 新增学科感知的文献身份与证据抓取闭环：学科化 provider 先发现候选，对称学科冲突和分层主题锚点先筛选，shortlist 再核验 DOI、标题、作者与年份；Core 内置的 vendored paper-fetch adapter 默认只按证据需求补抓全文，并在抓取后依据真实元数据和正文重新评分。`discipline_unknown` 不再被当作满分匹配，生态学与天文学等困难跨学科误召回会进入 review 或 quarantine，不能进入活动快照、引用池和 Agent 写作上下文。双语文献 HTML 会汇总发现、身份解析、全文决策、抓取后状态和隔离原因。v0.39.0 的分级 Agent 审查、活动事实阶段叙事、不可变科学基线和纵向漂移治理继续保留；pypdf 仍是默认本地 PDF 解析器，MinerU 仍是可选升级。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -44,7 +44,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 | 数据与方法 | 数据清单、可行性、阶段归属代码、真实方法运行、公式和变量提取 | data/method manifests、run/formula manifests |
 | 图表与证据 | 语义 figure/panel contract、figure-code trace、结果有效性和 Result Support | 主图组、附录图、result manifest、evidence registry |
 | 科学写作 | Paper Narrative Engine、章节证据包、Codex 自由写作、Scientific Editor | Results、Introduction、Data、Methods、Discussion |
-| 文献与引用 | 检索、Zotero、BibTeX、PDF/摘要证据、引用意图、citation audit | `library.bib`、citation evidence、final audit |
+| 文献与引用 | 学科化多源检索、Zotero、本地 PDF/结构化导入、对称学科门禁、论文身份核验、按需全文、抓取后复核、评分保全、双语 HTML 和引用审计 | identity/fetch receipts、active snapshot、quarantine、`library.bib`、citation evidence、final audit |
 | 审稿与发布 | Results 后学科审查、两位独立盲评、作者补全事务、编译和 release hash | reviewer reports、completion packet、`main.pdf` |
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
@@ -62,6 +62,12 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 **安全归档检查。** 用户单独确认下载后，系统会检查 checksum、路径逃逸、符号链接/设备文件、大小/压缩比、许可证一致性和静态结构，之后才允许进入插件晋升候选。metadata enrichment 和静态检查阶段永不执行第三方代码。
 <!-- /capability:safe_research_code_archive_inspection -->
 
+<!-- capability:discipline_aware_literature_identity -->
+<!-- capability-meta: id=discipline_aware_literature_identity; status=implemented; since=0.40 -->
+**学科感知文献身份闭环。** `search-literature` 默认使用 `resolve_then_fetch_on_demand`：NASA ADS、OpenAlex 等学科化来源负责发现候选，Core 对 shortlist 生成 hash-bound 身份收据，只有身份明确且确有证据需要时才调用 wheel 内 vendored paper-fetch。抓取后的真实标题、摘要和正文必须再次通过主题、学科和用途门禁；错误、歧义和历史 orphan 不进入活动文献快照。`audit-literature-integrity` 验证 active work 到全文产物的可达性，`quarantine-orphan-literature` 默认只生成 preview，必须提供 packet hash 才能 apply，并支持哈希校验回滚。
+操作方式见[学科感知文献检索与身份核验](docs/discipline_aware_literature.zh-CN.md)。
+<!-- /capability:discipline_aware_literature_identity -->
+
 **证据身份与完整阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v4` 阶段包通过同源的 JSON/HTML/Agent 载荷展示完整阶段产物、事务变化、实际 Agent 活动、审查要求、决定主体、科学基线、证据身份、验证状态、恢复路线、hash，以及项目相对路径和本机绝对路径。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
 
 ### 从早期版本到当前框架
@@ -72,6 +78,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - **v0.28.1-v0.33：事务、发布与精确恢复。** 完成 artifact DAG、统一 CommandSpec、科学非零退出状态、作者补全事务、稳定段落定位、跨期刊/跨平台 wheel 回归、Result Support v3 和 release hash 绑定。
 - **v0.34-v0.35：全学科文献质量与文档证据。** Query Contract v2 保留多语言主题锚点，provider 按学科和语言规划，相关性与角色覆盖由内容证据决定，本地 PDF 规范化为绑定 work identity 的 evidence passage。pypdf 是默认路径；官方 MinerU Agent 只在授权且满足质量条件时升级；自建 CPU/GPU MinerU 只通过通用 endpoint 合同和部署建议支持。
 - **v0.36-v0.37：代码来源、阶段透明度与发布质量闭环。** 保留文献时同步发现 GitHub/Zenodo metadata-only 代码来源，保留 version DOI、paper-era lineage、许可证和 provider receipt；人工确认前生成中文阶段成果包并返回双重路径；runtime preflight、语义漂移治理、归档安全审查、Ruff no-new-debt、源码/wheel/Skill/schema parity 和 Definition of Done 审计共同保护发布一致性。stars/forks 和论文/软件引用量用于候选排序与解释，不能替代科研验证。
+- **v0.37.1-v0.40：委托审查、纵向一致性与文献身份闭环。** 分级 Agent delegation、StageActivityBundle、不可变科学基线和 canonical facts 保护多轮执行；Query Contract v3、对称学科冲突、默认身份解析、按需全文、抓取后复核、active snapshot 可达性和可回滚 quarantine 共同阻止跨学科误召回及历史 orphan 重新进入写作上下文。
 
 版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
 
@@ -495,13 +502,30 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.40.0（2026-08-20）-- 学科感知文献身份核验与按需全文
+
+- Query Contract 升级为 v3，将实体/项目锚点、学科锚点、方法锚点、通用词和中英文同义词组分层计分；`population`、`classification`、`catalog`、`diversity` 等共享词不能单独通过主题门禁。
+- 新增生态学、环境科学、农业、公共卫生等中英文学科标记，将 `general` 拆为 `discipline_unknown` 等可解释状态，并以对称冲突策略同时阻止“天文学项目召回生态学”和反向误召回。显式 `method_transfer` 等跨学科用途进入 review/context-only，不会被静默激活。
+- shortlist 默认生成 DOI/标题/作者/年份身份收据；`ambiguous` 和 `mismatch` 不触发全文抓取。默认策略 `resolve_then_fetch_on_demand` 只补抓缺摘要、明确证据需求或可由全文消歧的候选，三篇以上使用批处理，图片与补充材料默认关闭，稳定身份和全文按输入/文件哈希复用。
+- 抓取后根据真实元数据与正文重新执行主题、学科和用途复核。只有 `accepted_active` 与 `accepted_context_only` 可以进入活动快照；错误、歧义、证据不足和历史 orphan 进入 quarantine，且 Agent 上下文、摘要、引用池和“已阅读”统计只读取 active snapshot 可达产物。
+- 双语离线文献 HTML 新增流程摘要、发现 provider、身份状态、全文决策、抓取后状态、引用资格、quarantine 原因和恢复路线。历史 orphan 隔离采用 preview → packet hash → apply → hash-verified rollback。
+- 冻结全学科基准覆盖天文学/生态学、医学/恒星生存、遥感/天文卫星、数字乡村/计算机网络治理、机器学习通用词和材料科学困难负例：正例召回率 100%，困难负例进入 active 为 0。Core 使用固定版本的 vendored paper-fetch adapter；外部 Agent skill 不是 wheel 运行前提。
+
+### 2026-08-18 -- 多源文献完整性加固
+
+- 文献 Core 现在默认采用 augment-first 合并路线：增加在线、Zotero、结构化文件、手工记录或本地 PDF 时，会保留已有 work identity、来源谱系、评分、摘要和代码来源线索，只有显式 replace 事务才允许替换。
+- 新增 `literature_work_registry.json`、snapshot/merge receipt、评分状态与评分来源，以及 `audit-literature-integrity`、`sync-literature-sources`、`apply-literature-sync`、`repair-literature-identities`、本地迁移与回滚命令 `migrate-literature-index`、可恢复批量解析命令 `parse-literature-source-documents`、`rebuild-literature-index` 和带哈希校验的孤儿全文隔离/回滚命令。缺失评分显示为 `not evaluated`；历史全零记录显示为 `legacy zero ambiguous`，不会被静默当作科学零值。
+- Core 文献页面统一提供离线 `中文 | English` 切换，索引页和详情页共享相同文献集合、数值、解析/绑定状态和 snapshot identity。
+- 本地 PDF reconciliation 现在记录正式 parser state、evidence passages、`work_id` 绑定并同步 registry；pypdf 仍是默认路线，MinerU 仍是质量触发的可选升级。
+- `EuclidxDESI` 文献索引作为只读结构回归样本：当前输入清单记录 26 条 active 文献、14 条 `quick_read`、5 条 `pdf_available_unreadable`、7 条 `not_parsed` 和 16 个未匹配全文产物。数量来自输入快照，不写死在 Core 行为中；所有迁移/apply 检查都只在隔离副本执行。
+
 ### v0.37.1-v0.39.0（2026-08-11）-- Agent 委托审查、阶段工作叙事与纵向漂移治理
 
 - `v0.37.1` 将 `WorkflowTrace` 升级为 `dpl.workflow_trace.v2`，将命令事务升级为 `dpl.command_transaction.v3`，记录 Agent 实际读取、分析、生成、修改、复用、验证、重试、跳过和失败的活动事实；同时生成审查权限 shadow 报告、不可变科学基线候选和修订周期记录，默认不改变旧项目的人工决定。
 - `v0.38.0` 将 checkpoint 成果包升级为 `dpl.checkpoint_summary.v4`。中文 HTML 首屏先用有证据引用的一段话说明 Agent 本阶段做了什么，再展开逐项动作、完整产物、文件变更、验证、未解决问题、审查主体、基线和恢复路线；完整图表、表格、代码、报告与运行证据清单仍可展开查看。
 - `v0.38.0` 新增 `manual`、`balanced` 和 `delegated` 三种审查模式、项目/修订周期范围的 Agent delegation、`evaluate-checkpoint-authority`、`review-checkpoint` 和 `agent_approved` receipt。`continue` 只消费有效授权下的 C1/C2 审查；C2 还要求明确的科学冻结授权和与记录中的生成者独立的审查 Agent。C3 科学路线、最终稿、作者身份、许可证和发布仍必须由用户确认，Agent 不会伪装成 `user_confirmed`。
 - `v0.38.1` 新增 `CanonicalFactRegistry v2`、不可变 `ScientificBaselineBundle`、`RevisionCycle`、受管修改 packet、`dpl.drift_reconciliation.v2` 和跨修订一致性报告。相同事实身份的数值冲突、不同 cohort/run/split 的不可比较结果、超出本轮范围的外部修改，会分别进入冲突、不可比较或重新打开上游的恢复路线；刷新 passport 不能隐藏历史漂移。
-- `v0.39.0` 将源码、wheel、Skill 副本、schema registry、CLI 合同、README 和 release manifest 对齐为同一发布身份。发布清单登记 242 条命令、v4 checkpoint companion、v2/v3 trace 与 transaction 合同，以及跨修订治理合同。
+- `v0.39.0` 将源码、wheel、Skill 副本、schema registry、CLI 合同、README 和 release manifest 对齐为同一发布身份。该版本发布清单登记 242 条命令、v4 checkpoint companion、v2/v3 trace 与 transaction 合同，以及跨修订治理合同。
 - 验证范围包括治理重点回归、compileall、Ruff、命令合同、release manifest 和隔离工作流 smoke test；完整 pytest、wheel 和跨平台矩阵仍需在正式 tag 前完成。fixture、shadow 报告、Agent receipt 和 HTML 成果包验证的是工作流合同与可追溯性，不代表真实科研结论，也不替代受保护科学决定的作者确认。
 
 ### v0.37.0（2026-08-03）-- 阶段确认透明度与持久科研代码来源

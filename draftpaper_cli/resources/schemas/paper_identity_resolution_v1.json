@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.paper_identity_resolution.v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_id", "input", "resolved", "status", "checks", "input_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.paper_identity_resolution.v1"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "input": {"type": "object"},
+    "resolved": {"type": "object"},
+    "status": {"enum": ["unresolved", "resolved_exact", "resolved_probable", "ambiguous", "mismatch", "no_access", "provider_degraded", "rate_limited"]},
+    "checks": {"type": "object"},
+    "input_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": true
+}

@@ -34,6 +34,14 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _identity_value(value: Any, fallback: str = "") -> str:
+    """Treat generated placeholder identities as missing when a real value exists."""
+    text = str(value or "").strip()
+    if text.lower() in {"not_yet_assigned", "unknown", "null", "none"}:
+        return fallback
+    return text
+
+
 def _normalize_record(
     record: dict[str, Any],
     *,
@@ -47,13 +55,14 @@ def _normalize_record(
     is_result_metric = role.startswith("result_metric_")
     cohort_id = str(record.get("cohort_id") or record.get("cohort") or "main").strip() or "main"
     run_id = str(record.get("run_id") or ("" if is_result_metric else "not_applicable")).strip()
-    split = str(record.get("split") or ("" if is_result_metric else "not_applicable")).strip()
+    split = _identity_value(record.get("split"), "" if is_result_metric else "not_applicable")
     model_id = str(record.get("model_id") or record.get("model") or ("" if is_result_metric else "not_applicable")).strip()
     metric_dimension = str(record.get("metric_dimension") or record.get("unit") or "").strip()
     normalized = {
         "evidence_id": str(record.get("evidence_id") or ""),
         "entity_role": role,
         "value": value,
+        "evidence_role": str(record.get("evidence_role") or "primary").strip() or "primary",
         "unit": str(record.get("unit") or "").strip(),
         "cohort_id": cohort_id,
         "cohort": cohort_id,
@@ -62,7 +71,7 @@ def _normalize_record(
         "analysis_spec_id": str(record.get("analysis_spec_id") or ("" if is_result_metric else "not_applicable")).strip(),
         "sample_unit": str(record.get("sample_unit") or "").strip(),
         "split": split,
-        "split_id": str(record.get("split_id") or split).strip(),
+        "split_id": _identity_value(record.get("split_id"), split) or split,
         "run_id": run_id,
         "model_id": model_id,
         "model": model_id,
@@ -94,7 +103,7 @@ def _finalize_binding(record: dict[str, Any]) -> None:
     record["missing_binding_fields"] = missing
 
 
-def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, str, str, str]:
+def _record_key(record: dict[str, Any]) -> tuple[str, ...]:
     return (
         str(record.get("entity_role") or ""),
         str(record.get("estimand_id") or ""),
@@ -103,8 +112,10 @@ def _record_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, str, s
         str(record.get("run_id") or ""),
         str(record.get("model_id") or record.get("model") or ""),
         str(record.get("split_id") or record.get("split") or ""),
+        str(record.get("sample_unit") or ""),
         str(record.get("metric_dimension") or ""),
         str(record.get("aggregation") or ""),
+        str(record.get("analysis_variant") or ""),
     )
 
 
@@ -137,8 +148,15 @@ def _numeric(value: Any) -> float | None:
 
 def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     conflicts: list[dict[str, Any]] = []
-    grouped: dict[tuple[str, str, str, str, str, str, str, str, str], list[dict[str, Any]]] = {}
-    for record in records:
+    # Presentation-only/secondary/legacy diagnostics remain visible in the
+    # registry but cannot compete with identity-bound scientific evidence.
+    scientific_records = [
+        record for record in records
+        if str(record.get("evidence_role") or "primary").strip().lower()
+        not in {"presentation_only", "secondary", "legacy"}
+    ]
+    grouped: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for record in scientific_records:
         grouped.setdefault(_record_key(record), []).append(record)
     for key, items in grouped.items():
         values = {_value_key(item.get("value")) for item in items}
@@ -154,15 +172,17 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "run_id": key[4],
                     "model": key[5],
                     "split_id": key[6],
-                    "metric_dimension": key[7],
-                    "aggregation": key[8],
+                    "sample_unit": key[7],
+                    "metric_dimension": key[8],
+                    "aggregation": key[9],
+                    "analysis_variant": key[10],
                 },
                 "values": [item.get("value") for item in items],
                 "evidence_ids": [item.get("evidence_id") for item in items],
             })
 
     by_scope: dict[tuple[str, str, str, str, str], dict[str, list[dict[str, Any]]]] = {}
-    for record in records:
+    for record in scientific_records:
         scope = (
             str(record.get("cohort_id") or record.get("cohort") or ""),
             str(record.get("sample_unit") or ""),

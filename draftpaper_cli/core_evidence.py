@@ -59,7 +59,13 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
             "caption": metadata.get("caption") or plan.get("caption_draft") or "",
             "scientific_question": plan.get("scientific_question") or "",
             "interpretation_summary": metadata.get("interpretation_summary") or "",
-            "plot_grammar": metadata.get("plot_grammar") or plan.get("plot_grammar") or "",
+            "plot_grammar": (
+                metadata.get("plot_grammar")
+                or metadata.get("figure_type")
+                or plan.get("plot_grammar")
+                or plan.get("figure_type")
+                or ""
+            ),
             "has_axes": bool(metadata.get("has_axes")),
             "axis_labels": metadata.get("axis_labels") or {},
             "publication_ready": bool(metadata.get("publication_ready")),
@@ -76,7 +82,7 @@ def _figure_items(figure_plan: dict[str, Any], figure_metadata: dict[str, Any]) 
                 "caption": plan.get("caption_draft") or "",
                 "scientific_question": plan.get("scientific_question") or "",
                 "interpretation_summary": plan.get("result_claim_template") or "",
-                "plot_grammar": plan.get("plot_grammar") or "",
+                "plot_grammar": plan.get("plot_grammar") or plan.get("figure_type") or "",
                 "has_axes": False,
                 "axis_labels": {},
                 "publication_ready": False,
@@ -100,7 +106,8 @@ def _reviewable_figure_issues(project_path: Path, figures: list[dict[str, Any]])
             issues.append(f"{path_text} lacks a title or caption.")
         if not item.get("interpretation_summary"):
             issues.append(f"{path_text} lacks an interpretation summary.")
-        is_workflow_schematic = str(item.get("plot_grammar") or "").lower() == "workflow_schematic"
+        figure_grammar = str(item.get("plot_grammar") or item.get("figure_type") or "").lower()
+        is_workflow_schematic = figure_grammar in {"workflow_diagram", "workflow_schematic"}
         if not item.get("has_axes") and not is_workflow_schematic:
             issues.append(f"{path_text} does not confirm axes or a scientific scale.")
         if not item.get("axis_labels") and not is_workflow_schematic:

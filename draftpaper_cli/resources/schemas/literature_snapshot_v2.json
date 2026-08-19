@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_snapshot.v2",
+  "title": "Draftpaper literature snapshot",
+  "type": "object",
+  "required": ["schema_version", "snapshot_hash", "item_count", "work_ids"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_snapshot.v2"},
+    "snapshot_hash": {"type": "string"},
+    "item_count": {"type": "integer", "minimum": 0},
+    "work_ids": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

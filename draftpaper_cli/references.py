@@ -5,17 +5,21 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import re
 import urllib.request
 from collections import Counter
+from copy import deepcopy
+from datetime import datetime, timezone
 from html import escape
 from html import unescape
 from pathlib import Path
 from typing import Any
 
 from .literature_language import tokenize_multilingual
+from .literature_identity import canonical_work_id
 
 from .html_utils import write_html_report
 from .project_scaffold import _write_json
@@ -43,6 +47,23 @@ REFERENCE_OUTPUTS = [
     "references/literature_confirmation_packet.json",
     "references/literature_confirmation_packet.zh-CN.md",
     "references/unresolved_reference_tasks.json",
+    "references/literature_snapshot.json",
+    "references/citation_evidence_snapshot.json",
+    "references/literature_output_manifest.json",
+    "references/literature_merge_report.json",
+    "references/literature_work_registry.json",
+    "references/literature_fetch_policy.json",
+    "references/discipline_ontology_snapshot.json",
+    "references/discipline_conflict_matrix.json",
+    "references/prefetch_relevance_report.json",
+    "references/prefetch_literature_candidates.jsonl",
+    "references/paper_identity_resolutions.jsonl",
+    "references/paper_identity_resolution_summary.json",
+    "references/unresolved_paper_identities.json",
+    "references/fulltext_fetch_decisions.json",
+    "references/paper_fetch_manifest.json",
+    "references/postfetch_relevance_report.json",
+    "references/quarantined_literature_candidates.json",
 ]
 
 MAX_REFERENCE_ITEMS = 30
@@ -50,6 +71,36 @@ CONTEXT_MINIMUM_ITEMS = 5
 RECENT_YEAR_CUTOFF = 2021
 OLD_YEAR_CUTOFF = 2011
 RECENT_TARGET_RATIO = 0.60
+
+SCORE_FIELDS = (
+    "citation_weight",
+    "relevance_score",
+    "authority_score",
+    "citation_authority_score",
+    "journal_score",
+    "topic_relevance_score",
+    "discipline_match_score",
+    "role_evidence_score",
+    "metadata_completeness_score",
+    "evidence_readiness_score",
+)
+
+
+def _optional_float(value: Any) -> float | None:
+    """Keep an absent score absent; zero is a valid computed score."""
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_status(item: dict[str, Any], field: str, value: float | None) -> str:
+    statuses = item.get("score_status")
+    if isinstance(statuses, dict) and statuses.get(field):
+        return str(statuses[field])
+    return "computed" if value is not None else "not_evaluated"
 
 
 def extract_year(raw_date: str | int | None) -> str:
@@ -158,6 +209,8 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "query_components": item.get("query_components") if isinstance(item.get("query_components"), dict) else {},
         "query_provenance": item.get("query_provenance") if isinstance(item.get("query_provenance"), list) else [],
         "canonical_identity": item.get("canonical_identity") if isinstance(item.get("canonical_identity"), dict) else {},
+        "work_id": str(item.get("work_id") or item.get("canonical_work_id") or "").strip(),
+        "canonical_work_id": str(item.get("canonical_work_id") or item.get("work_id") or "").strip(),
         "selection_policy": str(item.get("selection_policy") or "").strip(),
         "user_confirmed": bool(item.get("user_confirmed")),
         "prior_user_confirmed": bool(item.get("prior_user_confirmed")),
@@ -171,16 +224,38 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
         "_lineage_runtime_verified": bool(item.get("_lineage_runtime_verified")),
         "candidate_state": str(item.get("candidate_state") or "").strip(),
         "rejection_codes": [str(value) for value in (item.get("rejection_codes") or []) if str(value).strip()],
-        "topic_relevance_score": float(item.get("topic_relevance_score") or 0),
-        "discipline_match_score": float(item.get("discipline_match_score") or 0),
-        "role_evidence_score": float(item.get("role_evidence_score") or 0),
-        "metadata_completeness_score": float(item.get("metadata_completeness_score") or 0),
-        "evidence_readiness_score": float(item.get("evidence_readiness_score") or 0),
+        "citation_weight": _optional_float(item.get("citation_weight")),
+        "relevance_score": _optional_float(item.get("relevance_score")),
+        "authority_score": _optional_float(item.get("authority_score")),
+        "citation_authority_score": _optional_float(item.get("citation_authority_score")),
+        "journal_score": _optional_float(item.get("journal_score")),
+        "journal_rank_labels": [str(value) for value in (item.get("journal_rank_labels") or []) if str(value).strip()],
+        "context_rank_score": _optional_float(item.get("context_rank_score")),
+        "topic_relevance_score": _optional_float(item.get("topic_relevance_score")),
+        "discipline_match_score": _optional_float(item.get("discipline_match_score")),
+        "role_evidence_score": _optional_float(item.get("role_evidence_score")),
+        "metadata_completeness_score": _optional_float(item.get("metadata_completeness_score")),
+        "evidence_readiness_score": _optional_float(item.get("evidence_readiness_score")),
+        "score_status": {
+            field: _score_status(item, field, _optional_float(item.get(field)))
+            for field in SCORE_FIELDS
+        },
+        "score_provenance": deepcopy(item.get("score_provenance")) if isinstance(item.get("score_provenance"), dict) else {},
         "topic_hits": [str(value) for value in (item.get("topic_hits") or []) if str(value).strip()],
         "discipline_hypotheses": [str(value) for value in (item.get("discipline_hypotheses") or []) if str(value).strip()],
         "role_evidence": item.get("role_evidence") if isinstance(item.get("role_evidence"), dict) else {},
         "evidence_passages": [dict(value) for value in (item.get("evidence_passages") or []) if isinstance(value, dict)],
+        "deep_summary": deepcopy(item.get("deep_summary")) if isinstance(item.get("deep_summary"), dict) else {},
     }
+    # The normalized projection is intentionally explicit for stable fields, but
+    # it must remain lossless for plugin- and source-specific extensions.
+    for key, value in item.items():
+        if key not in normalized:
+            normalized[key] = deepcopy(value)
+    if not normalized["work_id"]:
+        normalized["work_id"] = _reference_identity(normalized)
+    if not normalized["canonical_work_id"]:
+        normalized["canonical_work_id"] = normalized["work_id"]
     if normalized["reference_origin"] == "parent_lineage_curated" and not normalized["_lineage_runtime_verified"]:
         normalized["reference_origin"] = normalized["lineage_previous_origin"] or "unverified_lineage_carryover"
     if not normalized["query_provenance"] and normalized["search_query"]:
@@ -209,6 +284,80 @@ def normalize_reference_item(item: dict[str, Any], index: int) -> dict[str, Any]
     return normalized
 
 
+def _has_reference_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def _merge_reference_fields(target: dict[str, Any], source: dict[str, Any]) -> None:
+    """Merge an incoming record without allowing absent fields to erase data."""
+    if source.get("_lineage_runtime_verified") and not target.get("_lineage_runtime_verified"):
+        for key in (
+            "reference_origin",
+            "lineage_previous_origin",
+            "lineage_source_project_id",
+            "lineage_asset_id",
+            "lineage_topic_overlap",
+            "lineage_domain_overlap",
+            "lineage_title_domain_overlap",
+            "lineage_requires_current_citation_audit",
+            "_lineage_runtime_verified",
+            "prior_user_confirmed",
+        ):
+            if _has_reference_value(source.get(key)):
+                target[key] = deepcopy(source[key])
+    merge_as_union = {"topic_hits", "discipline_hypotheses", "search_contexts", "search_queries"}
+    for key, value in source.items():
+        if key in {"source_records", "document_parses", "evidence_passages", "field_provenance", "score_status", "score_provenance"}:
+            continue
+        if key in merge_as_union and isinstance(value, list):
+            current = list(target.get(key) or [])
+            for entry in value:
+                if entry not in current:
+                    current.append(entry)
+            target[key] = current
+            continue
+        if not _has_reference_value(target.get(key)) and _has_reference_value(value):
+            target[key] = deepcopy(value)
+
+    for key in ("evidence_passages",):
+        current = list(target.get(key) or [])
+        seen = {json.dumps(entry, sort_keys=True, ensure_ascii=False) for entry in current if isinstance(entry, dict)}
+        for entry in source.get(key) or []:
+            marker = json.dumps(entry, sort_keys=True, ensure_ascii=False)
+            if marker not in seen:
+                current.append(deepcopy(entry))
+                seen.add(marker)
+        if current:
+            target[key] = current
+
+    statuses = dict(target.get("score_status") or {})
+    source_statuses = source.get("score_status") if isinstance(source.get("score_status"), dict) else {}
+    for field in SCORE_FIELDS:
+        current = _optional_float(target.get(field))
+        incoming = _optional_float(source.get(field))
+        if current is None and incoming is not None:
+            target[field] = incoming
+            statuses[field] = str(source_statuses.get(field) or "computed")
+        elif field not in statuses:
+            statuses[field] = str(source_statuses.get(field) or ("computed" if current is not None else "not_evaluated"))
+    target["score_status"] = statuses
+    provenance = dict(target.get("score_provenance") or {})
+    provenance.update(source.get("score_provenance") or {})
+    target["score_provenance"] = provenance
+
+    for key in ("field_provenance",):
+        current = dict(target.get(key) or {})
+        for field, origin in (source.get(key) or {}).items():
+            current.setdefault(field, origin)
+        target[key] = current
+
+
 def normalize_reference_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for item in items or []:
@@ -222,6 +371,7 @@ def normalize_reference_items(items: list[dict[str, Any]]) -> list[dict[str, Any
             normalized.append(candidate)
         else:
             _merge_context_metadata(existing, candidate)
+            _merge_reference_fields(existing, candidate)
             for key in ("source_records", "document_parses"):
                 merged = list(existing.get(key) or [])
                 seen = {json.dumps(value, sort_keys=True, ensure_ascii=False) for value in merged if isinstance(value, dict)}
@@ -311,6 +461,25 @@ def weight_literature_items(items: list[dict[str, Any]], idea: str = "", target_
         copied["journal_score"] = round(journal_score, 3)
         copied["journal_rank_labels"] = journal_labels
         copied["citation_weight"] = round(citation_weight, 3)
+        score_context = {
+            "policy_id": "dpl.reference_ranking.v1",
+            "idea": idea,
+            "target_journal": target_journal,
+            "work_id": copied.get("work_id") or _reference_identity(copied),
+        }
+        copied["score_context_hash"] = "sha256:" + hashlib.sha256(
+            json.dumps(score_context, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        copied["score_status"] = {
+            **dict(copied.get("score_status") or {}),
+            **{field: "computed" for field in ("citation_weight", "relevance_score", "authority_score", "citation_authority_score", "journal_score")},
+        }
+        copied["score_provenance"] = {
+            **dict(copied.get("score_provenance") or {}),
+            "policy_id": "dpl.reference_ranking.v1",
+            "context_hash": copied["score_context_hash"],
+            "computed_from": ["title", "abstract", "publication", "citation_count", "target_journal"],
+        }
         weighted.append(copied)
     weighted.sort(key=lambda entry: (entry.get("citation_weight", 0), entry.get("citation_count", 0)), reverse=True)
     return weighted
@@ -407,7 +576,14 @@ def _is_zotero_reference(item: dict[str, Any]) -> bool:
 
 
 def _is_user_curated_reference(item: dict[str, Any]) -> bool:
-    return _is_zotero_reference(item) or bool(item.get("retained")) or str(item.get("selection_policy") or "") == "user_curated_preserve" or str(item.get("reference_origin") or "") in {"local_import", "manual"}
+    return (
+        _is_zotero_reference(item)
+        or bool(item.get("retained"))
+        or bool(item.get("_lineage_runtime_verified"))
+        or str(item.get("selection_policy") or "") == "user_curated_preserve"
+        or str(item.get("reference_origin") or "")
+        in {"local_import", "manual", "parent_lineage_curated"}
+    )
 
 
 def _source_type_labels(item: dict[str, Any]) -> list[str]:
@@ -453,28 +629,7 @@ def _zotero_collection_label(item: dict[str, Any]) -> str:
 
 def _reference_identity(item: dict[str, Any]) -> str:
     """Return a stable work identity without merging unrelated same-title records."""
-    identifier_fields = (
-        "doi",
-        "pmid",
-        "pmcid",
-        "arxiv_id",
-        "bibcode",
-        "openalex_id",
-        "local_document_id",
-    )
-    for field in identifier_fields:
-        value = str(item.get(field) or "").strip().lower()
-        if value:
-            value = re.sub(r"^(https?://(doi\.org/|arxiv\.org/abs/))", "", value)
-            value = re.sub(r"\s+", "", value)
-            return f"{field}:{value}"
-    title = re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()
-    authors = item.get("authors") or []
-    first_author = re.sub(r"[^a-z0-9]+", " ", str(authors[0] if authors else "").lower()).strip()
-    year = extract_year(item.get("year"))
-    if not title:
-        return ""
-    return f"title:{title}|author:{first_author}|year:{year}"
+    return canonical_work_id(item)
 
 
 def _merge_context_metadata(target: dict[str, Any], source: dict[str, Any]) -> None:
@@ -661,11 +816,13 @@ def select_references_by_context(
             if _is_zotero_reference(preserved):
                 preserved["reference_origin"] = preserved.get("reference_origin") or "existing_zotero"
                 preserved["zotero_collection"] = _zotero_collection_label(preserved)
-            preserved.setdefault("citation_weight", 0)
-            preserved.setdefault("relevance_score", 0)
-            preserved.setdefault("authority_score", 0)
-            preserved.setdefault("citation_authority_score", 0)
-            preserved.setdefault("journal_score", 0)
+            statuses = dict(preserved.get("score_status") or {})
+            for score_field in SCORE_FIELDS:
+                value = _optional_float(preserved.get(score_field))
+                if value is not None:
+                    preserved[score_field] = value
+                statuses.setdefault(score_field, "computed" if value is not None else "not_evaluated")
+            preserved["score_status"] = statuses
             curated_items.append(preserved)
         elif has_sufficient_metadata_or_pdf(item) or (
             item.get("_lineage_runtime_verified")
@@ -961,10 +1118,10 @@ def literature_review_notes(items: list[dict[str, Any]], query: str = "") -> str
             f"- Recommended section: {recommended_section}",
             f"- Authors/year: {authors} ({item.get('year')})",
             f"- Venue: {item.get('publication') or 'n/a'}",
-            f"- Citation weight: {item.get('citation_weight', 0)}",
-            f"- Relevance score: {item.get('relevance_score', 0)}",
-            f"- Authority score: {item.get('authority_score', 0)}",
-            f"- Journal authority: {item.get('journal_score', 0)}",
+            f"- Citation weight: {_display_score(item, 'citation_weight')}",
+            f"- Relevance score: {_display_score(item, 'relevance_score')}",
+            f"- Authority score: {_display_score(item, 'authority_score')}",
+            f"- Journal authority: {_display_score(item, 'journal_score')}",
             f"- Evidence role: {infer_claim(item)}",
             f"- Evidence summary: {item.get('evidence_notes') or infer_evidence_summary(item)}",
             f"- Data used: {summary.get('data_used', '')}",
@@ -992,7 +1149,19 @@ def _reference_links_html(item: dict[str, Any]) -> str:
     return " ".join(links) if links else "n/a"
 
 
+def _display_score(item: dict[str, Any], field: str) -> str:
+    value = _optional_float(item.get(field))
+    if value is None:
+        status = str((item.get("score_status") or {}).get(field) or "not_evaluated")
+        return status.replace("_", " ")
+    return str(value)
+
+
 def write_literature_html_summaries(references_dir: Path, items: list[dict[str, Any]]) -> list[str]:
+    from .literature_html import render_literature_html
+
+    return render_literature_html(references_dir, items)
+
     summary_dir = references_dir / "literature_summaries"
     summary_dir.mkdir(parents=True, exist_ok=True)
     for old_summary in summary_dir.glob("*.html"):
@@ -1114,11 +1283,11 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
     <tr><th>Combination level</th><td>{escape(item.get('combination_level') or 'n/a')}</td></tr>
     <tr><th>Discipline anchor</th><td>{escape(item.get('discipline_anchor') or 'n/a')}</td></tr>
     <tr><th>Recommended section</th><td>{escape({'idea': 'introduction', 'data': 'data', 'methods': 'methods'}.get(str(item.get('search_context') or 'idea'), 'introduction'))}</td></tr>
-    <tr><th>Citation weight</th><td class="score">{escape(str(item.get('citation_weight', 0)))}</td></tr>
-    <tr><th>Relevance to Study</th><td>{escape(str(item.get('relevance_score', 0)))}</td></tr>
-    <tr><th>Journal authority</th><td>{escape(str(item.get('journal_score', 0)))} {escape(', '.join(item.get('journal_rank_labels') or []))}</td></tr>
-    <tr><th>Citation authority</th><td>{escape(str(item.get('citation_authority_score', 0)))}</td></tr>
-    <tr><th>Topic / discipline / role evidence</th><td>{escape(str(item.get('topic_relevance_score', 0)))} / {escape(str(item.get('discipline_match_score', 0)))} / {escape(str(item.get('role_evidence_score', 0)))}</td></tr>
+    <tr><th>Citation weight</th><td class="score">{escape(_display_score(item, 'citation_weight'))}</td></tr>
+    <tr><th>Relevance to Study</th><td>{escape(_display_score(item, 'relevance_score'))}</td></tr>
+    <tr><th>Journal authority</th><td>{escape(_display_score(item, 'journal_score'))} {escape(', '.join(item.get('journal_rank_labels') or []))}</td></tr>
+    <tr><th>Citation authority</th><td>{escape(_display_score(item, 'citation_authority_score'))}</td></tr>
+    <tr><th>Topic / discipline / role evidence</th><td>{escape(_display_score(item, 'topic_relevance_score'))} / {escape(_display_score(item, 'discipline_match_score'))} / {escape(_display_score(item, 'role_evidence_score'))}</td></tr>
     <tr><th>DOI / URL</th><td>{_reference_links_html(item)}</td></tr>
   </table>
   <h2>Query provenance</h2>
@@ -1162,8 +1331,8 @@ def write_literature_html_summaries(references_dir: Path, items: list[dict[str, 
             f"<td>{escape(item.get('search_query_id') or 'n/a')}</td>"
             f"<td>{escape(item.get('combination_level') or 'n/a')}</td>"
             f"<td>{escape(item.get('selection_policy') or 'ranked_by_relevance_and_authority')}</td>"
-            f"<td>{escape(str(item.get('citation_weight', 0)))}</td>"
-            f"<td>{escape(str(item.get('relevance_score', 0)))}</td><td>{escape(str(item.get('journal_score', 0)))}</td></tr>"
+            f"<td>{escape(_display_score(item, 'citation_weight'))}</td>"
+            f"<td>{escape(_display_score(item, 'relevance_score'))}</td><td>{escape(_display_score(item, 'journal_score'))}</td></tr>"
         )
     source_summary = ", ".join(f"{escape(source)}: {count}" for source, count in sorted(source_counts.items())) or "none"
     source_options_html = "".join(f'<option value="{escape(source)}">{escape(source)}</option>' for source in sorted(source_options))
@@ -1201,12 +1370,236 @@ def _write_citation_evidence(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+def _load_existing_literature_items(references_dir: Path) -> list[dict[str, Any]]:
+    path = references_dir / "literature_items.json"
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    raw_items = payload.get("items", payload) if isinstance(payload, dict) else payload
+    return [item for item in raw_items if isinstance(item, dict) and str(item.get("title") or "").strip()] if isinstance(raw_items, list) else []
+
+
+def _snapshot_input_item(item: dict[str, Any]) -> dict[str, Any]:
+    """Return the scientific input portion of a record, excluding output markers."""
+    value = deepcopy(item)
+    value.pop("snapshot_hash", None)
+    value.pop("_snapshot_hash", None)
+    return value
+
+
+def _literature_snapshot_hash(items: list[dict[str, Any]], search_queries: dict[str, Any]) -> str:
+    payload = {
+        "items": [_snapshot_input_item(item) for item in items],
+        "query_contract": search_queries.get("query_contract") if isinstance(search_queries, dict) else None,
+        "merge_mode": search_queries.get("merge_mode", "augment") if isinstance(search_queries, dict) else "augment",
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
 def _set_reference_manifest_outputs(project_path: Path) -> None:
     manifest_path = project_path / "references" / "stage_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["input_files"] = ["idea/idea.md"]
     manifest["output_files"] = REFERENCE_OUTPUTS
     _write_json(manifest_path, manifest)
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return "sha256:" + digest.hexdigest()
+
+
+def _snapshot_bound_items(items: list[dict[str, Any]], snapshot_hash: str) -> list[dict[str, Any]]:
+    return [
+        {
+            **deepcopy(item),
+            "snapshot_hash": snapshot_hash,
+        }
+        for item in items
+        if isinstance(item, dict)
+    ]
+
+
+def _inject_snapshot_meta(path: Path, snapshot_hash: str) -> None:
+    """Add or replace the portable snapshot marker in text and HTML outputs."""
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if path.suffix.lower() == ".html":
+        text = re.sub(r"\s*<meta\s+name=[\"']draftpaper-snapshot-hash[\"'][^>]*>", "", text, flags=re.IGNORECASE)
+        marker = f'<meta name="draftpaper-snapshot-hash" content="{escape(snapshot_hash, quote=True)}">'
+        if re.search(r"<head(?:\s[^>]*)?>", text, flags=re.IGNORECASE):
+            text = re.sub(r"(<head(?:\s[^>]*)?>)", rf"\1{marker}", text, count=1, flags=re.IGNORECASE)
+        else:
+            text = marker + text
+    elif path.suffix.lower() == ".md":
+        text = re.sub(r"(?m)^Snapshot hash:\s*.*\n?", "", text)
+        if text.startswith("# Literature Review Notes"):
+            text = text.replace("# Literature Review Notes", f"# Literature Review Notes\n\nSnapshot hash: `{snapshot_hash}`", 1)
+        else:
+            text = f"Snapshot hash: `{snapshot_hash}`\n\n{text}"
+    elif path.suffix.lower() == ".bib":
+        text = re.sub(r"(?m)^% Draftpaper-literature-snapshot:\s*.*\n?", "", text)
+        text = f"% Draftpaper-literature-snapshot: {snapshot_hash}\n{text}"
+    path.write_text(text, encoding="utf-8")
+
+
+def _snapshot_payload(references_dir: Path) -> dict[str, Any]:
+    path = references_dir / "literature_snapshot.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        value = {}
+    return value if isinstance(value, dict) else {}
+
+
+def _read_json_file(path: Path, default: Any) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _write_citation_evidence_snapshot(references_dir: Path, snapshot_hash: str) -> None:
+    csv_path = references_dir / "citation_evidence.csv"
+    payload = {
+        "schema_version": "dpl.citation_evidence_snapshot.v1",
+        "snapshot_hash": snapshot_hash,
+        "csv_path": "references/citation_evidence.csv",
+        "csv_sha256": _file_sha256(csv_path) if csv_path.is_file() else None,
+    }
+    _write_json(references_dir / "citation_evidence_snapshot.json", payload)
+
+
+def _literature_output_paths(references_dir: Path) -> list[Path]:
+    fixed = [
+        references_dir / "literature_snapshot.json",
+        references_dir / "literature_items.json",
+        references_dir / "library.bib",
+        references_dir / "citation_evidence.csv",
+        references_dir / "citation_evidence_snapshot.json",
+        references_dir / "literature_review_notes.md",
+        references_dir / "literature_review_notes.html",
+        references_dir / "literature_work_registry.json",
+        references_dir / "reference_registry.json",
+        references_dir / "bibliography_contract.json",
+        references_dir / "literature_summaries" / "index.html",
+    ]
+    details = sorted(
+        path
+        for path in (references_dir / "literature_summaries").glob("*.html")
+        if path.name != "index.html"
+    ) if (references_dir / "literature_summaries").is_dir() else []
+    return [path for path in [*fixed, *details] if path.is_file()]
+
+
+def _write_literature_output_manifest(references_dir: Path, snapshot_hash: str) -> dict[str, Any]:
+    artifacts = []
+    for path in _literature_output_paths(references_dir):
+        relative = path.relative_to(references_dir.parent).as_posix()
+        artifacts.append({
+            "path": relative,
+            "sha256": _file_sha256(path),
+            "snapshot_hash": snapshot_hash,
+        })
+    source_registry = references_dir / "literature_source_registry.json"
+    payload = {
+        "schema_version": "dpl.literature_output_manifest.v1",
+        "snapshot_hash": snapshot_hash,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "html_detail_paths": [
+            item["path"] for item in artifacts
+            if item["path"].startswith("references/literature_summaries/") and not item["path"].endswith("/index.html")
+        ],
+        "source_registry_sha256": _file_sha256(source_registry) if source_registry.is_file() else None,
+        "policy": "All projections are generated from one hash-bound literature snapshot; the manifest itself is excluded from its artifact hash set to avoid a circular digest.",
+    }
+    _write_json(references_dir / "literature_output_manifest.json", payload)
+    return payload
+
+
+def _write_reference_projection_bundle(
+    references_dir: Path,
+    items: list[dict[str, Any]],
+    *,
+    snapshot_hash: str,
+    query: str = "",
+    snapshot_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Write every literature projection from one immutable snapshot identity."""
+    references_dir.mkdir(parents=True, exist_ok=True)
+    bound_items = _snapshot_bound_items(items, snapshot_hash)
+    payload = dict(_snapshot_payload(references_dir))
+    payload.update(snapshot_payload or {})
+    payload.update({
+        "schema_version": "dpl.literature_snapshot.v2",
+        "snapshot_hash": snapshot_hash,
+        "item_count": len(bound_items),
+        "work_ids": [str(item.get("work_id") or "") for item in bound_items],
+    })
+    _write_json(references_dir / "literature_snapshot.json", payload)
+    _write_json(references_dir / "literature_items.json", bound_items)
+    _inject_snapshot_meta(references_dir / "library.bib", snapshot_hash) if (references_dir / "library.bib").is_file() else None
+    (references_dir / "library.bib").write_text(
+        f"% Draftpaper-literature-snapshot: {snapshot_hash}\n{generate_bibtex(bound_items)}",
+        encoding="utf-8",
+    )
+    _write_citation_evidence(references_dir / "citation_evidence.csv", citation_evidence_rows(bound_items))
+    _write_citation_evidence_snapshot(references_dir, snapshot_hash)
+    review_notes = literature_review_notes(bound_items, query=query)
+    _inject_snapshot_meta(references_dir / "literature_review_notes.md", snapshot_hash) if (references_dir / "literature_review_notes.md").is_file() else None
+    (references_dir / "literature_review_notes.md").write_text(review_notes, encoding="utf-8")
+    _inject_snapshot_meta(references_dir / "literature_review_notes.md", snapshot_hash)
+    write_html_report(references_dir / "literature_review_notes.html", review_notes, title="Literature Review Notes")
+    _inject_snapshot_meta(references_dir / "literature_review_notes.html", snapshot_hash)
+    html_outputs = write_literature_html_summaries(references_dir, bound_items)
+    return {"items": bound_items, "html_outputs": html_outputs, "snapshot_hash": snapshot_hash}
+
+
+def refresh_reference_outputs(project: str | Path, *, query: str | None = None) -> dict[str, Any]:
+    """Rebuild all literature projections after a parse bind or direct registry repair."""
+    state = load_project(project)
+    references_dir = state.path / "references"
+    items = normalize_reference_items(_load_existing_literature_items(references_dir))
+    search_queries = _snapshot_payload(references_dir)
+    query_payload = _read_json_file(references_dir / "search_queries.json", {})
+    snapshot_hash = _literature_snapshot_hash(items, query_payload)
+    snapshot_payload = {
+        **search_queries,
+        "merge_mode": search_queries.get("merge_mode") or "refresh",
+        "refresh_reason": "derived_outputs_rebuilt",
+    }
+    result = _write_reference_projection_bundle(
+        references_dir,
+        items,
+        snapshot_hash=snapshot_hash,
+        query=query if query is not None else str(query_payload.get("idea") or ""),
+        snapshot_payload=snapshot_payload,
+    )
+    from .bibliography import build_reference_registry
+    from .literature_repository import write_literature_registry
+
+    build_reference_registry(state.path)
+    registry = write_literature_registry(state.path, result["items"])
+    _set_reference_manifest_outputs(state.path)
+    manifest = _write_literature_output_manifest(references_dir, snapshot_hash)
+    return {
+        "status": "refreshed",
+        "project_path": str(state.path),
+        "item_count": len(result["items"]),
+        "snapshot_hash": snapshot_hash,
+        "registry": registry,
+        "manifest": manifest,
+        "outputs": REFERENCE_OUTPUTS + [item for item in result["html_outputs"] if item not in REFERENCE_OUTPUTS],
+    }
 
 
 def write_reference_outputs(
@@ -1217,20 +1610,48 @@ def write_reference_outputs(
     search_queries: dict[str, Any] | None = None,
     limit: int = MAX_REFERENCE_ITEMS,
 ) -> dict[str, Any]:
-    """Write normalized references, BibTeX, citation evidence, and review notes."""
+    """Write reference projections while preserving the current snapshot by default."""
     state = load_project(project)
     references_dir = state.path / "references"
     references_dir.mkdir(parents=True, exist_ok=True)
 
     project_text = " ".join([state.metadata.get("idea", ""), state.metadata.get("field", ""), query])
     active_search_queries = search_queries or {"idea": query}
+    merge_mode = str(active_search_queries.get("merge_mode") or "augment").strip().lower()
+    baseline = _load_existing_literature_items(references_dir) if merge_mode != "replace" else []
+    fetch_pipeline = (
+        active_search_queries.get("paper_fetch_pipeline")
+        if isinstance(active_search_queries.get("paper_fetch_pipeline"), dict)
+        else {}
+    )
+    quarantined_work_ids = {
+        str(value)
+        for value in fetch_pipeline.get("quarantined_work_ids") or []
+        if str(value).strip()
+    }
+    baseline_quarantined = [item for item in baseline if canonical_work_id(item) in quarantined_work_ids]
+    if quarantined_work_ids:
+        baseline = [item for item in baseline if canonical_work_id(item) not in quarantined_work_ids]
     candidates = list(items or [])
+    baseline_keys = {_reference_identity(item) for item in baseline if _reference_identity(item)}
     rejected: list[dict[str, Any]] = []
     contract = active_search_queries.get("query_contract") if isinstance(active_search_queries, dict) else None
     if isinstance(contract, dict):
         from .literature_relevance import apply_relevance_gate
 
         candidates, rejected = apply_relevance_gate(candidates, contract)
+        retained_for_review = []
+        still_rejected = []
+        for item in rejected:
+            if not _is_user_curated_reference(item):
+                still_rejected.append(item)
+                continue
+            retained = dict(item)
+            retained["candidate_state"] = "review_required"
+            retained["citation_eligibility"] = "not_eligible_pending_review"
+            retained_for_review.append(retained)
+        candidates = [*candidates, *retained_for_review]
+        rejected = still_rejected
     _write_json(references_dir / "literature_relevance_report.json", {
         "schema_version": "dpl.literature_relevance_report.v1",
         "contract_schema": contract.get("schema_version") if isinstance(contract, dict) else None,
@@ -1248,16 +1669,90 @@ def write_reference_outputs(
             for item in candidates
         ],
     })
+    selection_limit = max(0, int(limit), len(baseline)) if baseline else max(0, int(limit))
     normalized = select_references_by_context(
-        candidates,
+        [*baseline, *candidates],
         project_text=project_text,
         target_journal=state.metadata.get("target_journal", ""),
-        limit=max(0, int(limit)),
+        limit=selection_limit,
     )
     normalized = [enrich_pdf_text(item) for item in normalized]
-    normalized = [item for item in normalized if has_readable_evidence(item) or _is_zotero_reference(item)]
-    normalized = [{**item, "deep_summary": analyze_reference_item(item)} for item in normalized]
-    _write_json(references_dir / "literature_items.json", normalized)
+    normalized_keys = {_reference_identity(item) for item in normalized if _reference_identity(item)}
+    for item in baseline:
+        key = _reference_identity(item)
+        if key and key not in normalized_keys:
+            normalized.append(item)
+            normalized_keys.add(key)
+    normalized = [
+        item
+        for item in normalized
+        if has_readable_evidence(item) or _is_zotero_reference(item) or _is_user_curated_reference(item) or _reference_identity(item) in baseline_keys
+    ]
+    normalized = [
+        {
+            **item,
+            "deep_summary": (
+                analyze_reference_item(item)
+                if not isinstance(item.get("deep_summary"), dict) or not item.get("deep_summary") or item.get("document_parses")
+                else item.get("deep_summary")
+            ),
+        }
+        for item in normalized
+    ]
+    # M0 is a no-loss release: an existing computed score is authoritative for
+    # an augment operation. Re-ranking is a later, explicit score-contract
+    # change and must not happen as a side effect of adding a PDF/source.
+    baseline_by_identity = {
+        _reference_identity(item): item
+        for item in baseline
+        if _reference_identity(item)
+    }
+    for item in normalized:
+        previous = baseline_by_identity.get(_reference_identity(item))
+        if not previous:
+            continue
+        for field in SCORE_FIELDS:
+            previous_value = _optional_float(previous.get(field))
+            if previous_value is not None:
+                item[field] = previous_value
+        if isinstance(previous.get("score_status"), dict):
+            item["score_status"] = {
+                **dict(item.get("score_status") or {}),
+                **dict(previous.get("score_status") or {}),
+            }
+        if isinstance(previous.get("score_provenance"), dict):
+            item["score_provenance"] = deepcopy(previous["score_provenance"])
+        if previous.get("score_context_hash"):
+            item["score_context_hash"] = previous["score_context_hash"]
+    snapshot_hash = _literature_snapshot_hash(normalized, active_search_queries)
+    snapshot_payload = {
+        "schema_version": "dpl.literature_snapshot.v2",
+        "snapshot_hash": snapshot_hash,
+        "merge_mode": merge_mode,
+        "item_count": len(normalized),
+        "baseline_count": len(baseline),
+        "incoming_count": len(candidates),
+        "work_ids": [canonical_work_id(item) for item in normalized if canonical_work_id(item)],
+        "active_work_ids": [canonical_work_id(item) for item in normalized if canonical_work_id(item)],
+        "identity_candidate_set_hash": fetch_pipeline.get("identity_candidate_set_hash"),
+        "query_contract_hash": fetch_pipeline.get("query_contract_hash"),
+        "fetch_policy_hash": fetch_pipeline.get("policy_hash"),
+        "fetch_decision_packet_hash": fetch_pipeline.get("decision_packet_hash"),
+        "postfetch_assessment_hash": fetch_pipeline.get("postfetch_assessment_hash"),
+        "quarantined_work_ids": sorted(quarantined_work_ids),
+    }
+    _write_json(references_dir / "literature_merge_report.json", {
+        "schema_version": "dpl.literature_merge_report.v1",
+        "status": "augmented" if baseline else "created",
+        "merge_mode": merge_mode,
+        "baseline_count": len(baseline),
+        "incoming_count": len(candidates),
+        "final_count": len(normalized),
+        "preserved_work_ids": sorted(baseline_keys & {_reference_identity(item) for item in normalized}),
+        "dropped_work_ids": sorted(baseline_keys - {_reference_identity(item) for item in normalized}),
+        "quarantined_baseline_work_ids": sorted(canonical_work_id(item) for item in baseline_quarantined),
+        "snapshot_hash": snapshot_hash,
+    })
     (references_dir / "literature_candidates.jsonl").write_text(
         "\n".join(json.dumps(item, ensure_ascii=False, sort_keys=True) for item in candidates) + ("\n" if candidates else ""),
         encoding="utf-8",
@@ -1274,12 +1769,15 @@ def write_reference_outputs(
     zotero_manifest = references_dir / "zotero_collection_manifest.json"
     if not zotero_manifest.exists():
         _write_json(zotero_manifest, {"status": "not_used"})
-    (references_dir / "library.bib").write_text(generate_bibtex(normalized), encoding="utf-8")
-    _write_citation_evidence(references_dir / "citation_evidence.csv", citation_evidence_rows(normalized))
-    review_notes = literature_review_notes(normalized, query=query)
-    (references_dir / "literature_review_notes.md").write_text(review_notes, encoding="utf-8")
-    write_html_report(references_dir / "literature_review_notes.html", review_notes, title="Literature Review Notes")
-    html_outputs = write_literature_html_summaries(references_dir, normalized)
+    projection = _write_reference_projection_bundle(
+        references_dir,
+        normalized,
+        snapshot_hash=snapshot_hash,
+        query=query,
+        snapshot_payload=snapshot_payload,
+    )
+    normalized = projection["items"]
+    html_outputs = projection["html_outputs"]
 
     from .literature_confirmation import build_literature_confirmation_packet
 
@@ -1289,12 +1787,19 @@ def write_reference_outputs(
     from .bibliography import build_reference_registry
 
     bibliography = build_reference_registry(state.path)
+    from .literature_repository import write_literature_registry
+
+    registry = write_literature_registry(state.path, normalized)
     _set_reference_manifest_outputs(state.path)
+    output_manifest = _write_literature_output_manifest(references_dir, snapshot_hash)
     return {
         "status": "written",
         "project_path": str(state.path),
         "item_count": len(normalized),
         "bibliography": bibliography,
+        "registry": registry,
+        "snapshot_hash": snapshot_hash,
+        "output_manifest": output_manifest,
         "outputs": REFERENCE_OUTPUTS + [item for item in html_outputs if item not in REFERENCE_OUTPUTS] + [
             "references/literature_candidates.jsonl",
             "references/literature_relevance_report.json",

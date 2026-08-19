@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.paper_fetch_manifest.v2",
+  "type": "object",
+  "required": ["schema_version", "status", "runtime_source", "attempted_count", "success_count", "outputs", "failures"],
+  "properties": {
+    "schema_version": {"const": "dpl.paper_fetch_manifest.v2"},
+    "status": {"type": "string"},
+    "runtime_source": {"type": "string"},
+    "runtime_version": {"type": "string"},
+    "attempted_count": {"type": "integer", "minimum": 0},
+    "success_count": {"type": "integer", "minimum": 0},
+    "outputs": {"type": "array"},
+    "failures": {"type": "array"}
+  },
+  "additionalProperties": true
+}

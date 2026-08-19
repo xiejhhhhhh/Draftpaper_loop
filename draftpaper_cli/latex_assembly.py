@@ -141,11 +141,38 @@ def _metadata_affiliations(metadata: dict[str, Any]) -> tuple[dict[str, str], li
     return lookup, ordered
 
 
-def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool) -> str:
+def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool, elsarticle: bool = False) -> str:
     authors = metadata.get("authors") or []
     if not authors:
         return ""
     affiliation_lookup, ordered_affiliations = _metadata_affiliations(metadata)
+    if elsarticle:
+        lines: list[str] = []
+        corresponding = str(metadata.get("corresponding_author") or "").strip()
+        for item in authors:
+            author = item if isinstance(item, dict) else {"name": str(item)}
+            name = _safe_latex_text(str(author.get("name") or "").strip())
+            if not name:
+                continue
+            keys = author.get("affiliations") or author.get("affiliation_ids") or []
+            if isinstance(keys, (str, int)):
+                keys = [keys]
+            keys = [str(key) for key in keys]
+            marker = ""
+            if bool(author.get("corresponding")) or (corresponding and str(author.get("name") or "").strip() == corresponding):
+                marker = r"\corref{cor1}"
+            optional = "[" + ",".join(_safe_latex_text(key) for key in keys) + "]" if keys else ""
+            lines.append(rf"\author{optional}{{{name}{marker}}}")
+            email = author.get("email") or (metadata.get("email") if marker else None)
+            if email:
+                lines.append(rf"\ead{{{_safe_latex_text(str(email))}}}")
+        if corresponding:
+            lines.append(r"\cortext[cor1]{Corresponding author.}")
+        for index, affiliation in enumerate(ordered_affiliations, start=1):
+            item = metadata.get("affiliations")[index - 1] if isinstance(metadata.get("affiliations"), list) else None
+            key = str(item.get("id") if isinstance(item, dict) and item.get("id") else index)
+            lines.append(rf"\address[{_safe_latex_text(key)}]{{{_safe_latex_text(str(affiliation))}}}")
+        return "\n".join(lines)
     if aastex:
         lines: list[str] = []
         for item in authors:
@@ -153,7 +180,15 @@ def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool) -> str:
             name = _safe_latex_text(str(author.get("name") or "").strip())
             if not name:
                 continue
-            lines.append(rf"\author{{{name}}}")
+            author_options: list[str] = []
+            if author.get("orcid"):
+                author_options.append("orcid=" + _safe_latex_text(str(author.get("orcid"))))
+            if author.get("gname"):
+                author_options.append("gname=" + _safe_latex_text(str(author.get("gname"))))
+            if author.get("sname"):
+                author_options.append("sname=" + _safe_latex_text(str(author.get("sname"))))
+            optional = "[" + ",".join(author_options) + "]" if author_options else ""
+            lines.append(rf"\author{optional}{{{name}}}")
             keys = author.get("affiliations") or author.get("affiliation_ids") or []
             if isinstance(keys, (str, int)):
                 keys = [keys]
@@ -165,9 +200,6 @@ def _metadata_author_block(metadata: dict[str, Any], *, aastex: bool) -> str:
             email = author.get("email") or (metadata.get("email") if author.get("corresponding") else None)
             if email:
                 lines.append(rf"\email{{{_safe_latex_text(str(email))}}}")
-            orcid = author.get("orcid")
-            if orcid:
-                lines.append(rf"\orcid{{{_safe_latex_text(str(orcid))}}}")
         return "\n".join(lines)
     names = []
     for item in authors:
@@ -230,6 +262,11 @@ def _metadata_back_matter(metadata: dict[str, Any], *, aastex: bool) -> str:
 def _apply_manuscript_metadata(main_tex: str, metadata: dict[str, Any], *, aastex: bool) -> str:
     if not metadata:
         return main_tex
+    # A journal profile can identify an AAS target before the candidate
+    # template has been replaced with an actual AASTeX document class. Do not
+    # emit AASTeX-only author options into a generic test or user template.
+    aastex = bool(aastex and re.search(r"\\documentclass(?:\[[^\]]*\])?\{aastex", main_tex, flags=re.I))
+    elsarticle = bool(re.search(r"\\documentclass(?:\[[^\]]*\])?\{elsarticle\}", main_tex, flags=re.I))
     title = metadata.get("title")
     if title:
         replacement = rf"\title{{{_safe_latex_text(str(title))}}}"
@@ -268,14 +305,28 @@ def _apply_manuscript_metadata(main_tex: str, metadata: dict[str, Any], *, aaste
                 main_tex = re.sub(r"\\keywords\{[^{}]*\}", lambda _match: keyword_block, main_tex, count=1)
             else:
                 main_tex = main_tex.replace("\\begin{document}", keyword_block + "\n\\begin{document}", 1)
+        elif elsarticle:
+            keyword_block = "\\begin{keyword}\n" + rendered_keywords + "\n\\end{keyword}"
+            if re.search(r"\\begin\{keyword\}.*?\\end\{keyword\}", main_tex, flags=re.S):
+                main_tex = re.sub(
+                    r"\\begin\{keyword\}.*?\\end\{keyword\}",
+                    lambda _match: keyword_block,
+                    main_tex,
+                    count=1,
+                    flags=re.S,
+                )
+            elif "\\end{frontmatter}" in main_tex:
+                main_tex = main_tex.replace("\\end{frontmatter}", keyword_block + "\n\\end{frontmatter}", 1)
+            else:
+                main_tex = main_tex.replace("\\begin{document}", "\\begin{document}\n\n" + keyword_block, 1)
         elif rendered_keywords and "\\textbf{Keywords:}" not in main_tex:
             keyword_block = rf"\noindent\textbf{{Keywords:}} {rendered_keywords}"
             abstract_end = "\\end{abstract}"
             if abstract_end in main_tex:
                 main_tex = main_tex.replace(abstract_end, abstract_end + "\n\n" + keyword_block, 1)
-    author_block = _metadata_author_block(metadata, aastex=aastex)
+    author_block = _metadata_author_block(metadata, aastex=aastex, elsarticle=elsarticle)
     if author_block:
-        main_tex = re.sub(r"(?m)^\s*\\(?:author|affiliation|email|orcid)\{[^{}]*\}\s*\n?", "", main_tex)
+        main_tex = re.sub(r"(?m)^\s*\\(?:author|affiliation|email|orcid|address|cortext|ead)\b[^\n]*\n?", "", main_tex)
         title_match = re.search(r"\\title\{[^{}]*\}", main_tex)
         if title_match:
             main_tex = main_tex[:title_match.end()] + "\n" + author_block + main_tex[title_match.end():]
@@ -423,7 +474,39 @@ def _result_figure_entries(project_path: Path) -> list[dict[str, Any]]:
     manifest = _read_mapping(project_path / "results" / "result_manifest.yaml")
     entries: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for collection in (manifest.get("figures") or [], manifest.get("appendix_figures") or []):
+    main_items = list(manifest.get("main_figures") or [])
+    appendix_items = list(manifest.get("appendix_figures") or [])
+    if not main_items and not appendix_items:
+        # Read legacy manifests that only expose the combined figure list.
+        main_items = list(manifest.get("figures") or [])
+    if not main_items and not appendix_items:
+        # A minimal legacy project may have a successful run manifest but no
+        # figure projection yet. Use only its existing declared images as a
+        # compatibility input; normal projects should populate result_manifest.
+        run_manifest = _read_mapping(project_path / "methods" / "run_manifest.yaml")
+        declared_outputs = []
+        for key in ("figures_generated", "output_files", "declared_outputs"):
+            values = run_manifest.get(key) or []
+            declared_outputs.extend([values] if isinstance(values, str) else values)
+        for value in dict.fromkeys(str(item).replace("\\", "/") for item in declared_outputs):
+            if Path(value).suffix.lower() not in {".png", ".jpg", ".jpeg", ".pdf", ".svg"}:
+                continue
+            if not value.startswith("results/figures/") or not (project_path / value).is_file():
+                continue
+            main_items.append({"id": Path(value).stem, "path": value, "manuscript_role": "main"})
+    else:
+        # Older structured manifests may omit one of the projections while
+        # retaining the combined list. Fill only the missing projection and
+        # keep the explicit main/appendix classification authoritative.
+        for item in manifest.get("figures") or []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("manuscript_role") or "").lower() == "appendix":
+                if not any(str(existing.get("path") or existing.get("id") or "") == str(item.get("path") or item.get("id") or "") for existing in appendix_items if isinstance(existing, dict)):
+                    appendix_items.append(item)
+            elif not any(str(existing.get("path") or existing.get("id") or "") == str(item.get("path") or item.get("id") or "") for existing in main_items if isinstance(existing, dict)):
+                main_items.append(item)
+    for collection in (main_items, appendix_items):
         for item in collection if isinstance(collection, list) else []:
             if not isinstance(item, dict):
                 continue
@@ -431,24 +514,10 @@ def _result_figure_entries(project_path: Path) -> list[dict[str, Any]]:
             if key and key not in seen:
                 seen.add(key)
                 entries.append(item)
-    figures_dir = project_path / "results" / "figures"
-    if figures_dir.is_dir():
-        for path in sorted(figures_dir.rglob("*")):
-            if not path.is_file() or path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".pdf", ".eps"}:
-                continue
-            relative = path.relative_to(project_path).as_posix()
-            if relative in seen:
-                continue
-            seen.add(relative)
-            entries.append(
-                {
-                    "id": path.stem,
-                    "path": relative,
-                    "manuscript_role": "appendix",
-                    "caption_draft": path.stem.replace("_", " "),
-                    "result_claim": "Supporting result artifact retained by the verified run.",
-                }
-            )
+    # Only manifest-declared figures belong in the manuscript. The project may
+    # retain older renderings and candidate formats under results/figures, but
+    # silently importing every file creates duplicate floats and can make the
+    # final paper non-reproducible with respect to the frozen figure contract.
     return entries
 
 
@@ -475,7 +544,7 @@ def _render_result_artifacts(project_path: Path) -> tuple[str, list[str]]:
         override = next(
             (
                 caption_overrides.get(key)
-                for key in (identifier, str(entry.get("storyboard_id") or ""), relative)
+                for key in (identifier, str(entry.get("storyboard_id") or ""), relative, Path(relative).stem)
                 if key and caption_overrides.get(key)
             ),
             None,
@@ -558,6 +627,15 @@ def _section_input(project_path: Path, name: str) -> str:
     return rf"\section{{{SECTION_TITLES[name]}}}" + "\n" + input_line
 
 
+def _results_embeds_figures(project_path: Path) -> bool:
+    """Avoid inserting the derived figure inventory when Results already has floats."""
+    for relative in ("results/results.tex", "latex/sections/results.tex"):
+        path = project_path / relative
+        if path.is_file() and "\\begin{figure" in path.read_text(encoding="utf-8-sig", errors="replace"):
+            return True
+    return False
+
+
 def _ensure_math_support(tex: str) -> str:
     """Ensure journal-supplied templates can compile generated scientific formulas."""
     package_groups = re.findall(r"\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}", tex)
@@ -582,12 +660,13 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
             rendered = _apply_manuscript_metadata(rendered, manuscript_metadata, aastex=False)
         return GENERATOR_TEX_COMMENT + rendered
     template = template_path.read_text(encoding="utf-8")
+    artifact_input = [] if _results_embeds_figures(project_path) else [r"\input{sections/result_artifacts}"]
     sections = "\n".join([
         _section_input(project_path, "introduction"),
         _section_input(project_path, "data"),
         _section_input(project_path, "methods"),
         _section_input(project_path, "results"),
-        r"\input{sections/result_artifacts}",
+        *artifact_input,
         r"\clearpage",
         _section_input(project_path, "discussion"),
     ])

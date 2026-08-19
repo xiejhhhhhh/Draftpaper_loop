@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_migration_receipt.v1",
+  "title": "Draftpaper legacy literature migration receipt",
+  "type": "object",
+  "required": ["schema_version", "status", "packet_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_migration_receipt.v1"},
+    "status": {"enum": ["applied", "rolled_back"]},
+    "packet_hash": {"type": "string", "minLength": 1},
+    "snapshot_hash": {"type": ["string", "null"]},
+    "rollback_archive": {"type": "string"}
+  },
+  "additionalProperties": true
+}

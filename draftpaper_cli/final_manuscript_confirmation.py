@@ -276,9 +276,23 @@ def _bundled_frozen_artifacts(
         raise FinalManuscriptConfirmationError(
             "Independent review submission bundle schema error: exactly one frozen manuscript PDF is required."
         )
-    if manuscript_pdfs[0]["path"] != "latex/main.pdf":
+    frozen_manuscript_path = manuscript_pdfs[0]["path"]
+    # Independent reviewers are deliberately bound to the generated anonymous
+    # build.  The release packet separately binds the author-identified
+    # latex/main.pdf through ARTIFACTS and _validate_release_semantics().
+    # These are distinct artifacts with distinct identities; requiring the
+    # anonymous bundle to point at latex/main.pdf incorrectly rejects every
+    # valid blind-review bundle.
+    allowed_manuscript_paths = {"latex/main.pdf"}
+    if manifest.get("submission_anonymized") is True:
+        # Older release bundles used the project PDF for the frozen manuscript;
+        # current bundles may use the separately generated anonymous build.
+        # Keep the compatibility path explicit so arbitrary PDFs cannot enter
+        # the release packet.
+        allowed_manuscript_paths.add("quality_checks/blind_reviews/anonymous_build/main.pdf")
+    if frozen_manuscript_path not in allowed_manuscript_paths:
         raise FinalManuscriptConfirmationError(
-            "Independent review submission bundle schema error: the frozen manuscript PDF must be the current latex/main.pdf."
+            "Independent review submission bundle schema error: the frozen manuscript PDF must be the current latex/main.pdf or the declared anonymous build."
         )
 
     bindings: dict[str, tuple[_ArtifactSnapshot, dict[str, Any]]] = {}

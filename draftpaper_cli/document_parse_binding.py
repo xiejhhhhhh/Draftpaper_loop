@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,22 @@ def bind_document_parse(project: str | Path, *, receipt: dict[str, Any], normali
             item["document_parses"] = parses
             item["evidence_passages"] = passages
             item["candidate_state"] = "evidence_ready" if passages else item.get("candidate_state") or "document_parsed"
+            item["parser_state"] = "evidence_passages_ready" if passages else "parsed"
+            item["binding_status"] = "bound_to_work"
+            item["last_document_parse_receipt"] = {
+                "input_sha256": receipt.get("input_sha256"),
+                "parser": receipt.get("parser"),
+                "route": receipt.get("route"),
+                "status": receipt.get("status"),
+                "work_id": work_id,
+            }
+            item["document_evidence_bundle"] = {
+                "document_id": receipt.get("document_id"),
+                "work_id": work_id,
+                "parser": receipt.get("parser"),
+                "status": "bound_to_work",
+                "passage_count": len(passages),
+            }
             item["work_id"] = work_id
             bound = True
             break
@@ -51,11 +68,23 @@ def bind_document_parse(project: str | Path, *, receipt: dict[str, Any], normali
             if not isinstance(value, dict)
             or str((value.get("receipt") or {}).get("input_sha256") or "") != marker
         ]
-        queue["items"].append({"receipt": receipt, "normalized_document": normalized, "evidence_passages": passages})
+        queue["items"].append({"receipt": receipt, "normalized_document": normalized, "evidence_passages": passages, "binding_status": "identity_pending"})
         _write_json(queue_path, queue)
-    normalized_path = root / "references" / "document_parses" / str(receipt.get("input_sha256") or "unknown")[:16] / "normalized_document.json"
+    input_token = re.sub(r"[^A-Za-z0-9_-]", "_", str(receipt.get("input_sha256") or "unknown").removeprefix("sha256:"))[:16] or "unknown"
+    normalized_path = root / "references" / "document_parses" / input_token / "normalized_document.json"
     normalized_path.parent.mkdir(parents=True, exist_ok=True)
     _write_json(normalized_path, normalized)
     passage_path = normalized_path.with_name("evidence_passages.jsonl")
     passage_path.write_text("\n".join(json.dumps(item, ensure_ascii=False, sort_keys=True) for item in passages) + ("\n" if passages else ""), encoding="utf-8")
-    return {"status": "bound" if bound else "unresolved", "work_id": work_id, "normalized_output": normalized_path.relative_to(root).as_posix(), "passage_count": len(passages)}
+    refresh = None
+    if bound:
+        from .references import refresh_reference_outputs
+
+        refresh = refresh_reference_outputs(root)
+    return {
+        "status": "bound" if bound else "unresolved",
+        "work_id": work_id,
+        "normalized_output": normalized_path.relative_to(root).as_posix(),
+        "passage_count": len(passages),
+        "refresh": refresh,
+    }

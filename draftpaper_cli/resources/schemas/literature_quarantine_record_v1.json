@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_quarantine_record.v1",
+  "type": "object",
+  "required": ["schema_version", "status"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_quarantine_record.v1"},
+    "status": {"enum": ["preview", "completed", "applied", "rolled_back"]},
+    "packet_hash": {"type": "string"},
+    "items": {"type": "array"},
+    "artifacts": {"type": "array"}
+  },
+  "additionalProperties": true
+}

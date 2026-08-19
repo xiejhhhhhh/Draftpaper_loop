@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.unresolved_paper_identities.v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_set_hash", "count", "items"],
+  "properties": {
+    "schema_version": {"const": "dpl.unresolved_paper_identities.v1"},
+    "candidate_set_hash": {"type": "string"},
+    "count": {"type": "integer", "minimum": 0},
+    "items": {"type": "array"}
+  },
+  "additionalProperties": false
+}

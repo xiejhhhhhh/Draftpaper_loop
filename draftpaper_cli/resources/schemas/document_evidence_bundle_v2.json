@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.document_evidence_bundle.v2",
+  "title": "Draftpaper document evidence bundle",
+  "type": "object",
+  "required": ["document_id", "work_id", "parser", "status"],
+  "properties": {
+    "document_id": {"type": "string"},
+    "work_id": {"type": "string"},
+    "parser": {"type": "string"},
+    "status": {"type": "string"},
+    "passages": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

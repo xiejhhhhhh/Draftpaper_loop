@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.orphan_literature_artifact_report.v1",
+  "title": "Draftpaper orphan literature artifact report",
+  "type": "object",
+  "required": ["schema_version", "artifacts"],
+  "properties": {
+    "schema_version": {"const": "dpl.orphan_literature_artifact_report.v1"},
+    "artifacts": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

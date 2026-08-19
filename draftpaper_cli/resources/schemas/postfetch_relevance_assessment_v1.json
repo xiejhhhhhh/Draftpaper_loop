@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.postfetch_relevance_assessment.v1",
+  "type": "object",
+  "required": ["schema_version", "status", "reason_codes", "identity_status", "topic_relevance_score", "discipline_state", "citation_eligibility", "input_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.postfetch_relevance_assessment.v1"},
+    "status": {"enum": ["accepted_active", "accepted_context_only", "review_required", "rejected_topic_mismatch", "rejected_discipline_mismatch", "rejected_identity_mismatch", "rejected_insufficient_evidence"]},
+    "reason_codes": {"type": "array", "items": {"type": "string"}},
+    "identity_status": {"type": "string"},
+    "topic_relevance_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "discipline_state": {"type": "string"},
+    "citation_eligibility": {"type": "string"},
+    "input_hash": {"type": "string"}
+  },
+  "additionalProperties": true
+}

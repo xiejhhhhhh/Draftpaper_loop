@@ -105,6 +105,10 @@ from .project_state import (
 )
 from .quality_gate import QualityGateError, run_quality_check
 from .references import write_reference_outputs
+from .literature_identity import canonical_work_id, identity_aliases, identity_strength
+from .literature_integrity import audit_literature_integrity, quarantine_orphan_literature_artifacts
+from .literature_merge import apply_literature_merge, rebuild_literature_index, repair_literature_identities, sync_literature_sources
+from .literature_repository import build_literature_registry, load_literature_registry, project_registry_items, write_literature_registry
 from .research_plan import MissingReferencesError, generate_research_plan
 from .review_revision import (
     ReviewRevisionError,
@@ -303,6 +307,19 @@ __all__ = [
     "inventory_results",
     "write_results",
     "write_reference_outputs",
+    "canonical_work_id",
+    "identity_aliases",
+    "identity_strength",
+    "audit_literature_integrity",
+    "quarantine_orphan_literature_artifacts",
+    "apply_literature_merge",
+    "rebuild_literature_index",
+    "repair_literature_identities",
+    "sync_literature_sources",
+    "build_literature_registry",
+    "load_literature_registry",
+    "project_registry_items",
+    "write_literature_registry",
     "MissingReferencesError",
     "generate_research_plan",
     "diagnose_gate_failures",

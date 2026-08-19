@@ -94,6 +94,65 @@ def test_publication_figure_quality_requires_semantics_plugins_and_legibility(tm
     assert report["figure_checks"][0]["pixel_evidence"]["inferred_plot_body_content_groups"] >= 2
 
 
+def test_workflow_diagram_does_not_require_axis_region_pixels(tmp_path, monkeypatch) -> None:
+    from draftpaper_cli import scientific_figure_quality as figure_quality
+
+    monkeypatch.setattr(
+        figure_quality,
+        "_ocr_png",
+        lambda _path: ("Data Method Validation Reporting", "rapidocr_onnxruntime", 0.98),
+    )
+    monkeypatch.setattr(
+        figure_quality,
+        "_pixel_evidence",
+        lambda _path: {
+            "decoded": True,
+            "nonblank": True,
+            "axis_region_evidence": False,
+            "text_edge_evidence": True,
+            "inferred_horizontal_content_groups": 4,
+            "inferred_plot_body_content_groups": 4,
+        },
+    )
+
+    project = create_project(root=tmp_path, idea="Workflow study", field="astronomy", target_journal="Test").path
+    _png(project / "results" / "figures" / "workflow.png", 1600, 1000)
+    table = project / "results" / "tables" / "workflow.csv"
+    table.parent.mkdir(parents=True, exist_ok=True)
+    table.write_text("stage,count\ndata,1\n", encoding="utf-8")
+    table_hash = hashlib.sha256(table.read_bytes()).hexdigest()
+    _json(project / "results" / "figure_contracts.json", {"main_contracts": [{
+        "figure_id": "workflow", "scientific_question": "How does evidence reach a decision?",
+        "required_variable_roles": ["data_flow"], "required_method_outputs": ["pipeline_completeness"],
+        "plot_grammar": "workflow_diagram",
+    }]})
+    _json(project / "results" / "figure_metadata.json", {"figures": [{
+        "figure_id": "workflow", "path": "results/figures/workflow.png", "has_axes": False,
+        "axis_labels": {}, "text_elements": ["Data", "Method", "Validation", "Reporting"],
+        "statistics": {"pipeline_completeness": 1.0},
+        "interpretation_summary": "The diagram traces the evidence workflow.",
+        "variable_roles": ["data_flow"], "method_outputs": ["pipeline_completeness"],
+        "plot_grammar": "workflow_diagram", "source_tables": ["results/tables/workflow.csv"],
+        "minimum_font_points": 8, "panel_overlap_detected": False, "content_cropped": False,
+        "colorblind_safe": True, "caption_self_contained": True, "panel_finite_check": True,
+        "panel_finite_value_count": 1, "panel_nonfinite_value_count": 0, "global_title": False,
+        "display_labels_checked": True, "display_label_map": {}, "publication_ready": True,
+    }]})
+    _json(project / "results" / "figure_plugin_trace_report.json", {"decision": "pass", "figure_checks": [{
+        "figure_id": "workflow", "data_plugin_ids": ["table_loader"],
+        "method_plugin_ids": ["workflow_renderer"], "run_output_event_id": "evt_workflow",
+    }]})
+    (project / "methods" / "plugin_execution_ledger.jsonl").write_text(json.dumps({
+        "event_id": "evt_workflow", "status": "project_executed",
+        "output_hashes": {"results/tables/workflow.csv": table_hash},
+    }) + "\n", encoding="utf-8")
+
+    report = figure_quality.assess_scientific_figure_quality(project)
+
+    assert report["decision"] == "pass"
+    assert "rendered_axis_or_text_evidence_missing" not in {item["kind"] for item in report["issues"]}
+
+
 def test_publication_figure_quality_rejects_small_untraced_semantic_shell(tmp_path) -> None:
     from draftpaper_cli.scientific_figure_quality import assess_scientific_figure_quality
 

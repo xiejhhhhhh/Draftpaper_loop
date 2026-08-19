@@ -849,6 +849,45 @@ def test_required_role_counts_only_with_current_covered_evidence_binding(tmp_pat
     assert "results/promoted_evidence_snapshot.json" not in result["input_bindings"]
 
 
+def test_event_level_binding_supplies_cohort_when_run_manifest_is_sparse(tmp_path) -> None:
+    from draftpaper_cli.result_support_signals import collect_result_support_signals
+
+    project = create_project(root=tmp_path, idea="Event-level binding cohort", field="astronomy").path
+    evidence = project / "data" / "event_level_samples.csv"
+    evidence.write_text("event_id,source_group\n1,s1\n", encoding="utf-8")
+    _json(project / "methods" / "run_manifest.yaml", {
+        "status": "success",
+        "run_id": "event-run-current",
+    })
+    _json(project / "data" / "event_level_data_run_binding.json", {
+        "status": "project_result",
+        "run_id": "event-run-current",
+        "cohort_id": "event-cohort-current",
+    })
+    _json(project / "data" / "data_role_coverage_report.json", {
+        "required_roles": ["event_level_samples"],
+        "role_bindings": {
+            "event_level_samples": {
+                "state": "covered_project_local",
+                "evidence": {
+                    "path": "data/event_level_samples.csv",
+                    "sha256": _sha256(evidence),
+                    "run_id": "event-run-current",
+                    "cohort_id": "event-cohort-current",
+                    "snapshot_id": "",
+                },
+            },
+        },
+    })
+
+    result = collect_result_support_signals(project)
+
+    role_signal = result["signals"]["required_data_role_bindings"]
+    assert role_signal["bound_roles"] == ["event_level_samples"]
+    assert role_signal["unbound_required_roles"] == []
+    assert role_signal["binding_diagnostics"] == []
+
+
 @pytest.mark.parametrize(
     ("state", "overrides", "code"),
     [

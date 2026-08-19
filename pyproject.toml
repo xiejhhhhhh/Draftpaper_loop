@@ -1,6 +1,6 @@
 [project]
 name = "draftpaper-cli"
-version = "0.39.0"
+version = "0.40.0"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
 license = "LicenseRef-Draftpaper-NonCommercial"
@@ -42,6 +42,7 @@ plotting-full = [
   "scikit-learn>=1.4",
   "marsilea>=0.5",
   "reportlab>=4",
+  "rapidocr_onnxruntime>=1.2",
   "scikit-plot>=0.3.7",
 ]
 # The official MinerU Agent connector is part of the core package.  This
@@ -106,6 +107,10 @@ python_files = ["test_*.py"]
 [tool.ruff]
 target-version = "py310"
 line-length = 140
+extend-exclude = [
+  ".tmp",
+  "archived_derived_packages",
+]
 
 [tool.pyright]
 pythonVersion = "3.10"

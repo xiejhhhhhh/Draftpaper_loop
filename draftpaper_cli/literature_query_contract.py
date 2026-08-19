@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .literature_language import alias_terms, discipline_hypotheses, language_codes, topic_anchor_terms
+from .literature_discipline_policy import generated_conflict_terms, ontology_snapshot
+from .literature_language import alias_groups, alias_terms, classify_query_terms, discipline_hypotheses, language_codes, topic_anchor_terms
 from .project_scaffold import _write_json
 from .project_state import load_project
 
 
-QUERY_CONTRACT_SCHEMA = "dpl.literature_query.v2"
+QUERY_CONTRACT_SCHEMA = "dpl.literature_query.v3"
 DEFAULT_ROLES = ("problem_gap", "data_provenance", "method", "evaluation_standard", "baseline", "limitations")
 
 
@@ -23,6 +24,9 @@ def build_query_contract(project: str | Path, query: str | None = None) -> dict[
     aliases = alias_terms(anchors)
     hypotheses = discipline_hypotheses(" ".join([original, idea, field]))
     languages = language_codes(" ".join([original, idea, field]))
+    tiered_terms = classify_query_terms(original, idea, field)
+    ontology = ontology_snapshot()
+    negative_terms, negative_evidence = generated_conflict_terms(hypotheses)
     return {
         "schema_version": QUERY_CONTRACT_SCHEMA,
         "original_query": original,
@@ -32,10 +36,14 @@ def build_query_contract(project: str | Path, query: str | None = None) -> dict[
         "discipline_hypotheses": hypotheses,
         "must_preserve_terms": anchors,
         "optional_terms": aliases,
-        "negative_terms": [],
+        "entity_anchor_groups": alias_groups(tiered_terms["entity_anchors"]),
+        **tiered_terms,
+        "negative_terms": negative_terms,
+        "negative_term_evidence": negative_evidence,
         "roles": list(DEFAULT_ROLES),
         "expansion_mode": "balanced",
         "user_query_is_authoritative": bool(query),
+        "discipline_ontology_schema": ontology["schema_version"],
     }
 
 

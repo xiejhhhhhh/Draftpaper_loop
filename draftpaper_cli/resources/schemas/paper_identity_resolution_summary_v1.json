@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.paper_identity_resolution_summary.v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_count", "resolved_count", "status_counts", "candidate_set_hash", "query_contract_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.paper_identity_resolution_summary.v1"},
+    "candidate_count": {"type": "integer", "minimum": 0},
+    "resolved_count": {"type": "integer", "minimum": 0},
+    "status_counts": {"type": "object"},
+    "candidate_set_hash": {"type": "string"},
+    "query_contract_hash": {"type": "string"}
+  },
+  "additionalProperties": true
+}

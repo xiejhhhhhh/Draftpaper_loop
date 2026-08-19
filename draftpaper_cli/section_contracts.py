@@ -263,7 +263,15 @@ def _role_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
         metric = role.removeprefix("result_metric_").replace("_", " ")
         aliases = {"f1 macro": ("macro f1", "macro-f1"), "roc auc": ("roc auc", "roc-auc", "auc")}
         terms = aliases.get(metric, (metric,))
-        return any(_normalized_words(term) in normalized for term in terms)
+        if any(_normalized_words(term) in normalized for term in terms):
+            return True
+        semantic_terms = {
+            "current token available fraction": (("current", "token"), ("available", "availability")),
+            "history token available fraction": (("history", "historical"), ("token",), ("available", "availability")),
+            "physical fit usable fraction": (("physical",), ("fit", "spectrum", "spectral"), ("usable", "available", "availability")),
+        }
+        groups = semantic_terms.get(metric)
+        return bool(groups) and all(any(term in normalized for term in group) for group in groups)
     return False
 
 
@@ -277,6 +285,9 @@ def _model_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
     aliases = {
         "ablation no augmentation": ("without augmentation", "no augmentation"),
         "ablation no class weighting": ("removal of class weighting", "without class weighting", "no class weighting"),
+        "current only time2vec": ("learnable time2vec", "time2vec"),
+        "current only fixed pe": ("fixed time encoding", "fixed positional encoding", "fixed pe"),
+        "current only no pe": ("without an explicit time encoding", "without time encoding", "no time encoding", "no pe"),
         "frozen logistic": ("frozen feature", "frozen classifier", "frozen logistic"),
         "fine tune last three blocks": ("final fine tuned", "three block fine tuning"),
         "fine tune last block": ("last block fine tuning",),
@@ -408,6 +419,9 @@ def _resolve_numeric_claim(
     model_context = [record for record in candidates if _model_matches_sentence(record, local_context)]
     if model_context:
         candidates = model_context
+    role_context = [record for record in candidates if _role_matches_sentence(record, local_context)]
+    if role_context:
+        candidates = role_context
     explicit_variant_context = bool(re.search(
         r"\b(?:without|removal|ablation|baseline|frozen|seed|tile[- ]grouped|sensitivity|external)\b",
         local_context,
@@ -479,6 +493,16 @@ def _resolve_numeric_claim(
             record for record in candidates
             if abs(_value_distance(claim, record) - best_distance) <= 1e-12
         ]
+
+    # A resolved result metric may also be repeated in the generic structured
+    # run summary. Treat that summary as a fallback without demoting
+    # figure-bound evidence or masking distinct verified result scopes.
+    non_summary_candidates = [
+        record for record in candidates
+        if str(record.get("confidence") or "") != "verified_structured_run_output"
+    ]
+    if non_summary_candidates and len(non_summary_candidates) < len(candidates):
+        candidates = non_summary_candidates
 
     scope_signals: dict[str, set[str]] = {}
     for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id"):

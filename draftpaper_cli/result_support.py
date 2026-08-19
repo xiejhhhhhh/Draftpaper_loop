@@ -22,6 +22,7 @@ from .result_support_signals import (
     RESULT_SUPPORT_INPUTS,
     build_result_support_input_bindings,
     collect_result_support_signals,
+    result_support_binding_transition_is_safe,
 )
 from .run_evidence_bundle import load_active_run_evidence_bundle
 from .state_kernel import file_lock
@@ -652,6 +653,12 @@ def result_route_preflight(
                 relative == "results/promoted_evidence_snapshot.json"
                 and relative not in recorded_bindings
             )
+            if not result_support_binding_transition_is_safe(
+                project_path,
+                relative=relative,
+                recorded_digest=recorded_bindings.get(relative),
+                current_digest=current_bindings.get(relative),
+            )
             if current_bindings.get(relative) != recorded_bindings.get(relative)
         )
         if changed:
@@ -1035,6 +1042,12 @@ def validate_result_support_for_manuscript(project_path: Path) -> dict[str, Any]
         if not (
             relative == "results/promoted_evidence_snapshot.json"
             and relative not in recorded_bindings
+        )
+        if not result_support_binding_transition_is_safe(
+            project_path,
+            relative=relative,
+            recorded_digest=recorded_bindings.get(relative),
+            current_digest=current_bindings.get(relative),
         )
         if current_bindings.get(relative) != recorded_bindings.get(relative)
     )

@@ -902,13 +902,15 @@ def write_figure_metadata_report(root: Path, metadata: list[dict[str, Any]], err
     issues = []
     for item in metadata:
         path = root / str(item.get("path") or "")
+        figure_grammar = str(item.get("plot_grammar") or item.get("figure_type") or "").lower()
+        is_workflow_diagram = figure_grammar in {"workflow_diagram", "workflow_schematic"}
         if item.get("is_placeholder"):
             issues.append({"severity": "error", "code": "placeholder_figure", "message": f"{item.get('path')} is a placeholder figure."})
         if item.get("file_format") != "png" or not _is_png(path):
             issues.append({"severity": "error", "code": "invalid_png_figure", "message": f"{item.get('path')} is not a valid non-empty PNG figure."})
-        if not item.get("has_axes"):
+        if not item.get("has_axes") and not is_workflow_diagram:
             issues.append({"severity": "error", "code": "missing_axes", "message": f"{item.get('path')} lacks scientific axes or scale metadata."})
-        if not item.get("axis_labels"):
+        if not item.get("axis_labels") and not is_workflow_diagram:
             issues.append({"severity": "error", "code": "missing_axis_labels", "message": f"{item.get('path')} lacks axis-label metadata."})
         if not item.get("text_elements"):
             issues.append({"severity": "error", "code": "missing_text_elements", "message": f"{item.get('path')} lacks title, label, legend, or annotation metadata."})

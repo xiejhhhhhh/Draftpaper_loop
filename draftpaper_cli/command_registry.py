@@ -93,7 +93,13 @@ def _stage_write_globs(stage: str) -> tuple[str, ...]:
     stage_globs = {
         "state": ("project.json", "project_lineage.json", "project_version_*.json", "migration/**", "recovery/**", "lineage/**", "observations/**", "data/**", "methods/**"),
         "references": ("references/**", "research_plan/**", "citation_audit/**", "writing/**"),
-        "data": ("data/**", "writing/**", "research_plan/**", "review/**"),
+        "data": (
+            "data/**",
+            "writing/**",
+            "research_plan/**",
+            "review/**",
+            "references/reference_usage_plan.json",
+        ),
         "methods": ("methods/**", "data/**", "code/**", "results/**", "research_plan/**", "review/**", "writing/**", "latex/**", "references/**"),
         "results": ("results/**", "methods/**", "data/**", "code/**", "review/**", "writing/**", "latex/sections/results.tex"),
         "writing": ("writing/**", "latex/**", "introduction/**", "discussion/**", "results/**", "data/**", "methods/**", "references/**", "review/**"),
@@ -369,6 +375,7 @@ COMMAND_SPECS = {
                         "references/bibliography_contract.json",
                         "references/reference_duplicate_report.json",
                         "references/reference_registry.json",
+                        "references/literature_relevance_report.json",
                         "references/supplemental_bibliography_merge_report.json",
                     )
                 )
@@ -402,6 +409,7 @@ assess-research-plan-feasibility assess-result-support assess-result-validity as
 audit-project-capabilities bootstrap-discipline-foundation build-argument-matrices build-code-provenance
 build-data-context build-method-context build-panel-contracts build-paper-narrative build-reference-registry
 add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
+audit-literature-integrity sync-literature-sources apply-literature-sync repair-literature-identities migrate-literature-index rollback-literature-migration rebuild-literature-index quarantine-orphan-literature rollback-orphan-literature parse-literature-source-documents
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
 compile-skill-source create-project create-project-version detect-artifact-drift diagnose-figure-execution
@@ -449,6 +457,7 @@ mcp-install mcp-doctor
 
 
 READ_ONLY_COMMANDS = {
+    "audit-literature-integrity",
     "audit-evidence-identity",
     "detect-artifact-drift",
     "path-budget-check",
@@ -579,6 +588,8 @@ COMMAND_SPECS.update({
             "review/**",
             "core_evidence/**",
             "results/promoted_evidence_snapshot.json",
+            "guidance/**",
+            "guidance_reviews/**",
             ".draftpaper/**",
             *_COMMON_MANAGED_WRITES,
         ),
@@ -667,6 +678,114 @@ COMMAND_SPECS.update({
     "skill-doctor": CommandSpec("skill-doctor", "state_kernel", False, "state", "skill_sync", "skill_doctor", (("destination", "destination"),)),
     "snapshot-plugin-catalog": CommandSpec("snapshot-plugin-catalog", "capability_coordinator", True, "capabilities", "plugin_catalog", "write_plugin_catalog_snapshot", (("project", "project"),)),
     "validate-plugin-contract-diff": CommandSpec("validate-plugin-contract-diff", "capability_coordinator", False, "capabilities", "plugin_catalog", "validate_plugin_contract_diff", (("project", "project"),), "status_passed"),
+    "audit-literature-integrity": CommandSpec(
+        "audit-literature-integrity",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_integrity",
+        "audit_literature_integrity",
+        (("project", "project"), ("output", "output")),
+        "status_passed",
+    ),
+    "sync-literature-sources": CommandSpec(
+        "sync-literature-sources",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_merge",
+        "sync_literature_sources",
+        (("project", "project"), ("apply", "apply"), ("packet_hash", "packet_hash")),
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "parse-literature-source-documents": CommandSpec(
+        "parse-literature-source-documents",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_sources",
+        "parse_registered_literature_documents",
+        (("project", "project"), ("use_mineru", "use_mineru"), ("timeout_seconds", "timeout_seconds")),
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "apply-literature-sync": CommandSpec(
+        "apply-literature-sync",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_merge",
+        "apply_literature_merge",
+        (("project", "project"), ("packet_hash", "packet_hash")),
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "repair-literature-identities": CommandSpec(
+        "repair-literature-identities",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_merge",
+        "repair_literature_identities",
+        (("project", "project"), ("apply", "apply")),
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "migrate-literature-index": CommandSpec(
+        "migrate-literature-index",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_migration",
+        "migrate_literature_index",
+        (("project", "project"), ("index", "index"), ("apply", "apply"), ("packet_hash", "packet_hash")),
+        allowed_write_globs=("references/**", ".draftpaper/literature_migration_backups/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "rollback-literature-migration": CommandSpec(
+        "rollback-literature-migration",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_migration",
+        "rollback_literature_migration",
+        (("project", "project"), ("receipt", "receipt")),
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=("references/**", ".draftpaper/literature_migration_backups/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "rebuild-literature-index": CommandSpec(
+        "rebuild-literature-index",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_merge",
+        "rebuild_literature_index",
+        (("project", "project"),),
+        allowed_write_globs=("references/literature_summaries/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "quarantine-orphan-literature": CommandSpec(
+        "quarantine-orphan-literature",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_integrity",
+        "manage_orphan_literature_quarantine",
+        (("project", "project"), ("report", "report"), ("apply", "apply"), ("packet_hash", "packet_hash")),
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
+    "rollback-orphan-literature": CommandSpec(
+        "rollback-orphan-literature",
+        "reference_coordinator",
+        True,
+        "references",
+        "literature_integrity",
+        "rollback_orphan_literature_quarantine",
+        (("project", "project"), ("receipt", "receipt")),
+        protected_action=True,
+        manual_only=True,
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+    ),
     "audit-workflow-runtime": CommandSpec("audit-workflow-runtime", "state_kernel", False, "state", "workflow_trace", "audit_workflow_runtime", (("project", "project"),)),
     "submit-job": CommandSpec("submit-job", "state_kernel", True, "state", "jobs", "submit_job", (("project", "project"), ("job_command", "job_command"), ("arguments_json", "arguments_json"), ("idempotency_key", "idempotency_key"), ("timeout_seconds", "timeout_seconds")), risk_level="execute_science", allowed_write_globs=(".draftpaper/**", "transaction_ledger.jsonl", "workflow_trace.jsonl", "project_passport.yaml", "artifact_ledger.jsonl")),
     "job-status": CommandSpec("job-status", "state_kernel", False, "state", "jobs", "job_status", (("project", "project"), ("job_id", "job_id"))),
@@ -752,7 +871,7 @@ COMMAND_SPECS.update({
         protected_action=True,
     ),
     "preview-manuscript-revision": CommandSpec("preview-manuscript-revision", "writing_coordinator", True, "writing", "manuscript_revision", "preview_manuscript_revision", (("project", "project"), ("instruction", "instruction"), ("at", "at"), ("paragraph", "paragraph"), ("content_file", "content_file"), ("operation", "operation"), ("mode", "mode"), ("change_class", "change_class"), ("expected_text", "expect_text"), ("expected_text_file", "expect_text_file"), ("expected_sha256", "expect_sha256"), ("occurrence", "occurrence"))),
-    "apply-manuscript-revision": CommandSpec("apply-manuscript-revision", "writing_coordinator", True, "writing", "manuscript_revision", "apply_manuscript_revision", (("project", "project"), ("request_id", "request_id")), protected_action=True),
+    "apply-manuscript-revision": CommandSpec("apply-manuscript-revision", "writing_coordinator", True, "writing", "manuscript_revision", "apply_manuscript_revision", (("project", "project"), ("request_id", "request_id")), protected_action=True, allowed_write_globs=("citation_audit/**", "writing/**", "latex/**", "introduction/**", "discussion/**", "results/**", "data/**", "methods/**", "references/**", "review/**", *_COMMON_MANAGED_WRITES)),
     "rollback-manuscript-revision": CommandSpec("rollback-manuscript-revision", "writing_coordinator", True, "writing", "manuscript_revision", "rollback_manuscript_revision", (("project", "project"), ("revision_id", "revision_id")), protected_action=True),
     "set-manuscript-metadata": CommandSpec("set-manuscript-metadata", "writing_coordinator", True, "writing", "manuscript_revision", "set_manuscript_metadata", (("project", "project"), ("input_path", "input"))),
     "add-custom-reference": CommandSpec("add-custom-reference", "reference_coordinator", True, "references", "manuscript_revision", "add_custom_reference", (("project", "project"), ("input_path", "input"))),
@@ -817,6 +936,25 @@ COMMAND_SPECS["apply-result-downgrade"] = replace(
                 *COMMAND_SPECS["apply-result-downgrade"].allowed_write_globs,
                 "research_plan/claim_contract.json",
                 "research_plan/claim_downgrade_decision.json",
+            )
+        )
+    ),
+)
+
+# Plan generation also refreshes the literature coverage and confirmation
+# packet that are consumed by the regenerated research blueprint.
+COMMAND_SPECS["generate-plan"] = replace(
+    COMMAND_SPECS["generate-plan"],
+    allowed_write_globs=tuple(
+        dict.fromkeys(
+            (
+                *COMMAND_SPECS["generate-plan"].allowed_write_globs,
+                "references/literature_coverage.json",
+                "references/literature_coverage.md",
+                "references/literature_confirmation_packet.json",
+                "references/literature_confirmation_packet.zh-CN.md",
+                "references/literature_relevance_report.json",
+                "references/unresolved_reference_tasks.json",
             )
         )
     ),

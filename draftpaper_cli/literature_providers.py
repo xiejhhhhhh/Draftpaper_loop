@@ -18,9 +18,9 @@ from .literature_provider_planner import PROVIDER_PROFILES, plan_provider_ids
 
 
 PROVIDER_MANIFEST: tuple[dict[str, Any], ...] = (
-    {"id": "openalex", "disciplines": ["general", "social_science", "economics", "humanities", "geography", "law", "materials_science"], "languages": ["zh-CN", "en"], "roles": PROVIDER_PROFILES["openalex"]["roles"], "identifier_types": ["doi", "openalex_id"], "credential": None, "default_enabled": True},
-    {"id": "pubmed", "disciplines": ["medicine", "life_science", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["pubmed"]["roles"], "identifier_types": ["pmid", "doi"], "credential": None, "default_enabled": False},
-    {"id": "europe_pmc", "disciplines": ["medicine", "life_science", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["europe_pmc"]["roles"], "identifier_types": ["pmid", "pmcid", "doi"], "credential": None, "default_enabled": False},
+    {"id": "openalex", "disciplines": ["general", "discipline_unknown"], "languages": ["zh-CN", "en"], "roles": PROVIDER_PROFILES["openalex"]["roles"], "identifier_types": ["doi", "openalex_id"], "credential": None, "default_enabled": True},
+    {"id": "pubmed", "disciplines": ["medicine", "public_health", "life_science", "ecology", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["pubmed"]["roles"], "identifier_types": ["pmid", "doi"], "credential": None, "default_enabled": False},
+    {"id": "europe_pmc", "disciplines": ["medicine", "public_health", "life_science", "ecology", "bioinformatics"], "languages": ["en"], "roles": PROVIDER_PROFILES["europe_pmc"]["roles"], "identifier_types": ["pmid", "pmcid", "doi"], "credential": None, "default_enabled": False},
     {"id": "dblp", "disciplines": ["computer_science", "machine_learning"], "languages": ["en"], "roles": PROVIDER_PROFILES["dblp"]["roles"], "identifier_types": ["dblp_key", "doi"], "credential": None, "default_enabled": False},
     {"id": "nasa_ads", "disciplines": ["astronomy", "astrophysics", "physics"], "languages": ["en"], "roles": PROVIDER_PROFILES["nasa_ads"]["roles"], "identifier_types": ["bibcode", "doi", "arxiv"], "credential": "NASA_ADS_API_TOKEN", "default_enabled": False},
 )
@@ -242,7 +242,8 @@ def search_provider_router(
         decisions = {provider_id: ("planned" if provider_id in selected else "skipped_default_disabled") for provider_id in manifest_ids}
     items: list[dict[str, Any]] = []
     statuses = []
-    for provider_id in manifest_ids:
+    execution_order = [*selected, *(provider_id for provider_id in manifest_ids if provider_id not in selected)]
+    for provider_id in execution_order:
         if provider_id not in selected:
             statuses.append({"provider": provider_id, "status": decisions.get(provider_id, "not_selected"), "item_count": 0})
             continue

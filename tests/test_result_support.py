@@ -384,6 +384,30 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             with self.assertRaisesRegex(ResultSupportError, "inputs changed.*project.json"):
                 validate_result_support_for_manuscript(project.path)
 
+    def test_pass_checkpoint_allows_results_inventory_to_clear_stale_flag(self) -> None:
+        from draftpaper_cli.project_state import mark_stage_stale, update_stage_status
+        from draftpaper_cli.result_support import assess_result_support, validate_result_support_for_manuscript
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Cleared Results stale flag", field="machine learning")
+            _write_validity_inputs(project.path)
+            (project.path / "research_plan" / "claim_contract.json").write_text(
+                json.dumps({"claims": [{
+                    "claim_id": "bounded",
+                    "claim_text": "The current analysis is exploratory.",
+                }]}),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-current"}), encoding="utf-8"
+            )
+            mark_stage_stale(project.path, "results", include_self=True)
+            assess_result_support(project.path)
+
+            update_stage_status(project.path, "results", "draft")
+
+            self.assertEqual(validate_result_support_for_manuscript(project.path)["decision"], "pass")
+
     def test_pass_checkpoint_allows_first_promoted_snapshot_created_downstream(self) -> None:
         from draftpaper_cli.result_support import validate_result_support_for_manuscript
 

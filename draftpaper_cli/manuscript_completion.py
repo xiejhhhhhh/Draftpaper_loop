@@ -718,7 +718,22 @@ def _write_candidate_overlay(
         + relative_root
         + "results/}}"
     )
-    if "\\graphicspath" not in main_text:
+    # The canonical manuscript commonly already contains a graphicspath that
+    # is correct when compiled from the project latex directory (for example,
+    # ``{../}``).  The completion overlay is compiled from a different,
+    # packet-local directory, so retaining that path makes the candidate
+    # unable to resolve the project's figures.  Always replace the first
+    # existing graphicspath with the packet-relative paths; add one when the
+    # source has none.
+    if "\\graphicspath" in main_text:
+        main_text = re.sub(
+            r"\\graphicspath\{\{.*?\}\}",
+            lambda _match: graphicspath,
+            main_text,
+            count=1,
+            flags=re.DOTALL,
+        )
+    else:
         if not re.search(r"\\usepackage(?:\[[^]]*\])?\{graphicx\}", main_text):
             documentclass_match = re.search(r"\\documentclass(?:\[[^]]*\])?\{[^}]+\}", main_text)
             if documentclass_match:

@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.39.0",
-  "workflow_skill_sha256": "9d70c3dfdf80eedf76043e2fefcd14635708083987c4cd8b5516c42ca0485dfc",
-  "workflow_contract_sha256": "e15e82eff8d68eda5c680e8df9ecf2176f2447ecbc431f32c11d5f5d4e55cc6d",
+  "package_version": "0.40.0",
+  "workflow_skill_sha256": "914c29fbe350681a44e39d79f3bdf7df0822dbe83e73a95d0f73a6c260c18932",
+  "workflow_contract_sha256": "700612716ccb0273e213e8d4a026b748d5679a454360ae99148f7a72d76e2427",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 242,
+  "command_count": 252,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -37,6 +37,11 @@
     "prepare-result-rescue",
     "benchmark-literature-quality",
     "benchmark-document-parsers",
+    "audit-literature-integrity",
+    "sync-literature-sources",
+    "apply-literature-sync",
+    "repair-literature-identities",
+    "rebuild-literature-index",
     "configure-review-policy",
     "grant-agent-review",
     "review-policy-status",
@@ -136,6 +141,32 @@
       "citation_only"
     ],
     "archive_execution": "disabled"
+  },
+  "literature_identity_pipeline": {
+    "query_contract_schema": "dpl.literature_query.v3",
+    "fetch_policy_schema": "dpl.literature_fetch_policy.v1",
+    "identity_schema": "dpl.paper_identity_resolution.v1",
+    "postfetch_schema": "dpl.postfetch_relevance_assessment.v1",
+    "quarantine_schema": "dpl.literature_quarantine_record.v1",
+    "default_mode": "resolve_then_fetch_on_demand",
+    "asset_profile": "none",
+    "discipline_conflicts_symmetric": true,
+    "unknown_discipline_auto_active": false,
+    "postfetch_relevance_gate": true,
+    "active_snapshot_reachability_required": true,
+    "paper_fetch_runtime": {
+      "version": "2.0.0",
+      "upstream_commit": "10e30297df2cc7c354c1cb407a8514b22d2800d8",
+      "license": "MIT",
+      "vendored_fallback": true,
+      "agent_skill_required": false
+    },
+    "benchmark_thresholds": {
+      "positive_recall": 0.95,
+      "hard_negative_active_count": 0,
+      "off_discipline_contamination_rate": 0.0,
+      "bilingual_html_parity": 1.0
+    }
   },
   "release_security": {
     "license_identifier": "LicenseRef-Draftpaper-NonCommercial",

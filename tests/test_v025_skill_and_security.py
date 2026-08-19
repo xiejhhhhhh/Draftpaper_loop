@@ -53,11 +53,52 @@ def test_resolve_research_capabilities_can_write_research_plan_contracts() -> No
     assert "research_plan/**" in spec.allowed_write_globs
 
 
+def test_write_data_can_refresh_only_the_reference_usage_plan() -> None:
+    spec = COMMAND_SPECS["write-data"]
+
+    assert "references/reference_usage_plan.json" in spec.allowed_write_globs
+    assert "references/**" not in spec.allowed_write_globs
+
+
 def test_resume_can_promote_core_evidence_snapshot_within_its_write_boundary() -> None:
     spec = COMMAND_SPECS["resume"]
 
     assert "core_evidence/**" in spec.allowed_write_globs
     assert "results/promoted_evidence_snapshot.json" in spec.allowed_write_globs
+    assert "guidance/**" in spec.allowed_write_globs
+    assert "guidance_reviews/**" in spec.allowed_write_globs
+
+
+def test_resume_write_boundary_accepts_guidance_refresh_and_rejects_unrelated_writes(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    guard = WriteSetGuard(root, COMMAND_SPECS["resume"])
+
+    guidance_paths = (
+        "guidance/learning/packets/learn.results.guide.json",
+        "guidance/learning/visual_analysis/fig_5.json",
+        "guidance/runtime/research_understanding_snapshot.json",
+        "guidance_reviews/core_evidence/decision.json",
+    )
+    for relative in guidance_paths:
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("{}", encoding="utf-8")
+
+    report = guard.assess()
+    assert report["status"] == "passed"
+    assert set(guidance_paths).issubset(report["actual_write_set"])
+
+    guard = WriteSetGuard(root, COMMAND_SPECS["resume"])
+    unrelated = root / "private_notes" / "unexpected.txt"
+    unrelated.parent.mkdir()
+    unrelated.write_text("unexpected", encoding="utf-8")
+
+    report = guard.assess()
+    assert report["status"] == "boundary_violation"
+    assert "private_notes/unexpected.txt" in report["violations"]
 
 
 def test_reopen_core_evidence_can_archive_and_remove_promoted_snapshot_within_boundary() -> None:

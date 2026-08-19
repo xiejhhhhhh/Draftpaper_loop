@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from .literature_identity import canonical_work_id
 from .paper_fetch_adapter import enrich_with_paper_fetch
 from .literature_providers import aggregate_provider_runs, provider_status_report, search_provider_router
 from .literature_language import tokenize_multilingual
@@ -1033,6 +1034,7 @@ def search_literature_for_project(
     include_online: bool | None = None,
     enrich_code_sources: bool = True,
     enrich_code_sources_online: bool = False,
+    fetch_policy_mode: str | None = None,
 ) -> dict[str, Any]:
     final_query = build_search_query(project, query)
     search_queries = build_context_search_queries(project, query)
@@ -1106,7 +1108,10 @@ def search_literature_for_project(
     search_queries["local_source_collection"] = source_collection_report
     search_queries["provider_router"] = provider_status_report()
     online_enabled = (not from_json and not zotero_collection) if include_online is None else bool(include_online)
-    specialized_enabled = bool(include_online is True or os.getenv("DRAFTPAPER_ENABLE_SPECIALIZED_PROVIDERS", "").strip().lower() in {"1", "true", "yes"})
+    specialized_enabled = bool(
+        online_enabled
+        and os.getenv("DRAFTPAPER_DISABLE_SPECIALIZED_PROVIDERS", "").strip().lower() not in {"1", "true", "yes"}
+    )
     specialized_queries: set[str] = set()
     if online_enabled:
         query_plan = search_queries.get("query_plan") if isinstance(search_queries.get("query_plan"), list) else []
@@ -1211,12 +1216,58 @@ def search_literature_for_project(
                     break
             if fallback_entries:
                 search_queries["fallback_query_plan"] = fallback_entries
-        items, _manifest = enrich_with_paper_fetch(project, items)
     external_item_count = len(items or [])
     lineage_seeds, lineage_report = _load_verified_lineage_reference_seeds(project)
     if lineage_seeds:
         items = [*lineage_seeds, *list(items or [])]
     search_queries["lineage_reference_seeds"] = lineage_report
+    if fetch_policy_mode:
+        from .literature_fetch_policy import load_literature_fetch_policy
+
+        load_literature_fetch_policy(project, mode=fetch_policy_mode)
+    user_curated_items = [
+        dict(item)
+        for item in items
+        if bool(item.get("retained"))
+        or str(item.get("selection_policy") or "") == "user_curated_preserve"
+        or bool(item.get("_lineage_runtime_verified"))
+        or str(item.get("reference_origin") or "")
+        in {"manual", "local_import", "parent_lineage_curated", "existing_zotero"}
+        or str(item.get("source") or "") == "zotero_collection"
+    ]
+    items, paper_fetch_manifest = enrich_with_paper_fetch(project, items)
+    active_work_ids = {
+        canonical_work_id(item)
+        for item in items
+        if canonical_work_id(item)
+    }
+    preserved_after_review = []
+    for item in user_curated_items:
+        work_id = canonical_work_id(item)
+        if work_id and work_id in active_work_ids:
+            continue
+        preserved = dict(item)
+        preserved.setdefault("candidate_state", "review_required")
+        preserved.setdefault("citation_eligibility", "not_eligible_pending_review")
+        preserved_after_review.append(preserved)
+        if work_id:
+            active_work_ids.add(work_id)
+    items = [*items, *preserved_after_review]
+    paper_fetch_manifest["user_curated_preserved_count"] = len(preserved_after_review)
+    search_queries["paper_fetch_pipeline"] = {
+        "status": paper_fetch_manifest.get("status"),
+        "runtime_source": paper_fetch_manifest.get("runtime_source"),
+        "attempted_count": paper_fetch_manifest.get("attempted_count", 0),
+        "success_count": paper_fetch_manifest.get("success_count", 0),
+        "active_count": paper_fetch_manifest.get("active_count", len(items)),
+        "quarantine_count": paper_fetch_manifest.get("quarantine_count", 0),
+        "quarantined_work_ids": paper_fetch_manifest.get("quarantined_work_ids") or [],
+        "policy_hash": paper_fetch_manifest.get("policy_hash"),
+        "identity_candidate_set_hash": paper_fetch_manifest.get("identity_candidate_set_hash"),
+        "query_contract_hash": paper_fetch_manifest.get("query_contract_hash"),
+        "decision_packet_hash": paper_fetch_manifest.get("decision_packet_hash"),
+        "postfetch_assessment_hash": paper_fetch_manifest.get("postfetch_assessment_hash"),
+    }
     specialized_reports = search_queries.get("provider_router_runs") if isinstance(search_queries.get("provider_router_runs"), list) else []
     search_queries["provider_execution_report"] = aggregate_provider_runs([*provider_queries, *specialized_reports])
     _write_json(state.path / "references" / "literature_source_collection.json", source_collection_report)

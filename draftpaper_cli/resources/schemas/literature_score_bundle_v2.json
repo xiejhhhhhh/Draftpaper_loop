@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_score_bundle.v2",
+  "title": "Draftpaper literature score bundle",
+  "type": "object",
+  "required": ["values", "status"],
+  "properties": {
+    "values": {"type": "object", "additionalProperties": {"type": ["number", "null"]}},
+    "status": {"type": "object", "additionalProperties": {"type": "string"}},
+    "provenance": {"type": "object"},
+    "context_hash": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

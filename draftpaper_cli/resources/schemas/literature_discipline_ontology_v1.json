@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_discipline_ontology.v1",
+  "type": "object",
+  "required": ["schema_version", "unknown_state", "disciplines", "cross_discipline_roles"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_discipline_ontology.v1"},
+    "unknown_state": {"const": "discipline_unknown"},
+    "disciplines": {"type": "object", "minProperties": 5},
+    "cross_discipline_roles": {"type": "array", "items": {"type": "string"}},
+    "ontology_hash": {"type": "string"},
+    "generated_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

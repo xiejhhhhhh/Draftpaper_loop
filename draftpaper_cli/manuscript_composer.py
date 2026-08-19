@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import csv
 import re
 from pathlib import Path
 from typing import Any
@@ -82,7 +83,12 @@ def _compact_registry(registry: dict[str, Any], section: str) -> dict[str, Any]:
     }
 
 
-def _compact_reference_items(items: Any, *, summary_limit: int = 420) -> list[dict[str, Any]]:
+def _compact_reference_items(
+    items: Any,
+    *,
+    summary_limit: int = 420,
+    include_search_contexts: bool = True,
+) -> list[dict[str, Any]]:
     """Keep citation identity and paragraph-relevant evidence without embedding full summaries."""
     compact: list[dict[str, Any]] = []
     for item in items or []:
@@ -91,16 +97,14 @@ def _compact_reference_items(items: Any, *, summary_limit: int = 420) -> list[di
         summary = re.sub(r"\s+", " ", str(item.get("summary") or item.get("evidence_notes") or "")).strip()
         if len(summary) > summary_limit:
             summary = summary[:summary_limit].rstrip() + "..."
-        compact.append({
-            key: value
-            for key, value in {
-                "citation_key": item.get("citation_key") or item.get("bibtex_key") or item.get("key"),
-                "title": item.get("title"),
-                "summary": summary,
-                "search_contexts": item.get("search_contexts") or [],
-            }.items()
-            if value not in (None, "", [], {})
-        })
+        values = {
+            "citation_key": item.get("citation_key") or item.get("bibtex_key") or item.get("key"),
+            "title": item.get("title"),
+            "summary": summary,
+        }
+        if include_search_contexts:
+            values["search_contexts"] = item.get("search_contexts") or []
+        compact.append({key: value for key, value in values.items() if value not in (None, "", [], {})})
     return compact
 
 
@@ -112,6 +116,16 @@ def _narrative_claims(items: Any) -> list[dict[str, Any]]:
     ]
 
 
+def _compact_text(value: Any, limit: int) -> Any:
+    """Bound repeated prose while retaining the complete source artifact on disk."""
+    if value in (None, "", [], {}):
+        return value
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    if len(text) <= limit:
+        return text
+    return text[: max(1, limit - 1)].rstrip() + "…"
+
+
 def _compact_result_manifest(manifest: dict[str, Any], *, section: str = "results") -> dict[str, Any]:
     figure_fields = (
         "id", "figure_role", "manuscript_role", "storyboard_id", "figure_group",
@@ -119,16 +133,50 @@ def _compact_result_manifest(manifest: dict[str, Any], *, section: str = "result
     )
     table_fields = ("id", "table_role", "storyboard_id", "figure_group")
     if section == "results":
-        figure_fields = figure_fields + ("path", "caption_draft")
-        table_fields = table_fields + ("path", "caption_draft", "result_claim")
+        figure_fields = (
+            "id", "figure_role", "manuscript_role", "storyboard_id", "figure_group",
+            "result_claim", "claim_boundary", "path", "caption_draft",
+        )
+        # Results prose is figure-led; table captions and generic table claims
+        # are retained in the full manifest and add little to the paragraph
+        # packet when repeated for dozens of supporting tables.
+        table_fields = ("id", "table_role", "path")
+
+    def compact_entry(item: dict[str, Any], fields: tuple[str, ...], *, table: bool = False) -> dict[str, Any]:
+        limits = {
+            "scientific_question": 240,
+            "result_claim": 260 if not table else 150,
+            "claim_boundary": 220,
+            "caption_draft": 220,
+            "path": 180,
+        }
+        return {
+            key: _compact_text(item.get(key), limits.get(key, 180))
+            for key in fields
+            if item.get(key) not in (None, "", [], {})
+        }
+
     figures = [
-        {key: item.get(key) for key in figure_fields if item.get(key) not in (None, "", [], {})}
+        compact_entry(item, figure_fields)
         for item in manifest.get("figures") or [] if isinstance(item, dict)
     ]
     tables = [
-        {key: item.get(key) for key in table_fields if item.get(key) not in (None, "", [], {})}
+        compact_entry(item, table_fields, table=True)
         for item in manifest.get("tables") or [] if isinstance(item, dict)
     ]
+    if section == "methods":
+        # Methods needs the method-implementation and active-metric pointers,
+        # not the complete supporting-table inventory that Results cites.  The
+        # full manifest remains available through ``full_manifest_reference``.
+        tables = [
+            item for item in tables
+            if (
+                "analysis_summary" in str(item.get("id") or "").lower()
+                or "method_requirement" in str(item.get("id") or "").lower()
+                or str(item.get("id") or "").lower().endswith("_44_metrics")
+                or str(item.get("id") or "").lower().endswith("_45_primary_metrics")
+            )
+        ]
     return {
         "schema_version": manifest.get("schema_version"),
         "figures": figures,
@@ -139,13 +187,66 @@ def _compact_result_manifest(manifest: dict[str, Any], *, section: str = "result
     }
 
 
-def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
+def _current_table_metrics(project_path: Path | None) -> list[dict[str, Any]]:
+    """Read the active primary metric table as the compact writing source.
+
+    The full resolved evidence registry intentionally retains diagnostics from
+    several reporting levels.  A section packet needs the complete metric set
+    for the active test contract, otherwise a priority-based truncation can
+    retain many macro-F1 records while dropping balanced accuracy or baseline
+    values that appear in the prose.
+    """
+    if project_path is None:
+        return []
+    path = project_path / "results" / "tables" / "metrics.csv"
+    if not path.is_file():
+        return []
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+    except (OSError, csv.Error):
+        return []
+    selected = []
+    for row in rows:
+        try:
+            value = float(row.get("value"))
+        except (TypeError, ValueError):
+            continue
+        role = str(row.get("evidence_role") or "").strip().lower()
+        split = str(row.get("split_id") or row.get("split") or "").strip()
+        if role and role != "primary":
+            continue
+        if split and "test" not in split.lower():
+            continue
+        metric_name = str(row.get("metric") or row.get("metric_name") or "").strip().lower()
+        model_id = str(row.get("model_id") or row.get("model") or "").strip()
+        if not metric_name or not model_id:
+            continue
+        selected.append({
+            "metric_name": metric_name,
+            "value": value,
+            "model_id": model_id,
+            "split": split,
+            "aggregation": str(row.get("aggregation_id") or row.get("aggregation") or "").strip(),
+        })
+    return selected
+
+
+def _compact_results_contract(
+    contract: dict[str, Any],
+    *,
+    project_path: Path | None = None,
+) -> dict[str, Any]:
     groups = []
     for item in contract.get("figure_groups") or []:
         if not isinstance(item, dict):
             continue
         groups.append({
-            key: item.get(key)
+            key: _compact_text(item.get(key), {
+                "scientific_question": 240,
+                "expected_finding": 260,
+                "claim_boundary": 220,
+            }.get(key, 180))
             for key in (
                 "figure_id", "narrative_role", "scientific_question", "expected_finding",
                 "claim_boundary", "required_reasoning",
@@ -163,6 +264,12 @@ def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
         }
         for item in contract.get("verified_metrics") or [] if isinstance(item, dict)
     ]
+    active_table_metrics = _current_table_metrics(project_path)
+    if active_table_metrics:
+        # The active table is the canonical compact quantitative bridge.  Keep
+        # the full test-contract metric group for every current model and avoid
+        # mixing in older population or duplicate aggregation records.
+        all_verified_metrics = active_table_metrics
     metric_priority = {
         "macro_f1": 10,
         "f1_macro": 10,
@@ -194,7 +301,7 @@ def _compact_results_contract(contract: dict[str, Any]) -> dict[str, Any]:
             continue
         seen_metric_scopes.add(scope)
         verified_metrics.append(item)
-        if len(verified_metrics) >= 24:
+        if len(verified_metrics) >= 32:
             break
     return {
         key: contract.get(key)
@@ -218,9 +325,31 @@ def _compact_panel_contracts(payload: dict[str, Any]) -> dict[str, Any]:
         for panel in group.get("panels") or []:
             if not isinstance(panel, dict):
                 continue
+            raw_contract = panel.get("contract") or {}
+            compact_contract = {
+                key: (
+                    [_compact_text(item, 120) for item in value]
+                    if isinstance(value, list)
+                    else _compact_text(value, {
+                        "panel_question": 240,
+                        "expected_conclusion": 300,
+                        "claim_boundary": 220,
+                        "chart_grammar": 140,
+                        "comparison": 180,
+                        "required_statistical_check": 180,
+                    }.get(key, 160))
+                )
+                for key, value in raw_contract.items()
+                if value not in (None, "", [], {})
+                and key in {
+                    "panel_question", "data_roles", "method_output", "comparison",
+                    "required_statistical_check", "chart_grammar", "expected_conclusion",
+                    "claim_boundary", "parent_figure_group",
+                }
+            }
             panels.append({
                 "panel_id": panel.get("panel_id"),
-                "contract": panel.get("contract") or {},
+                "contract": compact_contract,
                 "status": panel.get("status"),
                 "missing_contract_fields": panel.get("missing_contract_fields") or [],
                 "no_weaker_substitute": bool(panel.get("no_weaker_substitute", True)),
@@ -242,6 +371,42 @@ def _compact_resolved_evidence(resolved: dict[str, Any]) -> dict[str, Any]:
             "policy", "evidence_fingerprint",
         )
         if resolved.get(key) not in (None, [], {})
+    }
+
+
+def _compact_section_context_index(index: dict[str, Any], *, section: str) -> dict[str, Any]:
+    """Keep paragraph routing in the packet without duplicating evidence slices.
+
+    The full paragraph slices remain on disk and are referenced by path.  The
+    packet only needs the stable paragraph/evidence mapping and token accounting
+    for free-prose composition; embedding each slice again can exceed the
+    section input budget when a run contains many secondary diagnostics.
+    """
+    current = (index.get("sections") or {}).get(section) if isinstance(index, dict) else {}
+    current = current if isinstance(current, dict) else {}
+    slices = []
+    for item in current.get("slices") or []:
+        if not isinstance(item, dict):
+            continue
+        slices.append({
+            key: item.get(key)
+            for key in ("paragraph_id", "path", "evidence_ids", "content_hash", "delta_status")
+            if item.get(key) not in (None, "", [], {})
+        })
+    return {
+        "schema_version": index.get("schema_version"),
+        "project_id": index.get("project_id"),
+        "section": section,
+        "budget": current.get("budget"),
+        "estimated_tokens": current.get("estimated_tokens"),
+        "naive_estimated_tokens": current.get("naive_estimated_tokens"),
+        "token_reduction_fraction": current.get("token_reduction_fraction"),
+        "within_budget": current.get("within_budget"),
+        "delta_paragraph_ids": current.get("delta_paragraph_ids") or [],
+        "allowed_evidence_ids": current.get("allowed_evidence_ids") or [],
+        "slices": slices,
+        "shared_evidence_store": current.get("shared_evidence_store"),
+        "full_context_index_reference": "writing/section_context_index.json",
     }
 
 
@@ -307,7 +472,16 @@ def _compact_results_synthesis_plan(plan: dict[str, Any]) -> dict[str, Any]:
 
 def _compact_paper_brief(brief: dict[str, Any]) -> dict[str, Any]:
     return {
-        key: brief.get(key)
+        key: (
+            [_compact_text(item, 120) for item in brief.get(key)]
+            if isinstance(brief.get(key), list)
+            else _compact_text(brief.get(key), {
+                "title_or_idea": 220,
+                "paper_pitch": 300,
+                "central_contribution": 260,
+                "figure_one_hook": 300,
+            }.get(key, 180))
+        )
         for key in (
             "project_id", "title_or_idea", "field", "paper_pitch",
             "central_contribution", "figure_one_hook", "story_progression",
@@ -325,17 +499,110 @@ def _compact_writing_context(
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     narrative = writing_context.get("narrative") or {}
     allocation = (narrative.get("section_claim_allocation") or {}).get("sections") or {}
+
+    def compact_claim_rows(items: Any) -> list[dict[str, Any]]:
+        rows = []
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("claim_role") or "") == "scientific_fact":
+                continue
+            rows.append({
+                key: _compact_text(item.get(key), {
+                    "claim": 260,
+                    "claim_boundary": 220,
+                }.get(key, 180))
+                for key in (
+                    "claim", "claim_boundary", "claim_id", "claim_role",
+                    "figure_story_id", "narrative_job",
+                )
+                if item.get(key) not in (None, "", [], {})
+            })
+        return rows
+
+    story_arc = narrative.get("figure_story_arc") or {}
+    compact_story_groups = []
+    for item in story_arc.get("figure_groups") or []:
+        if not isinstance(item, dict):
+            continue
+        compact_story_groups.append({
+            key: (
+                [_compact_text(value, 120) for value in item.get(key)]
+                if isinstance(item.get(key), list)
+                else _compact_text(item.get(key), {
+                    "scientific_question": 240,
+                    "claim": 260,
+                    "claim_boundary": 220,
+                    "expected_conclusion": 260,
+                }.get(key, 180))
+            )
+            for key in (
+                "story_id", "order", "narrative_job", "scientific_question", "claim",
+                "claim_boundary", "main_artifact_ids", "supporting_artifact_ids",
+                "expected_conclusion",
+            )
+            if item.get(key) not in (None, "", [], {})
+        })
     compact_narrative = {
         "paper_brief": _compact_paper_brief(narrative.get("paper_brief") or {}),
-        "figure_story_arc": narrative.get("figure_story_arc") or {},
-        "manuscript_argument_map": narrative.get("manuscript_argument_map") or {},
-        "section_claim_allocation": {section: _narrative_claims(allocation.get(section))},
+        "figure_story_arc": {
+            key: story_arc.get(key)
+            for key in ("schema_version", "generated_at")
+            if story_arc.get(key) not in (None, "", [], {})
+        } | {"figure_groups": compact_story_groups},
+        "manuscript_argument_map": {
+            key: _compact_text((narrative.get("manuscript_argument_map") or {}).get(key), {
+                "paper_pitch": 300,
+                "research_question": 260,
+                "central_contribution": 260,
+            }.get(key, 180))
+            for key in (
+                "schema_version", "paper_pitch", "research_question", "central_contribution",
+                "must_run_or_downgrade",
+            )
+            if (narrative.get("manuscript_argument_map") or {}).get(key) not in (None, "", [], {})
+        },
+        "section_claim_allocation": {section: compact_claim_rows(allocation.get(section))},
     }
     pack = writing_context.get("section_evidence_pack") or {}
+    reference_items = [item for item in pack.get("reference_items") or [] if isinstance(item, dict)]
+    if section in {"introduction", "discussion"}:
+        scoped = [
+            item for item in reference_items
+            if section in {str(value).lower() for value in item.get("search_contexts") or []}
+        ]
+        if scoped:
+            reference_items = scoped
+
+    compact_story_links = [
+        {
+            key: (
+                [_compact_text(value, 120) for value in item.get(key)]
+                if isinstance(item.get(key), list)
+                else _compact_text(item.get(key), {
+                    "claim": 260,
+                    "claim_boundary": 220,
+                    "scientific_question": 240,
+                    "expected_conclusion": 260,
+                }.get(key, 180))
+            )
+            for key in (
+                "story_id", "order", "narrative_job", "claim", "claim_boundary",
+                "scientific_question", "expected_conclusion", "main_artifact_ids",
+                "supporting_artifact_ids",
+            )
+            if item.get(key) not in (None, "", [], {})
+        }
+        for item in pack.get("figure_story_links") or [] if isinstance(item, dict)
+    ]
     compact_pack = {
         "section": section,
-        "allocated_claims": _narrative_claims(pack.get("allocated_claims")),
-        "reference_items": _compact_reference_items(pack.get("reference_items")),
+        "allocated_claims": compact_claim_rows(pack.get("allocated_claims")),
+        "reference_items": _compact_reference_items(
+            reference_items,
+            summary_limit=260 if section == "introduction" else 420,
+            include_search_contexts=section != "introduction",
+        ),
         "section_policy": pack.get("section_policy") or {},
         "evidence_registry_reference": "writing/scientific_evidence_registry.json",
         "full_pack_reference": f"writing/section_evidence_packs/{section}.json",
@@ -343,7 +610,7 @@ def _compact_writing_context(
     if section not in {"results", "discussion"}:
         compact_pack["paper_brief"] = _compact_paper_brief(pack.get("paper_brief") or {})
     if section != "results":
-        compact_pack["figure_story_links"] = pack.get("figure_story_links") or []
+        compact_pack["figure_story_links"] = compact_story_links
     if section == "data":
         compact_pack["data_writing_contract"] = pack.get("data_writing_contract") or {}
     elif section == "methods":
@@ -366,14 +633,109 @@ def _compact_writing_context(
     elif section == "methods":
         lifecycle = section_lifecycles.get("method_lifecycle") or {}
         plugin_events = [item for item in lifecycle.get("plugin_execution") or [] if isinstance(item, dict)]
+        # Methods writing needs the scientific lifecycle and auditable pointers,
+        # but embedding every routed code record and the full per-figure trace
+        # can exceed the section context budget. Keep the complete ledgers on
+        # disk and expose a compact, lossless index here.
+        code_rows = [item for item in lifecycle.get("stage_owned_code") or [] if isinstance(item, dict)]
+        trace_rows = [item for item in lifecycle.get("figure_code_trace") or [] if isinstance(item, dict)]
+        # The routed manifest can contain both the original source record and
+        # its already-stage-owned copy.  Collapse those duplicate provenance
+        # rows for the writing packet while retaining the complete manifest on
+        # disk for audit and reproducibility.
+        compact_code_by_path: dict[str, dict[str, Any]] = {}
+        for item in code_rows:
+            key = str(item.get("canonical_path") or item.get("source_path") or "").strip()
+            if not key:
+                continue
+            current = compact_code_by_path.get(key)
+            if current is None:
+                current = {
+                    field: item.get(field)
+                    for field in ("source_path", "canonical_path", "owner_stage", "code_role", "route_action", "formula_count", "privacy_status")
+                    if item.get(field) not in (None, "", [], {})
+                }
+                compact_code_by_path[key] = current
+                continue
+            # Prefer stage-owned routing and the most informative formula/code
+            # role when duplicate source records disagree.
+            if item.get("route_action") == "already_stage_owned":
+                current["route_action"] = item.get("route_action")
+            if int(item.get("formula_count") or 0) > int(current.get("formula_count") or 0):
+                current["formula_count"] = item.get("formula_count")
+            if current.get("code_role") in (None, "", "method_model_or_analysis") and item.get("code_role"):
+                current["code_role"] = item.get("code_role")
+            if not current.get("source_path") and item.get("source_path"):
+                current["source_path"] = item.get("source_path")
+        compact_code_rows = list(compact_code_by_path.values())
+
+        compact_stages = []
+        for stage in lifecycle.get("stages") or []:
+            if not isinstance(stage, dict):
+                continue
+            compact_stage = {
+                key: stage.get(key)
+                for key in ("role", "formula_requirement")
+                if stage.get(key) not in (None, "", [], {})
+            }
+            evidence = stage.get("evidence")
+            if isinstance(evidence, list):
+                compact_evidence = []
+                for value in evidence:
+                    if isinstance(value, dict):
+                        compact_evidence.append({
+                            key: _compact_text(value.get(key), {
+                                "latex": 360,
+                                "formula_id": 120,
+                                "source": 180,
+                                "required_explanation": 180,
+                            }.get(key, 180))
+                            for key in ("formula_id", "latex", "variables", "source", "required_explanation")
+                            if value.get(key) not in (None, "", [], {})
+                        })
+                    else:
+                        compact_evidence.append(_compact_text(value, 1000))
+                compact_stage["evidence"] = compact_evidence
+            else:
+                # The full method context is retained in methods/; the packet
+                # only needs a bounded prose cue for each lifecycle stage.
+                compact_stage["evidence"] = _compact_text(evidence, 1500)
+            compact_stages.append(compact_stage)
+        compact_trace_rows = []
+        for item in trace_rows:
+            stats = item.get("statistics") if isinstance(item.get("statistics"), dict) else {}
+            compact_trace_rows.append({
+                key: item.get(key)
+                for key in ("figure_id", "figure_path", "code_files", "figure_hash", "semantic_hash", "metadata_hash", "run_transaction_id", "run_id", "cohort_id", "trace_status")
+                if item.get(key) not in (None, "", [], {})
+            } | {
+                "statistics_summary": {
+                    key: stats.get(key)
+                    for key in ("profile_count", "input_roles")
+                    if stats.get(key) not in (None, "", [], {})
+                },
+                "metric_record_ref_count": len(item.get("metric_record_refs") or []),
+                "count_record_ref_count": len(item.get("count_record_refs") or []),
+            })
         compact_lifecycles["method_lifecycle"] = {
             key: lifecycle.get(key)
             for key in (
-                "stages", "stage_owned_code", "formula_contracts", "formula_coverage_status",
-                "deterministic_no_formula_reason", "figure_code_trace",
+                "formula_contracts", "formula_coverage_status",
+                "deterministic_no_formula_reason",
                 "variable_explanation_required", "forbidden_prose",
             )
             if lifecycle.get(key) not in (None, [], {})
+        }
+        compact_lifecycles["method_lifecycle"]["stages"] = compact_stages
+        compact_lifecycles["method_lifecycle"]["stage_owned_code"] = {
+            "record_count": len(code_rows),
+            "records": compact_code_rows,
+            "full_ledger_reference": "methods/method_code_manifest.json",
+        }
+        compact_lifecycles["method_lifecycle"]["figure_code_trace"] = {
+            "record_count": len(trace_rows),
+            "records": compact_trace_rows,
+            "full_trace_reference": "results/figure_code_trace.json",
         }
         compact_lifecycles["method_lifecycle"]["plugin_execution_summary"] = {
             "event_count": len(plugin_events),
@@ -393,6 +755,44 @@ def _write_quantitative_claim_bindings(
 ) -> dict[str, Any]:
     bindings = list(validation.get("numeric_claim_bindings") or [])
     sentences = [item.strip() for item in re.split(r"(?<=[.!?])\s+|\n\s*\n", text) if item.strip()]
+    # Results prose contains evidence-bearing interpretation sentences that do
+    # not contain a numeral.  Keep those sentences in the claim map and attach
+    # them to the paragraph-level evidence contract generated by
+    # prepare-section-writing.  This lets discipline review validate the full
+    # finding, rather than only its numeric sentence.
+    paragraph_evidence: dict[str, list[str]] = {}
+    if section == "results":
+        packet_path = project_path / "writing" / "section_packets" / "results.json"
+        try:
+            packet = json.loads(packet_path.read_text(encoding="utf-8-sig")) if packet_path.exists() else {}
+        except (OSError, json.JSONDecodeError):
+            packet = {}
+        outline = packet.get("section_outline") if isinstance(packet, dict) else {}
+        outline_rows = outline.get("paragraphs") if isinstance(outline, dict) else []
+        jobs = [item for item in (outline_rows or []) if isinstance(item, dict)]
+        current_job = -1
+        for block in re.split(r"\n\s*\n", text):
+            block = block.strip()
+            if not block:
+                continue
+            if re.search(r"\\subsection\s*\{", block):
+                current_job += 1
+            if current_job >= 0 and current_job < len(jobs):
+                ids = [str(item) for item in jobs[current_job].get("required_evidence_ids") or [] if str(item).strip()]
+            elif jobs:
+                # The final boundary paragraph summarizes all findings; it is
+                # intentionally linked to the union of the already approved
+                # finding evidence rather than inventing a new estimand.
+                ids = [
+                    str(item)
+                    for job in jobs
+                    for item in (job.get("required_evidence_ids") or [])
+                    if str(item).strip()
+                ]
+            else:
+                ids = []
+            for sentence in [item.strip() for item in re.split(r"(?<=[.!?])\s+|\n\s*\n", block) if item.strip()]:
+                paragraph_evidence[sentence] = list(dict.fromkeys(ids))
     claim_rows = []
     for index, sentence in enumerate(sentences, start=1):
         sentence_bindings = [
@@ -411,6 +811,8 @@ def _write_quantitative_claim_bindings(
             ]
             if evidence_id
         })
+        if not evidence_ids:
+            evidence_ids = paragraph_evidence.get(sentence, [])
         if evidence_ids or re.search(r"\d", sentence):
             claim_rows.append({
                 "section_claim_id": f"{section}:claim:{index:03d}",
@@ -542,7 +944,10 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "scientific_evidence_registry": _compact_registry(registry, normalized),
         "resolved_result_evidence": _compact_resolved_evidence(resolved_evidence),
         "result_manifest": _compact_result_manifest(result_manifest, section=normalized),
-        "results_narrative_contract": _compact_results_contract(results_narrative_contract) if results_narrative_contract else {},
+        "results_narrative_contract": (
+            _compact_results_contract(results_narrative_contract, project_path=state.path)
+            if results_narrative_contract else {}
+        ),
         "promoted_evidence_snapshot": promoted_snapshot,
         "paper_narrative": compact_narrative,
         "section_evidence_pack": compact_pack,
@@ -552,8 +957,14 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         ),
         "argument_matrices": compact_matrices,
         "section_reasoning_inputs": (
-            argument_matrices.get("introduction_gap_matrix", []) if normalized == "introduction"
-            else argument_matrices.get("discussion_finding_comparison_matrix", []) if normalized == "discussion"
+            {
+                "job_count": len(argument_matrices.get("introduction_gap_matrix", [])),
+                "artifact": "writing/argument_matrices.json",
+            } if normalized == "introduction"
+            else {
+                "job_count": len(argument_matrices.get("discussion_finding_comparison_matrix", [])),
+                "artifact": "writing/argument_matrices.json",
+            } if normalized == "discussion"
             else (section_lifecycles.get("data_lifecycle", {}).get("stages", []) if normalized == "data"
                   else section_lifecycles.get("method_lifecycle", {}).get("stages", []) if normalized == "methods"
                   else {
@@ -564,7 +975,7 @@ def build_section_evidence_packet(project: str | Path, section: str) -> dict[str
         "section_lifecycles": compact_lifecycles,
         "panel_figure_contracts": _compact_panel_contracts(panel_contracts) if panel_contracts else {},
         "venue_style_adapter": venue_style,
-        "section_context_index": paragraph_context,
+        "section_context_index": _compact_section_context_index(paragraph_context, section=normalized),
         "figure_evidence_resolution": {
             "status": figure_evidence.get("status"),
             "run_id": figure_evidence.get("run_id"),

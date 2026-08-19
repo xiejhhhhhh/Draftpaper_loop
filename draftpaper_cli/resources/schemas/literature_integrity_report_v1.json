@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_integrity_report.v1",
+  "title": "Draftpaper literature integrity report",
+  "type": "object",
+  "required": ["schema_version", "status", "active_work_count", "orphan_count"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_integrity_report.v1"},
+    "status": {"enum": ["passed", "review_required"]},
+    "active_work_count": {"type": "integer", "minimum": 0},
+    "orphan_count": {"type": "integer", "minimum": 0},
+    "issues": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

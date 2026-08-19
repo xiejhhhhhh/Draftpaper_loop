@@ -107,7 +107,7 @@ def _cached_parse(
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    if not isinstance(receipt, dict) or receipt.get("request_fingerprint") != fingerprint or receipt.get("status") != "parsed":
+    if not isinstance(receipt, dict) or receipt.get("request_fingerprint") != fingerprint or receipt.get("status") not in {"parsed", "fallback"}:
         return None
     output = receipt.get("output")
     if output:
@@ -162,17 +162,11 @@ def _append_project_record(path: Path, record: dict[str, Any], *, key: str = "re
 
 
 def _refresh_literature_index(project: Path) -> None:
-    items_path = project / "references" / "literature_items.json"
-    if not items_path.is_file():
-        return
     try:
-        payload = json.loads(items_path.read_text(encoding="utf-8"))
-        items = payload.get("items", []) if isinstance(payload, dict) else payload
-        if isinstance(items, list):
-            from .references import write_literature_html_summaries
+        from .references import refresh_reference_outputs
 
-            write_literature_html_summaries(project / "references", items)
-    except (OSError, json.JSONDecodeError):
+        refresh_reference_outputs(project)
+    except (OSError, json.JSONDecodeError, ValueError):
         return
 
 
@@ -251,19 +245,23 @@ def parse_literature_document(
         endpoint=endpoint_for_fingerprint,
         document_class=document_class,
     )
-    if should_upgrade and selected_parser != "pypdf":
-        cached = _cached_parse(state.path, output_root, fingerprint=request_fingerprint)
-        if cached is not None:
-            cached["binding"] = bind_document_parse(
-                state.path,
-                receipt=cached["receipt"],
-                normalized=cached["normalized"],
-                passages=cached["passages"],
-            )
-            _refresh_literature_index(state.path)
-            cached.pop("normalized", None)
-            cached.pop("passages", None)
-            return cached
+    cached = _cached_parse(state.path, output_root, fingerprint=request_fingerprint)
+    if cached is not None:
+        cached["binding"] = bind_document_parse(
+            state.path,
+            receipt=cached["receipt"],
+            normalized=cached["normalized"],
+            passages=cached["passages"],
+        )
+        if cached["binding"].get("status") == "bound":
+            from .literature_repository import write_literature_registry
+            from .references import _load_existing_literature_items
+
+            write_literature_registry(state.path, _load_existing_literature_items(state.path / "references"))
+        _refresh_literature_index(state.path)
+        cached.pop("normalized", None)
+        cached.pop("passages", None)
+        return cached
     if should_upgrade and selected_parser != "pypdf":
         if effective_route == "local":
             parsed_output, route_report = _local_mineru_parse(source, output_root, timeout_seconds)
@@ -360,6 +358,11 @@ def parse_literature_document(
     _write_json(output_root / "extraction_quality.json", quality)
     _write_json(output_root / "document_context_manifest.json", context_manifest)
     binding = bind_document_parse(state.path, receipt=receipt, normalized=normalized, passages=selected_passages)
+    if binding.get("status") == "bound":
+        from .literature_repository import write_literature_registry
+        from .references import _load_existing_literature_items
+
+        write_literature_registry(state.path, _load_existing_literature_items(state.path / "references"))
     cost_record = {
         "document_id": doc_id,
         "input_sha256": input_hash,

@@ -401,6 +401,165 @@ class SectionWritingContractTests(unittest.TestCase):
         self.assertEqual(report["decision"], "pass")
         self.assertEqual(report["numeric_claim_bindings"][0]["status"], "bound")
 
+    def test_verified_result_metric_precedes_generic_structured_run_summary(self) -> None:
+        shared = {
+            "entity_role": "result_metric_macro_f1",
+            "value": 0.825691,
+            "unit": "score",
+            "metric_dimension": "score",
+            "run_id": "run-1",
+            "model_id": "current_history_spectrum",
+            "analysis_variant": "primary",
+            "target_sections": ["results"],
+        }
+        registry = {"preferred_run_id": "run-1", "records": [
+            {
+                **shared,
+                "evidence_id": "resolved-result",
+                "cohort_id": "event-level-cohort",
+                "sample_unit": "observation_event",
+                "split": "source-held-out-test",
+                "confidence": "verified_run_output",
+            },
+            {
+                **shared,
+                "evidence_id": "run-summary",
+                "cohort_id": "main",
+                "sample_unit": "model_evaluation",
+                "split": "run_summary",
+                "confidence": "verified_structured_run_output",
+            },
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "The full model reached a macro-F1 of 0.8257.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["evidence_id"], "resolved-result")
+
+    def test_time_encoding_aliases_resolve_nearby_rounded_values(self) -> None:
+        def metric(evidence_id: str, value: float, model_id: str) -> dict:
+            return {
+                "evidence_id": evidence_id,
+                "entity_role": "result_metric_macro_f1",
+                "value": value,
+                "unit": "score",
+                "metric_dimension": "score",
+                "run_id": "run-1",
+                "cohort_id": "event-cohort",
+                "sample_unit": "observation_event",
+                "split": "source-held-out-test",
+                "model_id": model_id,
+                "analysis_variant": "primary",
+                "confidence": "verified_run_output",
+                "target_sections": ["results"],
+            }
+
+        registry = {"preferred_run_id": "run-1", "records": [
+            metric("time2vec", 0.7625807, "Current only (Time2Vec)"),
+            metric("nearby-no-pe", 0.7626097, "Current only (no PE)"),
+            metric("fixed", 0.7643569, "Current only (fixed PE)"),
+            metric("no-pe", 0.7677339, "Current only (no PE)"),
+            metric("nearby-spectrum", 0.7676785, "Current + quick spectrum"),
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "Current-only macro-F1 was 0.7626 with learnable Time2Vec, 0.7644 with fixed time encoding, and 0.7677 without an explicit time encoding.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(
+            [item["evidence_id"] for item in report["numeric_claim_bindings"]],
+            ["time2vec", "fixed", "no-pe"],
+        )
+
+    def test_modality_availability_role_precedes_nearby_unrelated_score(self) -> None:
+        shared = {
+            "run_id": "run-1",
+            "cohort_id": "main",
+            "sample_unit": "figure_evidence",
+            "split": "source-held-out-test",
+            "model_id": "not_applicable",
+            "analysis_variant": "primary",
+            "target_sections": ["results"],
+        }
+        registry = {"preferred_run_id": "run-1", "preferred_model_id": "full-model", "records": [
+            {
+                **shared,
+                "evidence_id": "availability",
+                "entity_role": "result_metric_current_token_available_fraction",
+                "value": 0.833714,
+                "unit": "fraction",
+                "metric_dimension": "fraction",
+                "confidence": "figure_metadata_bound",
+            },
+            {
+                **shared,
+                "evidence_id": "nearby-score",
+                "model_id": "full-model",
+                "entity_role": "result_metric_macro_f1_upper_95",
+                "value": 0.834197,
+                "unit": "score",
+                "metric_dimension": "score",
+                "confidence": "verified_run_output",
+            },
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            r"Current-observation tokens were available for 83.4\% of events.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "pass")
+        self.assertEqual(report["numeric_claim_bindings"][0]["evidence_id"], "availability")
+
+    def test_equal_confidence_distinct_scopes_remain_ambiguous(self) -> None:
+        shared = {
+            "entity_role": "result_metric_macro_f1",
+            "value": 0.825691,
+            "unit": "score",
+            "metric_dimension": "score",
+            "run_id": "run-1",
+            "model_id": "classifier",
+            "analysis_variant": "primary",
+            "confidence": "verified_run_output",
+            "target_sections": ["results"],
+        }
+        registry = {"preferred_run_id": "run-1", "records": [
+            {
+                **shared,
+                "evidence_id": "cohort-a",
+                "cohort_id": "cohort-a",
+                "sample_unit": "source",
+                "split": "held-out-a",
+            },
+            {
+                **shared,
+                "evidence_id": "cohort-b",
+                "cohort_id": "cohort-b",
+                "sample_unit": "source",
+                "split": "held-out-b",
+            },
+        ]}
+
+        report = validate_section_writing(
+            "results",
+            "The classifier reached a macro-F1 of 0.8257.",
+            registry,
+        )
+
+        self.assertEqual(report["decision"], "blocked")
+        self.assertIn(
+            "ambiguous_numeric_claim_binding",
+            {item["kind"] for item in report["issues"]},
+        )
+
     def test_figure_reference_resolves_equal_values_from_distinct_scopes(self) -> None:
         def record(evidence_id: str, figure_alias: str, analysis_value: str) -> dict:
             return {

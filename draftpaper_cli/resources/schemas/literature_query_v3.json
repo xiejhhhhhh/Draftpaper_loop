@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_query.v3",
+  "type": "object",
+  "required": ["schema_version", "original_query", "discipline_hypotheses", "entity_anchors", "discipline_anchors", "method_anchors", "generic_terms"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_query.v3"},
+    "original_query": {"type": "string"},
+    "discipline_hypotheses": {"type": "array", "items": {"type": "string"}},
+    "entity_anchors": {"type": "array", "items": {"type": "string"}},
+    "entity_anchor_groups": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+    "discipline_anchors": {"type": "array", "items": {"type": "string"}},
+    "method_anchors": {"type": "array", "items": {"type": "string"}},
+    "generic_terms": {"type": "array", "items": {"type": "string"}},
+    "negative_terms": {"type": "array", "items": {"type": "string"}},
+    "roles": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

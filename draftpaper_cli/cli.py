@@ -446,6 +446,13 @@ def build_parser() -> argparse.ArgumentParser:
     code_sources.add_argument("--enrich-code-sources", dest="enrich_code_sources", action="store_true", help="Record metadata-only GitHub/Zenodo code leads for retained literature (default).")
     code_sources.add_argument("--no-code-source-enrichment", dest="enrich_code_sources", action="store_false", help="Disable the metadata-only code-source enrichment stage.")
     search.add_argument("--enrich-code-sources-online", action="store_true", help="Allow public GitHub/Zenodo metadata API calls during enrichment.")
+    search.add_argument(
+        "--fetch-policy",
+        dest="fetch_policy_mode",
+        choices=["off", "resolve_only", "resolve_then_fetch_on_demand", "fulltext_eager", "local_only"],
+        default=None,
+        help="Override the project paper identity/full-text policy for this search.",
+    )
     search.set_defaults(enrich_code_sources=True, enrich_code_sources_online=False)
 
     add_source = subparsers.add_parser("add-literature-source", help="Register a local PDF folder or structured literature file.")
@@ -463,8 +470,45 @@ def build_parser() -> argparse.ArgumentParser:
     collect_sources.add_argument("--project", required=True)
     reconcile_sources = subparsers.add_parser("reconcile-literature", help="Merge registered local sources into the current reference registry without live search.")
     reconcile_sources.add_argument("--project", required=True)
+    parse_source_documents = subparsers.add_parser("parse-literature-source-documents", help="Batch-parse registered local PDFs with resumable per-file receipts.")
+    parse_source_documents.add_argument("--project", required=True)
+    parse_source_documents.add_argument("--no-mineru", dest="use_mineru", action="store_false")
+    parse_source_documents.set_defaults(use_mineru=True)
+    parse_source_documents.add_argument("--timeout-seconds", type=int, default=600)
     coverage = subparsers.add_parser("review-literature-coverage", help="Review literature coverage by scientific role and source type.")
     coverage.add_argument("--project", required=True)
+
+    integrity = subparsers.add_parser("audit-literature-integrity", help="Audit work identity, score state, parser binding, and orphan full-text reachability.")
+    integrity.add_argument("--project", required=True)
+    integrity.add_argument("--output", default=None)
+    sync_literature = subparsers.add_parser("sync-literature-sources", help="Preview or apply registered local literature source synchronization.")
+    sync_literature.add_argument("--project", required=True)
+    sync_literature.add_argument("--apply", action="store_true")
+    sync_literature.add_argument("--packet-hash", default=None)
+    apply_literature = subparsers.add_parser("apply-literature-sync", help="Apply a hash-bound literature merge preview.")
+    apply_literature.add_argument("--project", required=True)
+    apply_literature.add_argument("--packet-hash", required=True)
+    repair_identity = subparsers.add_parser("repair-literature-identities", help="Preview or apply canonical work identity repair for current literature records.")
+    repair_identity.add_argument("--project", required=True)
+    repair_identity.add_argument("--apply", action="store_true")
+    migrate_literature = subparsers.add_parser("migrate-literature-index", help="Preview or apply a local-only migration of a legacy literature index.")
+    migrate_literature.add_argument("--project", required=True)
+    migrate_literature.add_argument("--index", default=None)
+    migrate_literature.add_argument("--apply", action="store_true")
+    migrate_literature.add_argument("--packet-hash", default=None)
+    rollback_migration = subparsers.add_parser("rollback-literature-migration", help="Rollback one hash-bound legacy literature migration.")
+    rollback_migration.add_argument("--project", required=True)
+    rollback_migration.add_argument("--receipt", default=None)
+    rebuild_index = subparsers.add_parser("rebuild-literature-index", help="Rebuild the Core bilingual offline literature index from current records.")
+    rebuild_index.add_argument("--project", required=True)
+    quarantine_orphan = subparsers.add_parser("quarantine-orphan-literature", help="Move previewed orphan full-text artifacts into the project quarantine area.")
+    quarantine_orphan.add_argument("--project", required=True)
+    quarantine_orphan.add_argument("--report", default=None)
+    quarantine_orphan.add_argument("--apply", action="store_true", help="Apply the current preview after packet-hash verification.")
+    quarantine_orphan.add_argument("--packet-hash", default=None)
+    rollback_orphan = subparsers.add_parser("rollback-orphan-literature", help="Restore one hash-verified orphan quarantine transaction.")
+    rollback_orphan.add_argument("--project", required=True)
+    rollback_orphan.add_argument("--receipt", default=None)
 
     consent = subparsers.add_parser("record-remote-parser-consent", help="Record one project-scoped decision for optional remote MinerU parsing.")
     consent.add_argument("--project", required=True)
@@ -1287,7 +1331,16 @@ def main(argv: list[str] | None = None) -> int:
     command = str(getattr(args, "command", "") or "")
     spec = command_spec(command)
     mutates_project = bool(project and (spec.mutates_project if spec else command not in _READ_ONLY_PROJECT_COMMANDS))
-    allows_preexisting_drift = command in {"sync-artifact-stale", "rebase-project-passport", "session-preflight"}
+    # Drift reconciliation is the guarded recovery command that resolves the
+    # pending packet created by sync-artifact-stale. It must be allowed to run
+    # while drift is present; otherwise the recovery route deadlocks behind the
+    # very preflight check it is meant to clear.
+    allows_preexisting_drift = command in {
+        "sync-artifact-stale",
+        "reconcile-project-drift",
+        "rebase-project-passport",
+        "session-preflight",
+    }
     preexisting_drift = False
     if mutates_project:
         try:

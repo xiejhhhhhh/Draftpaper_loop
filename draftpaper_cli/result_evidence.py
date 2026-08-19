@@ -430,6 +430,13 @@ def _anchor_verified_metric_tables(
     already_bound = set(bound_sources)
     for path in sorted(tables_root.rglob("*.csv")) if tables_root.exists() else []:
         relative = path.relative_to(project_path).as_posix()
+        # Reviewer-only sensitivity tables can use a different cohort and
+        # validation identity from the active scientific run.  They remain
+        # available as supplementary evidence, but must not be promoted to
+        # legacy anchors for the primary run merely because their filenames
+        # contain "metric".
+        if relative.startswith("results/tables/reviewer_revision/"):
+            continue
         if relative in already_bound or "metric" not in path.stem.lower():
             continue
         candidate = _aggregate(_metric_rows_from_csv(path, relative, run_id))
@@ -579,6 +586,7 @@ def resolve_result_evidence(project: str | Path) -> dict[str, Any]:
             "run_id": item.get("run_id") or run_id,
             "source_artifact": item.get("source_artifact"),
             "source_hash": item.get("source_hash"),
+            "evidence_role": item.get("evidence_role") or "primary",
             "confidence": "verified_run_output",
             "target_sections": ["results", "methods", "discussion"],
             "model_id": item.get("model") or run_manifest.get("model_id") or "run_summary",

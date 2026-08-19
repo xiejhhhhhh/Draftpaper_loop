@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.citation_evidence_snapshot.v1",
+  "title": "Draftpaper citation evidence snapshot binding",
+  "type": "object",
+  "required": ["schema_version", "snapshot_hash", "csv_path", "csv_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.citation_evidence_snapshot.v1"},
+    "snapshot_hash": {"type": "string", "minLength": 1},
+    "csv_path": {"const": "references/citation_evidence.csv"},
+    "csv_sha256": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

@@ -358,18 +358,30 @@ def _paragraphs(text: str) -> list[str]:
 
 
 def _normalized_reference(value: Any) -> str:
-    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower()).removeprefix("fig").removeprefix("table")
+    normalized = re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+    # A manuscript reference may contain both a namespace and the internal
+    # figure id, e.g. ``fig:fig-4-fig-04``.  Remove repeated leading figure
+    # or table markers so both forms resolve to the same semantic key.
+    while normalized.startswith(("fig", "table", "tab")):
+        normalized = re.sub(r"^(?:fig|table|tab)", "", normalized, count=1)
+    return normalized
 
 
 def _jobs_for_paragraph(paragraph: str, jobs: list[Any]) -> list[dict[str, Any]]:
-    paragraph_key = _normalized_reference(paragraph)
+    # Match semantic figure/table links from LaTeX references.  Normalizing
+    # the whole paragraph cannot match ``fig_4_fig_04`` against
+    # ``\ref{fig:fig-4-fig-04}`` because prose and the ``fig:`` namespace sit
+    # between the two identifiers.
+    paragraph_refs = re.findall(r"\\(?:ref|autoref|eqref)\{([^}]+)\}", paragraph)
+    paragraph_keys = {_normalized_reference(value) for value in paragraph_refs}
+    paragraph_keys.add(_normalized_reference(paragraph))
     matches: list[dict[str, Any]] = []
     for job in jobs:
         if not isinstance(job, dict):
             continue
         for link in job.get("figure_or_table_links") or []:
             link_key = _normalized_reference(link)
-            if link_key and link_key in paragraph_key:
+            if link_key and any(link_key in paragraph_key for paragraph_key in paragraph_keys):
                 matches.append(job)
                 break
     return matches
@@ -387,6 +399,9 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
     paragraphs = _paragraphs(text)
     jobs = outline.get("paragraphs") or []
     tasks: list[dict[str, Any]] = []
+    document_has_semantic_refs = any(
+        _jobs_for_paragraph(paragraph, jobs) for paragraph in paragraphs
+    )
     matched_job_ids: set[str] = set()
     for index, paragraph in enumerate(paragraphs):
         paragraph_jobs = _jobs_for_paragraph(paragraph, jobs)
@@ -395,8 +410,12 @@ def prepare_scientific_editor(project: str | Path, section: str, input_path: str
         # use the already ordered paragraph contract as the deterministic
         # alignment fallback.
         ordered_job = jobs[index] if index < len(jobs) and isinstance(jobs[index], dict) else {}
+        # Only use positional fallback for legacy prose that contains no
+        # semantic figure/table references anywhere.  In a normal LaTeX
+        # section, paragraphs without a reference are continuations of the
+        # preceding finding and must not inherit the next figure's contract.
         job = paragraph_jobs[0] if paragraph_jobs else (
-            ordered_job if ordered_job.get("figure_or_table_links") else {}
+            ordered_job if ordered_job.get("figure_or_table_links") and not document_has_semantic_refs else {}
         )
         if job.get("paragraph_id"):
             matched_job_ids.add(str(job["paragraph_id"]))

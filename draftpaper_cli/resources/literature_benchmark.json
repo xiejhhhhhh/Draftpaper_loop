@@ -1,13 +1,160 @@
 {
-  "schema_version": "dpl.literature_benchmark_fixture.v1",
+  "schema_version": "dpl.literature_benchmark_fixture.v2",
   "topics": [
-    {"topic_id": "zh_digital_village", "query_contract": {"must_preserve_terms": ["数字乡村"], "optional_terms": ["乡村数字化", "digital village"], "discipline_hypotheses": ["social_science", "economics"], "languages": ["zh-CN", "en"]}, "relevant_titles": ["数字乡村建设与农村治理现代化", "Digital village development and rural governance"], "candidates": [{"title": "数字乡村建设与农村治理现代化", "authors": ["A"], "year": "2024", "abstract": "数字乡村建设、数据治理和农村治理现代化。"}, {"title": "Digital village development and rural governance", "authors": ["B"], "year": "2023", "abstract": "Digital village development and rural governance evidence."}, {"title": "A reproducible statistical workflow", "authors": ["C"], "year": "2022", "abstract": "A generic analysis workflow."}]},
-    {"topic_id": "medicine_checkpoint", "query_contract": {"must_preserve_terms": ["immune checkpoint inhibitor adverse events"], "discipline_hypotheses": ["medicine"], "languages": ["en"]}, "relevant_titles": ["Immune checkpoint inhibitor adverse events"], "candidates": [{"title": "Immune checkpoint inhibitor adverse events", "authors": ["A"], "year": "2024", "abstract": "Clinical cohort analysis of adverse events."}, {"title": "Galaxy morphology with visual embeddings", "authors": ["B"], "year": "2024", "abstract": "Astronomical image classification."}]},
-    {"topic_id": "ml_molecular", "query_contract": {"must_preserve_terms": ["graph neural networks molecular property prediction"], "discipline_hypotheses": ["computer_science", "machine_learning"], "languages": ["en"]}, "relevant_titles": ["Graph neural networks for molecular property prediction"], "candidates": [{"title": "Graph neural networks for molecular property prediction", "authors": ["A"], "year": "2024", "abstract": "Graph neural network prediction of molecular properties."}, {"title": "Rural governance and digital villages", "authors": ["B"], "year": "2024", "abstract": "Social science governance study."}]},
-    {"topic_id": "astronomy_tde", "query_contract": {"must_preserve_terms": ["X-ray tidal disruption event inference"], "discipline_hypotheses": ["astronomy"], "languages": ["en"]}, "relevant_titles": ["X-ray tidal disruption event inference"], "candidates": [{"title": "X-ray tidal disruption event inference", "authors": ["A"], "year": "2024", "abstract": "X-ray transient astronomy and tidal disruption events."}, {"title": "Clinical adverse event prediction", "authors": ["B"], "year": "2024", "abstract": "Clinical medicine cohort study."}]},
-    {"topic_id": "remote_sensing_crop", "query_contract": {"must_preserve_terms": ["satellite crop yield estimation"], "discipline_hypotheses": ["geography"], "languages": ["en"]}, "relevant_titles": ["Satellite crop yield estimation"], "candidates": [{"title": "Satellite crop yield estimation", "authors": ["A"], "year": "2024", "abstract": "Remote sensing and crop yield estimation."}, {"title": "Molecular graph prediction", "authors": ["B"], "year": "2024", "abstract": "Molecular property prediction."}]},
-    {"topic_id": "materials_stability", "query_contract": {"must_preserve_terms": ["perovskite solar cell stability"], "discipline_hypotheses": ["materials_science"], "languages": ["en"]}, "relevant_titles": ["Perovskite solar cell stability"], "candidates": [{"title": "Perovskite solar cell stability", "authors": ["A"], "year": "2024", "abstract": "Materials stability and solar cell degradation."}, {"title": "Administrative accountability algorithms", "authors": ["B"], "year": "2024", "abstract": "Law and public administration."}]},
-    {"topic_id": "economics_digital_finance", "query_contract": {"must_preserve_terms": ["digital finance rural household income"], "discipline_hypotheses": ["economics", "social_science"], "languages": ["en"]}, "relevant_titles": ["Digital finance and rural household income"], "candidates": [{"title": "Digital finance and rural household income", "authors": ["A"], "year": "2024", "abstract": "Econometric analysis of rural household income."}, {"title": "Molecular property prediction", "authors": ["B"], "year": "2024", "abstract": "Chemistry machine learning."}]},
-    {"topic_id": "law_algorithmic_governance", "query_contract": {"must_preserve_terms": ["algorithmic governance administrative accountability"], "discipline_hypotheses": ["law", "social_science"], "languages": ["en"]}, "relevant_titles": ["Algorithmic governance and administrative accountability"], "candidates": [{"title": "Algorithmic governance and administrative accountability", "authors": ["A"], "year": "2024", "abstract": "Legal analysis of algorithmic governance and accountability."}, {"title": "Clinical prediction model evaluation", "authors": ["B"], "year": "2024", "abstract": "Medical model evaluation."}]}
+    {
+      "topic_id": "astronomy_ecology_hard_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["Euclid", "galaxy", "redshift"],
+        "discipline_anchors": ["astrophysics"],
+        "method_anchors": ["classification"],
+        "generic_terms": ["population", "classification", "catalog", "diversity", "survey"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["astronomy"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Euclid galaxy population classification with redshift evidence"],
+      "hard_negative_titles": ["Ecological population classification and biodiversity catalogue"],
+      "candidates": [
+        {"title": "Euclid galaxy population classification with redshift evidence", "authors": ["A"], "year": "2025", "abstract": "Astrophysics analysis of Euclid galaxies and redshift populations."},
+        {"title": "Ecological population classification and biodiversity catalogue", "authors": ["B"], "year": "2025", "abstract": "Ecological biodiversity, ecosystem structure, habitat and species richness."},
+        {"title": "Representation learning for generic images", "authors": ["C"], "year": "2024", "abstract": "A deep learning method.", "cross_discipline_role": "method_transfer"}
+      ]
+    },
+    {
+      "topic_id": "ecology_astronomy_symmetric_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["biodiversity", "ecosystem"],
+        "discipline_anchors": ["ecology"],
+        "method_anchors": ["classification"],
+        "generic_terms": ["population", "classification", "catalog", "diversity", "survey"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["ecology"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Biodiversity classification across ecosystems"],
+      "hard_negative_titles": ["Galaxy population diversity in an astronomical survey"],
+      "candidates": [
+        {"title": "Biodiversity classification across ecosystems", "authors": ["A"], "year": "2025", "abstract": "Ecological habitat and species-richness evidence."},
+        {"title": "Galaxy population diversity in an astronomical survey", "authors": ["B"], "year": "2025", "abstract": "Astrophysics catalogue of galaxies and redshift."}
+      ]
+    },
+    {
+      "topic_id": "medicine_stellar_survival_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["patient", "survival"],
+        "discipline_anchors": ["clinical"],
+        "method_anchors": ["survival model"],
+        "generic_terms": ["population", "model", "evaluation"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["medicine"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Patient survival modelling in a clinical cohort"],
+      "hard_negative_titles": ["Stellar survival and evolution model"],
+      "candidates": [
+        {"title": "Patient survival modelling in a clinical cohort", "authors": ["A"], "year": "2024", "abstract": "Clinical patient disease outcomes and therapy."},
+        {"title": "Stellar survival and evolution model", "authors": ["B"], "year": "2024", "abstract": "Stellar astrophysics and galaxy evolution."}
+      ]
+    },
+    {
+      "topic_id": "remote_sensing_satellite_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["land cover", "crop"],
+        "discipline_anchors": ["remote sensing", "earth observation"],
+        "method_anchors": ["classification"],
+        "generic_terms": ["satellite", "image", "classification"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["geography"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Satellite land-cover classification for crop monitoring"],
+      "hard_negative_titles": ["Astronomical satellite imaging of stellar sources"],
+      "candidates": [
+        {"title": "Satellite land-cover classification for crop monitoring", "authors": ["A"], "year": "2024", "abstract": "Remote sensing and earth observation of agricultural crop cover."},
+        {"title": "Astronomical satellite imaging of stellar sources", "authors": ["B"], "year": "2024", "abstract": "Astronomy, stellar sources and galaxy observations."}
+      ]
+    },
+    {
+      "topic_id": "social_science_network_governance_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["rural", "digital village"],
+        "discipline_anchors": ["governance", "social science"],
+        "method_anchors": [],
+        "generic_terms": ["network", "governance", "system"],
+        "optional_terms": ["rural governance"],
+        "discipline_hypotheses": ["social_science"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Digital village development and rural governance"],
+      "hard_negative_titles": ["Network governance for distributed computer systems"],
+      "candidates": [
+        {"title": "Digital village development and rural governance", "authors": ["A"], "year": "2024", "abstract": "Social science and public administration evidence from rural communities."},
+        {"title": "Network governance for distributed computer systems", "authors": ["B"], "year": "2024", "abstract": "Computer science software and network algorithms."}
+      ]
+    },
+    {
+      "topic_id": "machine_learning_generic_classification_pair",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["representation learning", "benchmark"],
+        "discipline_anchors": ["machine learning"],
+        "method_anchors": ["neural network"],
+        "generic_terms": ["classification", "model", "population"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["machine_learning"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Representation learning benchmark for neural networks"],
+      "hard_negative_titles": ["Population classification model for ecosystem diversity"],
+      "candidates": [
+        {"title": "Representation learning benchmark for neural networks", "authors": ["A"], "year": "2025", "abstract": "Machine learning evaluation of deep neural network embeddings."},
+        {"title": "Population classification model for ecosystem diversity", "authors": ["B"], "year": "2025", "abstract": "Ecological biodiversity and species-richness analysis."}
+      ]
+    },
+    {
+      "topic_id": "zh_digital_village",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["数字乡村", "digital village"],
+        "entity_anchor_groups": [["数字乡村", "digital village"]],
+        "discipline_anchors": ["乡村治理"],
+        "method_anchors": [],
+        "generic_terms": ["治理", "发展"],
+        "optional_terms": ["乡村数字化", "digital village"],
+        "discipline_hypotheses": ["social_science", "economics"],
+        "languages": ["zh-CN", "en"]
+      },
+      "relevant_titles": ["数字乡村建设与农村治理现代化", "Digital village development and rural governance"],
+      "hard_negative_titles": ["数字网络系统的分布式治理"],
+      "candidates": [
+        {"title": "数字乡村建设与农村治理现代化", "authors": ["A"], "year": "2024", "abstract": "数字乡村建设、社会科学、公共管理和农村治理现代化。"},
+        {"title": "Digital village development and rural governance", "authors": ["B"], "year": "2023", "abstract": "Social science evidence on rural governance and public administration."},
+        {"title": "数字网络系统的分布式治理", "authors": ["C"], "year": "2024", "abstract": "计算机软件、算法和网络系统。"}
+      ]
+    },
+    {
+      "topic_id": "materials_stability",
+      "query_contract": {
+        "schema_version": "dpl.literature_query.v3",
+        "entity_anchors": ["perovskite", "solar cell"],
+        "discipline_anchors": ["materials science"],
+        "method_anchors": [],
+        "generic_terms": ["stability", "model"],
+        "optional_terms": [],
+        "discipline_hypotheses": ["materials_science"],
+        "languages": ["en"]
+      },
+      "relevant_titles": ["Perovskite solar cell stability"],
+      "hard_negative_titles": ["Administrative stability in legal institutions"],
+      "candidates": [
+        {"title": "Perovskite solar cell stability", "authors": ["A"], "year": "2024", "abstract": "Materials science evidence on perovskite crystal degradation."},
+        {"title": "Administrative stability in legal institutions", "authors": ["B"], "year": "2024", "abstract": "Legal doctrine, jurisdiction and regulation."}
+      ]
+    }
   ]
 }

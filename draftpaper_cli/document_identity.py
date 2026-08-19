@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .literature_identity import canonical_work_id
+
 
 def document_id(path: str | Path) -> str:
     digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -16,14 +18,7 @@ def document_id(path: str | Path) -> str:
 
 
 def _work_id(item: dict[str, Any]) -> str:
-    for key in ("doi", "pmid", "pmcid", "arxiv_id", "bibcode", "openalex_id"):
-        value = str(item.get(key) or "").strip()
-        if value:
-            return f"{key}:{value.lower().removeprefix('https://doi.org/')}"
-    title = re.sub(r"[^a-z0-9]+", " ", str(item.get("title") or "").lower()).strip()
-    author = re.sub(r"[^a-z0-9]+", " ", str((item.get("authors") or [""])[0]).lower()).strip()
-    year = str(item.get("year") or "")
-    return f"title:{title}|author:{author}|year:{year}" if title else ""
+    return canonical_work_id(item)
 
 
 def reference_work_id(item: dict[str, Any]) -> str:

@@ -33,27 +33,48 @@ def run_literature_quality_benchmark(output: str | Path | None = None) -> dict[s
         candidates = topic.get("candidates") if isinstance(topic.get("candidates"), list) else []
         accepted, rejected = apply_relevance_gate(candidates, contract)
         relevant = {str(value) for value in topic.get("relevant_titles") or []}
-        selected_titles = {str(item.get("title") or "") for item in accepted}
+        hard_negatives = {str(value) for value in topic.get("hard_negative_titles") or []}
+        active = [item for item in accepted if item.get("gate_state") == "accepted"]
+        review_required = [item for item in accepted if item.get("gate_state") == "review_required"]
+        selected_titles = {str(item.get("title") or "") for item in active}
         true_positive = len(selected_titles & relevant)
         false_positive = len(selected_titles - relevant)
+        hard_negative_active = len(selected_titles & hard_negatives)
         topic_reports.append({
             "topic_id": topic.get("topic_id"),
             "candidate_count": len(candidates),
-            "selected_count": len(accepted),
+            "selected_count": len(active),
+            "review_required_count": len(review_required),
             "rejected_count": len(rejected),
-            "precision_at_10": round(true_positive / max(1, len(accepted)), 4),
-            "off_discipline_contamination_rate": round(false_positive / max(1, len(accepted)), 4),
+            "precision_at_10": round(true_positive / max(1, len(active)), 4),
+            "positive_recall": round(true_positive / max(1, len(relevant)), 4),
+            "off_discipline_contamination_rate": round(false_positive / max(1, len(active)), 4),
+            "hard_negative_active_count": hard_negative_active,
             "selected_titles": sorted(selected_titles),
+            "review_required_titles": sorted(str(item.get("title") or "") for item in review_required),
         })
     precision = sum(report["precision_at_10"] for report in topic_reports) / max(1, len(topic_reports))
+    recall = sum(report["positive_recall"] for report in topic_reports) / max(1, len(topic_reports))
     contamination = sum(report["off_discipline_contamination_rate"] for report in topic_reports) / max(1, len(topic_reports))
+    hard_negative_active_count = sum(report["hard_negative_active_count"] for report in topic_reports)
     report = {
-        "schema_version": "dpl.literature_quality_benchmark.v1",
-        "status": "passed" if precision >= 0.8 and contamination <= 0.1 else "review_required",
+        "schema_version": "dpl.literature_quality_benchmark.v2",
+        "status": (
+            "passed"
+            if precision >= 0.8 and recall >= 0.95 and contamination == 0.0 and hard_negative_active_count == 0
+            else "review_required"
+        ),
         "topic_count": len(topic_reports),
         "mean_precision_at_10": round(precision, 4),
+        "mean_positive_recall": round(recall, 4),
         "mean_off_discipline_contamination_rate": round(contamination, 4),
-        "thresholds": {"precision_at_10": 0.8, "off_discipline_contamination_rate": 0.1},
+        "hard_negative_active_count": hard_negative_active_count,
+        "thresholds": {
+            "precision_at_10": 0.8,
+            "positive_recall": 0.95,
+            "off_discipline_contamination_rate": 0.0,
+            "hard_negative_active_count": 0,
+        },
         "topics": topic_reports,
         "mode": "offline_frozen_fixture",
     }

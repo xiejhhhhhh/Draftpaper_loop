@@ -270,6 +270,8 @@ def build_reference_registry(project: str | Path) -> dict[str, Any]:
     effective_database = bibtexparser.loads(effective_bibtex)
     supplemental_keys = set(merge_report.get("accepted_supplemental_keys") or [])
     literature = _literature_index(state.path)
+    snapshot = _read_json(state.path / "references" / "literature_snapshot.json")
+    snapshot_hash = str(snapshot.get("snapshot_hash") or "") if isinstance(snapshot, dict) else ""
     records = []
     for entry in effective_database.entries:
         key = str(entry.get("ID") or "")
@@ -368,10 +370,12 @@ def build_reference_registry(project: str | Path) -> dict[str, Any]:
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "source_bibtex_sha256": hashlib.sha256(effective_bibtex.encode("utf-8")).hexdigest(),
+        "snapshot_hash": snapshot_hash or None,
         "supplemental_merge_report": SUPPLEMENTAL_MERGE_REPORT,
         "record_count": len(records),
         "records": records,
     }
+    contract["snapshot_hash"] = snapshot_hash or None
     _write_json(state.path / REFERENCE_REGISTRY, registry)
     _write_json(state.path / BIBLIOGRAPHY_CONTRACT, contract)
     inspect_reference_duplicates(state.path)

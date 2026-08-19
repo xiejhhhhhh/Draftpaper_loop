@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_fetch_policy.v1",
+  "type": "object",
+  "required": ["schema_version", "mode", "identity_resolution", "fulltext_fetch", "asset_profile", "policy_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_fetch_policy.v1"},
+    "mode": {"enum": ["off", "resolve_only", "resolve_then_fetch_on_demand", "fulltext_eager", "local_only"]},
+    "identity_resolution": {"type": "string"},
+    "fulltext_fetch": {"type": "string"},
+    "asset_profile": {"const": "none"},
+    "max_identity_candidates": {"type": "integer", "minimum": 0},
+    "max_fulltext_candidates": {"type": "integer", "minimum": 0},
+    "policy_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": true
+}

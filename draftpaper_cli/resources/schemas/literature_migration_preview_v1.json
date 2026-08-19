@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_migration_preview.v1",
+  "title": "Draftpaper legacy literature migration preview",
+  "type": "object",
+  "required": ["schema_version", "packet_hash", "source_index", "counts", "items"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_migration_preview.v1"},
+    "packet_hash": {"type": "string", "minLength": 1},
+    "source_index": {"type": "string", "minLength": 1},
+    "counts": {"type": "object"},
+    "items": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

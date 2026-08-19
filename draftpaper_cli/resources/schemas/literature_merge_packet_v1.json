@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_merge_packet.v1",
+  "title": "Draftpaper literature merge preview",
+  "type": "object",
+  "required": ["schema_version", "packet_hash", "mode", "incoming"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_merge_packet.v1"},
+    "packet_hash": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["augment", "replace"]},
+    "incoming": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

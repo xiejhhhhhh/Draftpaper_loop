@@ -411,7 +411,34 @@ def reconcile_project_drift(
         raise ArtifactDriftError("Drift reconciliation packet already has a resolution receipt.")
     changes = [item for item in packet.get("changes") or [] if isinstance(item, dict)]
     semantic_changes = [item for item in changes if item.get("scientific_semantics_changed") is True]
-    if route == "rebuild_derived_artifacts" and semantic_changes:
+    baseline = load_active_baseline(root) or {}
+    baseline_hashes = baseline.get("artifact_hashes") or {}
+    current_artifacts = {
+        str(item.get("path") or ""): item
+        for item in collect_artifacts(root)
+        if item.get("path")
+    }
+    baseline_restorations = [
+        item
+        for item in semantic_changes
+        if (
+            str(baseline_hashes.get(str(item.get("path") or "")) or "")
+            and str(baseline_hashes.get(str(item.get("path") or "")) or "")
+            in {
+                str(current_artifacts.get(str(item.get("path") or ""), {}).get("evidence_sha256") or ""),
+                str(current_artifacts.get(str(item.get("path") or ""), {}).get("semantic_sha256") or ""),
+                str(
+                    current_artifacts.get(str(item.get("path") or ""), {}).get("byte_sha256")
+                    or current_artifacts.get(str(item.get("path") or ""), {}).get("sha256")
+                    or ""
+                ),
+            }
+        )
+    ]
+    unresolved_semantic_changes = [
+        item for item in semantic_changes if item not in baseline_restorations
+    ]
+    if route == "rebuild_derived_artifacts" and unresolved_semantic_changes:
         raise ArtifactDriftError("Derived-artifact rebuild cannot resolve data, method, run, cohort, metric, or claim drift.")
     cycle = load_active_revision_cycle(root)
     if route == "adopt_as_expected_change":
@@ -433,6 +460,7 @@ def reconcile_project_drift(
         "status": "resolved" if route != "reopen_scientific_stage" else "reopen_required",
         "requires_human_confirmation": bool(semantic_changes) or route == "reopen_scientific_stage",
         "revision_cycle_id": (cycle or {}).get("revision_cycle_id"),
+        "baseline_restored_paths": [str(item.get("path") or "") for item in baseline_restorations],
         "created_at": utc_now(),
     }
     resolution["resolution_sha256"] = hashlib.sha256(json.dumps(resolution, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()

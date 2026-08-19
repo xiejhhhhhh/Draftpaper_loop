@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_output_manifest.v1",
+  "title": "Draftpaper literature output binding manifest",
+  "type": "object",
+  "required": ["schema_version", "snapshot_hash", "artifact_count", "artifacts"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_output_manifest.v1"},
+    "snapshot_hash": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string"},
+    "artifact_count": {"type": "integer", "minimum": 0},
+    "html_detail_paths": {"type": "array", "items": {"type": "string"}},
+    "source_registry_sha256": {"type": ["string", "null"]},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "snapshot_hash"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "minLength": 1},
+          "snapshot_hash": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

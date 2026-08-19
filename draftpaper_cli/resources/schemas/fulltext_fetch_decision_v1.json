@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.fulltext_fetch_decision.v1",
+  "type": "object",
+  "required": ["schema_version", "policy_hash", "decision_packet_hash", "decision_count", "fetch_count", "decisions"],
+  "properties": {
+    "schema_version": {"const": "dpl.fulltext_fetch_decision.v1"},
+    "policy_hash": {"type": "string"},
+    "decision_packet_hash": {"type": "string"},
+    "decision_count": {"type": "integer", "minimum": 0},
+    "fetch_count": {"type": "integer", "minimum": 0},
+    "decisions": {"type": "array", "items": {"type": "object", "required": ["candidate_id", "fetch", "reason", "decision_hash"]}}
+  },
+  "additionalProperties": true
+}

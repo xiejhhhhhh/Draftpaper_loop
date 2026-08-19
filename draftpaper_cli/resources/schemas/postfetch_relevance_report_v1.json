@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.postfetch_relevance_report.v1",
+  "type": "object",
+  "required": ["schema_version", "input_count", "active_count", "quarantine_count", "status_counts", "assessment_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.postfetch_relevance_report.v1"},
+    "input_count": {"type": "integer", "minimum": 0},
+    "active_count": {"type": "integer", "minimum": 0},
+    "quarantine_count": {"type": "integer", "minimum": 0},
+    "status_counts": {"type": "object"},
+    "assessment_hash": {"type": "string"}
+  },
+  "additionalProperties": true
+}

@@ -467,6 +467,10 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         path = state.path / str(item.get("path") or contract.get("path") or "")
         width, height = _png_dimensions(path)
         pixels = _pixel_evidence(path)
+        figure_grammar = str(
+            contract.get("plot_grammar") or item.get("plot_grammar") or item.get("figure_type") or ""
+        ).lower()
+        is_workflow_diagram = figure_grammar in {"workflow_diagram", "workflow_schematic"}
         ocr_text, ocr_backend, ocr_mean_confidence = _ocr_png(path)
         ocr_raw_identifiers = sorted(set(INTERNAL_DISPLAY_LABEL_PATTERN.findall(ocr_text)))
         ocr_code_style_labels = sorted(set(CODE_STYLE_LABEL_PATTERN.findall(ocr_text)))
@@ -507,10 +511,11 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         artifact_integrity = 1.0 if (
             png_valid and rendered_label_contract_ok and not code_quality_issues
         ) else 0.0
-        legibility = 1.0 if width >= 1200 and height >= 800 and pixels.get("axis_region_evidence") and pixels.get("text_edge_evidence") else 0.0
+        visible_structure = pixels.get("axis_region_evidence") or is_workflow_diagram
+        legibility = 1.0 if width >= 1200 and height >= 800 and visible_structure and pixels.get("text_edge_evidence") else 0.0
         if width < 1200 or height < 800:
             issues.append({"kind": "insufficient_pixel_dimensions", "width": width, "height": height})
-        if not pixels.get("axis_region_evidence") or not pixels.get("text_edge_evidence"):
+        if not visible_structure or not pixels.get("text_edge_evidence"):
             issues.append({"kind": "rendered_axis_or_text_evidence_missing"})
         render_qa = {
             "target_width_inches": target_widths.get("double_column_inches") or 6.9,

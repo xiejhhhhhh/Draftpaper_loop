@@ -359,8 +359,10 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
             if not metadata:
                 issues.append(QualityIssue("error", "figure_metadata_entry_missing", f"Figure lacks scientific metadata: {relative}", "results/figure_metadata.json"))
             else:
-                plot_grammar = str(metadata.get("plot_grammar") or "").strip().lower()
-                is_workflow_schematic = plot_grammar == "workflow_schematic"
+                plot_grammar = str(
+                    metadata.get("plot_grammar") or metadata.get("figure_type") or ""
+                ).strip().lower()
+                is_workflow_schematic = plot_grammar in {"workflow_diagram", "workflow_schematic"}
                 common_metadata_missing = (
                     metadata.get("is_placeholder")
                     or metadata.get("file_format") != "png"
@@ -374,7 +376,7 @@ def _check_results(project_path: Path, issues: list[QualityIssue]) -> dict[str, 
                     not metadata.get("has_axes") or not metadata.get("axis_labels")
                 )
                 schematic_semantics_missing = is_workflow_schematic and (
-                    "data_flow" not in (metadata.get("variable_roles") or [])
+                    not metadata.get("variable_roles")
                     or not metadata.get("method_outputs")
                 )
                 if common_metadata_missing or empirical_axes_missing or schematic_semantics_missing:

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_work_record.v3",
+  "title": "Draftpaper canonical literature work record",
+  "type": "object",
+  "required": ["work_id", "record"],
+  "properties": {
+    "work_id": {"type": "string", "minLength": 1},
+    "identity_strength": {"type": "string"},
+    "identity_aliases": {"type": "array", "items": {"type": "string"}},
+    "source_types": {"type": "array", "items": {"type": "string"}},
+    "score_bundle": {"$ref": "dpl.literature_score_bundle.v2"},
+    "document_parse_count": {"type": "integer", "minimum": 0},
+    "record": {"type": "object", "required": ["work_id"]}
+  },
+  "additionalProperties": true
+}

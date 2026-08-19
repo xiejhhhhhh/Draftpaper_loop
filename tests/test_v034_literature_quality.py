@@ -77,6 +77,8 @@ def test_pypdf_parse_binds_to_doi_work_and_writes_passages(tmp_path: Path) -> No
     assert result["binding"]["status"] == "bound"
     items = json.loads((project / "references" / "literature_items.json").read_text(encoding="utf-8"))
     assert items[0]["document_parses"]
+    assert items[0]["binding_status"] == "bound_to_work"
+    assert (project / "references" / "literature_work_registry.json").is_file()
 
 
 def test_remote_policy_requires_public_class_and_consent(tmp_path: Path) -> None:

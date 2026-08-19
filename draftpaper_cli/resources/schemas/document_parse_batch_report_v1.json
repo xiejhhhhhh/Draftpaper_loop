@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.document_parse_batch_report.v1",
+  "title": "Draftpaper local literature document parse batch report",
+  "type": "object",
+  "required": ["schema_version", "status", "document_count", "results"],
+  "properties": {
+    "schema_version": {"const": "dpl.document_parse_batch_report.v1"},
+    "status": {"enum": ["completed", "completed_with_failures"]},
+    "document_count": {"type": "integer", "minimum": 0},
+    "status_counts": {"type": "object"},
+    "results": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

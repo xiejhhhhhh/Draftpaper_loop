@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.prefetch_relevance_assessment.v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_count", "shortlist_count", "rejected_count", "candidate_set_hash", "query_contract_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.prefetch_relevance_assessment.v1"},
+    "candidate_count": {"type": "integer", "minimum": 0},
+    "shortlist_count": {"type": "integer", "minimum": 0},
+    "rejected_count": {"type": "integer", "minimum": 0},
+    "candidate_set_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "query_contract_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": true
+}

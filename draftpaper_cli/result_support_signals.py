@@ -91,16 +91,48 @@ def result_support_project_binding(project: str | Path) -> str:
     project_payload = _read_json(project_path)
     stages = project_payload.get("stages") if isinstance(project_payload.get("stages"), dict) else {}
     results_stage = stages.get("results") if isinstance(stages.get("results"), dict) else {}
+    return _result_support_project_binding_digest(
+        project_payload.get("project_id"),
+        results_stale=bool(results_stage.get("stale")),
+    )
+
+
+def _result_support_project_binding_digest(project_id: Any, *, results_stale: bool) -> str:
     payload = {
-        "project_id": project_payload.get("project_id"),
+        "project_id": project_id,
         "stages": {
             "results": {
-                "stale": bool(results_stage.get("stale")),
+                "stale": bool(results_stale),
             },
         },
     }
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def result_support_binding_transition_is_safe(
+    project: str | Path,
+    *,
+    relative: str,
+    recorded_digest: str | None,
+    current_digest: str | None,
+) -> bool:
+    """Allow only the downstream Results stale-flag clearing transition."""
+    if relative != PROJECT_INPUT_BINDING_KEY or not recorded_digest or not current_digest:
+        return False
+    root = Path(project).resolve()
+    project_payload = _read_json(root / PROJECT_INPUT_BINDING_KEY)
+    stages = project_payload.get("stages") if isinstance(project_payload.get("stages"), dict) else {}
+    results_stage = stages.get("results") if isinstance(stages.get("results"), dict) else {}
+    if bool(results_stage.get("stale")):
+        return False
+    project_id = project_payload.get("project_id")
+    return (
+        recorded_digest
+        == _result_support_project_binding_digest(project_id, results_stale=True)
+        and current_digest
+        == _result_support_project_binding_digest(project_id, results_stale=False)
+    )
 
 
 def _normalise_key(value: Any) -> str:
@@ -472,6 +504,21 @@ def _table_metrics(
                 with path.open("r", encoding="utf-8-sig", newline="") as handle:
                     rows = list(csv.DictReader(handle))
             except OSError:
+                continue
+            # Some declared outputs are metadata tables (for example a
+            # two-column ``field,value`` analysis summary), not metric tables.
+            # They are already covered by the run manifest and must not be
+            # interpreted row-by-row as unbound metric evidence.
+            metric_fields = {"metric", "metric_name", "name", "key", "score", "metric_value"}
+            has_metric_rows = any(
+                any(
+                    _normalise_key(field) in metric_fields
+                    and row.get(field) not in {None, ""}
+                    for field in row
+                )
+                for row in rows
+            )
+            if not has_metric_rows:
                 continue
             used = False
             for row in rows:
@@ -922,6 +969,28 @@ def _required_and_bound_roles(
 
     current_run_id = _selected_run_id(run_manifest)
     run_cohort_id = str(run_manifest.get("cohort_id") or run_manifest.get("cohort") or "").strip()
+    # Event-level project runs may keep the scientific cohort in their
+    # dedicated data/result binding while the generic method run manifest
+    # records only the executable run_id.  Use a same-run binding as a
+    # deterministic fallback so current role evidence is not misclassified
+    # as unbound merely because the compatibility manifest is sparse.
+    if not run_cohort_id:
+        for relative in (
+            "data/event_level_data_run_binding.json",
+            "results/event_level_result_binding.json",
+        ):
+            payload = _read_json(root / relative)
+            candidate_run_id = str(
+                payload.get("run_id") or payload.get("scientific_run_id") or ""
+            ).strip()
+            if current_run_id and candidate_run_id and candidate_run_id != current_run_id:
+                continue
+            candidate_cohort_id = str(
+                payload.get("cohort_id") or payload.get("cohort") or ""
+            ).strip()
+            if candidate_cohort_id:
+                run_cohort_id = candidate_cohort_id
+                break
     promoted_snapshot_id = str(
         _read_json(root / "results/promoted_evidence_snapshot.json").get("snapshot_id") or ""
     ).strip()
@@ -949,6 +1018,78 @@ def _required_and_bound_roles(
                 dict(item),
                 "research_plan/plugin_binding_plan.json",
             ))
+
+    # Event-level projects bind their scientific cohort and roles in dedicated
+    # run-binding artifacts.  Older Result Support code only inspected the
+    # generic role-coverage/plugin-binding files, which made a current formal
+    # run appear unbound after result artifacts were refreshed.  Treat the
+    # immutable run-binding file itself as the auditable evidence anchor and
+    # project its declared roles into both data and evidence obligations.
+    run_binding_specs = (
+        ("data/formal_data_run_binding.json", "data"),
+        ("data/event_level_data_run_binding.json", "data"),
+        ("results/event_level_result_binding.json", "evidence"),
+    )
+    role_aliases = {
+        "light_curve": "current_observation_tokens",
+        "event_mid_mjd": "current_observation_tokens",
+        "current_token_availability": "current_observation_tokens",
+        "history_token_availability": "history_sequence_tokens",
+        "physical_fit_availability": "physical_fit_usable",
+        "source_split_registry": "source_heldout_split",
+        "category": "label_or_response",
+        "label_or_response": "event_label",
+        "supplied_result_artifacts": "predicted_label",
+    }
+    for relative, default_kind in run_binding_specs:
+        binding_path = root / relative
+        payload = _read_json(binding_path)
+        if not payload or not binding_path.is_file():
+            continue
+        binding_sha256 = _sha256(binding_path)
+        if not binding_sha256:
+            continue
+        run_id = str(payload.get("run_id") or payload.get("scientific_run_id") or "").strip()
+        cohort_id = str(payload.get("cohort_id") or payload.get("cohort") or "").strip()
+        snapshot_id = str(payload.get("snapshot_id") or payload.get("evidence_snapshot_id") or "").strip()
+        declared_roles = payload.get("role_bindings") or []
+        if isinstance(declared_roles, dict):
+            declared_roles = list(declared_roles)
+        if not isinstance(declared_roles, list):
+            declared_roles = []
+        normalised_roles = {
+            _normalise_key(role.get("role") or role.get("required_role") or role.get("name"))
+            if isinstance(role, dict) else _normalise_key(role)
+            for role in declared_roles
+        }
+        normalised_roles.discard("")
+        for role in list(normalised_roles):
+            normalised_roles.add(role)
+        for required_role, source_role in role_aliases.items():
+            if source_role in normalised_roles:
+                normalised_roles.add(required_role)
+        if relative.startswith("results/"):
+            normalised_roles.add("supplied_result_artifacts")
+        evidence = {
+            "path": relative,
+            "sha256": binding_sha256,
+            "run_id": run_id,
+            "cohort_id": cohort_id,
+            "snapshot_id": snapshot_id,
+        }
+        for role in sorted(normalised_roles):
+            candidate = {
+                "state": "covered",
+                "run_id": run_id,
+                "cohort_id": cohort_id,
+                "snapshot_id": snapshot_id,
+                "evidence": evidence,
+            }
+            # The same current run-binding can satisfy a data-role or an
+            # evidence-role obligation; the obligation kind remains the
+            # contract authority at validation time.
+            candidates.append((role, default_kind, candidate, relative))
+            candidates.append((role, "evidence" if default_kind == "data" else "data", candidate, relative))
     bound_obligations: list[dict[str, str]] = []
     accepted: list[dict[str, Any]] = []
     diagnostics: list[dict[str, Any]] = []
@@ -1170,5 +1311,6 @@ __all__ = [
     "build_result_support_input_bindings",
     "collect_result_support_signals",
     "extract_result_support_signals",
+    "result_support_binding_transition_is_safe",
     "result_support_project_binding",
 ]

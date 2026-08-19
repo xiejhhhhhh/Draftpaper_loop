@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.localized_evidence_summary.v1",
+  "title": "Draftpaper localized evidence summary",
+  "type": "object",
+  "required": ["zh-CN", "en"],
+  "properties": {
+    "zh-CN": {"type": "object"},
+    "en": {"type": "object"}
+  },
+  "additionalProperties": true
+}

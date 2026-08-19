@@ -106,6 +106,17 @@ def assess_path_budget(project_path: str | Path, *, include_tree: bool = True) -
             if not path.is_file():
                 continue
             relative = path.relative_to(root).as_posix().lower()
+            # Historical lineage reports and non-canonical completion/blind
+            # review packets are retained for provenance but are never passed
+            # to tool-sensitive execution.  Their long, hash-bound archive
+            # paths must not make an otherwise valid project fail the active
+            # Windows path budget.
+            if relative.startswith((
+                "lineage/legacy_reports/",
+                "quality_checks/blind_reviews/superseded/",
+                "writing/manuscript_completion/packets/",
+            )):
+                continue
             tool_sensitive = relative.startswith(("latex/", "references/")) or path.suffix.lower() in {".tex", ".bib", ".bst", ".cls"}
             add(path, "latex_or_bibliography" if tool_sensitive else "artifact", TOOL_PATH_BUDGET if tool_sensitive else GENERAL_PATH_BUDGET)
     violations = [item for item in checks if not item["within_budget"]]

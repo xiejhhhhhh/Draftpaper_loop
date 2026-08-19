@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.literature_merge_receipt.v1",
+  "title": "Draftpaper literature merge receipt",
+  "type": "object",
+  "required": ["schema_version", "status", "packet_hash"],
+  "properties": {
+    "schema_version": {"const": "dpl.literature_merge_receipt.v1"},
+    "status": {"enum": ["applied", "rolled_back"]},
+    "packet_hash": {"type": "string"},
+    "snapshot_hash": {"type": ["string", "null"]},
+    "registry_hash": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

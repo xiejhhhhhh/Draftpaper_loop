@@ -201,7 +201,7 @@ def _pdf_is_extractable(pdf: Path) -> bool:
 
 def _anonymize_review_tex(tex: str) -> str:
     tex = re.sub(
-        r"(?m)^\s*\\(?:author|affiliation|email|orcid)\{[^{}]*\}\s*\n?",
+        r"(?m)^\s*\\(?:author|affiliation|email|orcid|ead|cortext|address)(?:\[[^\]]*\])?[^\n]*\n?",
         "",
         tex,
     )
@@ -222,6 +222,12 @@ def _anonymize_review_tex(tex: str) -> str:
     tex = re.sub(
         r"\\section\*?\{Acknowledg(?:e)?ments\}.*?(?=\\section|\\bibliographystyle|\\bibliography|\\end\{document\})",
         "\\\\section*{Acknowledgments}\nWithheld for anonymous review.\n\n",
+        tex,
+        flags=re.S | re.I,
+    )
+    tex = re.sub(
+        r"\\section\*?\{Author Contributions\}.*?(?=\\section|\\bibliographystyle|\\bibliography|\\end\{document\})",
+        "\\\\section*{Author Contributions}\nWithheld for anonymous review.\n\n",
         tex,
         flags=re.S | re.I,
     )

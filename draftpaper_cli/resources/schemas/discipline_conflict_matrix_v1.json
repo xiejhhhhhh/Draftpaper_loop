@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.discipline_conflict_matrix.v1",
+  "type": "object",
+  "required": ["schema_version", "policy", "symmetric", "unknown_state", "allowed_roles"],
+  "properties": {
+    "schema_version": {"const": "dpl.discipline_conflict_matrix.v1"},
+    "policy": {"type": "string"},
+    "symmetric": {"const": true},
+    "unknown_state": {"const": "review_required"},
+    "allowed_roles": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

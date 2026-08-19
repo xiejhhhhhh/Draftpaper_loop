@@ -254,6 +254,19 @@ def render_introduction_tex(project_meta: dict[str, Any], _plan_text: str, citat
     if project_path is not None:
         ensure_reference_usage_plan(project_path)
         preserve_all_references = "use all retained references" in str(_plan_text or "").lower()
+        # A user-curated bibliography is an explicit preservation contract;
+        # do not depend on one English phrase in a localized research plan.
+        items_path = project_path / "references" / "literature_items.json"
+        if items_path.is_file():
+            try:
+                retained_items = json.loads(items_path.read_text(encoding="utf-8"))
+                preserve_all_references = preserve_all_references or (
+                    isinstance(retained_items, list)
+                    and bool(retained_items)
+                    and all(isinstance(item, dict) and item.get("retained") is True for item in retained_items)
+                )
+            except (OSError, json.JSONDecodeError):
+                pass
         paragraphs.extend(_reference_coverage_paragraphs(
             project_path,
             "introduction",

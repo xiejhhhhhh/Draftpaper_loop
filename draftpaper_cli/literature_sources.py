@@ -233,6 +233,8 @@ def _local_pdf_item(
         enriched["url"] = enriched.get("url") or f"https://arxiv.org/abs/{arxiv}"
     enriched.pop("pdf_path", None)
     enriched["pdf_read_status"] = enriched.get("pdf_read_status") or "metadata_only"
+    enriched["parser_state"] = "quick_read_unbound" if enriched.get("pdf_text_excerpt") else "registered"
+    enriched["binding_status"] = "identity_pending"
     return enriched
 
 
@@ -427,6 +429,22 @@ def collect_registered_sources(project: str | Path) -> tuple[list[dict[str, Any]
     return items, {"status": "loaded", "source_reports": reports, "item_count": len(items)}
 
 
+def _registered_pdf_paths(project: str | Path) -> list[Path]:
+    """Return registered PDF inputs for the parser stage without exposing paths in reports."""
+    state = load_project(project)
+    registry = _read_registry(state.path)
+    paths: list[Path] = []
+    for source in registry.get("sources") or []:
+        if not isinstance(source, dict) or source.get("source_type") != "local_folder":
+            continue
+        root = Path(str(source.get("path") or "")).expanduser().resolve()
+        if not root.is_dir():
+            continue
+        pattern = "**/*" if source.get("recursive", True) else "*"
+        paths.extend(path for path in root.glob(pattern) if path.is_file() and path.suffix.lower() == ".pdf")
+    return sorted(set(paths))
+
+
 def collect_literature_sources(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     items, report = collect_registered_sources(project)
@@ -459,7 +477,90 @@ def reconcile_literature_sources(project: str | Path) -> dict[str, Any]:
         state.path,
         [*(existing if isinstance(existing, list) else []), *local_items],
         query=str(state.metadata.get("idea") or ""),
-        search_queries={"mode": "reconcile_local_sources", "local_source_collection": report},
+        search_queries={"mode": "reconcile_local_sources", "merge_mode": "augment", "local_source_collection": report},
     )
+    parse_results: list[dict[str, Any]] = []
+    current_items_path = state.path / "references" / "literature_items.json"
+    try:
+        current_items = json.loads(current_items_path.read_text(encoding="utf-8-sig")) if current_items_path.is_file() else []
+    except (OSError, json.JSONDecodeError):
+        current_items = []
+    current_items = current_items if isinstance(current_items, list) else current_items.get("items", []) if isinstance(current_items, dict) else []
+    by_file_id = {str(item.get("local_file_id") or ""): item for item in current_items if isinstance(item, dict) and item.get("local_file_id")}
+    from .mineru_adapter import parse_literature_document
+
+    for pdf_path in _registered_pdf_paths(state.path):
+        file_id = _file_hash(pdf_path)
+        matched = by_file_id.get(file_id)
+        try:
+            parsed = parse_literature_document(
+                state.path,
+                pdf_path,
+                use_mineru=True,
+                parser="auto",
+                purpose="evidence",
+                work_id=str(matched.get("work_id") or "") if matched else None,
+            )
+            parse_results.append({"path": pdf_path.name, "status": parsed.get("status"), "binding": parsed.get("binding")})
+        except (OSError, ValueError) as exc:
+            parse_results.append({"path": pdf_path.name, "status": "failed", "error": str(exc)})
     result["reconciliation"] = "local_sources_merged_without_live_search"
+    result["document_parse_results"] = parse_results
     return result
+
+
+def parse_registered_literature_documents(project: str | Path, *, use_mineru: bool = True, timeout_seconds: int = 600) -> dict[str, Any]:
+    """Parse every registered PDF independently with resumable per-file receipts."""
+    state = load_project(project)
+    items_path = state.path / "references" / "literature_items.json"
+    try:
+        payload = json.loads(items_path.read_text(encoding="utf-8-sig")) if items_path.is_file() else []
+    except (OSError, json.JSONDecodeError):
+        payload = []
+    items = payload.get("items", payload) if isinstance(payload, dict) else payload
+    items = items if isinstance(items, list) else []
+    by_file_id = {
+        str(item.get("local_file_id")): item
+        for item in items
+        if isinstance(item, dict) and item.get("local_file_id")
+    }
+    from .mineru_adapter import parse_literature_document
+
+    results: list[dict[str, Any]] = []
+    for pdf_path in _registered_pdf_paths(state.path):
+        file_id = _file_hash(pdf_path)
+        matched = by_file_id.get(file_id)
+        try:
+            parsed = parse_literature_document(
+                state.path,
+                pdf_path,
+                use_mineru=use_mineru,
+                parser="auto",
+                purpose="evidence",
+                timeout_seconds=timeout_seconds,
+                work_id=str(matched.get("work_id") or "") if matched else None,
+            )
+            results.append({
+                "file_id": file_id,
+                "name": pdf_path.name,
+                "status": parsed.get("status"),
+                "cache_hit": bool((parsed.get("receipt") or {}).get("cache_hit")),
+                "binding": parsed.get("binding"),
+            })
+        except Exception as exc:
+            # A single invalid or unreadable PDF becomes a resumable record;
+            # it must not invalidate successful documents in the same batch.
+            results.append({"file_id": file_id, "name": pdf_path.name, "status": "failed", "error_type": type(exc).__name__, "error": str(exc)})
+    counts: dict[str, int] = {}
+    for result in results:
+        status = str(result.get("status") or "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    report = {
+        "schema_version": "dpl.document_parse_batch_report.v1",
+        "status": "completed_with_failures" if counts.get("failed") else "completed",
+        "document_count": len(results),
+        "status_counts": counts,
+        "results": results,
+    }
+    _write_json(state.path / "references" / "document_parse_batch_report.json", report)
+    return {"status": report["status"], "document_count": len(results), "status_counts": counts, "report": "references/document_parse_batch_report.json"}

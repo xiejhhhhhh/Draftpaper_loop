@@ -717,7 +717,8 @@ def _validate_generated_figure_outputs(project_path: Path, output_files: list[st
             issues.append(f"{relative} metadata must declare file_format=png.")
         if item.get("is_placeholder"):
             issues.append(f"{relative} metadata marks the figure as placeholder.")
-        is_workflow_schematic = str(item.get("plot_grammar") or "").lower() == "workflow_schematic"
+        figure_grammar = str(item.get("plot_grammar") or item.get("figure_type") or "").lower()
+        is_workflow_schematic = figure_grammar in {"workflow_diagram", "workflow_schematic"}
         if not item.get("has_axes") and not is_workflow_schematic:
             issues.append(f"{relative} metadata must confirm axes or scale.")
         if not item.get("axis_labels") and not is_workflow_schematic:
