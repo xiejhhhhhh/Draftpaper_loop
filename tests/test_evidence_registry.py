@@ -247,6 +247,48 @@ class EvidenceRegistryTests(unittest.TestCase):
             self.assertEqual(grouped_f1["metric_dimension"], "score")
             self.assertEqual(grouped_count["metric_dimension"], "count")
 
+    def test_performance_scope_words_do_not_turn_scores_into_data_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Event-level classification", field="astronomy")
+            (project.path / "results" / "result_manifest.yaml").write_text(json.dumps({
+                "figures": [
+                    {
+                        "storyboard_id": "performance-figure",
+                        "scientific_question": "How well does event-level classification generalize?",
+                        "metrics": {
+                            "source_balanced_event_macro_f1": 0.8257,
+                            "independent_event_count": 3283,
+                            "event_confusion_matrix": [[2218, 189], [123, 753]],
+                        },
+                    },
+                    {
+                        "storyboard_id": "coverage-figure",
+                        "scientific_question": "What sample coverage and missingness define the cohort?",
+                        "metrics": {"current_token_available_fraction": 0.8337},
+                    },
+                ]
+            }), encoding="utf-8")
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+            by_role = {item["entity_role"]: item for item in registry["records"]}
+
+            performance = by_role["result_metric_source_balanced_event_macro_f1"]
+            self.assertEqual(performance["metric_dimension"], "score")
+            self.assertNotIn("data", performance["target_sections"])
+            denominator = by_role["result_metric_independent_event_count"]
+            self.assertEqual(denominator["metric_dimension"], "count")
+            self.assertIn("data", denominator["target_sections"])
+            confusion = [item for role, item in by_role.items() if "event_confusion_matrix" in role]
+            self.assertTrue(confusion)
+            self.assertTrue(all(item["metric_dimension"] == "count" for item in confusion))
+            self.assertTrue(all("data" not in item["target_sections"] for item in confusion))
+            coverage = by_role["result_metric_current_token_available_fraction"]
+            self.assertEqual(coverage["metric_dimension"], "fraction")
+            self.assertIn("data", coverage["target_sections"])
+
     def test_figure_contract_bindings_distinguish_same_named_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Bound figure metrics", field="geography")

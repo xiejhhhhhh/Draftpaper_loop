@@ -256,6 +256,67 @@ def _flatten_numeric_metrics(value: Any, prefix: str = "") -> list[tuple[str, fl
     return [(prefix, numeric)] if prefix and numeric is not None else []
 
 
+def _figure_metric_unit(metric_name: str, numeric: float, *, cohort_figure: bool) -> str:
+    """Classify flattened figure values without treating scope words as counts."""
+
+    name = metric_name.lower().replace("/", "_")
+    score_hints = (
+        "macro_f1", "balanced_accuracy", "recall", "precision", "brier",
+        "roc_auc", "average_precision", "p_value", "probability", "delta",
+        "ci_lower", "ci_upper", "global_max", "global_min", "display_xlim",
+        "display_ylim",
+    )
+    if any(hint in name for hint in score_hints):
+        return "score"
+    if any(hint in name for hint in ("fraction", "proportion", "percentage", "percent", "prevalence")):
+        return "fraction"
+    tokens = {token for token in name.split("_") if token}
+    explicit_count = (
+        "confusion_matrix" in name
+        or name.endswith(("_count", "_counts", "_rows", "_draws"))
+        or "_count_" in name
+        or "_counts_" in name
+        or bool(tokens.intersection({"count", "counts", "number", "rows", "draws", "folds"}))
+    )
+    if explicit_count:
+        return "count"
+    cohort_count_hint = bool(tokens.intersection({
+        "sample", "cohort", "source", "event", "catalog", "image", "embedding",
+        "available", "valid", "excluded", "inventory", "dimension",
+    }))
+    if cohort_figure and cohort_count_hint and float(numeric).is_integer():
+        return "count"
+    return "score"
+
+
+def _figure_metric_target_sections(
+    metric_name: str,
+    numeric: float,
+    *,
+    unit: str,
+    cohort_figure: bool,
+) -> list[str]:
+    """Route only sample, coverage, and denominator evidence into Data."""
+
+    name = metric_name.lower().replace("/", "_")
+    if cohort_figure and unit in {"count", "fraction"}:
+        return ["results", "data", "discussion"]
+    if float(numeric) <= 0 or any(token in name for token in ("confusion", "bootstrap", "outlier", "metric_row_count")):
+        return ["results", "discussion"]
+    denominator_hints = (
+        "sample_count", "cohort_count", "source_count", "event_count",
+        "event_counts_by_split", "split_counts", "physical_fit_event_count",
+        "available_count", "availability_count", "available_fraction",
+        "availability_fraction", "coverage", "inventory_count", "valid_count",
+        "excluded_count", "support_count",
+    )
+    return (
+        ["results", "data", "discussion"]
+        if any(hint in name for hint in denominator_hints)
+        else ["results", "discussion"]
+    )
+
+
 def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[str, Any]]:
     payload = _read_json(path)
     relative = path.relative_to(project_path).as_posix()
@@ -309,20 +370,13 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
                 analysis_variant = "external_transfer"
             elif "adjusted_association" in metric_name:
                 analysis_variant = "adjusted_association"
-            count_tokens = (
-                "count", "number", "row", "sample", "cohort", "event", "source", "available",
-                "valid", "excluded", "support", "dimension", "fold", "group_count", "confusion",
-            )
-            unit = "count" if any(token in metric_name for token in count_tokens) or "_as_" in metric_name else "score"
             cohort_figure = any(token in figure_text for token in ("sample", "cohort", "coverage", "missingness", "availability"))
-            data_count_tokens = (
-                "sample", "cohort", "row", "event", "source", "available", "valid", "excluded",
-                "support", "inventory", "dimension", "group_count",
-            )
-            data_sections = (
-                ["results", "data", "discussion"]
-                if unit == "count" and (cohort_figure or any(token in metric_name for token in data_count_tokens))
-                else ["results", "discussion"]
+            unit = _figure_metric_unit(metric_name, numeric, cohort_figure=cohort_figure)
+            data_sections = _figure_metric_target_sections(
+                metric_name,
+                numeric,
+                unit=unit,
+                cohort_figure=cohort_figure,
             )
             record = _normalize_record(
                 {
