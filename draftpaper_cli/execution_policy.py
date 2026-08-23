@@ -35,6 +35,11 @@ class ExecutionPolicy:
     idempotency: str
     parallel_safe: bool
     confirmation_policy: str
+    decision_family: str
+    packet_policy: str
+    risk_resolver: str
+    receipt_contract: str
+    delegation_policy: str
     allowed_read_globs: tuple[str, ...]
     allowed_write_globs: tuple[str, ...]
     forbidden_globs: tuple[str, ...]
@@ -52,6 +57,11 @@ class ExecutionPolicy:
             idempotency=spec.idempotency,
             parallel_safe=bool(spec.parallel_safe),
             confirmation_policy=spec.confirmation_policy,
+            decision_family=spec.decision_family,
+            packet_policy=spec.packet_policy,
+            risk_resolver=spec.risk_resolver,
+            receipt_contract=spec.receipt_contract,
+            delegation_policy=spec.delegation_policy,
             allowed_read_globs=tuple(spec.allowed_read_globs),
             allowed_write_globs=tuple(spec.allowed_write_globs),
             forbidden_globs=tuple(spec.forbidden_globs),
@@ -67,6 +77,11 @@ class ExecutionPolicy:
             "idempotency": self.idempotency,
             "parallel_safe": self.parallel_safe,
             "confirmation_policy": self.confirmation_policy,
+            "decision_family": self.decision_family,
+            "packet_policy": self.packet_policy,
+            "risk_resolver": self.risk_resolver,
+            "receipt_contract": self.receipt_contract,
+            "delegation_policy": self.delegation_policy,
             "allowed_read_globs": list(self.allowed_read_globs),
             "allowed_write_globs": list(self.allowed_write_globs),
             "forbidden_globs": list(self.forbidden_globs),

@@ -1,21 +1,17 @@
 ---
 name: draftpaper-workflow
-version: 0.41.1
+version: 0.42.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
 # Draftpaper-loop Workflow
 
-Use the installed `draftpaper_cli` package as the workflow authority. Do not
-reimplement stage ordering, infer stale stages from memory, or write project
-state by hand. In particular, never directly edit `project.json`, stage
-manifests, passports, evidence snapshots, or append-only ledgers.
-Do not directly edit project.json or stage_manifest files.
-Do not directly edit stage_manifest files.
+Use the installed `draftpaper_cli` CLI as the workflow authority. Do not infer
+stage order from memory or edit workflow state by hand. Do not directly edit project.json. Do not directly edit stage_manifest files, including passports, evidence snapshots, or append-only ledgers.
 
-## Before project changes
+## Control Loop
 
-Run the control loop first:
+Before changing a project, run:
 
 ```powershell
 python -m draftpaper_cli.cli session-preflight --project <project>
@@ -23,107 +19,78 @@ python -m draftpaper_cli.cli status --project <project>
 python -m draftpaper_cli.cli verify-next-action --project <project>
 ```
 
-Use the recommended command only when its preconditions pass. Normal
-progression is:
+Use `continue` only when its reported preconditions pass. A runtime identity
+mismatch stops the workflow; after an accepted runtime update, use
+`session-preflight --accept-runtime-update`. If a transaction reports
+`rollback_incomplete`, stop and use `doctor` or `recover`.
 
-```powershell
-python -m draftpaper_cli.cli continue --project <project>
-```
+## Evidence and Literature
 
-A runtime identity mismatch stops the workflow. After release-candidate
-checks and explicit user acceptance, use `session-preflight --accept-runtime-update`;
-this writes only a migration receipt and runtime lock. If a transaction reports
-`rollback_incomplete`, stop and run `doctor` or `recover`.
+Treat a fixture, candidate, plan-only plugin, or mock as a contract check, not
+live scientific evidence. A project-local method is usable only after its
+inputs, outputs, hashes, and execution scope are recorded. Validate
+`MetricEvidence`, `CountEvidence`, the active `RunEvidenceBundle`, and
+`FigureCodeTrace v2` before result support or a checkpoint. Compare evidence
+identity before values: different models, cohorts, splits, or denominators are
+not numerically comparable.
 
-## Evidence and execution truth
+Literature discovery, identity resolution, and full-text fetching are separate.
+Discovery sources propose candidates; they do not prove citation fitness.
+`search-literature` applies symmetric discipline and topic gates, resolves
+DOI/title/author/year identity, then uses the vendored paper-fetch adapter for
+evidence-on-demand. Do not fetch all candidates by default. Re-score fetched
+metadata or text; mismatched, off-topic, ambiguous, review-required, and orphan
+records remain quarantined outside active snapshots, citation pools, summaries,
+and Agent context. GitHub and Zenodo code leads are metadata-only unless the
+guarded archive route is explicitly approved; never execute third-party archive
+code during enrichment.
 
-- Read normalized plugin manifests and execution contracts. Plan-only,
-  mock-only, candidate, and fixture plugins cannot be reported as live paper
-  execution; a fixture proves a contract, not a scientific result.
-- A project-local method is usable only after its inputs, outputs, hashes, and
-  execution scope are recorded. A scientific failure follows its rescue route;
-  it is not permission to fabricate a figure or weaken a gate.
-- Before Result Support or a checkpoint, validate `MetricEvidence`,
-  `CountEvidence`, the active `RunEvidenceBundle`, and `FigureCodeTrace v2`.
-  Compare identity before values: different models, validation designs,
-  cohorts, or denominator nodes are non-comparable, not numeric conflicts.
-- Use `audit-evidence-identity` for a read-only migration audit. It reports
-  legacy presentation files, derived rebuilds, and scientific reruns but never
-  guesses missing semantics or edits project state.
+Teaching uses an explicit confirmed corpus, not an inferred active directory.
+After `review-literature-coverage`, show the hash-bound
+`literature_confirmation_packet` and use `confirm-literature-corpus --packet-hash
+<hash>` only after human review. Its receipt binds the canonical registry, active
+literature snapshot, and project usage plan; any change to those inputs requires
+a fresh packet and confirmation before Learn may publish deep literature cards.
 
-## Human checkpoints
+## Human Review
 
-Every new checkpoint writes a v5 package with `stage_summary.zh-CN.html`
-(readable decision page), `stage_audit.zh-CN.html` (technical audit),
-`stage_summary.json`, `artifact_manifest.json`, and `confirmation_request.json`.
-The decision page covers the question, semantic delta, scientific context,
-figures, boundaries, exclusions, reopen conditions, and deliverables; never
-create a project-external readability sidecar. v1/v2 are read-only legacy;
-v3/v4 remain readable and are never rewritten. Earlier v5 packages created
-before FigureClaimMap-bound scientific fingerprints are also read-only; they
-must receive an explicit new C3 checkpoint before they can use continuity.
-The request binds `scientific_decision_sha256` and the DecisionBrief semantic
-hash, not the audit/package hash. Identical valid prior user decisions write a
-continuity receipt and continue as a notification. Metric, cohort, split,
-sample-unit, method, figure-semantic, or claim-boundary changes require C3.
-Show readable relative/absolute paths first, then the audit path, delta,
-artifacts, issues, and confirmation meaning. Previews, stale, blocked, and
-identity-missing packages cannot be confirmed.
+New checkpoints write readable Chinese and English decision pages,
+`stage_audit.json`, `stage_summary.json`, an artifact manifest, and a
+confirmation request. Technical audit HTML is created only by
+`render-checkpoint-audit` in `.draftpaper/render_cache/audit/`; it is temporary
+and never an immutable package artifact. Do not create a project-external
+readability sidecar.
 
-Agent review may continue only inside an active, hash-bound delegation and
-must record `agent_approved`; it must never write `user_confirmed`. C0
-notification checkpoints may record a `system_acknowledged` receipt and
-continue automatically. C1 review must revalidate the policy, runtime,
-summary, scope, expiry, revision cycle, change class, unresolved-item, and
-side-effect boundaries. C2 additionally needs explicit scientific-freeze
-permission and a reviewer Agent independent of the recorded producer. C3
-scientific routes, mutually exclusive claim choices, plugin promotion,
+Research-plan confirmation uses an immutable, versioned `HumanReviewPacket`.
+Read it with `show-human-review-packet`; validate it with
+`validate-research-plan-review`; compare decisions with
+`compare-research-plan-decision`; and explain an actual reopen with
+`explain-research-plan-reconfirmation`. Equivalent valid reviews reuse the
+prior packet and produce a continuity receipt. Scientific question, data role,
+method, cohort, split, metric, claim boundary, or figure semantics changes need
+an explicit new human decision.
+
+For a checkpoint, show the readable decision page before audit paths, then its
+semantic delta, deliverables, exclusions, unresolved issues, and confirmation
+meaning. Use `inspect-review-evidence --ref <reference>` only for selected
+evidence. `show-checkpoint-summary`, `render-checkpoint-audit`,
+`validate-checkpoint-readability`, and `shadow-checkpoint-v6` are read-only
+inspection or shadow tools.
+
+`checkpoint` constructs the packet; `resume` consumes a valid receipt. Agent
+approval is permitted only within an active hash-bound delegation and records
+`agent_approved`, never `user_confirmed`. C0 may be system-acknowledged; C1
+revalidates policy and scope; C2 needs scientific-freeze permission and an
+independent reviewer; C3 scientific routes, claim choices, plugin promotion,
 licenses, author identity, final manuscript, and release remain human-only.
-An anonymous fixture may record `test_auto_confirmation=true` while testing
-HTML; that marker must never confirm a real research result or change real
-project state. New projects may use `balanced`; existing projects remain
-`manual` until the owner opts in.
 
-## Scientific boundaries and order
+## Stage Order
 
-Preserve the evidence-first order: literature and plan, data and methods,
-executable figures, human core-evidence confirmation, manuscript, final
-citations, independent reviews, quality checks, and final confirmation. Key
-figure code runs only against the confirmed plan hash; implementation repair
-cannot change claims, data roles, methods, statistics, or figure contracts.
-Reopen the scientific checkpoint when those contracts change.
-
-New projects use the configured central projects root. Large datasets remain
-read-only through private locators and public data contracts. Literature may
-attach metadata-only GitHub and Zenodo code leads; release/version, stars,
-forks, and citation counts are provenance or adoption signals, not validity
-proof. Archive download requires the guarded confirmation, checksum, license,
-and static inspection route; never execute third-party archive code during
-metadata enrichment.
-
-Literature discovery, identity resolution, and evidence fetching are separate
-contracts. A discovery provider proposes candidates; it does not prove paper
-identity or citation fitness. `search-literature` applies symmetric discipline
-and tiered topic gates, resolves shortlist DOI/title/author/year identity, and
-uses the vendored paper-fetch adapter only for evidence-on-demand full text.
-Ambiguous or mismatched identities never trigger automatic full-text fetching.
-Fetched metadata and text are scored again before a work becomes active.
-Review-required, topic-mismatched, discipline-mismatched, identity-mismatched,
-and orphan artifacts stay outside the active literature snapshot, citation
-pool, summaries consumed by Agents, and writing context. Historical orphan
-files require `quarantine-orphan-literature` preview, packet-hash apply, and a
-hash-verified rollback route. Use `audit-literature-integrity` to verify active
-work reachability; never infer active evidence from files merely existing under
-`references/fulltext/`. The external Agent `paper-fetch-skill` is useful for
-interactive single-paper work, but Core availability depends on the pinned
-vendored adapter rather than a user-installed Agent skill.
-
-The CLI owns the exact next action. When references change, regenerate the
-affected plan and writing. When results change, reopen core evidence and
-regenerate Results and downstream sections; let `status` compute stale scope.
-
-The normal stage route includes `create-project`, `search-literature`,
+Use the CLI-owned sequence: `create-project`, `search-literature`,
 `resolve-journal-template`, `generate-plan`, `collect-method-plan`,
 `verify-methods`, `assess-result-validity`, `inventory-results`,
 `write-results`, `write-introduction`, `write-methods`, `write-discussion`,
-`assemble-latex`, and `quality-check`.
+`assemble-latex`, and `quality-check`. When references change, regenerate the
+affected plan and writing. When results change, reopen core evidence and
+regenerate Results and downstream sections; use `status` to compute stale
+scope.

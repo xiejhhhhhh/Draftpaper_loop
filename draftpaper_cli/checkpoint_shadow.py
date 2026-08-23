@@ -17,6 +17,7 @@ from .passport import project_root, utc_now
 from .state_kernel import atomic_write_json, atomic_write_text
 
 SHADOW_REPORT_SCHEMA = "dpl.checkpoint_v5_shadow_report.v1"
+V6_SHADOW_REPORT_SCHEMA = "dpl.checkpoint_v6_shadow_report.v1"
 _PROTECTED_FILES = (
     "project.json",
     "project_passport.yaml",
@@ -289,4 +290,82 @@ def shadow_checkpoint_v5(project: str | Path, *, output_root: str | Path | None 
     }
 
 
-__all__ = ["SHADOW_REPORT_SCHEMA", "shadow_checkpoint_v5"]
+def shadow_checkpoint_v6(project: str | Path, *, output_root: str | Path | None = None) -> dict[str, Any]:
+    """Verify v6 packages without changing project state or package files.
+
+    v1-v5 packages are intentionally reported as historical read-only records.
+    This makes the shadow result suitable for a release gate: it can prove
+    that a real project is safe to inspect while refusing to silently upgrade
+    any earlier author decision.
+    """
+
+    from .checkpoint_summary import validate_checkpoint_summary
+
+    root = project_root(project)
+    target = _safe_output_root(root, output_root)
+    before = _protected_snapshot(root)
+    entries: list[dict[str, Any]] = []
+    for record in _records(root):
+        path: Path | None = None
+        relative = str(record.get("stage_summary_json") or "").replace("\\", "/")
+        if relative and not Path(relative).is_absolute() and ".." not in Path(relative).parts:
+            path = root / relative
+        schema = _summary_schema(path)
+        base = {
+            "checkpoint_id": record.get("checkpoint_id"),
+            "summary_schema": schema,
+            "summary_path": str(path.resolve()) if path and path.is_file() else None,
+        }
+        if schema is None:
+            entries.append({**base, "status": "invalid", "reason_codes": ["summary_missing_or_invalid"]})
+            continue
+        if schema != "dpl.checkpoint_summary.v6":
+            entries.append(
+                {
+                    **base,
+                    "status": "legacy_read_only",
+                    "reason_codes": ["historical_checkpoint_requires_explicit_v6_recheck"],
+                    "migration_action": "create_new_v6_checkpoint_and_request_c3",
+                }
+            )
+            continue
+        validation = validate_checkpoint_summary(root, record)
+        entries.append(
+            {
+                **base,
+                "status": "passed" if validation.get("valid") else "invalid",
+                "reason_codes": [str(item) for item in validation.get("reasons") or []],
+                "scientific_decision_sha256": record.get("scientific_decision_sha256"),
+            }
+        )
+    after = _protected_snapshot(root)
+    project_unchanged = before == after
+    status = "passed" if entries and project_unchanged and all(item.get("status") in {"passed", "legacy_read_only"} for item in entries) else "blocked"
+    report = {
+        "schema_version": V6_SHADOW_REPORT_SCHEMA,
+        "project_path": str(root),
+        "generated_at": utc_now(),
+        "mode": "read_only_shadow",
+        "checkpoint_count": len(entries),
+        "checkpoints": entries,
+        "project_state_unchanged": project_unchanged,
+        "protected_state_before_sha256": _hash(before),
+        "protected_state_after_sha256": _hash(after),
+        "status": status,
+    }
+    report["report_sha256"] = _hash({key: value for key, value in report.items() if key != "report_sha256"})
+    target.mkdir(parents=True, exist_ok=True)
+    json_path = target / "checkpoint_v6_shadow_report.json"
+    html_path = target / "checkpoint_v6_shadow_report.zh-CN.html"
+    atomic_write_json(json_path, report)
+    atomic_write_text(html_path, _render_html(report).replace("v5 checkpoint", "v6 checkpoint"))
+    return {
+        "status": status,
+        "project_path": str(root),
+        "report": report,
+        "report_json": str(json_path.resolve()),
+        "report_html": str(html_path.resolve()),
+    }
+
+
+__all__ = ["SHADOW_REPORT_SCHEMA", "V6_SHADOW_REPORT_SCHEMA", "shadow_checkpoint_v5", "shadow_checkpoint_v6"]

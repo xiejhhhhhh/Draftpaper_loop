@@ -128,7 +128,7 @@ def test_ten_prose_citation_and_format_cycles_preserve_the_scientific_decision()
         assert decision["requires_reconfirmation"] is False
 
 
-def test_v5_checkpoint_page_is_readable_and_same_science_continues_without_new_user_hash(tmp_path: Path) -> None:
+def test_v6_checkpoint_page_is_readable_and_same_science_continues_without_new_user_hash(tmp_path: Path) -> None:
     project = create_project(root=tmp_path / "project", idea="continuity", field="generic scientific workflow").path
     first = checkpoint_project(project, stage="data")
     resume_project(project, checkpoint_hash=first["checkpoint_hash"])
@@ -137,14 +137,14 @@ def test_v5_checkpoint_page_is_readable_and_same_science_continues_without_new_u
     package = project / second["checkpoint_summary"]["project_relative_dir"]
     summary = json.loads((package / "stage_summary.json").read_text(encoding="utf-8"))
     decision_html = (package / "stage_summary.zh-CN.html").read_text(encoding="utf-8")
-    audit_html = (package / "stage_audit.zh-CN.html").read_text(encoding="utf-8")
+    audit = json.loads((package / "stage_audit.json").read_text(encoding="utf-8"))
 
-    assert summary["schema_version"] == "dpl.checkpoint_summary.v5"
+    assert summary["schema_version"] == "dpl.checkpoint_summary.v6"
     assert summary["confirmation_continuity"]["eligible"] is True
     assert summary["review_requirement"] == "notify_only"
     assert "本次确认什么" in decision_html
     assert "Agent实际工作" not in decision_html
-    assert "Agent实际工作" in audit_html
+    assert audit["stage_summary_sha256"] == summary["stage_summary_sha256"]
     assert validate_checkpoint_readability(project, checkpoint_package_id=summary["checkpoint_id"])["status"] == "passed"
     assert continue_workflow(project)["automatic_review"]["status"] == "resumed_after_system_acknowledgement"
 

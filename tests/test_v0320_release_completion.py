@@ -17,8 +17,8 @@ def test_v0320_release_identity_and_scope() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     manifest = build_release_manifest()
 
-    assert version == "0.41.1"
     assert manifest["package_version"] == version
+    assert version.count(".") == 2
     assert manifest["command_count"] == len(COMMAND_SPECS)
     assert len(manifest["release_fixture_ids"]) == 5
     assert manifest["resource_schema_status"] == "passed"

@@ -9,7 +9,6 @@ from typing import Any
 
 from .command_registry import COMMAND_SPECS, CommandSpec
 
-
 HARD_GATE_COMMANDS = frozenset({
     "assess-core-evidence",
     "assess-data-quality",
@@ -47,10 +46,17 @@ def _json_type(action: argparse.Action) -> str:
     return "string"
 
 
-def command_input_schema(command: str) -> tuple[dict[str, Any], bool]:
-    from .cli import build_parser
+def _command_input_schema(parser: argparse.ArgumentParser | None) -> tuple[dict[str, Any], bool]:
+    """Return a command schema from an already selected subparser.
 
-    parser = _subparser_choices(build_parser()).get(command)
+    ``build_command_contracts`` validates every registered command.  Rebuilding
+    the full CLI parser for each command makes that validation needlessly slow
+    on Windows once the command catalogue grows beyond a few hundred entries.
+    Keeping parser construction at the caller boundary preserves the public
+    ``command_input_schema`` API while allowing the full report to share one
+    immutable parser tree.
+    """
+
     if parser is None:
         return {"type": "object", "properties": {}, "additionalProperties": False}, False
     properties: dict[str, Any] = {}
@@ -75,6 +81,13 @@ def command_input_schema(command: str) -> tuple[dict[str, Any], bool]:
         "required": sorted(set(required)),
         "additionalProperties": False,
     }, "project" in properties
+
+
+def command_input_schema(command: str) -> tuple[dict[str, Any], bool]:
+    from .cli import build_parser
+
+    parser = _subparser_choices(build_parser()).get(command)
+    return _command_input_schema(parser)
 
 
 def required_options(command: str) -> list[str]:
@@ -138,7 +151,7 @@ def build_command_contracts() -> dict[str, Any]:
             local_issues.append("command_spec_missing")
         if parser is None:
             local_issues.append("parser_missing")
-        schema, project_scoped = command_input_schema(name) if parser else ({"type": "object"}, False)
+        schema, project_scoped = _command_input_schema(parser) if parser else ({"type": "object"}, False)
         if spec and parser:
             local_issues.extend(_handler_issues(spec, {action.dest for action in _actions(parser)}))
         if spec and name in HARD_GATE_COMMANDS:
@@ -157,6 +170,11 @@ def build_command_contracts() -> dict[str, Any]:
             "project_scoped": project_scoped,
             "risk_level": spec.risk_level if spec else None,
             "mutates_project": spec.mutates_project if spec else None,
+            "decision_family": spec.decision_family if spec else None,
+            "packet_policy": spec.packet_policy if spec else None,
+            "risk_resolver": spec.risk_resolver if spec else None,
+            "receipt_contract": spec.receipt_contract if spec else None,
+            "delegation_policy": spec.delegation_policy if spec else None,
             "issues": local_issues,
         })
     return {

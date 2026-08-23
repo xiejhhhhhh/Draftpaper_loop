@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.research_plan_decision_brief.v1",
+  "type": "object",
+  "required": ["schema_version", "decision_family", "decision_question_zh", "decision_question_en", "objective_zh", "objective_en", "claims", "figures", "methods", "statistics", "semantic_delta", "facts", "semantic_subject", "brief_semantic_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.research_plan_decision_brief.v1"},
+    "decision_family": {"const": "scientific_plan"},
+    "claims": {"type": "array", "minItems": 1},
+    "figures": {"type": "array"},
+    "methods": {"type": "array"},
+    "statistics": {"type": "object"},
+    "semantic_delta": {"type": "object"},
+    "facts": {"type": "array", "minItems": 1},
+    "semantic_subject": {"type": "object"},
+    "brief_semantic_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

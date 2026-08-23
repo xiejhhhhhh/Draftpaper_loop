@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.41.1",
-  "workflow_skill_sha256": "9412fe695418e49d66a818c7956598ace852ea6f82f441b8e0664844f469ce7a",
-  "workflow_contract_sha256": "26f9b25f3e2d3f86c0dfe97ceedb44fff6d5f805b48d3380517378487ed244f8",
+  "package_version": "0.42.0",
+  "workflow_skill_sha256": "2e5d713066b270b678cf7e16789c602c0f38bf643e77d4620dd1e40b0879cf8e",
+  "workflow_contract_sha256": "7c326b43e3253e702835d5371daf79d551a94137cc4578de3aa7803211d133d8",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 260,
+  "command_count": 270,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -15,6 +15,7 @@
     "review-research-plan",
     "confirm-research-plan",
     "reopen-research-plan",
+    "audit-research-plan-migration",
     "path-budget-check",
     "token-report",
     "validate-confirmed-figure-alignment",
@@ -57,6 +58,9 @@
     "reconcile-project-drift",
     "show-scientific-baseline",
     "show-checkpoint-audit",
+    "inspect-review-evidence",
+    "render-checkpoint-audit",
+    "shadow-checkpoint-v6",
     "compare-checkpoint-decision",
     "explain-reconfirmation",
     "validate-checkpoint-readability",
@@ -92,14 +96,15 @@
   },
   "checkpoint_contract": {
     "status": "passed",
-    "summary_schema": "dpl.checkpoint_summary.v5",
+    "summary_schema": "dpl.checkpoint_summary.v6",
     "schema_files": {
-      "summary": "resources/schemas/checkpoint_summary_v5.json",
+      "summary": "resources/schemas/checkpoint_summary_v6.json",
       "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
       "confirmation_request": "resources/schemas/confirmation_request_v2.json",
       "change_report": "resources/schemas/checkpoint_change_report_v1.json",
       "unresolved_issues": "resources/schemas/checkpoint_unresolved_issues_v1.json",
-      "agent_payload": "resources/schemas/checkpoint_agent_payload_v2.json",
+      "agent_payload": "resources/schemas/checkpoint_agent_payload_v3.json",
+      "stage_audit": "resources/schemas/checkpoint_stage_audit_v1.json",
       "decision_brief": "resources/schemas/human_decision_brief_v1.json",
       "scientific_decision_fingerprint": "resources/schemas/scientific_decision_fingerprint_v1.json",
       "confirmation_continuity_receipt": "resources/schemas/confirmation_continuity_receipt_v1.json",
@@ -111,7 +116,7 @@
     "required_companions": [
       "stage_summary.zh-CN.html",
       "stage_summary.en.html",
-      "stage_audit.zh-CN.html",
+      "stage_audit.json",
       "stage_summary.json",
       "human_decision_brief_v1.json",
       "scientific_decision_fingerprint_v1.json",
@@ -130,8 +135,27 @@
       "absolute_path"
     ]
   },
+  "human_review_packet_contract": {
+    "status": "passed",
+    "schemas": {
+      "packet": "dpl.human_review_packet.v1",
+      "research_plan_brief": "dpl.research_plan_decision_brief.v1",
+      "scientific_plan_fingerprint": "dpl.scientific_plan_fingerprint.v1",
+      "operation_effect_fingerprint": "dpl.operation_effect_fingerprint.v1",
+      "user_intent_receipt": "dpl.user_intent_receipt.v1"
+    },
+    "schema_files": {
+      "packet": "resources/schemas/human_review_packet_v1.json",
+      "research_plan_brief": "resources/schemas/research_plan_decision_brief_v1.json",
+      "scientific_plan_fingerprint": "resources/schemas/scientific_plan_fingerprint_v1.json",
+      "operation_effect_fingerprint": "resources/schemas/operation_effect_fingerprint_v1.json",
+      "user_intent_receipt": "resources/schemas/user_intent_receipt_v1.json"
+    },
+    "missing_schema_files": [],
+    "default_agent_context_budget_bytes": 12288
+  },
   "review_governance": {
-    "summary_schema": "dpl.checkpoint_summary.v5",
+    "summary_schema": "dpl.checkpoint_summary.v6",
     "workflow_trace_schema": "dpl.workflow_trace.v2",
     "command_transaction_schema": "dpl.command_transaction.v3",
     "modes": [

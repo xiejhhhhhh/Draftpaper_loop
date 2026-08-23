@@ -1425,7 +1425,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     passport = load_project_passport(state.path)
     if passport.get("awaiting_checkpoint"):
         raise OrchestratorError("A checkpoint is already awaiting resume.")
-    from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v5
+    from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v6
 
     before_artifacts = load_project_passport(state.path).get("artifacts") or []
     base = {
@@ -1439,7 +1439,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     # Allocate the immutable package id before rendering.  Earlier versions
     # rendered a provisional and a final summary solely to discover this id;
     # that made a checkpoint's own generated files leak into its activity and
-    # scope.  The ledger hash is now allocated first, then one v5 package is
+    # scope.  The ledger hash is now allocated first, then one v6 package is
     # written atomically against that boundary.
     id_seed = json.dumps(
         {"stage": stage, "note": note, "created_at": base["created_at"], "project_id": base["project_id"]},
@@ -1455,7 +1455,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
     base["hash"] = _checkpoint_hash(base)
-    final_summary = write_stage_summary_v5(
+    final_summary = write_stage_summary_v6(
         state.path,
         stage=stage,
         command="checkpoint",
@@ -1478,10 +1478,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "absolute_path": final_summary["absolute_stage_summary_zh_html"],
         "source_semantic_sha256": final_summary["stage_summary_sha256"],
     }
-    audit_path = {
-        "project_relative_path": final_summary["stage_audit_zh_html"],
-        "absolute_path": final_summary["absolute_stage_audit_zh_html"],
-    }
+    audit_path = final_summary["technical_audit_json"]
     return {
         "stage_completion_summary_zh": final_summary["stage_completion_summary_zh"],
         "primary_human_review_html": decision_path,
@@ -1494,7 +1491,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "confirmation_meaning_zh": final_summary["confirmation_meaning_zh"],
         "confirmation_meaning_en": final_summary["confirmation_meaning_en"],
         "confirmation_command": final_summary["confirmation_command"],
-        "technical_audit_html": audit_path,
+        "technical_audit_json": audit_path,
         "status": "checkpoint_created",
         "project_path": str(state.path),
         "checkpoint_hash": base["hash"],
@@ -1510,7 +1507,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             "change_report": final_summary["absolute_change_report"],
             "unresolved_issues": final_summary["absolute_unresolved_issues"],
             "agent_payload": final_summary["absolute_agent_payload"],
-            "stage_audit": final_summary["absolute_stage_audit_zh_html"],
+            "stage_audit": final_summary["absolute_stage_audit_json"],
             "human_decision_brief": str((state.path / final_summary["human_decision_brief"]).resolve()),
         },
         "primary_artifacts": agent_artifact_paths(state.path, final_summary["inspection_targets"]),

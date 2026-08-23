@@ -13,7 +13,7 @@ from draftpaper_cli.checkpoint_migration import audit_checkpoint_v5_migration
 from draftpaper_cli.checkpoint_readability import build_checkpoint_readability_report
 from draftpaper_cli.checkpoint_scope import build_checkpoint_scope
 from draftpaper_cli.checkpoint_shadow import _summary_schema, shadow_checkpoint_v5
-from draftpaper_cli.checkpoint_summary import show_checkpoint_summary, write_stage_summary_v4
+from draftpaper_cli.checkpoint_summary import show_checkpoint_summary, write_stage_summary_v4, write_stage_summary_v5
 from draftpaper_cli.confirmation_continuity import evaluate_confirmation_continuity
 from draftpaper_cli.doctor import verify_next_action
 from draftpaper_cli.evidence_repair_router import route_evidence_failures
@@ -99,7 +99,7 @@ def _fingerprint(summary: dict) -> dict:
     return build_scientific_decision_fingerprint(summary, brief, figure_claim_map=build_figure_claim_map(summary, brief))
 
 
-def test_v5_package_binds_the_readable_page_audit_and_scientific_request(tmp_path: Path) -> None:
+def test_v6_package_binds_the_readable_page_json_audit_and_scientific_request(tmp_path: Path) -> None:
     project = create_project(root=tmp_path / "project", idea="one canonical checkpoint package", field="generic").path
     checkpoint = checkpoint_project(project, stage="data")
     package = project / checkpoint["checkpoint_summary"]["project_relative_dir"]
@@ -107,24 +107,24 @@ def test_v5_package_binds_the_readable_page_audit_and_scientific_request(tmp_pat
     request = json.loads((package / "confirmation_request.json").read_text(encoding="utf-8"))
     agent = json.loads((package / "agent_payload.json").read_text(encoding="utf-8"))
     decision_html = (package / "stage_summary.zh-CN.html").read_text(encoding="utf-8")
-    audit_html = (package / "stage_audit.zh-CN.html").read_text(encoding="utf-8")
+    audit = json.loads((package / "stage_audit.json").read_text(encoding="utf-8"))
 
-    assert summary["schema_version"] == "dpl.checkpoint_summary.v5"
+    assert summary["schema_version"] == "dpl.checkpoint_summary.v6"
     assert request["schema_version"] == "dpl.confirmation_request.v2"
     assert request["scientific_decision_sha256"] == summary["scientific_decision_fingerprint"]["scientific_decision_sha256"]
     assert request["human_brief_semantic_sha256"] == summary["human_brief_semantic_sha256"]
     assert "stage_summary_sha256" not in request
     assert (package / "human_decision_brief_v1.json").is_file()
     assert (package / "figure_claim_map_v1.json").is_file()
-    assert summary["audit_bundle_ref"].endswith("stage_audit.zh-CN.html")
+    assert summary["audit_bundle_ref"].endswith("stage_audit.json")
     assert "本次确认什么" in decision_html
     assert "Agent实际工作" not in decision_html
-    assert "Agent实际工作" in audit_html
-    assert list(agent)[:2] == ["primary_human_review_html", "human_decision_html"]
-    assert list(agent)[-1] == "technical_audit_html"
+    assert audit["stage_summary_sha256"] == summary["stage_summary_sha256"]
+    assert agent["schema_version"] == "dpl.checkpoint_agent_payload.v3"
+    assert "technical_audit_html" not in agent
     assert agent["primary_human_review_html"]["project_relative_path"].endswith("stage_summary.zh-CN.html")
     assert Path(agent["primary_human_review_html"]["absolute_path"]).is_relative_to(project)
-    assert Path(agent["technical_audit_html"]["absolute_path"]).is_relative_to(project)
+    assert Path(agent["technical_audit_json"]["absolute_path"]).is_relative_to(project)
     assert agent["stage_completion_summary_zh"]
     assert agent["decision_question_zh"]
     assert agent["decision_summary_zh"]
@@ -145,7 +145,7 @@ def test_verify_next_action_returns_the_readable_page_for_pending_checkpoint(tmp
     assert verified["command"] == "resume"
     assert verified["primary_human_review_html"]["project_relative_path"] == checkpoint["stage_summary_zh_html"]["project_relative_path"]
     assert Path(verified["primary_human_review_html"]["absolute_path"]).is_relative_to(project)
-    assert Path(verified["technical_audit_html"]["absolute_path"]).is_relative_to(project)
+    assert Path(verified["technical_audit_json"]["absolute_path"]).is_relative_to(project)
 
 
 def test_fingerprint_ignores_paths_order_and_presentation_but_detects_scientific_change() -> None:
@@ -302,20 +302,28 @@ def test_legacy_v4_migration_audit_is_read_only_and_requires_explicit_v5_c3(tmp_
 
 def test_pre_figure_claim_v5_package_is_read_only_and_never_silently_reconfirmed(tmp_path: Path) -> None:
     project = create_project(root=tmp_path / "project", idea="pre figure map v5", field="generic").path
-    checkpoint = checkpoint_project(project, stage="data")
-    summary_path = project / checkpoint["checkpoint_summary"]["project_relative_dir"] / "stage_summary.json"
+    checkpoint = write_stage_summary_v5(
+        project,
+        stage="data",
+        command="checkpoint",
+        payload={"status": "checkpoint_created"},
+        before_artifacts=[],
+        checkpoint_id="legacy-v5-figure-map",
+        checkpoint_hash="legacy-v5-figure-map-hash",
+    )
+    summary_path = Path(checkpoint["absolute_stage_summary_json"])
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     summary["scientific_decision_fingerprint"]["canonical_payload"].pop("figure_claim_map", None)
     summary.pop("scientific_figure_claim_sha256", None)
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     before = summary_path.read_bytes()
 
-    audit = audit_checkpoint_v5_migration(project, checkpoint_hash=checkpoint["checkpoint_hash"])
+    audit = audit_checkpoint_v5_migration(project, checkpoint_hash="legacy-v5-figure-map-hash")
     assert audit["status"] == "legacy_read_only"
     assert audit["migration_action"] == "create_new_v5_checkpoint_and_request_c3"
     assert audit["reason_codes"] == ["legacy_v5_pre_figure_claim_fingerprint"]
 
-    shown = show_checkpoint_summary(project, checkpoint["checkpoint_hash"])
+    shown = show_checkpoint_summary(project, "legacy-v5-figure-map-hash")
     assert shown["status"] == "legacy_summary"
     assert shown["migration_action"] == "create_new_v5_checkpoint_and_request_c3"
     assert shown["legacy_reason_codes"] == ["legacy_v5_pre_figure_claim_fingerprint"]
@@ -330,8 +338,16 @@ def test_pre_figure_claim_v5_package_is_read_only_and_never_silently_reconfirmed
 
 def test_pre_method_analysis_v5_core_package_is_read_only_and_requires_new_c3(tmp_path: Path) -> None:
     project = create_project(root=tmp_path / "project", idea="pre method identity", field="generic").path
-    checkpoint = checkpoint_project(project, stage="data")
-    summary_path = project / checkpoint["checkpoint_summary"]["project_relative_dir"] / "stage_summary.json"
+    checkpoint = write_stage_summary_v5(
+        project,
+        stage="data",
+        command="checkpoint",
+        payload={"status": "checkpoint_created"},
+        before_artifacts=[],
+        checkpoint_id="legacy-v5-method-identity",
+        checkpoint_hash="legacy-v5-method-identity-hash",
+    )
+    summary_path = Path(checkpoint["absolute_stage_summary_json"])
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     summary["checkpoint_type"] = "core_evidence"
     summary["completed_stage"] = "core_evidence"
@@ -342,8 +358,8 @@ def test_pre_method_analysis_v5_core_package_is_read_only_and_requires_new_c3(tm
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     before = summary_path.read_bytes()
 
-    audit = audit_checkpoint_v5_migration(project, checkpoint_hash=checkpoint["checkpoint_hash"])
-    shown = show_checkpoint_summary(project, checkpoint["checkpoint_hash"])
+    audit = audit_checkpoint_v5_migration(project, checkpoint_hash="legacy-v5-method-identity-hash")
+    shown = show_checkpoint_summary(project, "legacy-v5-method-identity-hash")
 
     assert audit["status"] == "legacy_read_only"
     assert audit["reason_codes"] == ["legacy_v5_pre_method_analysis_fingerprint"]
@@ -362,8 +378,16 @@ def test_shadow_legacy_schema_probe_tolerates_a_utf8_window_boundary(tmp_path: P
 
 def test_shadow_checkpoint_v5_writes_only_outside_project(tmp_path: Path) -> None:
     project = create_project(root=tmp_path / "project", idea="shadow", field="generic").path
-    checkpoint = checkpoint_project(project, stage="data")
-    summary_path = project / checkpoint["checkpoint_summary"]["project_relative_dir"] / "stage_summary.json"
+    checkpoint = write_stage_summary_v5(
+        project,
+        stage="data",
+        command="checkpoint",
+        payload={"status": "checkpoint_created"},
+        before_artifacts=[],
+        checkpoint_id="shadow-v5",
+        checkpoint_hash="shadow-v5-hash",
+    )
+    summary_path = Path(checkpoint["absolute_stage_summary_json"])
     before = summary_path.read_bytes()
     output = tmp_path / "shadow-output"
     result = shadow_checkpoint_v5(project, output_root=output)

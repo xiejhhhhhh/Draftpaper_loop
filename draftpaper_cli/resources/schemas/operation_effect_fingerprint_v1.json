@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.operation_effect_fingerprint.v1",
+  "type": "object",
+  "required": ["schema_version", "operation_subject", "operation_effect_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.operation_effect_fingerprint.v1"},
+    "operation_subject": {"type": "object"},
+    "operation_effect_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

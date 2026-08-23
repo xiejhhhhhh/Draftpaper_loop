@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.41.1。** 人工确认点将“作者要确认的科学决定”与“技术审计”分开：默认的 `stage_summary.zh-CN.html` 是短小、绑定证据的可读决定页，说明确认对象、相对上次的语义变化、科学上下文、主图、论断边界、排除范围和重新确认条件；`stage_audit.zh-CN.html` 保留完整活动、产物、验证和 hash 审计。科学决定指纹可区分真正的数据/方法/cohort/split/指标/图表/论断变化与 manifest、HTML、引用映射或 PDF 重建；科学内容相同则写入 continuity receipt，不再反复要求 C3。v0.41.1 还用匿名 showcase 覆盖真实 v5 页面，并保留 cohort 绑定的图表表格证据而不晋升未绑定数据。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.42.0。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -49,7 +49,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
-**确认点透明度与运行时身份。** 每次人工确认前，Draftpaper-loop 都会生成中文可读决定页、独立技术审计页、artifact manifest、confirmation request、DecisionBrief、科学指纹和可读性报告。Agent 会先给出决定页的项目相对路径与本机绝对路径，再给审计页路径和确认含义。`session-preflight` 会在写入项目之前绑定源码 checkout、wheel、Python、CommandSpec、schema registry、Skill 副本和 plugin catalog。
+**确认点透明度与运行时身份。** 每次人工确认前，Draftpaper-loop 都会生成中英文可读决定页、artifact manifest、confirmation request、DecisionBrief、科学指纹、机器审计 JSON 和可读性报告。Agent 会先给出决定页的项目相对路径与本机绝对路径，再说明语义变化、未解决事项和确认含义；技术审计只在显式请求时从 JSON 渲染到缓存。`session-preflight` 会在写入项目之前绑定源码 checkout、wheel、Python、CommandSpec、schema registry、Skill 副本和 plugin catalog。
 <!-- /capability:checkpoint_summary_and_runtime_handshake -->
 
 <!-- capability:metadata_first_research_code_sources -->
@@ -68,7 +68,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 操作方式见[学科感知文献检索与身份核验](docs/discipline_aware_literature.zh-CN.md)。
 <!-- /capability:discipline_aware_literature_identity -->
 
-**证据身份与可读阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v5` 将作者可读的 `HumanDecisionBrief` 与完整审计包分离，记录 scientific/audit/presentation 三类指纹，将 StageActivity 限定在当前 checkpoint window，并把主图与决定陈述绑定。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
+**证据身份与可读阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v6` 将作者可读的 `HumanDecisionBrief` 与 JSON-first 完整审计分离，记录 scientific/audit/presentation 三类指纹，将 StageActivity 限定在当前 checkpoint window，并把主图与决定陈述绑定。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
 
 ### 从早期版本到当前框架
 
@@ -180,10 +180,11 @@ idea、已有数据、项目代码与文献
 3. **最终稿与发布确认**：一起查看作者补全 packet、候选 PDF、最终引用审计、两位盲评意见和 release hash。
 
 在展示上述任一确认点之前，Draftpaper-loop 会先在
-`review/checkpoints/<checkpoint_id>/` 写出一个离线成果包。用户应先打开
-`stage_summary.zh-CN.html`：它是正式作者决定页，展示科学问题、相对上次的语义变化、
-主事实与主图、论断边界、排除范围和重新确认条件；`stage_audit.zh-CN.html` 才保存完整
-技术审计。Agent 会同时给出两页的项目相对路径和本机绝对路径。决定是否需要新的 C3
+`review/checkpoints/<checkpoint_id>/` 写出一个离线成果包。用户应先打开中英文
+`stage_summary` 决定页：它展示科学问题、相对上次的语义变化、主事实与主图、论断边界、
+排除范围和重新确认条件；完整技术审计保留为 `stage_audit.json`，仅在需要时按需渲染。
+研究蓝图另使用版本化 `HumanReviewPacket`，且必须等本轮待办完成后才请求确认。Agent 会先给出
+决定页的项目相对路径和本机绝对路径，再说明差异、阻断项和确认含义。决定是否需要新的 C3
 由 `scientific_decision_sha256` 而非不断变化的审计包 hash 决定；科学内容未变时会使用
 continuity receipt。详见[人工确认点成果包](docs/human_checkpoints.zh-CN.md)。
 
@@ -503,6 +504,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.42.0（2026-08-23）-- 统一可读审阅包与 JSON-first 审计
+
+- 研究计划确认升级为版本化中英文 `HumanReviewPacket`：页面在同一处展示研究问题、claim 边界、数据角色、方法、统计、主图/表格合同、可行性限制和相对上次的语义变化；历史包保留，active pointer 只切换当前包。
+- `RevisionCycle` 增加待办与决定项门禁。计划仍在修订或验证时只报告集中 blocker，不生成可消费确认命令；同一完整 revision 的等价重复审阅复用不可变包，真实科学变化才形成一个新的 C3 请求，并记录 user-intent/continuity receipt。
+- 新 checkpoint 使用 `dpl.checkpoint_summary.v6` 和 `stage_audit.json`。默认 Agent 载荷限制为决定摘要、可读页路径和最多必要交付物；`render-checkpoint-audit` 仅在 `.draftpaper/render_cache/` 按需生成技术 HTML，`inspect-review-evidence --ref` 读取单项、项目内且有大小限制的证据。
+- 27 条原 `human_checkpoint` 命令现有显式 decision family、packet policy、风险解析器、receipt 与 delegation 合同。`checkpoint` 只构建包，`resume` 只消费已有 receipt；受保护写入不再自动等同于新的长篇人工科学确认。
+
 ### v0.41.1（2026-08-23）-- v5 确认页与证据绑定加固
 
 - 匿名 checkpoint showcase 现在会为 research-plan、data、methods、result-support、core-evidence 与 quality checkpoints 生成真实的 v5 决定页/审计页包，直接覆盖普通 checkpoint 所使用的可读页面、双语门禁、确认合同与审计分离。

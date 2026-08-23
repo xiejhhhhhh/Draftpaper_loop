@@ -23,19 +23,19 @@ from draftpaper_cli.scientific_baseline import create_scientific_baseline
 from draftpaper_cli.workflow_macros import continue_workflow
 
 
-def test_v5_checkpoint_separates_decision_page_from_activity_audit_and_is_hash_valid(tmp_path: Path) -> None:
-    project = create_project(root=tmp_path / "project", idea="v5 checkpoint", field="generic").path
+def test_v6_checkpoint_separates_decision_page_from_json_audit_and_is_hash_valid(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path / "project", idea="v6 checkpoint", field="generic").path
     checkpoint = checkpoint_project(project, stage="data")
     summary_path = project / checkpoint["checkpoint_summary"]["stage_summary_json"]
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    assert summary["schema_version"] == "dpl.checkpoint_summary.v5"
+    assert summary["schema_version"] == "dpl.checkpoint_summary.v6"
     assert summary["stage_activity_bundle"]["actions"]
     assert summary["review_requirement"] == "agent_delegable"
     decision_html = (summary_path.parent / "stage_summary.zh-CN.html").read_text(encoding="utf-8")
-    audit_html = (summary_path.parent / "stage_audit.zh-CN.html").read_text(encoding="utf-8")
+    audit = json.loads((summary_path.parent / "stage_audit.json").read_text(encoding="utf-8"))
     assert "本次确认什么" in decision_html
     assert "Agent实际工作" not in decision_html
-    assert "Agent实际工作" in audit_html
+    assert audit["stage_summary_sha256"] == summary["stage_summary_sha256"]
     ledger_event = json.loads((project / "checkpoint_ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
     assert validate_checkpoint_summary(project, ledger_event)["valid"] is True
 

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from html import escape
 from html import unescape
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from .literature_language import tokenize_multilingual
 from .literature_identity import canonical_work_id
@@ -1159,8 +1159,79 @@ def _display_score(item: dict[str, Any], field: str) -> str:
 
 def write_literature_html_summaries(references_dir: Path, items: list[dict[str, Any]]) -> list[str]:
     from .literature_html import render_literature_html
+    from .literature_teaching_corpus import TEACHING_CORPUS_PATH, write_literature_teaching_corpus
 
-    return render_literature_html(references_dir, items)
+    # A confirmed corpus is the publication boundary for both the summary
+    # index and downstream learning.  When an older workflow has not yet
+    # reached confirmation, retain its broad operational index but label it as
+    # non-teaching material; do not silently publish an empty index.
+    corpus = write_literature_teaching_corpus(references_dir.parent)
+    output_items = _items_for_literature_summary_projection(items, corpus)
+    outputs = render_literature_html(
+        references_dir,
+        output_items,
+        corpus_manifest=corpus,
+    )
+    return [*outputs, TEACHING_CORPUS_PATH]
+
+
+def _items_for_literature_summary_projection(
+    items: list[dict[str, Any]],
+    corpus: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Project a confirmed teaching corpus into summary HTML in its own order.
+
+    ``literature_items.json`` is an operational list and may retain rejected
+    candidates.  Once Core has a confirmed corpus, allowing an extra row into
+    the human-facing index would make that index disagree with the learner and
+    invite later re-contamination.  The incomplete branch deliberately keeps
+    legacy discoverability while remaining ineligible for teaching.
+    """
+
+    if str(corpus.get("corpus_status") or "") != "confirmed":
+        return items
+    by_key = {
+        str(item.get("bibtex_key") or item.get("citation_key") or "").strip(): item
+        for item in items
+        if str(item.get("bibtex_key") or item.get("citation_key") or "").strip()
+    }
+    accepted = [
+        item
+        for item in corpus.get("accepted_works") or ()
+        if isinstance(item, Mapping)
+    ]
+    missing = [
+        str(item.get("citation_key") or "")
+        for item in accepted
+        if str(item.get("citation_key") or "") not in by_key
+    ]
+    if missing:
+        raise ValueError(
+            "confirmed literature corpus cannot be projected because active items are missing: "
+            + ", ".join(missing)
+        )
+    projected: list[dict[str, Any]] = []
+    for work in accepted:
+        key = str(work.get("citation_key") or "")
+        item = dict(by_key[key])
+        # The detail renderer uses this exact path when a caller needs to
+        # navigate from a learner card back to the formal Core summary.
+        item["summary_detail_path"] = str(work.get("summary_detail_path") or "")
+        projected.append(item)
+    return projected
+
+
+def _legacy_html_summary_renderer(
+    references_dir: Path,
+    items: list[dict[str, Any]],
+) -> list[str]:
+    """Retained read-only compatibility renderer for archived v0.40 artifacts.
+
+    New Core projections use :mod:`draftpaper_cli.literature_html` through
+    :func:`write_literature_html_summaries`, because that route stamps and
+    constrains the confirmed teaching corpus.  This historical function is
+    intentionally not part of the active write path.
+    """
 
     summary_dir = references_dir / "literature_summaries"
     summary_dir.mkdir(parents=True, exist_ok=True)
@@ -1490,6 +1561,7 @@ def _literature_output_paths(references_dir: Path) -> list[Path]:
         references_dir / "reference_registry.json",
         references_dir / "bibliography_contract.json",
         references_dir / "literature_summaries" / "index.html",
+        references_dir / "literature_teaching_corpus_manifest.json",
     ]
     details = sorted(
         path
@@ -1589,6 +1661,7 @@ def refresh_reference_outputs(project: str | Path, *, query: str | None = None) 
 
     build_reference_registry(state.path)
     registry = write_literature_registry(state.path, result["items"])
+    html_outputs = write_literature_html_summaries(references_dir, result["items"])
     _set_reference_manifest_outputs(state.path)
     manifest = _write_literature_output_manifest(references_dir, snapshot_hash)
     return {
@@ -1598,7 +1671,7 @@ def refresh_reference_outputs(project: str | Path, *, query: str | None = None) 
         "snapshot_hash": snapshot_hash,
         "registry": registry,
         "manifest": manifest,
-        "outputs": REFERENCE_OUTPUTS + [item for item in result["html_outputs"] if item not in REFERENCE_OUTPUTS],
+        "outputs": REFERENCE_OUTPUTS + [item for item in html_outputs if item not in REFERENCE_OUTPUTS],
     }
 
 
@@ -1790,6 +1863,7 @@ def write_reference_outputs(
     from .literature_repository import write_literature_registry
 
     registry = write_literature_registry(state.path, normalized)
+    html_outputs = write_literature_html_summaries(references_dir, normalized)
     _set_reference_manifest_outputs(state.path)
     output_manifest = _write_literature_output_manifest(references_dir, snapshot_hash)
     return {

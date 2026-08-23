@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.41.1.** Human checkpoints separate the author decision from the technical audit. The default `stage_summary.zh-CN.html` is a short, evidence-bound page explaining what is being confirmed, what changed since the prior confirmation, the scientific context, main figures, claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html` retains the complete activity, artifact, validation, and hash trail. A scientific decision fingerprint distinguishes real data/method/cohort/split/metric/figure/claim changes from regenerated manifests, HTML, citation mapping, and PDF presentation; identical decisions receive a continuity receipt instead of repeated C3 confirmation. v0.41.1 also verifies the v5 page across the anonymous showcase and preserves cohort-bound figure-table evidence without promoting unbound data. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.42.0.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -49,7 +49,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
-**Checkpoint transparency and runtime identity.** Before any human confirmation, Draftpaper-loop writes a readable Chinese decision page, a separate technical audit page, artifact manifest, confirmation request, DecisionBrief, scientific fingerprint, and readability report. The Agent shows the readable page's project-relative and machine-absolute path first, then the audit path and confirmation meaning. `session-preflight` binds the source checkout, wheel, Python, command registry, schema registry, Skill copies, and plugin catalog before project writes.
+**Checkpoint transparency and runtime identity.** Before any human confirmation, Draftpaper-loop writes bilingual readable decision pages, an artifact manifest, confirmation request, DecisionBrief, scientific fingerprint, machine audit JSON, and readability reports. The Agent shows the readable page's project-relative and machine-absolute path first, then the semantic delta, unresolved items, and confirmation meaning; technical audit HTML is rendered from JSON only on explicit request. `session-preflight` binds the source checkout, wheel, Python, command registry, schema registry, Skill copies, and plugin catalog before project writes.
 <!-- /capability:checkpoint_summary_and_runtime_handshake -->
 
 <!-- capability:metadata_first_research_code_sources -->
@@ -68,7 +68,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 See [Discipline-aware literature discovery and identity](docs/discipline_aware_literature.md) for commands and status semantics.
 <!-- /capability:discipline_aware_literature_identity -->
 
-**Evidence identity and readable stage review.** The framework validates typed `MetricEvidence`, `CountEvidence`, `AggregationContract`, `PrimaryMetricContract`, `RunEvidenceBundle`, and `FigureCodeTrace v2` before Result Support or checkpoint review. A `dpl.checkpoint_summary.v5` package separates the author-facing `HumanDecisionBrief` from the complete audit bundle, records scientific/audit/presentation fingerprints, bounds StageActivity to the current checkpoint window, and aligns main figures with their claim statements. Identity is checked before values are compared, so different cohorts, runs, models, validation designs, or denominators are reported as non-comparable rather than silently merged.
+**Evidence identity and readable stage review.** The framework validates typed `MetricEvidence`, `CountEvidence`, `AggregationContract`, `PrimaryMetricContract`, `RunEvidenceBundle`, and `FigureCodeTrace v2` before Result Support or checkpoint review. A `dpl.checkpoint_summary.v6` package separates the author-facing `HumanDecisionBrief` from a JSON-first complete audit, records scientific/audit/presentation fingerprints, bounds StageActivity to the current checkpoint window, and aligns main figures with their claim statements. Identity is checked before values are compared, so different cohorts, runs, models, validation designs, or denominators are reported as non-comparable rather than silently merged.
 
 ### From the early releases to the current framework
 
@@ -180,14 +180,17 @@ The three concentrated human checkpoints are:
 3. **Final manuscript and release confirmation:** inspect the completion packet, candidate PDF, final citation audit, two blind-review reports, and release hash together.
 
 Before any of these checkpoints is presented, Draftpaper-loop writes an offline
-package under `review/checkpoints/<checkpoint_id>/`. Open
-`stage_summary.zh-CN.html` first: it is the formal author decision page, with
-the scientific question, before/after semantic delta, main facts and figures,
-claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html`
-contains the complete technical audit. The Agent response gives both pages'
-project-relative and absolute paths. `scientific_decision_sha256`, rather than
-the changing audit package hash, determines whether a new C3 decision is
-needed; unchanged science receives a continuity receipt. See
+package under `review/checkpoints/<checkpoint_id>/`. Open the bilingual
+`stage_summary` decision page first: it shows the scientific question,
+before/after semantic delta, main facts and figures, claim boundary, exclusions,
+and reopen conditions. The complete technical audit is retained as
+`stage_audit.json` and rendered only on demand. Research blueprints use a
+versioned `HumanReviewPacket` and cannot request confirmation until the current
+revision's pending tasks are complete. The Agent gives the decision page's
+project-relative and absolute paths first, then the delta, blockers, and
+confirmation meaning. `scientific_decision_sha256`, rather than a changing
+audit package hash, determines whether a new C3 decision is needed; unchanged
+science receives a continuity receipt. See
 [Human Checkpoint Packages](docs/human_checkpoints.md).
 
 ### Two routes when result support is insufficient
@@ -510,6 +513,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.42.0 (2026-08-23) -- Unified readable review packets and JSON-first audit
+
+- Research-plan confirmation now creates a versioned bilingual `HumanReviewPacket` that presents questions, claim boundaries, data roles, methods, statistics, figure/table contracts, feasibility limits, and the semantic delta together; historical packets remain available while an active pointer selects the current one.
+- `RevisionCycle` now has pending-task and decision-item gates. A plan still being drafted or validated reports grouped blockers rather than exposing a consumable confirmation command; an equivalent repeated review reuses its immutable packet, while a real scientific change creates one new C3 request with user-intent and continuity receipts kept distinct.
+- New checkpoints use `dpl.checkpoint_summary.v6` and `stage_audit.json`. Default Agent context is limited to a decision brief, readable paths, and necessary deliverables; `render-checkpoint-audit` writes technical HTML only into `.draftpaper/render_cache/` on demand, and `inspect-review-evidence --ref` reads one bounded, project-owned evidence item.
+- All 27 former `human_checkpoint` commands now declare a decision family, packet policy, risk resolver, receipt contract, and delegation policy. `checkpoint` builds a package and `resume` consumes an existing receipt; a protected write is no longer automatically treated as a new long-form human scientific decision.
+
 ### v0.41.1 (2026-08-23) -- v5 confirmation-page and evidence-binding hardening
 
 - The anonymous checkpoint showcase now generates the real v5 decision/audit package for research-plan, data, methods, result-support, core-evidence, and quality checkpoints. This exercises the same readable page, bilingual gate, confirmation contract, and audit separation that normal checkpoint creation uses.

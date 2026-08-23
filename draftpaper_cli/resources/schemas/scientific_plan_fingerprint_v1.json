@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.scientific_plan_fingerprint.v1",
+  "type": "object",
+  "required": ["schema_version", "identity_complete", "missing_artifacts", "scientific_plan_subject", "scientific_plan_sha256", "scientific_decision_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.scientific_plan_fingerprint.v1"},
+    "identity_complete": {"type": "boolean"},
+    "missing_artifacts": {"type": "array"},
+    "scientific_plan_subject": {"type": "object"},
+    "scientific_plan_sha256": {"type": "string"},
+    "scientific_decision_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

@@ -506,7 +506,11 @@ def evaluate_checkpoint_authority(project: str | Path, *, checkpoint_hash: str) 
     def check(name: str, passed: bool, detail: str = "") -> None:
         checks.append({"name": name, "passed": bool(passed), "detail": detail})
 
-    is_current_summary = summary.get("schema_version") in {"dpl.checkpoint_summary.v4", "dpl.checkpoint_summary.v5"}
+    is_current_summary = summary.get("schema_version") in {
+        "dpl.checkpoint_summary.v4",
+        "dpl.checkpoint_summary.v5",
+        "dpl.checkpoint_summary.v6",
+    }
     continuity_preserved = bool((summary.get("confirmation_continuity") or {}).get("eligible")) and summary.get("decision_status") == "continuity_preserved"
     check("current_checkpoint_summary", is_current_summary, "Agent delegation never consumes a legacy or v3 package.")
     check("summary_validation", valid_summary, "; ".join(validation_reasons))

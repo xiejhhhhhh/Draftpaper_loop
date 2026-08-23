@@ -7,13 +7,23 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from .project_scaffold import _write_json
+from .literature_teaching_corpus import (
+    build_literature_teaching_corpus,
+    literature_confirmation_binding,
+    literature_confirmation_packet_hash,
+    write_literature_teaching_corpus,
+)
+from .project_scaffold import _write_json, utc_now
 from .project_state import load_project
-
 
 PACKET_JSON = "literature_confirmation_packet.json"
 PACKET_MARKDOWN = "literature_confirmation_packet.zh-CN.md"
+RECEIPT_JSON = "literature_confirmation_receipt.json"
 TASKS_JSON = "unresolved_reference_tasks.json"
+
+
+class LiteratureConfirmationError(RuntimeError):
+    """Raised when a user confirmation is not bound to the current review packet."""
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -43,6 +53,12 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
     coverage = _read_json(references / "literature_coverage.json", {})
     provider = _read_json(references / "literature_provider_report.json", {})
     unresolved_bindings = _read_json(references / "unresolved_document_bindings.json", {"items": []})
+    teaching_candidate = build_literature_teaching_corpus(state.path)
+    accepted_corpus_candidates = [
+        item
+        for item in teaching_candidate.get("accepted_works") or ()
+        if isinstance(item, dict)
+    ]
     role_gaps = [str(value) for value in coverage.get("gaps") or []]
     rejected = [value for value in rejection.get("rejections") or [] if isinstance(value, dict)]
     routes = Counter()
@@ -103,6 +119,19 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
         "query_contract": _read_json(references / "query_contract.json", {}),
         "candidate_count": len(candidates),
         "candidates": candidates,
+        "confirmed_corpus_candidate_count": len(accepted_corpus_candidates),
+        "confirmed_corpus_candidates": [
+            {
+                "canonical_work_id": item.get("canonical_work_id"),
+                "citation_key": item.get("citation_key"),
+                "title": item.get("title"),
+                "citation_eligibility": item.get("citation_eligibility"),
+                "role_bindings": item.get("role_bindings") or [],
+                "current_project_use": item.get("current_project_use"),
+            }
+            for item in accepted_corpus_candidates
+        ],
+        "confirmed_corpus_integrity": teaching_candidate.get("set_integrity") or {},
         "rejected_candidate_count": len(rejected),
         "source_counts": dict(sorted(source_counts.items())),
         "parser_route_counts": dict(sorted(routes.items())),
@@ -122,6 +151,8 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
             "remote_parser_requires_project_consent": True,
         },
     }
+    packet["confirmation_binding"] = literature_confirmation_binding(state.path)
+    packet["packet_hash"] = literature_confirmation_packet_hash(packet)
     _write_json(references / PACKET_JSON, packet)
     _write_json(references / TASKS_JSON, {
         "schema_version": "dpl.unresolved_reference_tasks.v1",
@@ -134,6 +165,7 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
         "> 这是文献进入研究蓝图前的集中确认材料。该文件不会自动修改文献保留状态，也不会自动把 PDF 中的参考文献加入正文。",
         "",
         f"- 状态：**{packet['status']}**",
+        f"- 确认哈希：`{packet['packet_hash']}`",
         f"- 候选文献：**{len(candidates)}**",
         f"- 被相关性门禁拒绝：**{len(rejected)}**",
         f"- 待处理任务：**{len(unresolved_tasks)}**",
@@ -146,6 +178,29 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
     lines.extend(f"| `{key}` | {value} |" for key, value in sorted(source_counts.items()))
     lines.extend(f"| parser:`{key}` | {value} |" for key, value in sorted(routes.items()))
     lines.extend(["", "## 用户需要一次性确认的内容", "", "1. 保留、排除或暂缓候选文献。", "2. 有歧义文献的写作角色：研究空白、数据来源、方法、评估标准、基线或局限性。", "3. 检索缺口是否接受为真实缺口，还是补充 Zotero、本地 PDF 或新的在线检索。", "4. 复杂 PDF 是否允许在合规且满足限制时调用 MinerU Agent，或改用用户自己的 endpoint。", ""])
+    lines.extend(
+        [
+            "## 将进入正式教学语料的文献集合",
+            "",
+            "以下集合由 canonical registry、active literature snapshot 与 reference usage plan 的交集构成。"
+            + "确认 receipt 后，Draftpaper_learn 只允许这些 work 进入正式阅读顺序和深读任务。",
+            "",
+        ]
+    )
+    if accepted_corpus_candidates:
+        for item in accepted_corpus_candidates:
+            roles = ", ".join(
+                str(binding.get("citation_role") or "")
+                for binding in item.get("role_bindings") or []
+                if isinstance(binding, dict) and str(binding.get("citation_role") or "")
+            )
+            lines.append(
+                f"- `{item.get('citation_key') or ''}` · {item.get('title') or ''}"
+                f" · role: `{roles or 'unclassified'}`"
+            )
+    else:
+        lines.append("- 当前三个 Core 合同没有形成可确认的交集；先修复 registry、active snapshot 或 usage plan。")
+    lines.append("")
     if role_gaps:
         lines.extend(["## 当前文献角色缺口", "", *[f"- `{role}`：需要补充来源或由用户确认保留缺口。" for role in role_gaps], ""])
     if rejected:
@@ -159,5 +214,65 @@ def build_literature_confirmation_packet(project: str | Path) -> dict[str, Any]:
         "markdown": f"references/{PACKET_MARKDOWN}",
         "tasks": f"references/{TASKS_JSON}",
         "candidate_count": len(candidates),
+        "confirmed_corpus_candidate_count": len(accepted_corpus_candidates),
         "unresolved_task_count": len(unresolved_tasks),
+        "packet_hash": packet["packet_hash"],
+    }
+
+
+def confirm_literature_corpus(project: str | Path, *, packet_hash: str) -> dict[str, Any]:
+    """Write a human-confirmation receipt for one exact literature corpus.
+
+    This command deliberately does not modify the accepted records themselves:
+    it only records that the user accepted the current registry, active
+    snapshot and usage-plan intersection after inspecting its review packet.
+    Any later change to one of those artifacts invalidates the receipt.
+    """
+
+    state = load_project(project)
+    references = state.path / "references"
+    packet_path = references / PACKET_JSON
+    packet = _read_json(packet_path, {})
+    if not packet_path.is_file() or not isinstance(packet, dict):
+        raise LiteratureConfirmationError("Run review-literature-coverage before confirming a literature corpus.")
+    expected_hash = literature_confirmation_packet_hash(packet)
+    if str(packet.get("packet_hash") or "") != expected_hash:
+        raise LiteratureConfirmationError("The literature review packet is malformed or was edited outside its hash-bound review flow.")
+    if packet_hash != expected_hash:
+        raise LiteratureConfirmationError("The supplied packet hash does not match the current literature review packet.")
+    current_binding = literature_confirmation_binding(state.path)
+    if packet.get("confirmation_binding") != current_binding:
+        raise LiteratureConfirmationError("The literature corpus changed after review; regenerate the packet and confirm the new hash.")
+    if not current_binding.get("accepted_citation_keys"):
+        raise LiteratureConfirmationError("The current literature packet contains no accepted canonical works to confirm.")
+    if current_binding.get("accepted_citation_keys") != current_binding.get("registry_citation_keys"):
+        raise LiteratureConfirmationError(
+            "The canonical registry, active literature snapshot and usage plan do not yet agree; resolve the missing bindings before confirmation."
+        )
+    receipt = {
+        "schema_version": "dpl.literature_confirmation_receipt.v1",
+        "status": "confirmed",
+        "decision": "accepted",
+        "confirmed_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "confirmation_packet": f"references/{PACKET_JSON}",
+        "confirmation_packet_hash": expected_hash,
+        "confirmation_binding": current_binding,
+        "decision_boundary": "The user confirmed this exact literature corpus for teaching and project-role use; rejected, quarantined and unbound records remain excluded.",
+    }
+    _write_json(references / RECEIPT_JSON, receipt)
+    corpus = write_literature_teaching_corpus(state.path)
+    if str(corpus.get("corpus_status") or "") != "confirmed":
+        raise LiteratureConfirmationError(
+            "The confirmation receipt was written but the canonical literature contracts no longer agree; review the regenerated packet before publication."
+        )
+    return {
+        "status": "confirmed",
+        "project_path": str(state.path),
+        "packet_hash": expected_hash,
+        "receipt": f"references/{RECEIPT_JSON}",
+        "corpus_manifest": "references/literature_teaching_corpus_manifest.json",
+        "corpus_snapshot_hash": corpus["corpus_snapshot_hash"],
+        "accepted_work_count": len(current_binding["accepted_citation_keys"]),
+        "next_command": f'python -m draftpaper_cli.cli rebuild-literature-index --project "{state.path}"',
     }

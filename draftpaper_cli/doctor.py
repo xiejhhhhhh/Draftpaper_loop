@@ -105,12 +105,16 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
 
     def checkpoint_review_paths() -> dict[str, Any]:
         decision = action.get("stage_summary_zh_html")
+        audit_json = action.get("stage_audit_json")
         audit = action.get("stage_audit_zh_html")
         paths: dict[str, Any] = {}
         if isinstance(decision, dict):
             paths["primary_human_review_html"] = decision
             paths["stage_summary_zh_html"] = decision
-        if isinstance(audit, dict):
+        if isinstance(audit_json, dict):
+            paths["technical_audit_json"] = audit_json
+            paths["stage_audit_json"] = audit_json
+        elif isinstance(audit, dict):
             paths["technical_audit_html"] = audit
             paths["stage_audit_zh_html"] = audit
         for key in ("checkpoint_id", "scientific_decision_sha256", "stage_summary_json"):

@@ -35,6 +35,9 @@ def begin_revision_cycle(
     allowed_change_classes: Iterable[str] = (),
     protected_facts: Iterable[str] = (),
     expected_artifacts: Iterable[str] = (),
+    expected_decision_items: Iterable[str] = (),
+    pending_tasks: Iterable[dict[str, Any] | str] = (),
+    scope: str = "project",
     started_by: str = "user",
     baseline_id: str | None = None,
 ) -> dict[str, Any]:
@@ -57,6 +60,15 @@ def begin_revision_cycle(
         "allowed_change_classes": sorted({str(item) for item in allowed_change_classes if str(item).strip()}),
         "protected_facts": sorted({str(item) for item in protected_facts if str(item).strip()}),
         "expected_artifacts": sorted({str(item) for item in expected_artifacts if str(item).strip()}),
+        "expected_decision_items": sorted({str(item) for item in expected_decision_items if str(item).strip()}),
+        "pending_tasks": [
+            dict(item) if isinstance(item, dict) else {"task": str(item), "status": "pending"}
+            for item in pending_tasks
+            if str(item).strip()
+        ],
+        "scope": str(scope or "project"),
+        "revision_generation": 1,
+        "review_status": "drafting",
         "started_by": started_by,
         "started_at": utc_now(),
         "status": "open",
@@ -75,6 +87,60 @@ def begin_revision_cycle(
     }
     atomic_write_json(root / ACTIVE_POINTER, pointer)
     return {"status": "started", "project_path": str(root), "revision_cycle": payload, "revision_cycle_path": str(path.resolve()), "active_pointer": str((root / ACTIVE_POINTER).resolve()), "parent_baseline_id": payload["parent_baseline_id"]}
+
+
+def update_revision_cycle_review_state(
+    project: str | Path,
+    *,
+    review_status: str,
+    pending_tasks: Iterable[dict[str, Any] | str] | None = None,
+    expected_decision_items: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Write a superseding review-state record without mutating cycle history."""
+
+    if review_status not in {"drafting", "validating", "ready_for_review", "awaiting_decision"}:
+        raise RevisionCycleError("Invalid revision review status.")
+    root = project_root(project)
+    active = load_active_revision_cycle(root)
+    if not active or active.get("status") != "open":
+        raise RevisionCycleError("No open revision cycle is available.")
+    updated = dict(active)
+    updated["review_status"] = review_status
+    updated["revision_generation"] = int(updated.get("revision_generation") or 1) + 1
+    if pending_tasks is not None:
+        updated["pending_tasks"] = [
+            dict(item) if isinstance(item, dict) else {"task": str(item), "status": "pending"}
+            for item in pending_tasks
+            if str(item).strip()
+        ]
+    if expected_decision_items is not None:
+        updated["expected_decision_items"] = sorted(
+            {str(item) for item in expected_decision_items if str(item).strip()}
+        )
+    updated["updated_at"] = utc_now()
+    updated["revision_cycle_sha256"] = _hash(
+        {key: value for key, value in updated.items() if key != "revision_cycle_sha256"}
+    )
+    path = root / REVISION_DIR / (
+        f"{updated['revision_cycle_id']}-review-{updated['revision_generation']:04d}.json"
+    )
+    atomic_write_json(path, updated)
+    atomic_write_json(
+        root / ACTIVE_POINTER,
+        {
+            "schema_version": "dpl.active_revision_cycle.v1",
+            "revision_cycle_id": updated["revision_cycle_id"],
+            "revision_cycle_sha256": updated["revision_cycle_sha256"],
+            "path": str(path.relative_to(root).as_posix()),
+            "updated_at": utc_now(),
+        },
+    )
+    return {
+        "status": review_status,
+        "project_path": str(root),
+        "revision_cycle": updated,
+        "revision_cycle_path": str(path.resolve()),
+    }
 
 
 def load_active_revision_cycle(project: str | Path) -> dict[str, Any] | None:
@@ -136,4 +202,12 @@ def _project_id(root: Path) -> str | None:
     return str(payload.get("project_id") or "") or None
 
 
-__all__ = ["ACTIVE_POINTER", "REVISION_SCHEMA", "RevisionCycleError", "begin_revision_cycle", "close_revision_cycle", "load_active_revision_cycle"]
+__all__ = [
+    "ACTIVE_POINTER",
+    "REVISION_SCHEMA",
+    "RevisionCycleError",
+    "begin_revision_cycle",
+    "close_revision_cycle",
+    "load_active_revision_cycle",
+    "update_revision_cycle_review_state",
+]

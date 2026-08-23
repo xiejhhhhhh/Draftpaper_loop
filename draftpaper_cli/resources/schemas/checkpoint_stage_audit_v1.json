@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_stage_audit.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_id", "checkpoint_type", "summary_schema", "stage_summary_sha256", "audit_bundle_sha256", "audit_fingerprint", "artifact_manifest", "stage_activity_bundle", "stage_audit_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_stage_audit.v1"},
+    "checkpoint_id": {"type": "string"},
+    "checkpoint_type": {"type": "string"},
+    "summary_schema": {"const": "dpl.checkpoint_summary.v6"},
+    "stage_summary_sha256": {"type": "string"},
+    "audit_bundle_sha256": {"type": "string"},
+    "audit_fingerprint": {"type": "object"},
+    "artifact_manifest": {"type": "object"},
+    "stage_activity_bundle": {"type": "object"},
+    "stage_audit_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

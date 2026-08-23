@@ -27,6 +27,8 @@ REVIEW_PACKET_HTML = "research_plan/research_plan_review_packet.html"
 CONFIRMATION_JSON = "research_plan/research_plan_confirmation.json"
 SNAPSHOT_JSON = "research_plan/confirmed_research_blueprint_snapshot.json"
 HISTORY_DIR = "research_plan/confirmation_history"
+DECISION_LEDGER = "research_plan/review_decision_ledger.jsonl"
+USER_INTENT_DIR = "research_plan/user_intent_receipts"
 
 SCIENTIFIC_ARTIFACTS = [
     "research_plan/research_plan.md",
@@ -41,7 +43,7 @@ SCIENTIFIC_ARTIFACTS = [
 ]
 
 
-class ResearchPlanConfirmationError(RuntimeError):
+class _LegacyResearchPlanConfirmationError(RuntimeError):
     """Raised when key-figure execution lacks a current human-confirmed plan."""
 
 
@@ -69,18 +71,18 @@ def _artifact_records(project_path: Path) -> list[dict[str, Any]]:
             continue
         records.append({"path": relative, "sha256": _sha256(path), "size_bytes": path.stat().st_size})
     if missing:
-        raise ResearchPlanConfirmationError("Research blueprint is incomplete: " + ", ".join(missing))
+        raise _LegacyResearchPlanConfirmationError("Research blueprint is incomplete: " + ", ".join(missing))
     return records
 
 
-def current_plan_hash(project: str | Path) -> str:
+def _legacy_current_plan_hash(project: str | Path) -> str:
     state = load_project(project)
     records = _artifact_records(state.path)
     encoded = json.dumps(records, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
-def mark_research_plan_confirmation_required(project: str | Path) -> dict[str, Any]:
+def _legacy_mark_research_plan_confirmation_required(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     marker = {
         "schema_version": "dpl.research_plan_confirmation_required.v1",
@@ -136,7 +138,7 @@ def _refresh_cn_plan_projection(project: str | Path) -> str:
     state = load_project(project)
     blueprint = _read_json(state.path / "research_plan" / "research_blueprint.json")
     if not blueprint:
-        raise ResearchPlanConfirmationError("research_plan/research_blueprint.json is required.")
+        raise _LegacyResearchPlanConfirmationError("research_plan/research_blueprint.json is required.")
     from .research_plan import _assert_cn_plan_quality, _render_research_plan_cn
     from .statistical_validation import statistical_plan_summary
 
@@ -148,7 +150,7 @@ def _refresh_cn_plan_projection(project: str | Path) -> str:
     return _sha256(path)
 
 
-def review_research_plan(project: str | Path) -> dict[str, Any]:
+def _legacy_review_research_plan(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     if not (state.path / STATISTICAL_CONTRACT).exists():
         build_statistical_validation_contract(state.path)
@@ -184,19 +186,19 @@ def review_research_plan(project: str | Path) -> dict[str, Any]:
     return {"status": "ready_for_human_review", "project_path": str(state.path), "plan_hash": plan_hash, "review_packet": REVIEW_PACKET_HTML, "limitations": limitations, "confirmation_requires_accept_limitations": bool(limitations)}
 
 
-def confirm_research_plan(project: str | Path, *, plan_hash: str, accept_limitations: bool = False) -> dict[str, Any]:
+def _legacy_confirm_research_plan(project: str | Path, *, plan_hash: str, accept_limitations: bool = False) -> dict[str, Any]:
     state = load_project(project)
     packet = _read_json(state.path / REVIEW_PACKET_JSON)
     if not packet:
-        raise ResearchPlanConfirmationError("Run review-research-plan before confirmation.")
+        raise _LegacyResearchPlanConfirmationError("Run review-research-plan before confirmation.")
     current = current_plan_hash(state.path)
     if plan_hash != current or packet.get("plan_hash") != current:
-        raise ResearchPlanConfirmationError("The supplied plan hash does not match the current research blueprint.")
+        raise _LegacyResearchPlanConfirmationError("The supplied plan hash does not match the current research blueprint.")
     support_decision = str(packet.get("pre_execution_support_decision") or "")
     if support_decision == "blocked_requires_user_route":
-        raise ResearchPlanConfirmationError("Pre-execution support is blocked; choose supplement or research-scope revision first.")
+        raise _LegacyResearchPlanConfirmationError("Pre-execution support is blocked; choose supplement or research-scope revision first.")
     if packet.get("confirmation_requires_accept_limitations") and not accept_limitations:
-        raise ResearchPlanConfirmationError("The review packet contains explicit limitations; confirmation requires --accept-limitations.")
+        raise _LegacyResearchPlanConfirmationError("The review packet contains explicit limitations; confirmation requires --accept-limitations.")
     embedded: dict[str, Any] = {}
     for record in packet.get("artifacts") or []:
         relative = str(record["path"])
@@ -233,7 +235,7 @@ def confirm_research_plan(project: str | Path, *, plan_hash: str, accept_limitat
     return {"status": "approved", "project_path": str(state.path), "snapshot_id": snapshot_id, "confirmed_plan_hash": plan_hash, "snapshot": SNAPSHOT_JSON}
 
 
-def confirmation_state(project: str | Path) -> dict[str, Any]:
+def _legacy_confirmation_state(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     marker = state.path / REQUIRED_MARKER
     if not marker.exists():
@@ -243,30 +245,30 @@ def confirmation_state(project: str | Path) -> dict[str, Any]:
         return {"required": True, "status": "awaiting_confirmation", "current": False}
     try:
         current = current_plan_hash(state.path)
-    except ResearchPlanConfirmationError as exc:
+    except _LegacyResearchPlanConfirmationError as exc:
         return {"required": True, "status": "incomplete", "current": False, "reason": str(exc)}
     matches = current == snapshot.get("confirmed_plan_hash")
     return {"required": True, "status": "confirmed" if matches else "scientific_contract_drift", "current": matches, "confirmed_plan_hash": snapshot.get("confirmed_plan_hash"), "current_plan_hash": current, "snapshot_id": snapshot.get("snapshot_id")}
 
 
-def require_confirmed_research_blueprint(project: str | Path) -> dict[str, Any]:
+def _legacy_require_confirmed_research_blueprint(project: str | Path) -> dict[str, Any]:
     state = confirmation_state(project)
     if state["required"] and not state["current"]:
-        raise ResearchPlanConfirmationError(
+        raise _LegacyResearchPlanConfirmationError(
             "Key-figure execution requires the current human-confirmed research blueprint. Run review-research-plan and confirm-research-plan."
         )
     project_path = load_project(project).path
     return _read_json(project_path / SNAPSHOT_JSON) if state["required"] else {}
 
 
-def reopen_research_plan(project: str | Path, *, reason: str) -> dict[str, Any]:
+def _legacy_reopen_research_plan(project: str | Path, *, reason: str) -> dict[str, Any]:
     if not str(reason or "").strip():
-        raise ResearchPlanConfirmationError("A reason is required to reopen the research plan.")
+        raise _LegacyResearchPlanConfirmationError("A reason is required to reopen the research plan.")
     state = load_project(project)
     snapshot_path = state.path / SNAPSHOT_JSON
     snapshot = _read_json(snapshot_path)
     if not snapshot:
-        raise ResearchPlanConfirmationError("No active confirmed research blueprint exists.")
+        raise _LegacyResearchPlanConfirmationError("No active confirmed research blueprint exists.")
     history = state.path / HISTORY_DIR
     history.mkdir(parents=True, exist_ok=True)
     archive = history / f"{snapshot.get('snapshot_id') or 'snapshot'}_{utc_now().replace(':', '').replace('-', '')}.json"
@@ -284,3 +286,23 @@ def reopen_research_plan(project: str | Path, *, reason: str) -> dict[str, Any]:
     _write_json(state.path / CONFIRMATION_JSON, confirmation)
     mark_stage_stale(state.path, "research_plan", include_self=False)
     return {"status": "reopened", "project_path": str(state.path), "previous_snapshot_id": snapshot.get("snapshot_id"), "history_snapshot": confirmation["history_snapshot"], "reason": confirmation["reason"]}
+
+
+# v0.42 keeps the v1 implementation above for historical inspection only.
+# Public entry points are the semantic, versioned implementation below.
+from .research_plan_confirmation_v42 import (  # noqa: E402, F401
+    MIGRATION_AUDIT_SCHEMA,
+    ResearchPlanConfirmationError,
+    audit_research_plan_migration,
+    compare_research_plan_decision,
+    confirm_research_plan,
+    confirmation_state,
+    current_plan_hash,
+    explain_research_plan_reconfirmation,
+    mark_research_plan_confirmation_required,
+    reopen_research_plan,
+    require_confirmed_research_blueprint,
+    review_research_plan,
+    show_research_plan_review_packet,
+    validate_research_plan_review,
+)

@@ -22,6 +22,7 @@ REQUIRED_CLI_COMMANDS = (
     "review-research-plan",
     "confirm-research-plan",
     "reopen-research-plan",
+    "audit-research-plan-migration",
     "path-budget-check",
     "token-report",
     "validate-confirmed-figure-alignment",
@@ -64,6 +65,9 @@ REQUIRED_CLI_COMMANDS = (
     "reconcile-project-drift",
     "show-scientific-baseline",
     "show-checkpoint-audit",
+    "inspect-review-evidence",
+    "render-checkpoint-audit",
+    "shadow-checkpoint-v6",
     "compare-checkpoint-decision",
     "explain-reconfirmation",
     "validate-checkpoint-readability",
@@ -223,12 +227,13 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         {"status": "not_packaged", "baseline_version": "unknown", "current_count": None, "legacy_debt_count": None},
     )
     checkpoint_schema_ids = {
-        "summary": "dpl.checkpoint_summary.v5",
+        "summary": "dpl.checkpoint_summary.v6",
         "artifact_manifest": "dpl.checkpoint_artifact_manifest.v2",
         "confirmation_request": "dpl.confirmation_request.v2",
         "change_report": "dpl.checkpoint_change_report.v1",
         "unresolved_issues": "dpl.checkpoint_unresolved_issues.v1",
-        "agent_payload": "dpl.checkpoint_agent_payload.v2",
+        "agent_payload": "dpl.checkpoint_agent_payload.v3",
+        "stage_audit": "dpl.checkpoint_stage_audit.v1",
         "decision_brief": "dpl.human_decision_brief.v1",
         "scientific_decision_fingerprint": "dpl.scientific_decision_fingerprint.v1",
         "confirmation_continuity_receipt": "dpl.confirmation_continuity_receipt.v1",
@@ -237,18 +242,33 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         "figure_claim_map": "dpl.figure_claim_map.v1",
     }
     checkpoint_schema_files = {
-        "summary": "resources/schemas/checkpoint_summary_v5.json",
+        "summary": "resources/schemas/checkpoint_summary_v6.json",
         "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
         "confirmation_request": "resources/schemas/confirmation_request_v2.json",
         "change_report": "resources/schemas/checkpoint_change_report_v1.json",
         "unresolved_issues": "resources/schemas/checkpoint_unresolved_issues_v1.json",
-        "agent_payload": "resources/schemas/checkpoint_agent_payload_v2.json",
+        "agent_payload": "resources/schemas/checkpoint_agent_payload_v3.json",
+        "stage_audit": "resources/schemas/checkpoint_stage_audit_v1.json",
         "decision_brief": "resources/schemas/human_decision_brief_v1.json",
         "scientific_decision_fingerprint": "resources/schemas/scientific_decision_fingerprint_v1.json",
         "confirmation_continuity_receipt": "resources/schemas/confirmation_continuity_receipt_v1.json",
         "stage_activity": "resources/schemas/stage_activity_bundle_v2.json",
         "readability_report": "resources/schemas/checkpoint_readability_report_v1.json",
         "figure_claim_map": "resources/schemas/figure_claim_map_v1.json",
+    }
+    human_review_packet_schema_ids = {
+        "packet": "dpl.human_review_packet.v1",
+        "research_plan_brief": "dpl.research_plan_decision_brief.v1",
+        "scientific_plan_fingerprint": "dpl.scientific_plan_fingerprint.v1",
+        "operation_effect_fingerprint": "dpl.operation_effect_fingerprint.v1",
+        "user_intent_receipt": "dpl.user_intent_receipt.v1",
+    }
+    human_review_packet_schema_files = {
+        "packet": "resources/schemas/human_review_packet_v1.json",
+        "research_plan_brief": "resources/schemas/research_plan_decision_brief_v1.json",
+        "scientific_plan_fingerprint": "resources/schemas/scientific_plan_fingerprint_v1.json",
+        "operation_effect_fingerprint": "resources/schemas/operation_effect_fingerprint_v1.json",
+        "user_intent_receipt": "resources/schemas/user_intent_receipt_v1.json",
     }
     missing_checkpoint_schema_files = [
         relative for relative in checkpoint_schema_files.values() if not (repository / "draftpaper_cli" / relative).is_file()
@@ -257,6 +277,15 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         "passed"
         if all(_schema_family(schema_registry, schema_id) for schema_id in checkpoint_schema_ids.values())
         and not missing_checkpoint_schema_files
+        else "failed"
+    )
+    missing_human_review_packet_schema_files = [
+        relative for relative in human_review_packet_schema_files.values() if not (repository / "draftpaper_cli" / relative).is_file()
+    ]
+    human_review_packet_contract_status = (
+        "passed"
+        if all(_schema_family(schema_registry, schema_id) for schema_id in human_review_packet_schema_ids.values())
+        and not missing_human_review_packet_schema_files
         else "failed"
     )
     missing_commands = sorted(set(REQUIRED_CLI_COMMANDS) - set(COMMAND_SPECS))
@@ -295,7 +324,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "required_companions": [
                 "stage_summary.zh-CN.html",
                 "stage_summary.en.html",
-                "stage_audit.zh-CN.html",
+                "stage_audit.json",
                 "stage_summary.json",
                 "human_decision_brief_v1.json",
                 "scientific_decision_fingerprint_v1.json",
@@ -311,8 +340,15 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             ],
             "agent_paths": ["project_relative_path", "absolute_path"],
         },
+        "human_review_packet_contract": {
+            "status": human_review_packet_contract_status,
+            "schemas": human_review_packet_schema_ids,
+            "schema_files": human_review_packet_schema_files,
+            "missing_schema_files": missing_human_review_packet_schema_files,
+            "default_agent_context_budget_bytes": 12288,
+        },
         "review_governance": {
-            "summary_schema": "dpl.checkpoint_summary.v5",
+            "summary_schema": "dpl.checkpoint_summary.v6",
             "workflow_trace_schema": "dpl.workflow_trace.v2",
             "command_transaction_schema": "dpl.command_transaction.v3",
             "modes": ["manual", "balanced", "delegated"],
@@ -395,6 +431,8 @@ def validate_release_manifest(root: str | Path | None = None) -> dict[str, Any]:
         security_issues.append("missing_ci_constraints")
     if current.get("resource_schema_status") != "passed" or current.get("resource_schema_issue_count"):
         security_issues.append("packaged_resource_schema_validation_failed")
+    if (current.get("human_review_packet_contract") or {}).get("status") != "passed":
+        security_issues.append("human_review_packet_schema_validation_failed")
     changed_fields = sorted(key for key in set(expected) | set(current) if expected.get(key) != current.get(key))
     return {
         "schema_version": "dpl.release_manifest_validation.v1",

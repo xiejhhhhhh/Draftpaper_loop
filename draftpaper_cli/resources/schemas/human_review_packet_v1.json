@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.human_review_packet.v1",
+  "type": "object",
+  "required": ["schema_version", "packet_id", "decision_family", "risk_class", "review_state", "review_requirement", "decision_status", "decision_question", "human_decision_brief_ref", "scientific_or_effect_fingerprint", "audit_bundle_sha256", "presentation_sha256", "semantic_delta", "unresolved_items", "authority", "expires_when"],
+  "properties": {
+    "schema_version": {"const": "dpl.human_review_packet.v1"},
+    "packet_id": {"type": "string"},
+    "decision_family": {"type": "string"},
+    "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
+    "review_state": {"type": "string"},
+    "review_requirement": {"type": "string"},
+    "decision_status": {"type": "string"},
+    "decision_question": {"type": "string"},
+    "human_decision_brief_ref": {"type": "string"},
+    "scientific_or_effect_fingerprint": {"type": "string"},
+    "audit_bundle_sha256": {"type": "string"},
+    "presentation_sha256": {"type": "string"},
+    "semantic_delta": {"type": "object"},
+    "unresolved_items": {"type": "array"},
+    "authority": {"type": "object"},
+    "expires_when": {"type": "array"}
+  },
+  "additionalProperties": true
+}

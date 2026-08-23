@@ -19,7 +19,9 @@ from .state_kernel import atomic_write_json, atomic_write_text
 CHECKPOINT_SUMMARY_SCHEMA = "dpl.checkpoint_summary.v3"
 CHECKPOINT_SUMMARY_V4_SCHEMA = "dpl.checkpoint_summary.v4"
 CHECKPOINT_SUMMARY_V5_SCHEMA = "dpl.checkpoint_summary.v5"
+CHECKPOINT_SUMMARY_V6_SCHEMA = "dpl.checkpoint_summary.v6"
 LEGACY_CHECKPOINT_SUMMARY_SCHEMAS = frozenset({"dpl.checkpoint_summary.v1", "dpl.checkpoint_summary.v2"})
+CURRENT_DECISION_CHECKPOINT_SCHEMAS = frozenset({CHECKPOINT_SUMMARY_V5_SCHEMA, CHECKPOINT_SUMMARY_V6_SCHEMA})
 CHECKPOINT_REVIEW_STATES = frozenset({"confirmable", "stale", "blocked", "preview_only", "legacy_unqualified"})
 ARTIFACT_MANIFEST_SCHEMA = "dpl.checkpoint_artifact_manifest.v2"
 CONFIRMATION_REQUEST_SCHEMA = "dpl.confirmation_request.v1"
@@ -28,6 +30,7 @@ CHANGE_REPORT_SCHEMA = "dpl.checkpoint_change_report.v1"
 UNRESOLVED_ISSUES_SCHEMA = "dpl.checkpoint_unresolved_issues.v1"
 AGENT_PAYLOAD_SCHEMA = "dpl.checkpoint_agent_payload.v1"
 AGENT_PAYLOAD_V2_SCHEMA = "dpl.checkpoint_agent_payload.v2"
+AGENT_PAYLOAD_V3_SCHEMA = "dpl.checkpoint_agent_payload.v3"
 CHECKPOINT_ROOT = "review/checkpoints"
 
 _STAGE_TITLES = {
@@ -96,7 +99,7 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
     schema = str(summary.get("schema_version") or "")
     if schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS:
         return [] if allow_legacy else [f"Legacy checkpoint summary is read-only: {schema}."]
-    if schema not in {CHECKPOINT_SUMMARY_SCHEMA, CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}:
+    if schema not in {CHECKPOINT_SUMMARY_SCHEMA, CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS}:
         return [f"Unsupported checkpoint summary schema: {schema or 'missing'}."]
 
     required = (
@@ -140,9 +143,9 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
         "stage_summary_sha256",
         "created_at",
     )
-    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}:
+    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS}:
         required = (*required, "review_requirement", "decision_status", "decision_actor_type", "authority_source", "risk_class", "stage_activity_bundle", "activity_bundle_sha256", "baseline_refs", "revision_cycle_id")
-    if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+    if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
         required = (
             *required,
             "decision_brief",
@@ -212,14 +215,14 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
                 issues.append(f"Confirmation contract is missing: {key}")
         if schema == CHECKPOINT_SUMMARY_SCHEMA and confirmation_contract.get("requires_user_decision") is not True:
             issues.append("Checkpoint confirmation must always require a user decision.")
-        if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA} and not isinstance(confirmation_contract.get("requires_user_decision"), bool):
-            issues.append("v4/v5 confirmation requires requires_user_decision to be boolean.")
+        if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS} and not isinstance(confirmation_contract.get("requires_user_decision"), bool):
+            issues.append("v4/v5/v6 confirmation requires requires_user_decision to be boolean.")
         if confirmation_contract.get("source_of_truth") != "canonical_evidence":
             issues.append("Checkpoint confirmation source_of_truth must be canonical_evidence.")
         expected_command_allowed = summary.get("review_state") == "confirmable" and (
             schema == CHECKPOINT_SUMMARY_SCHEMA or summary.get("review_requirement") != "notify_only"
         ) and (
-            schema != CHECKPOINT_SUMMARY_V5_SCHEMA or bool(confirmation_contract.get("requires_user_decision"))
+            schema not in CURRENT_DECISION_CHECKPOINT_SCHEMAS or bool(confirmation_contract.get("requires_user_decision"))
         )
         if confirmation_contract.get("confirmation_command_allowed") is not expected_command_allowed:
             issues.append("Confirmation command permission does not match review_state.")
@@ -233,7 +236,7 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
         and schema == CHECKPOINT_SUMMARY_SCHEMA
     ):
         issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
-    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}:
+    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS}:
         if summary.get("review_requirement") not in {"notify_only", "agent_delegable", "human_required"}:
             issues.append("v4 review_requirement is not recognized.")
         if summary.get("decision_status") not in {"not_required", "pending", "system_acknowledged", "continuity_preserved", "agent_approved", "user_confirmed", "rejected", "refinement_required"}:
@@ -244,27 +247,31 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
             issues.append("v4 stage_activity_bundle must be an object.")
         if not isinstance(summary.get("baseline_refs"), dict):
             issues.append("v4 baseline_refs must be an object.")
-    if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+    if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
         if not isinstance(summary.get("decision_brief"), dict):
-            issues.append("v5 decision_brief must be an object.")
+            issues.append("v5/v6 decision_brief must be an object.")
         if not isinstance(summary.get("scientific_decision_fingerprint"), dict):
-            issues.append("v5 scientific_decision_fingerprint must be an object.")
+            issues.append("v5/v6 scientific_decision_fingerprint must be an object.")
         if not isinstance(summary.get("activity_window"), dict):
-            issues.append("v5 activity_window must be an object.")
+            issues.append("v5/v6 activity_window must be an object.")
         if not isinstance(summary.get("semantic_delta_from_last_confirmed"), dict):
-            issues.append("v5 semantic_delta_from_last_confirmed must be an object.")
+            issues.append("v5/v6 semantic_delta_from_last_confirmed must be an object.")
         if not isinstance(summary.get("confirmation_basis"), dict):
-            issues.append("v5 confirmation_basis must be an object.")
+            issues.append("v5/v6 confirmation_basis must be an object.")
         if not isinstance(summary.get("confirmation_continuity"), dict):
-            issues.append("v5 confirmation_continuity must be an object.")
+            issues.append("v5/v6 confirmation_continuity must be an object.")
         if not isinstance(summary.get("confirmation_meaning_en"), str) or not summary.get("confirmation_meaning_en").strip():
-            issues.append("v5 confirmation_meaning_en must be a non-empty string.")
+            issues.append("v5/v6 confirmation_meaning_en must be a non-empty string.")
         if summary.get("reviewer_visibility_scope") not in {"author_decision", "internal_audit", "reviewer_visible", "release_public"}:
-            issues.append("v5 reviewer_visibility_scope is not recognized.")
+            issues.append("v5/v6 reviewer_visibility_scope is not recognized.")
         if not isinstance(summary.get("figure_claim_map_sha256"), str) or not summary.get("figure_claim_map_sha256").strip():
-            issues.append("v5 figure_claim_map_sha256 must be a non-empty string.")
+            issues.append("v5/v6 figure_claim_map_sha256 must be a non-empty string.")
         if not isinstance(summary.get("scientific_figure_claim_sha256"), str) or not summary.get("scientific_figure_claim_sha256").strip():
-            issues.append("v5 scientific_figure_claim_sha256 must be a non-empty string.")
+            issues.append("v5/v6 scientific_figure_claim_sha256 must be a non-empty string.")
+        if schema == CHECKPOINT_SUMMARY_V6_SCHEMA and not str(summary.get("audit_bundle_ref") or "").endswith(".json"):
+            issues.append("v6 audit_bundle_ref must point to JSON.")
+        if schema == CHECKPOINT_SUMMARY_V6_SCHEMA and summary.get("audit_render_policy") != "on_demand_cache_only":
+            issues.append("v6 audit_render_policy must be on_demand_cache_only.")
     if summary.get("review_state") != "confirmable" and summary.get("confirmation_contract", {}).get("confirmation_command_allowed"):
         issues.append("Non-confirmable summary cannot allow a confirmation command.")
     return issues
@@ -529,8 +536,9 @@ def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:
             "scientific_decision_sha256": report.get("scientific_decision_sha256"),
             "stage_summary_json": f"{relative_dir}/stage_summary.json",
             "stage_summary_zh_html": f"{relative_dir}/stage_summary.zh-CN.html",
-            "stage_summary_en_html": f"{relative_dir}/stage_summary.en.html" if report.get("schema_version") == CHECKPOINT_SUMMARY_V5_SCHEMA else None,
+            "stage_summary_en_html": f"{relative_dir}/stage_summary.en.html" if report.get("schema_version") in CURRENT_DECISION_CHECKPOINT_SCHEMAS else None,
             "stage_audit_zh_html": f"{relative_dir}/stage_audit.zh-CN.html" if report.get("schema_version") == CHECKPOINT_SUMMARY_V5_SCHEMA else None,
+            "stage_audit_json": f"{relative_dir}/stage_audit.json" if report.get("schema_version") == CHECKPOINT_SUMMARY_V6_SCHEMA else None,
             "created_at": report.get("created_at"),
         }
     )
@@ -1408,6 +1416,226 @@ def write_stage_summary_v5(
     }
 
 
+def write_stage_summary_v6(
+    project: str | Path,
+    *,
+    stage: str,
+    command: str,
+    payload: dict[str, Any] | None = None,
+    before_artifacts: list[dict[str, Any]] | None = None,
+    checkpoint_id: str | None = None,
+    checkpoint_hash: str | None = None,
+    publish_index: bool = True,
+) -> dict[str, Any]:
+    """Write a v6 decision package with JSON-first technical audit.
+
+    v6 deliberately reuses v5's evidence assembly and continuity gates.  It
+    changes only the persistent presentation contract: `stage_audit.json` is
+    the complete technical record and audit HTML is rendered only into the
+    disposable `.draftpaper/render_cache/` on demand.  v5 packages remain
+    untouched and readable.
+    """
+
+    from .checkpoint_fingerprint import build_presentation_fingerprint
+    from .checkpoint_html import render_checkpoint_html
+    from .checkpoint_readability import build_checkpoint_readability_report
+
+    root = project_root(project)
+    base = write_stage_summary_v5(
+        root,
+        stage=stage,
+        command=command,
+        payload=payload,
+        before_artifacts=before_artifacts,
+        checkpoint_id=checkpoint_id,
+        checkpoint_hash=checkpoint_hash,
+        publish_index=False,
+    )
+    output_dir = root / str(base["project_relative_dir"])
+    summary_path = output_dir / "stage_summary.json"
+    request_path = output_dir / "confirmation_request.json"
+    agent_path = output_dir / "agent_payload.json"
+    audit_path = output_dir / "stage_audit.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
+    request = json.loads(request_path.read_text(encoding="utf-8-sig"))
+    brief = summary.get("decision_brief") if isinstance(summary.get("decision_brief"), dict) else {}
+    audit_fingerprint = json.loads((output_dir / "checkpoint_audit_fingerprint_v1.json").read_text(encoding="utf-8-sig"))
+    manifest = json.loads((output_dir / "artifact_manifest.json").read_text(encoding="utf-8-sig"))
+    activity = json.loads((output_dir / "stage_activity_bundle.json").read_text(encoding="utf-8-sig"))
+    relative_dir = str(base["project_relative_dir"])
+
+    # The renderer version is presentation identity, not scientific identity.
+    presentation_fingerprint = build_presentation_fingerprint(brief, renderer_version="v6")
+    summary["schema_version"] = CHECKPOINT_SUMMARY_V6_SCHEMA
+    summary["audit_bundle_ref"] = f"{relative_dir}/stage_audit.json"
+    summary["audit_render_policy"] = "on_demand_cache_only"
+    summary["presentation_sha256"] = presentation_fingerprint["presentation_sha256"]
+    summary.pop("stage_summary_sha256", None)
+    summary_hash = _hash_payload(summary)
+    summary["stage_summary_sha256"] = summary_hash
+
+    request["summary_schema"] = CHECKPOINT_SUMMARY_V6_SCHEMA
+    request["checkpoint_package_summary_sha256"] = summary_hash
+
+    decision_path = {
+        "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
+        "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
+    }
+    decision_path_en = {
+        "project_relative_path": f"{relative_dir}/stage_summary.en.html",
+        "absolute_path": str((output_dir / "stage_summary.en.html").resolve()),
+    }
+    technical_audit_json = {
+        "project_relative_path": f"{relative_dir}/stage_audit.json",
+        "absolute_path": str(audit_path.resolve()),
+    }
+    decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
+    decision_summary = next(
+        (
+            str(item.get("text_zh") or "").strip()
+            for item in brief.get("confirming") or []
+            if isinstance(item, dict) and str(item.get("text_zh") or "").strip()
+        ),
+        str(summary.get("stage_purpose_zh") or ""),
+    )
+    review_points: list[str] = []
+    for group in ("confirming", "claim_boundaries", "not_confirming", "reopen_conditions"):
+        for item in brief.get(group) or []:
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get("text_zh") or "").strip()
+            if text and text not in review_points:
+                review_points.append(text)
+            if len(review_points) >= 5:
+                break
+        if len(review_points) >= 5:
+            break
+    continuity = summary.get("confirmation_continuity") if isinstance(summary.get("confirmation_continuity"), dict) else {}
+    authority_source = summary.get("authority_source") if isinstance(summary.get("authority_source"), dict) else {}
+    authority_reason = (
+        "本次科学决定与最近一次有效作者确认相同，系统只沿用原确认。"
+        if continuity.get("eligible")
+        else f"当前审查主体由 {authority_source.get('policy') or 'review_policy'} 决定。"
+    )
+    agent = {
+        "schema_version": AGENT_PAYLOAD_V3_SCHEMA,
+        "summary_schema": CHECKPOINT_SUMMARY_V6_SCHEMA,
+        "checkpoint_id": summary["checkpoint_id"],
+        "stage": stage,
+        "review_state": summary.get("review_state"),
+        "stage_narrative_zh": summary.get("stage_narrative_zh"),
+        "activity_bundle_sha256": summary.get("activity_bundle_sha256"),
+        "primary_human_review_html": decision_path,
+        "human_decision_html": decision_path,
+        "human_decision_html_en": decision_path_en,
+        "stage_summary_zh_html": decision_path,
+        "stage_completion_summary_zh": summary.get("stage_narrative_zh"),
+        "decision_question_zh": str(decision_question.get("text_zh") or summary.get("stage_purpose_zh") or ""),
+        "decision_summary_zh": decision_summary,
+        "semantic_delta_summary_zh": str((summary.get("semantic_delta_from_last_confirmed") or {}).get("summary_zh") or ""),
+        "semantic_delta_summary_en": str((summary.get("semantic_delta_from_last_confirmed") or {}).get("summary_en") or ""),
+        "review_points_zh": review_points,
+        "decision_actor_type": summary.get("decision_actor_type"),
+        "decision_authority_reason_zh": authority_reason,
+        "confirmation_meaning_zh": summary.get("confirmation_meaning_zh"),
+        "confirmation_meaning_en": summary.get("confirmation_meaning_en"),
+        "scientific_decision_sha256": (summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"),
+        "human_brief_semantic_sha256": summary.get("human_brief_semantic_sha256"),
+        "continuity_status": continuity.get("classification"),
+        "reconfirmation_reason_codes": continuity.get("reason_codes") or [],
+        "latest_user_visible_deliverables": list(brief.get("latest_user_visible_deliverables") or [])[:8],
+        "confirmation_command": request.get("confirmation_command"),
+        "confirmation_contract": summary.get("confirmation_contract") or {},
+        "decision_brief": {
+            "project_relative_path": f"{relative_dir}/human_decision_brief_v1.json",
+            "absolute_path": str((output_dir / "human_decision_brief_v1.json").resolve()),
+        },
+        "technical_audit_json": technical_audit_json,
+        "audit_access_policy": "evidence_on_demand",
+        "context_budget_bytes": 12 * 1024,
+        "stage_summary_sha256": summary_hash,
+    }
+    if len(json.dumps(agent, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 12 * 1024:
+        raise CheckpointSummaryError("Checkpoint v6 Agent payload exceeds the 12 KB decision-context budget.")
+
+    audit_document = {
+        "schema_version": "dpl.checkpoint_stage_audit.v1",
+        "checkpoint_id": summary["checkpoint_id"],
+        "checkpoint_type": summary.get("checkpoint_type"),
+        "summary_schema": CHECKPOINT_SUMMARY_V6_SCHEMA,
+        "stage_summary_sha256": summary_hash,
+        "audit_bundle_sha256": summary.get("audit_bundle_sha256"),
+        "audit_fingerprint": audit_fingerprint,
+        "artifact_manifest": manifest,
+        "stage_activity_bundle": activity,
+        "unresolved_issues": summary.get("unresolved") or [],
+        "confirmation_request": request,
+    }
+    audit_document["stage_audit_sha256"] = _hash_payload(audit_document)
+
+    contract_issues = _checkpoint_summary_contract_issues(summary)
+    if contract_issues:
+        raise CheckpointSummaryError("Checkpoint v6 summary contract failed: " + "; ".join(contract_issues))
+    atomic_write_json(summary_path, summary)
+    atomic_write_json(request_path, request)
+    atomic_write_json(agent_path, agent)
+    atomic_write_json(audit_path, audit_document)
+    atomic_write_json(output_dir / "checkpoint_presentation_fingerprint_v1.json", presentation_fingerprint)
+
+    # This package was created in the current call, so removing the v5 audit
+    # projection cannot remove a user-facing historical record.
+    (output_dir / "stage_audit.zh-CN.html").unlink(missing_ok=True)
+    decision_html = render_checkpoint_html(root, output_dir, summary, request)
+    decision_html_en = render_checkpoint_html(root, output_dir, summary, request, locale="en")
+    atomic_write_text(output_dir / "stage_summary.zh-CN.html", decision_html)
+    atomic_write_text(output_dir / "stage_summary.en.html", decision_html_en)
+    readability = build_checkpoint_readability_report(html=decision_html, brief=brief)
+    readability_en = build_checkpoint_readability_report(html=decision_html_en, brief=brief, locale="en")
+    atomic_write_json(output_dir / "checkpoint_readability_report.json", readability)
+    atomic_write_json(output_dir / "checkpoint_readability_report.en.json", readability_en)
+    if readability.get("status") != "passed" or readability_en.get("status") != "passed":
+        failures = [
+            *list(readability.get("failure_codes") or []),
+            *[f"en:{code}" for code in readability_en.get("failure_codes") or []],
+        ]
+        raise CheckpointSummaryError("Checkpoint v6 decision page failed readability gate: " + ", ".join(failures))
+    required_files = (
+        output_dir / "stage_summary.json",
+        output_dir / "stage_summary.zh-CN.html",
+        output_dir / "stage_summary.en.html",
+        audit_path,
+        output_dir / "confirmation_request.json",
+        output_dir / "agent_payload.json",
+        output_dir / "human_decision_brief_v1.json",
+        output_dir / "scientific_decision_fingerprint_v1.json",
+        output_dir / "checkpoint_readability_report.json",
+        output_dir / "checkpoint_readability_report.en.json",
+        output_dir / "figure_claim_map_v1.json",
+    )
+    if not all(path.is_file() for path in required_files):
+        missing = ", ".join(path.name for path in required_files if not path.is_file())
+        raise CheckpointSummaryError("Checkpoint v6 package is incomplete; missing: " + missing)
+    if publish_index:
+        _publish_checkpoint_index(root, {**summary, "checkpoint_type": stage})
+    return {
+        **base,
+        "schema_version": CHECKPOINT_SUMMARY_V6_SCHEMA,
+        "summary_schema": CHECKPOINT_SUMMARY_V6_SCHEMA,
+        "stage_summary_sha256": summary_hash,
+        "stage_summary_zh_html": f"{relative_dir}/stage_summary.zh-CN.html",
+        "absolute_stage_summary_zh_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
+        "stage_summary_en_html": f"{relative_dir}/stage_summary.en.html",
+        "absolute_stage_summary_en_html": str((output_dir / "stage_summary.en.html").resolve()),
+        "stage_audit_json": f"{relative_dir}/stage_audit.json",
+        "absolute_stage_audit_json": str(audit_path.resolve()),
+        "technical_audit_json": technical_audit_json,
+        "audit_bundle_sha256": summary["audit_bundle_sha256"],
+        "presentation_sha256": summary["presentation_sha256"],
+        "primary_human_review_html": decision_path,
+        "confirmation_command": request.get("confirmation_command"),
+    }
+
+
 def show_checkpoint_summary(
     project: str | Path,
     checkpoint_hash: str | None = None,
@@ -1441,7 +1669,7 @@ def show_checkpoint_summary(
         *(["legacy_v5_pre_method_analysis_fingerprint"] if pre_method_analysis_v5 else []),
     ]
     request_path = summary_path.parent / "confirmation_request.json"
-    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA} and not (summary_path.parent / "stage_activity_bundle.json").is_file():
+    if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS} and not (summary_path.parent / "stage_activity_bundle.json").is_file():
         return {
             "status": "invalid_summary",
             "project_path": str(root),
@@ -1473,6 +1701,28 @@ def show_checkpoint_summary(
                 "reasons": ["Missing v5 checkpoint companions: " + ", ".join(missing_v5)],
                 "summary": summary,
             }
+    if schema == CHECKPOINT_SUMMARY_V6_SCHEMA:
+        v6_required = (
+            "stage_audit.json",
+            "stage_summary.en.html",
+            "human_decision_brief_v1.json",
+            "scientific_decision_fingerprint_v1.json",
+            "checkpoint_readability_report.json",
+            "checkpoint_readability_report.en.json",
+            "figure_claim_map_v1.json",
+            "evidence_binding_failure_receipt.json",
+        )
+        missing_v6 = [name for name in v6_required if not (summary_path.parent / name).is_file()]
+        if missing_v6:
+            return {
+                "status": "invalid_summary",
+                "project_path": str(root),
+                "checkpoint_hash": _checkpoint_record_hash(root, selected) or checkpoint_hash,
+                "language": language,
+                "review_state": summary.get("review_state") or "unknown",
+                "reasons": ["Missing v6 checkpoint companions: " + ", ".join(missing_v6)],
+                "summary": summary,
+            }
     legacy = schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS or bool(legacy_v5_reason_codes)
     contract_issues = _checkpoint_summary_contract_issues(summary)
     if not legacy and contract_issues:
@@ -1485,7 +1735,7 @@ def show_checkpoint_summary(
             "reasons": contract_issues,
             "summary": summary,
         }
-    preferred_html_name = "stage_summary.en.html" if language == "en" and schema == CHECKPOINT_SUMMARY_V5_SCHEMA else "stage_summary.zh-CN.html"
+    preferred_html_name = "stage_summary.en.html" if language == "en" and schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS else "stage_summary.zh-CN.html"
     return {
         "status": "legacy_summary" if legacy else "ready_for_human_review",
         "project_path": str(root),
@@ -1516,7 +1766,7 @@ def show_checkpoint_summary(
                 "project_relative_path": summary_path.parent.joinpath("stage_summary.en.html").relative_to(root).as_posix(),
                 "absolute_path": str(summary_path.parent.joinpath("stage_summary.en.html").resolve()),
             }
-            if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
+            if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS
             else None
         ),
         "author_decision_html": {
@@ -1532,6 +1782,14 @@ def show_checkpoint_summary(
             if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
             else None
         ),
+        "stage_audit_json": (
+            {
+                "project_relative_path": summary_path.parent.joinpath("stage_audit.json").relative_to(root).as_posix(),
+                "absolute_path": str(summary_path.parent.joinpath("stage_audit.json").resolve()),
+            }
+            if schema == CHECKPOINT_SUMMARY_V6_SCHEMA
+            else None
+        ),
         "artifact_manifest": str(summary_path.parent.joinpath("artifact_manifest.json").resolve()),
         "confirmation_request": str(request_path.resolve()),
         "change_report": str(summary_path.parent.joinpath("change_report.json").resolve()),
@@ -1539,22 +1797,22 @@ def show_checkpoint_summary(
         "agent_payload": str(summary_path.parent.joinpath("agent_payload.json").resolve()),
         "stage_activity_bundle": (
             str(summary_path.parent.joinpath("stage_activity_bundle.json").resolve())
-            if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}
+            if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS}
             else None
         ),
         "human_decision_brief": (
             str(summary_path.parent.joinpath("human_decision_brief_v1.json").resolve())
-            if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
+            if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS
             else None
         ),
         "scientific_decision_fingerprint": (
             str(summary_path.parent.joinpath("scientific_decision_fingerprint_v1.json").resolve())
-            if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
+            if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS
             else None
         ),
         "checkpoint_readability_report": (
             str(summary_path.parent.joinpath("checkpoint_readability_report.json").resolve())
-            if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
+            if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS
             else None
         ),
         "review_decision_receipt": (
@@ -1592,8 +1850,20 @@ def show_checkpoint_audit(
         return {"status": "not_found", "project_path": str(root)}
     selected_hash = _checkpoint_record_hash(root, record)
     shown = show_checkpoint_summary(root, selected_hash, view="audit") if selected_hash else show_checkpoint_summary(root, None, view="audit")
-    if shown.get("summary_schema") != CHECKPOINT_SUMMARY_V5_SCHEMA:
+    schema = shown.get("summary_schema")
+    if schema not in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
         return {"status": "unsupported_legacy_audit", "project_path": str(root), "checkpoint_id": record.get("checkpoint_id")}
+    if schema == CHECKPOINT_SUMMARY_V6_SCHEMA:
+        audit = shown.get("stage_audit_json")
+        return {
+            "status": "passed",
+            "project_path": str(root),
+            "checkpoint_id": shown.get("summary", {}).get("checkpoint_id"),
+            "technical_audit_json": audit,
+            "decision_html": shown.get("stage_summary_zh_html"),
+            "artifact_manifest": shown.get("artifact_manifest"),
+            "render_command": f'draftpaper render-checkpoint-audit --project "{root}" --checkpoint-package-id "{shown.get("summary", {}).get("checkpoint_id") or ""}"',
+        }
     return {
         "status": "passed",
         "project_path": str(root),
@@ -1601,6 +1871,54 @@ def show_checkpoint_audit(
         "technical_audit_html": shown.get("stage_audit_zh_html"),
         "decision_html": shown.get("stage_summary_zh_html"),
         "artifact_manifest": shown.get("artifact_manifest"),
+    }
+
+
+def render_checkpoint_audit(
+    project: str | Path,
+    *,
+    checkpoint_package_id: str,
+) -> dict[str, Any]:
+    """Render a disposable v6 technical-audit HTML cache on explicit request."""
+
+    from .checkpoint_html import render_checkpoint_audit_html
+
+    root = project_root(project)
+    record = _checkpoint_record_by_package_id(root, checkpoint_package_id)
+    if not record:
+        return {"status": "not_found", "project_path": str(root)}
+    relative = _relative_project_path(root, str(record.get("stage_summary_json") or ""))
+    if not relative:
+        return {"status": "not_found", "project_path": str(root)}
+    summary_path = root / relative
+    output_dir = summary_path.parent
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
+        request = json.loads((output_dir / "confirmation_request.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        return {"status": "invalid", "project_path": str(root), "reason": str(exc)}
+    if summary.get("schema_version") != CHECKPOINT_SUMMARY_V6_SCHEMA:
+        return {"status": "unsupported_non_v6_summary", "project_path": str(root), "checkpoint_id": checkpoint_package_id}
+    audit_json = output_dir / "stage_audit.json"
+    if not audit_json.is_file():
+        return {"status": "invalid", "project_path": str(root), "reason": "stage_audit_json_missing"}
+    cache_dir = root / ".draftpaper" / "render_cache" / "audit"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache = cache_dir / f"{checkpoint_package_id}.zh-CN.html"
+    atomic_write_text(cache, render_checkpoint_audit_html(root, cache_dir, summary, request))
+    return {
+        "status": "passed",
+        "project_path": str(root),
+        "checkpoint_id": checkpoint_package_id,
+        "technical_audit_json": {
+            "project_relative_path": audit_json.relative_to(root).as_posix(),
+            "absolute_path": str(audit_json.resolve()),
+        },
+        "rendered_audit_html": {
+            "project_relative_path": cache.relative_to(root).as_posix(),
+            "absolute_path": str(cache.resolve()),
+        },
+        "cache_only": True,
     }
 
 
@@ -1614,7 +1932,7 @@ def compare_checkpoint_decision(
 
     shown = show_checkpoint_summary(project, checkpoint_hash)
     summary = shown.get("summary") if isinstance(shown.get("summary"), dict) else {}
-    if shown.get("summary_schema") != CHECKPOINT_SUMMARY_V5_SCHEMA:
+    if shown.get("summary_schema") not in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
         return {"status": "unsupported_legacy_summary", "project_path": shown.get("project_path"), "against": against}
     return {
         "status": "passed",
@@ -1693,7 +2011,7 @@ def show_confirmation_continuity(project: str | Path, *, checkpoint_type: str = 
 
 
 def rebuild_checkpoint_presentation(project: str | Path, *, checkpoint_package_id: str) -> dict[str, Any]:
-    """Regenerate only v5 HTML and readability output from immutable facts."""
+    """Regenerate decision HTML from immutable v5/v6 facts only."""
 
     from .checkpoint_html import render_checkpoint_audit_html
     from .checkpoint_readability import build_checkpoint_readability_report
@@ -1712,14 +2030,16 @@ def rebuild_checkpoint_presentation(project: str | Path, *, checkpoint_package_i
         request = json.loads((output_dir / "confirmation_request.json").read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         return {"status": "invalid", "project_path": str(root), "reason": str(exc)}
-    if summary.get("schema_version") != CHECKPOINT_SUMMARY_V5_SCHEMA:
+    schema = str(summary.get("schema_version") or "")
+    if schema not in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
         return {"status": "unsupported_legacy_summary", "project_path": str(root)}
-    audit_html = render_checkpoint_audit_html(root, output_dir, summary, request)
+    audit_html = render_checkpoint_audit_html(root, output_dir, summary, request) if schema == CHECKPOINT_SUMMARY_V5_SCHEMA else None
     decision_html = _render_html(root, output_dir, summary, request)
     decision_html_en = _render_html(root, output_dir, summary, request, locale="en")
     report = build_checkpoint_readability_report(html=decision_html, brief=summary.get("decision_brief") or {})
     report_en = build_checkpoint_readability_report(html=decision_html_en, brief=summary.get("decision_brief") or {}, locale="en")
-    atomic_write_text(output_dir / "stage_audit.zh-CN.html", audit_html)
+    if audit_html is not None:
+        atomic_write_text(output_dir / "stage_audit.zh-CN.html", audit_html)
     atomic_write_text(output_dir / "stage_summary.zh-CN.html", decision_html)
     atomic_write_text(output_dir / "stage_summary.en.html", decision_html_en)
     atomic_write_json(output_dir / "checkpoint_readability_report.json", report)
@@ -1731,7 +2051,8 @@ def rebuild_checkpoint_presentation(project: str | Path, *, checkpoint_package_i
         "presentation_sha256": summary.get("presentation_sha256"),
         "decision_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
         "decision_html_en": str((output_dir / "stage_summary.en.html").resolve()),
-        "audit_html": str((output_dir / "stage_audit.zh-CN.html").resolve()),
+        "audit_html": str((output_dir / "stage_audit.zh-CN.html").resolve()) if audit_html is not None else None,
+        "technical_audit_json": str((output_dir / "stage_audit.json").resolve()) if schema == CHECKPOINT_SUMMARY_V6_SCHEMA else None,
         "readability_report": str((output_dir / "checkpoint_readability_report.json").resolve()),
         "readability_report_en": str((output_dir / "checkpoint_readability_report.en.json").resolve()),
     }
@@ -1808,8 +2129,14 @@ def checkpoint_path_payload(project: str | Path, event: dict[str, Any]) -> dict[
             "source_semantic_sha256": event.get("stage_summary_sha256"),
         }
     if relative_json:
+        audit_json_relative = str(Path(relative_json).parent / "stage_audit.json").replace("\\", "/")
         audit_relative = str(Path(relative_json).parent / "stage_audit.zh-CN.html").replace("\\", "/")
-        if (root / audit_relative).is_file():
+        if (root / audit_json_relative).is_file():
+            result["stage_audit_json"] = {
+                "project_relative_path": audit_json_relative,
+                "absolute_path": str((root / audit_json_relative).resolve()),
+            }
+        elif (root / audit_relative).is_file():
             result["stage_audit_zh_html"] = {
                 "project_relative_path": audit_relative,
                 "absolute_path": str((root / audit_relative).resolve()),
@@ -1878,14 +2205,14 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
     else:
         if stored_manifest != manifest:
             reasons.append("Checkpoint artifact manifest file differs from stage summary.")
-        if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+        if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
             fingerprint = summary.get("scientific_decision_fingerprint") if isinstance(summary.get("scientific_decision_fingerprint"), dict) else {}
             if request.get("scientific_decision_sha256") != fingerprint.get("scientific_decision_sha256"):
-                reasons.append("v5 confirmation request is not bound to the scientific decision hash.")
+                reasons.append("v5/v6 confirmation request is not bound to the scientific decision hash.")
             if request.get("human_brief_semantic_sha256") != summary.get("human_brief_semantic_sha256"):
-                reasons.append("v5 confirmation request is not bound to the decision brief semantic hash.")
+                reasons.append("v5/v6 confirmation request is not bound to the decision brief semantic hash.")
             if request.get("checkpoint_package_summary_sha256") != summary.get("stage_summary_sha256"):
-                reasons.append("v5 confirmation request package hash differs from the summary.")
+                reasons.append("v5/v6 confirmation request package hash differs from the summary.")
         elif request.get("stage_summary_sha256") != summary.get("stage_summary_sha256"):
             reasons.append("Confirmation request is not bound to the stage summary hash.")
         if request.get("summary_schema") != summary.get("schema_version"):
@@ -1893,7 +2220,7 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
         expected_request_command = summary.get("review_state") == "confirmable" and (
             schema == CHECKPOINT_SUMMARY_SCHEMA or summary.get("review_requirement") != "notify_only"
         ) and summary.get("decision_status") not in {"agent_approved", "user_confirmed", "continuity_preserved"}
-        if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+        if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
             expected_request_command = expected_request_command and bool((summary.get("confirmation_contract") or {}).get("requires_user_decision"))
         if (request.get("confirmation_command") is not None) != expected_request_command:
             reasons.append("Confirmation request command permission does not match review_state.")
@@ -1905,7 +2232,7 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
             reasons.append("Agent payload review_state differs from stage summary.")
         if agent.get("stage_narrative_zh") != summary.get("stage_narrative_zh"):
             reasons.append("Agent payload narrative differs from stage summary.")
-        if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}:
+        if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, *CURRENT_DECISION_CHECKPOINT_SCHEMAS}:
             activity_path = path.parent / "stage_activity_bundle.json"
             if not activity_path.is_file():
                 reasons.append("Missing v4 stage activity bundle companion.")
@@ -1921,7 +2248,7 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                         reasons.append("Stage activity bundle hash differs from stage summary.")
                     if agent.get("activity_bundle_sha256") != summary.get("activity_bundle_sha256"):
                         reasons.append("Agent payload activity bundle hash differs from stage summary.")
-        if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+        if schema in CURRENT_DECISION_CHECKPOINT_SCHEMAS:
             v5_paths = {
                 "stage_summary.en.html": path.parent / "stage_summary.en.html",
                 "human_decision_brief_v1.json": path.parent / "human_decision_brief_v1.json",
@@ -1931,10 +2258,12 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                 "figure_claim_map_v1.json": path.parent / "figure_claim_map_v1.json",
                 "checkpoint_audit_fingerprint_v1.json": path.parent / "checkpoint_audit_fingerprint_v1.json",
             }
+            if schema == CHECKPOINT_SUMMARY_V6_SCHEMA:
+                v5_paths["stage_audit.json"] = path.parent / "stage_audit.json"
             for name, companion in v5_paths.items():
                 if not companion.is_file():
-                    reasons.append(f"Missing v5 companion: {name}")
-            if not reasons or all(not reason.startswith("Missing v5 companion") for reason in reasons):
+                    reasons.append(f"Missing v5/v6 companion: {name}")
+            if not reasons or all(not reason.startswith("Missing v5/v6 companion") for reason in reasons):
                 try:
                     brief = json.loads(v5_paths["human_decision_brief_v1.json"].read_text(encoding="utf-8-sig"))
                     fingerprint = json.loads(v5_paths["scientific_decision_fingerprint_v1.json"].read_text(encoding="utf-8-sig"))
@@ -1943,18 +2272,18 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                     figure_map = json.loads(v5_paths["figure_claim_map_v1.json"].read_text(encoding="utf-8-sig"))
                     audit_fingerprint = json.loads(v5_paths["checkpoint_audit_fingerprint_v1.json"].read_text(encoding="utf-8-sig"))
                 except (OSError, ValueError) as exc:
-                    reasons.append(f"Invalid v5 companion JSON: {exc}")
+                    reasons.append(f"Invalid v5/v6 companion JSON: {exc}")
                 else:
                     from .checkpoint_fingerprint import build_scientific_decision_fingerprint
                     from .figure_claim_map import build_figure_claim_map, validate_figure_claim_map
 
                     if brief != summary.get("decision_brief"):
-                        reasons.append("Human decision brief file differs from the v5 summary.")
+                        reasons.append("Human decision brief file differs from the v5/v6 summary.")
                     if fingerprint != summary.get("scientific_decision_fingerprint"):
-                        reasons.append("Scientific decision fingerprint file differs from the v5 summary.")
+                        reasons.append("Scientific decision fingerprint file differs from the v5/v6 summary.")
                     recomputed_figure_map = build_figure_claim_map(summary, brief)
                     if figure_map != recomputed_figure_map:
-                        reasons.append("FigureClaimMap file differs from the v5 summary projection.")
+                        reasons.append("FigureClaimMap file differs from the v5/v6 summary projection.")
                     figure_issues = validate_figure_claim_map(figure_map)
                     if figure_issues:
                         reasons.append("FigureClaimMap contains unresolved alignment issues.")
@@ -1970,11 +2299,26 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                     if readability_en.get("status") != "passed":
                         reasons.append("English checkpoint decision page did not pass readability validation.")
                     if figure_map.get("figure_claim_map_sha256") != summary.get("figure_claim_map_sha256"):
-                        reasons.append("FigureClaimMap hash differs from the v5 summary.")
+                        reasons.append("FigureClaimMap hash differs from the v5/v6 summary.")
                     if figure_map.get("scientific_figure_claim_sha256") != summary.get("scientific_figure_claim_sha256"):
-                        reasons.append("Scientific FigureClaimMap hash differs from the v5 summary.")
+                        reasons.append("Scientific FigureClaimMap hash differs from the v5/v6 summary.")
                     if audit_fingerprint.get("audit_bundle_sha256") != summary.get("audit_bundle_sha256"):
-                        reasons.append("Audit fingerprint differs from the v5 summary.")
+                        reasons.append("Audit fingerprint differs from the v5/v6 summary.")
+                    if schema == CHECKPOINT_SUMMARY_V6_SCHEMA:
+                        try:
+                            audit_document = json.loads(v5_paths["stage_audit.json"].read_text(encoding="utf-8-sig"))
+                        except (OSError, ValueError) as exc:
+                            reasons.append(f"Invalid v6 stage audit JSON: {exc}")
+                        else:
+                            audit_hash = audit_document.get("stage_audit_sha256")
+                            audit_subject = dict(audit_document)
+                            audit_subject.pop("stage_audit_sha256", None)
+                            if audit_hash != _hash_payload(audit_subject):
+                                reasons.append("v6 stage audit JSON does not match its hash.")
+                            if audit_document.get("stage_summary_sha256") != summary.get("stage_summary_sha256"):
+                                reasons.append("v6 stage audit JSON is not bound to the stage summary hash.")
+                            if audit_document.get("audit_bundle_sha256") != summary.get("audit_bundle_sha256"):
+                                reasons.append("v6 stage audit JSON is not bound to the audit fingerprint.")
     current = {str(item.get("path")): item for item in collect_artifacts(root) if isinstance(item, dict)}
     for item in (summary.get("artifact_manifest") or {}).get("artifacts") or []:
         relative_artifact = str(item.get("project_relative_path") or "")
@@ -2009,7 +2353,7 @@ def attach_checkpoint_summary(
 
     if payload.get("stage_summary_zh_html"):
         return payload
-    report = write_stage_summary_v5(
+    report = write_stage_summary_v6(
         project,
         stage=stage,
         command=command,
@@ -2023,10 +2367,7 @@ def attach_checkpoint_summary(
         "absolute_path": report["absolute_stage_summary_zh_html"],
         "source_semantic_sha256": report["stage_summary_sha256"],
     }
-    audit_path = {
-        "project_relative_path": report["stage_audit_zh_html"],
-        "absolute_path": report["absolute_stage_audit_zh_html"],
-    }
+    audit_path = report["technical_audit_json"]
     review_keys = {
         "stage_completion_summary_zh",
         "primary_human_review_html",
@@ -2040,6 +2381,7 @@ def attach_checkpoint_summary(
         "confirmation_meaning_en",
         "confirmation_command",
         "technical_audit_html",
+        "technical_audit_json",
         "stage_summary_zh_html",
         "checkpoint_summary",
         "primary_artifacts",
@@ -2059,7 +2401,7 @@ def attach_checkpoint_summary(
         "confirmation_meaning_zh": report["confirmation_meaning_zh"],
         "confirmation_meaning_en": report["confirmation_meaning_en"],
         "confirmation_command": report["confirmation_command"],
-        "technical_audit_html": audit_path,
+        "technical_audit_json": audit_path,
         **{key: value for key, value in payload.items() if key not in review_keys},
         "stage_summary_zh_html": decision_path,
     }
@@ -2070,7 +2412,7 @@ def attach_checkpoint_summary(
         "stage_summary_json": report["absolute_stage_summary_json"],
         "artifact_manifest": report["absolute_artifact_manifest"],
         "confirmation_request": report["confirmation_request"],
-        "stage_audit": report["absolute_stage_audit_zh_html"],
+        "stage_audit": report["absolute_stage_audit_json"],
         "human_decision_brief": str((project_root(project) / report["human_decision_brief"]).resolve()),
     }
     root = project_root(project)

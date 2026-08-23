@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .passport import project_root
+from .protected_action_policy import policy_for_command
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,11 @@ class CommandSpec:
     idempotency: str = "supported"
     parallel_safe: bool = False
     confirmation_policy: str = "none"
+    decision_family: str = "none"
+    packet_policy: str = "none"
+    risk_resolver: str = "none"
+    receipt_contract: str = "none"
+    delegation_policy: str = "none"
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
     mcp_exposed: bool | None = None
@@ -204,7 +210,16 @@ COMMAND_SPECS = {
             "audit_project_capabilities",
             (("project", "project"),),
         ),
-        CommandSpec("review-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "review_research_plan", (("project", "project"),)),
+        CommandSpec(
+            "review-research-plan",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            "research_plan_confirmation",
+            "review_research_plan",
+            (("project", "project"),),
+            allowed_write_globs=(".draftpaper/**", *_stage_write_globs("capabilities")),
+        ),
         CommandSpec(
             "revise-research-objective",
             "capability_coordinator",
@@ -215,8 +230,37 @@ COMMAND_SPECS = {
             (("project", "project"), ("objective_file", "objective_file")),
             allowed_write_globs=("idea/**", *_COMMON_MANAGED_WRITES),
         ),
-        CommandSpec("confirm-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "confirm_research_plan", (("project", "project"), ("plan_hash", "plan_hash"), ("accept_limitations", "accept_limitations")), protected_action=True, manual_only=True),
+        CommandSpec(
+            "confirm-research-plan",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            "research_plan_confirmation",
+            "confirm_research_plan",
+            (("project", "project"), ("plan_hash", "plan_hash"), ("decision_hash", "decision_hash"), ("accept_limitations", "accept_limitations")),
+            protected_action=True,
+            manual_only=True,
+            allowed_write_globs=(".draftpaper/**", *_stage_write_globs("capabilities")),
+        ),
+        CommandSpec(
+            "confirm-literature-corpus",
+            "literature_coordinator",
+            True,
+            "references",
+            "literature_confirmation",
+            "confirm_literature_corpus",
+            (("project", "project"), ("packet_hash", "packet_hash")),
+            protected_action=True,
+            manual_only=True,
+            allowed_write_globs=(".draftpaper/**", *_stage_write_globs("references")),
+        ),
         CommandSpec("reopen-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "reopen_research_plan", (("project", "project"), ("reason", "reason")), protected_action=True, manual_only=True),
+        CommandSpec("validate-research-plan-review", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "validate_research_plan_review", (("project", "project"),)),
+        CommandSpec("compare-research-plan-decision", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "compare_research_plan_decision", (("project", "project"), ("against", "against"))),
+        CommandSpec("explain-research-plan-reconfirmation", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "explain_research_plan_reconfirmation", (("project", "project"),)),
+        CommandSpec("audit-research-plan-migration", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "audit_research_plan_migration", (("project", "project"),)),
+        CommandSpec("show-human-review-packet", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "show_research_plan_review_packet", (("project", "project"),)),
+        CommandSpec("audit-human-checkpoint-policy", "state_kernel", False, "state", "protected_action_policy", "audit_registered_human_checkpoint_policy"),
         CommandSpec("validate-confirmed-figure-alignment", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_confirmed_figure_alignment", (("project", "project"),), "decision_pass"),
         CommandSpec("validate-figure-captions", "evidence_coordinator", True, "results", "figure_contracts_v026", "validate_figure_captions", (("project", "project"),), "decision_pass"),
         CommandSpec(
@@ -408,7 +452,7 @@ assess-method-feasibility assess-paper-quality-parity assess-plugin-sufficiency 
 assess-research-plan-feasibility assess-result-support assess-result-validity assess-review-rules audit-citations
 audit-project-capabilities bootstrap-discipline-foundation build-argument-matrices build-code-provenance
 build-data-context build-method-context build-panel-contracts build-paper-narrative build-reference-registry
-add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
+ add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage confirm-literature-corpus record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
 audit-literature-integrity sync-literature-sources apply-literature-sync repair-literature-identities migrate-literature-index rollback-literature-migration rebuild-literature-index quarantine-orphan-literature rollback-orphan-literature parse-literature-source-documents
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
@@ -416,7 +460,12 @@ compile-skill-source create-project create-project-version detect-artifact-drift
 path-budget-check doctor-project-layout adopt-orphan-artifacts
 apply-orphan-adoption
 build-statistical-validation-contract assess-review-rule-coverage assess-pre-execution-support prepare-pre-execution-rescue
-review-research-plan confirm-research-plan reopen-research-plan
+review-research-plan confirm-research-plan reopen-research-plan validate-research-plan-review
+compare-research-plan-decision explain-research-plan-reconfirmation show-human-review-packet audit-human-checkpoint-policy
+audit-research-plan-migration
+inspect-review-evidence
+render-checkpoint-audit
+shadow-checkpoint-v6
 validate-confirmed-figure-alignment validate-figure-captions
 review-final-manuscript confirm-final-manuscript
 diagnose-gate-failures discover-research-repos discover-review-workflow-gaps evaluate-capability-routing
@@ -603,6 +652,15 @@ COMMAND_SPECS.update({
         "show_checkpoint_summary",
         (("project", "project"), ("checkpoint_hash", "checkpoint_hash"), ("language", "language"), ("view", "view")),
     ),
+    "inspect-review-evidence": CommandSpec(
+        "inspect-review-evidence",
+        "state_kernel",
+        False,
+        "state",
+        "review_evidence",
+        "inspect_review_evidence",
+        (("project", "project"), ("ref", "ref")),
+    ),
     "show-checkpoint-audit": CommandSpec(
         "show-checkpoint-audit",
         "state_kernel",
@@ -611,6 +669,16 @@ COMMAND_SPECS.update({
         "checkpoint_summary",
         "show_checkpoint_audit",
         (("project", "project"), ("checkpoint_package_id", "checkpoint_package_id"), ("checkpoint_hash", "checkpoint_hash")),
+    ),
+    "render-checkpoint-audit": CommandSpec(
+        "render-checkpoint-audit",
+        "state_kernel",
+        True,
+        "state",
+        "checkpoint_summary",
+        "render_checkpoint_audit",
+        (("project", "project"), ("checkpoint_package_id", "checkpoint_package_id")),
+        allowed_write_globs=(".draftpaper/render_cache/audit/**",),
     ),
     "compare-checkpoint-decision": CommandSpec(
         "compare-checkpoint-decision",
@@ -664,6 +732,15 @@ COMMAND_SPECS.update({
         "state",
         "checkpoint_shadow",
         "shadow_checkpoint_v5",
+        (("project", "project"), ("output_root", "output_root")),
+    ),
+    "shadow-checkpoint-v6": CommandSpec(
+        "shadow-checkpoint-v6",
+        "state_kernel",
+        False,
+        "state",
+        "checkpoint_shadow",
+        "shadow_checkpoint_v6",
         (("project", "project"), ("output_root", "output_root")),
     ),
     "rebuild-checkpoint-presentation": CommandSpec(
@@ -1034,6 +1111,46 @@ COMMAND_SPECS["generate-plan"] = replace(
 )
 
 
+def _apply_protected_action_policies() -> None:
+    """Attach explicit decision metadata without weakening write protection."""
+
+    for name, spec in tuple(COMMAND_SPECS.items()):
+        policy = policy_for_command(name, protected=spec.protected_action)
+        if (
+            name not in {"checkpoint", "resume"}
+            and not spec.protected_action
+            and policy["decision_family"] == "none"
+        ):
+            continue
+        updates: dict[str, Any] = {
+            "decision_family": policy["decision_family"],
+            "packet_policy": policy["packet_policy"],
+            "risk_resolver": policy["risk_resolver"],
+            "receipt_contract": policy["receipt_contract"],
+            "delegation_policy": policy["delegation_policy"],
+        }
+        if name == "checkpoint":
+            updates.update(
+                {
+                    "risk_level": "write_project",
+                    "manual_only": False,
+                    "confirmation_policy": "packet_build",
+                }
+            )
+        elif name == "resume":
+            updates.update(
+                {
+                    "risk_level": "write_project",
+                    "manual_only": False,
+                    "confirmation_policy": "receipt_consumer",
+                }
+            )
+        COMMAND_SPECS[name] = replace(spec, **updates)
+
+
+_apply_protected_action_policies()
+
+
 for _name, _spec in tuple(COMMAND_SPECS.items()):
     if _spec.handler_module and _spec.handler_name:
         continue
@@ -1092,6 +1209,8 @@ def _checkpoint_stage(spec: CommandSpec, command: str, payload: dict[str, Any]) 
         return explicit
     if command in {"review-research-plan", "confirm-research-plan", "reopen-research-plan"}:
         return "research_plan"
+    if command == "confirm-literature-corpus":
+        return "references"
     if command in {"assess-result-support", "prepare-result-rescue", "apply-result-downgrade"}:
         return "result_support"
     if "core-evidence" in command or command in {"checkpoint", "resume"}:
@@ -1112,12 +1231,15 @@ def _attach_human_checkpoint_summary(
 ) -> dict[str, Any]:
     command = spec.name
     status = str(payload.get("status") or payload.get("decision") or "").lower()
-    needs_summary = spec.risk_level == "human_checkpoint" or bool(payload.get("requires_user_decision")) or status in {
-        "confirmation_required",
-        "review_required",
-        "checkpoint_created",
-        "awaiting_confirmation",
-    }
+    # A protected write is not automatically a new scientific decision.  Full
+    # author pages are reserved for an explicit decision requirement or a
+    # policy-declared full packet.  Compact and notification operations keep
+    # their own focused payloads, preventing a reopen/resume/rollback from
+    # manufacturing an unrelated long checkpoint page.
+    needs_summary = bool(payload.get("requires_user_decision")) or (
+        spec.packet_policy == "full"
+        and status in {"confirmation_required", "review_required", "checkpoint_created", "awaiting_confirmation"}
+    )
     project = getattr(args, "project", None)
     if not needs_summary or not project or payload.get("stage_summary_zh_html"):
         return payload

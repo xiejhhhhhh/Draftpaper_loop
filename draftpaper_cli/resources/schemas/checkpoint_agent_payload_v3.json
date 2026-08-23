@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_agent_payload.v3",
+  "type": "object",
+  "required": ["schema_version", "summary_schema", "checkpoint_id", "stage", "primary_human_review_html", "human_decision_html", "technical_audit_json", "stage_completion_summary_zh", "decision_question_zh", "decision_summary_zh", "semantic_delta_summary_zh", "semantic_delta_summary_en", "review_points_zh", "decision_actor_type", "decision_authority_reason_zh", "confirmation_meaning_zh", "confirmation_meaning_en", "scientific_decision_sha256", "human_brief_semantic_sha256", "continuity_status", "latest_user_visible_deliverables", "context_budget_bytes"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_agent_payload.v3"},
+    "summary_schema": {"type": "string"},
+    "checkpoint_id": {"type": "string"},
+    "stage": {"type": "string"},
+    "primary_human_review_html": {"type": "object"},
+    "human_decision_html": {"type": "object"},
+    "technical_audit_json": {"type": "object"},
+    "stage_completion_summary_zh": {"type": "string"},
+    "decision_question_zh": {"type": "string"},
+    "decision_summary_zh": {"type": "string"},
+    "scientific_decision_sha256": {"type": "string"},
+    "human_brief_semantic_sha256": {"type": "string"},
+    "semantic_delta_summary_zh": {"type": "string"},
+    "semantic_delta_summary_en": {"type": "string"},
+    "review_points_zh": {"type": "array"},
+    "decision_actor_type": {"type": "string"},
+    "decision_authority_reason_zh": {"type": "string"},
+    "confirmation_meaning_zh": {"type": "string"},
+    "confirmation_meaning_en": {"type": "string"},
+    "continuity_status": {"type": ["string", "null"]},
+    "latest_user_visible_deliverables": {"type": "array"},
+    "context_budget_bytes": {"const": 12288}
+  },
+  "additionalProperties": true
+}

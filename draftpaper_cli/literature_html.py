@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import tempfile
 from collections import Counter
+from collections.abc import Mapping
 from html import escape
 from pathlib import Path
 from typing import Any
 
 from .literature_scoring import identify_legacy_zero_scores
-
 
 LOCALES = {
     "en": {
@@ -79,6 +80,19 @@ LOCALES = {
         "limitations": "Limitations",
         "relevance_to_study": "Relevance to Study",
         "pdf_excerpt": "PDF Quick-Read Excerpt",
+        "verified_teaching_analysis": "Evidence-verified teaching analysis",
+        "one_sentence": "Core contribution in one sentence",
+        "validation": "Validation and uncertainty checks",
+        "contribution": "What this paper contributes",
+        "evidence_mapping": "Field-level evidence mapping",
+        "paper_report": "Paper-reported fact or evidence-grounded paper synthesis",
+        "project_synthesis": "Project-level synthesis; not presented as a paper fact",
+        "reading_order": "Recommended reading order",
+        "citation_role": "Project citation role",
+        "prerequisites": "Read after",
+        "evidence_status": "Teaching evidence status",
+        "transfer_boundary": "Transfer boundary",
+        "formal_learning_portal": "Open the linked learning portal",
         "not_available": "n/a",
         "not_evaluated": "not evaluated",
         "language_zh": "中文",
@@ -149,6 +163,19 @@ LOCALES = {
         "limitations": "局限性",
         "relevance_to_study": "与当前研究的相关性",
         "pdf_excerpt": "PDF 快速阅读摘录",
+        "verified_teaching_analysis": "证据核验后的教学解读",
+        "one_sentence": "一句话核心贡献",
+        "validation": "验证设计与不确定性检查",
+        "contribution": "该文献的具体贡献",
+        "evidence_mapping": "字段级证据映射",
+        "paper_report": "论文原文事实或有证据约束的论文综合",
+        "project_synthesis": "项目层综合判断；不作为论文原文事实展示",
+        "reading_order": "建议阅读顺序",
+        "citation_role": "项目中的引用角色",
+        "prerequisites": "建议先理解",
+        "evidence_status": "教学证据状态",
+        "transfer_boundary": "迁移边界",
+        "formal_learning_portal": "打开关联学习门户",
         "not_available": "不适用",
         "not_evaluated": "尚未评估",
         "language_zh": "中文",
@@ -178,6 +205,135 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _enrichment_hash(payload: Mapping[str, Any]) -> str:
+    material = json.dumps(
+        {str(key): value for key, value in payload.items() if str(key) != "enrichment_hash"},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return "sha256:" + hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def _valid_verified_analysis(analysis: Mapping[str, Any]) -> bool:
+    required = {
+        "one_sentence",
+        "research_question",
+        "data",
+        "method",
+        "validation",
+        "result",
+        "limitation",
+        "contribution",
+        "relation_to_project",
+        "transfer_boundary",
+    }
+    if not required.issubset(analysis):
+        return False
+    for field in required:
+        item = analysis.get(field)
+        if (
+            not isinstance(item, Mapping)
+            or not str(item.get("zh-CN") or "").strip()
+            or not str(item.get("en") or "").strip()
+            or not [value for value in item.get("source_ids") or () if str(value)]
+            or not isinstance(item.get("evidence_quotes"), list)
+            or not item.get("evidence_quotes")
+        ):
+            return False
+        scope = str(item.get("statement_scope") or "")
+        if field in {"relation_to_project", "transfer_boundary"}:
+            if scope != "project_synthesis":
+                return False
+        elif scope not in {"paper_report", "paper_synthesis"}:
+            return False
+    return True
+
+
+def _load_verified_teaching_enrichment(
+    references_dir: Path,
+    corpus_manifest: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Return the optional Guidance projection only when it covers this corpus.
+
+    Core retains ownership of its summary pages.  The optional sidecar may
+    enrich their reader-facing explanation only after all accepted works have
+    verifier-promoted analyses tied to the exact same corpus hash.
+    """
+
+    corpus_hash = str(corpus_manifest.get("corpus_snapshot_hash") or "")
+    accepted = {
+        str(item.get("citation_key") or "")
+        for item in corpus_manifest.get("accepted_works") or ()
+        if isinstance(item, Mapping) and str(item.get("citation_key") or "")
+    }
+    path = references_dir.parent / "guidance" / "learning" / "literature" / "core_summary_enrichment.json"
+    payload = _read_json_object(path)
+    if (
+        payload.get("schema_version") != "dpl.literature_summary_enrichment.v1"
+        or str(payload.get("enrichment_hash") or "") != _enrichment_hash(payload)
+        or str(payload.get("core_corpus_snapshot_hash") or "") != corpus_hash
+        or int(payload.get("accepted_work_count") or 0) != len(accepted)
+        or int(payload.get("verified_analysis_count") or 0) != len(accepted)
+    ):
+        return {}
+    papers = [item for item in payload.get("papers") or () if isinstance(item, Mapping)]
+    by_key = {str(item.get("citation_key") or ""): dict(item) for item in papers if str(item.get("citation_key") or "")}
+    if set(by_key) != accepted:
+        return {}
+    if any(
+        not isinstance(item.get("analysis"), Mapping)
+        or not _valid_verified_analysis(item["analysis"])
+        for item in by_key.values()
+    ):
+        return {}
+    return by_key
+
+
+def _localized_teaching_value(value: Any) -> str:
+    if not isinstance(value, Mapping):
+        return f"<p>{escape(str(value or ''))}</p>"
+    en = str(value.get("en") or value.get("zh-CN") or "")
+    zh = str(value.get("zh-CN") or value.get("en") or "")
+    return f'<p data-dpl-localized="true" data-dpl-en="{escape(en, quote=True)}" data-dpl-zh="{escape(zh, quote=True)}">{escape(en)}</p>'
+
+
+def _teaching_evidence_mapping_html(
+    analysis: Mapping[str, Any],
+    locale: Mapping[str, str],
+) -> str:
+    """Render short, readable supporting excerpts instead of orphaned hashes."""
+
+    rows: list[str] = []
+    for field, item in analysis.items():
+        if not isinstance(item, Mapping):
+            continue
+        supports = item.get("evidence_quotes") or ()
+        if not isinstance(supports, list) or not supports:
+            continue
+        scope = str(item.get("statement_scope") or "paper_report")
+        scope_label = locale.get(scope, scope.replace("_", " "))
+        quotes = [
+            str(support.get("quote") or "").strip()
+            for support in supports
+            if isinstance(support, Mapping) and str(support.get("quote") or "").strip()
+        ]
+        if not quotes:
+            continue
+        rows.append(
+            "<li>"
+            f"<strong>{escape(locale.get(field, field.replace('_', ' ')))}</strong> · {escape(scope_label)}"
+            + "".join(f"<blockquote>{escape(quote)}</blockquote>" for quote in quotes)
+            + "</li>"
+        )
+    if not rows:
+        return ""
+    return (
+        f'<details class="teaching-evidence"><summary data-i18n="evidence_mapping">'
+        f'{escape(locale["evidence_mapping"])}</summary><ul>{"".join(rows)}</ul></details>'
+    )
+
+
 def _pipeline_summary(references_dir: Path, active_count: int) -> dict[str, Any]:
     prefetch = _read_json_object(references_dir / "prefetch_relevance_report.json")
     identity = _read_json_object(references_dir / "paper_identity_resolution_summary.json")
@@ -193,11 +349,7 @@ def _pipeline_summary(references_dir: Path, active_count: int) -> dict[str, Any]
         "identity_resolved": int(identity.get("resolved_count") or 0),
         "identity_ambiguous": sum(int(identity_status.get(value) or 0) for value in ("ambiguous", "mismatch")),
         "fulltext_fetched": int(fetch.get("success_count") or 0),
-        "postfetch_rejected": sum(
-            int(count or 0)
-            for status, count in postfetch_status.items()
-            if str(status).startswith("rejected_")
-        ),
+        "postfetch_rejected": sum(int(count or 0) for status, count in postfetch_status.items() if str(status).startswith("rejected_")),
         "active_references": active_count,
         "quarantine_records": int(quarantine.get("count") or 0),
         "provider_status": f"{fetch.get('status') or 'not_run'} / {fetch.get('runtime_source') or 'n/a'}",
@@ -219,8 +371,7 @@ def _pipeline_summary_html(summary: dict[str, Any]) -> str:
         "review_required",
     )
     rows = "".join(
-        f'<div><dt data-i18n="{key}">{escape(LOCALES["en"][key])}</dt><dd>{escape(str(summary.get(key, "n/a")))}</dd></div>'
-        for key in keys
+        f'<div><dt data-i18n="{key}">{escape(LOCALES["en"][key])}</dt><dd>{escape(str(summary.get(key, "n/a")))}</dd></div>' for key in keys
     )
     return f'<section aria-labelledby="pipeline-summary"><h2 id="pipeline-summary" data-i18n="workflow_summary">{LOCALES["en"]["workflow_summary"]}</h2><dl class="pipeline-summary">{rows}</dl></section>'
 
@@ -246,17 +397,14 @@ def _quarantine_html(references_dir: Path) -> str:
         )
     if not rows:
         return ""
-    return (
-        f'<section><h2 data-i18n="quarantine_heading">{LOCALES["en"]["quarantine_heading"]}</h2>'
-        f"<ul>{''.join(rows)}</ul></section>"
-    )
+    return f'<section><h2 data-i18n="quarantine_heading">{LOCALES["en"]["quarantine_heading"]}</h2><ul>{"".join(rows)}</ul></section>'
 
 
 def _safe_filename(text: str, fallback: str) -> str:
     import re
 
     name = re.sub(r"[^A-Za-z0-9]+", "_", text or "").strip("_").lower()
-    return (name[:70].strip("_") or fallback)
+    return name[:70].strip("_") or fallback
 
 
 def _score_display(item: dict[str, Any], field: str) -> str:
@@ -381,6 +529,9 @@ function setDplLocale(locale) {{
     const key = node.dataset.i18n;
     if (dictionary[key]) node.textContent = dictionary[key];
   }});
+  document.querySelectorAll('[data-dpl-localized="true"]').forEach((node) => {{
+    node.textContent = chosen === 'zh-CN' ? (node.dataset.dplZh || node.dataset.dplEn || '') : (node.dataset.dplEn || node.dataset.dplZh || '');
+  }});
   document.querySelectorAll('[data-locale-button]').forEach((node) => {{
     node.setAttribute('aria-pressed', node.dataset.localeButton === chosen ? 'true' : 'false');
   }});
@@ -420,9 +571,13 @@ def _detail_html(
     locale_payload: dict[str, dict[str, str]],
     code_sources_by_work: dict[str, list[dict[str, Any]]],
     snapshot_hash: str = "",
+    corpus_hash: str = "",
 ) -> str:
     locale = locale_payload["en"]
     summary = item.get("deep_summary") or {}
+    enrichment = item.get("teaching_enrichment")
+    enrichment = enrichment if isinstance(enrichment, Mapping) else {}
+    analysis = enrichment.get("analysis") if isinstance(enrichment.get("analysis"), Mapping) else {}
     categories = _source_categories(item)
     parse_receipts = json.dumps(item.get("document_parses") or [], ensure_ascii=False, sort_keys=True, indent=2)
     field_provenance = json.dumps(item.get("field_provenance") or {}, ensure_ascii=False, sort_keys=True, indent=2)
@@ -436,12 +591,20 @@ def _detail_html(
         ("file_id", str(item.get("local_file_id") or "n/a")),
         ("metadata", str(item.get("metadata_status") or "unknown")),
         ("pdf_parser", str(item.get("pdf_read_status") or "not_parsed")),
-        ("parser_route", str((item.get("document_parses") or [{}])[0].get("route") or "n/a") if isinstance((item.get("document_parses") or [{}])[0], dict) else "n/a"),
+        (
+            "parser_route",
+            str((item.get("document_parses") or [{}])[0].get("route") or "n/a")
+            if isinstance((item.get("document_parses") or [{}])[0], dict)
+            else "n/a",
+        ),
         ("candidate_state", str(item.get("candidate_state") or "unknown")),
         ("discovery_provider", str(item.get("source_provider") or item.get("source") or "unknown")),
         ("prefetch_topic", f"{item.get('topic_relevance_score', 'n/a')} / {item.get('gate_state') or 'n/a'}"),
         ("identity_status", str(item.get("identity_resolution_status") or "legacy_not_resolved")),
-        ("identity_checks", json.dumps((item.get("identity_resolution_receipt") or {}).get("checks") or {}, ensure_ascii=False, sort_keys=True)),
+        (
+            "identity_checks",
+            json.dumps((item.get("identity_resolution_receipt") or {}).get("checks") or {}, ensure_ascii=False, sort_keys=True),
+        ),
         ("fulltext_decision", str((item.get("fulltext_fetch_decision") or {}).get("reason") or "not_recorded")),
         ("fetch_runtime", str(item.get("paper_fetch_status") or "not_fetched")),
         ("postfetch_status", str(item.get("postfetch_state") or "legacy_active")),
@@ -456,44 +619,87 @@ def _detail_html(
         ("citation_weight", _score_display(item, "citation_weight")),
         ("relevance", _score_display(item, "relevance_score")),
         ("journal_authority", _score_display(item, "journal_score")),
+        ("reading_order", str(enrichment.get("reading_order") or "n/a")),
+        ("citation_role", ", ".join(str(value) for value in enrichment.get("citation_roles") or ())),
+        ("prerequisites", ", ".join(str(value) for value in enrichment.get("prerequisites") or ())),
+        ("evidence_status", str(enrichment.get("evidence_status") or "not_verified")),
         ("relevance_to_study", str(summary.get("relevance_to_study") or "")),
     ]
-    table_rows = "".join(f'<tr><th data-i18n="{escape(key)}">{escape(locale.get(key, key))}</th><td>{escape(value)}</td></tr>' for key, value in rows)
-    sections = [
-        ("abstract", item.get("abstract") or "No abstract metadata is available."),
-        ("read_status", summary.get("read_status") or ""),
-        ("research_question", summary.get("research_question") or ""),
-        ("data_used", summary.get("data_used") or ""),
-        ("methods", summary.get("methods") or ""),
-        ("scientific_results", summary.get("scientific_results") or ""),
-        ("limitations", summary.get("limitations") or ""),
-        ("relevance_to_study", summary.get("relevance_to_study") or ""),
-        ("pdf_excerpt", summary.get("pdf_excerpt") or "No readable PDF excerpt was available."),
-    ]
-    headings = "".join(f'<h2 data-i18n="{escape(key)}">{escape(locale.get(key, key))}</h2><p>{escape(str(value))}</p>' for key, value in sections)
+    table_rows = "".join(
+        f'<tr><th data-i18n="{escape(key)}">{escape(locale.get(key, key))}</th><td>{escape(value)}</td></tr>' for key, value in rows
+    )
+    # Once every work in the confirmed corpus has a verified Guidance
+    # enrichment, do not keep showing older ``deep_summary`` template text in
+    # the same reader-facing section.  The raw Core metadata remains above;
+    # the teaching interpretation is wholly derived from the promoted fields.
+    if analysis:
+        sections: list[tuple[str, Any]] = [
+            ("abstract", item.get("abstract") or "No abstract metadata is available."),
+            ("one_sentence", analysis.get("one_sentence") or ""),
+            ("research_question", analysis.get("research_question") or ""),
+            ("data_used", analysis.get("data") or ""),
+            ("methods", analysis.get("method") or ""),
+            ("validation", analysis.get("validation") or ""),
+            ("scientific_results", analysis.get("result") or ""),
+            ("limitations", analysis.get("limitation") or ""),
+            ("contribution", analysis.get("contribution") or ""),
+            ("relevance_to_study", analysis.get("relation_to_project") or ""),
+            ("transfer_boundary", analysis.get("transfer_boundary") or ""),
+        ]
+    else:
+        sections = [
+            ("abstract", item.get("abstract") or "No abstract metadata is available."),
+            ("read_status", summary.get("read_status") or ""),
+            ("research_question", summary.get("research_question") or ""),
+            ("data_used", summary.get("data_used") or ""),
+            ("methods", summary.get("methods") or ""),
+            ("scientific_results", summary.get("scientific_results") or ""),
+            ("limitations", summary.get("limitations") or ""),
+            ("relevance_to_study", summary.get("relevance_to_study") or ""),
+            ("pdf_excerpt", summary.get("pdf_excerpt") or "No readable PDF excerpt was available."),
+        ]
+    teaching_heading = f'<h2 data-i18n="verified_teaching_analysis">{escape(locale["verified_teaching_analysis"])}</h2>' if analysis else ""
+    headings = "".join(
+        f'<h2 data-i18n="{escape(key)}">{escape(locale.get(key, key))}</h2>' + _localized_teaching_value(value) for key, value in sections
+    )
+    evidence_mapping = _teaching_evidence_mapping_html(analysis, locale) if analysis else ""
     snapshot_meta = f'<meta name="draftpaper-snapshot-hash" content="{escape(snapshot_hash, quote=True)}">' if snapshot_hash else ""
+    corpus_meta = f'<meta name="draftpaper-teaching-corpus-hash" content="{escape(corpus_hash, quote=True)}">' if corpus_hash else ""
     snapshot_attr = f' data-snapshot-hash="{escape(snapshot_hash, quote=True)}"' if snapshot_hash else ""
+    corpus_attr = f' data-teaching-corpus-hash="{escape(corpus_hash, quote=True)}"' if corpus_hash else ""
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">{snapshot_meta}<title>{escape(str(item.get('title') or locale['index_title']))}</title>{_style()}{_script(locale_payload)}</head>
-<body{snapshot_attr}>{_language_switcher()}<p><a href="index.html">{escape(locale['index_heading'])}</a></p>
-<h1>{escape(str(item.get('title') or locale['index_title']))}</h1>
+<html lang="en"><head><meta charset="utf-8">{snapshot_meta}{corpus_meta}<title>{escape(str(item.get("title") or locale["index_title"]))}</title>{_style()}{_script(locale_payload)}</head>
+<body{snapshot_attr}{corpus_attr}>{_language_switcher()}<p><a href="index.html">{escape(locale["index_heading"])}</a></p>
+<h1>{escape(str(item.get("title") or locale["index_title"]))}</h1>
 <table><tbody>{table_rows}</tbody></table>
-<h2 data-i18n="source_records">{escape(locale['source_records'])}</h2>{_source_record_table(item, locale)}
-<h2 data-i18n="query_provenance">{escape(locale['query_provenance'])}</h2><pre>{escape(query_provenance)}</pre>
-<h2 data-i18n="recommended_section">{escape(locale['recommended_section'])}</h2><p>{escape({'idea': 'introduction', 'introduction': 'introduction', 'data': 'data', 'methods': 'methods'}.get(str(item.get('search_context') or 'idea'), 'introduction'))}</p>
-<h2 data-i18n="field_provenance">{escape(locale['field_provenance'])}</h2><pre>{escape(field_provenance)}</pre>
-<h2 data-i18n="parse_receipts">{escape(locale['parse_receipts'])}</h2><pre>{escape(parse_receipts)}</pre>
-{headings}
+<h2 data-i18n="source_records">{escape(locale["source_records"])}</h2>{_source_record_table(item, locale)}
+<h2 data-i18n="query_provenance">{escape(locale["query_provenance"])}</h2><pre>{escape(query_provenance)}</pre>
+<h2 data-i18n="recommended_section">{escape(locale["recommended_section"])}</h2><p>{escape({"idea": "introduction", "introduction": "introduction", "data": "data", "methods": "methods"}.get(str(item.get("search_context") or "idea"), "introduction"))}</p>
+<h2 data-i18n="field_provenance">{escape(locale["field_provenance"])}</h2><pre>{escape(field_provenance)}</pre>
+  <h2 data-i18n="parse_receipts">{escape(locale["parse_receipts"])}</h2><pre>{escape(parse_receipts)}</pre>
+  {teaching_heading}{headings}{evidence_mapping}
 <p>{_link_html(item)}</p>
 </body></html>
 """
 
 
-def render_literature_html(references_dir: Path, items: list[dict[str, Any]]) -> list[str]:
+def render_literature_html(
+    references_dir: Path,
+    items: list[dict[str, Any]],
+    *,
+    corpus_manifest: dict[str, Any] | None = None,
+) -> list[str]:
     summary_dir = references_dir / "literature_summaries"
     temporary = Path(tempfile.mkdtemp(prefix="literature_summaries.", dir=str(references_dir)))
     try:
         snapshot_hash = _read_snapshot_hash(references_dir)
+        corpus_manifest = corpus_manifest or {}
+        corpus_hash = str(corpus_manifest.get("corpus_snapshot_hash") or "")
+        corpus_status = str(corpus_manifest.get("corpus_status") or "incomplete")
+        teaching_enrichment = _load_verified_teaching_enrichment(
+            references_dir,
+            corpus_manifest,
+        )
         pipeline_summary = _pipeline_summary(references_dir, len(items))
         code_sources_by_work = _load_code_source_records(references_dir)
         source_counts: Counter[str] = Counter()
@@ -501,49 +707,84 @@ def render_literature_html(references_dir: Path, items: list[dict[str, Any]]) ->
         index_rows: list[str] = []
         output_files: list[str] = []
         for index, item in enumerate(items, start=1):
+            item = dict(item)
+            citation_key = str(item.get("bibtex_key") or item.get("citation_key") or "")
+            if citation_key in teaching_enrichment:
+                item["teaching_enrichment"] = teaching_enrichment[citation_key]
             categories = _source_categories(item)
             source_counts.update(categories)
             source_options.update(categories)
             filename = f"{index:02d}_{_safe_filename(str(item.get('bibtex_key') or ''), 'paper')}.html"
             detail_path = temporary / filename
-            detail_path.write_text(_detail_html(item, filename, LOCALES, code_sources_by_work, snapshot_hash), encoding="utf-8")
+            detail_path.write_text(
+                _detail_html(
+                    item,
+                    filename,
+                    LOCALES,
+                    code_sources_by_work,
+                    snapshot_hash,
+                    corpus_hash,
+                ),
+                encoding="utf-8",
+            )
             output_files.append(f"references/literature_summaries/{filename}")
             score_weight = _score_display(item, "citation_weight")
             relevance = _score_display(item, "relevance_score")
             journal = _score_display(item, "journal_score")
             code_source_summary = _code_source_summary(item, code_sources_by_work)
+            enrichment = item.get("teaching_enrichment")
+            enrichment = enrichment if isinstance(enrichment, Mapping) else {}
+            reading_order = str(enrichment.get("reading_order") or "n/a")
+            citation_roles = ", ".join(str(value) for value in enrichment.get("citation_roles") or ()) or "n/a"
+            evidence_status = str(enrichment.get("evidence_status") or "not_verified")
             index_rows.append(
                 f'<tr data-source-categories="{escape("|".join(categories))}"><td>{index}</td>'
                 f'<td><a href="{escape(filename)}">{escape(str(item.get("title") or ""))}</a></td>'
-                f'<td>{escape(str(item.get("bibtex_key") or ""))}</td>'
-                f'<td>{escape(", ".join(categories))}</td><td>{escape(str(item.get("reference_origin") or "external_search"))}</td>'
-                f'<td>{escape(str(item.get("zotero_collection") or "n/a"))}</td><td>{escape(str(item.get("local_logical_path") or "n/a"))}</td>'
-                f'<td>{escape(str(item.get("local_file_id") or "n/a"))}</td><td>{escape(str(item.get("metadata_status") or "unknown"))}</td>'
-                f'<td>{escape(str(item.get("pdf_read_status") or "not_parsed"))}</td><td>{escape(str((item.get("document_parses") or [{}])[0].get("route") or "n/a") if isinstance((item.get("document_parses") or [{}])[0], dict) else "n/a")}</td>'
-                f'<td>{escape(str(item.get("candidate_state") or "unknown"))}</td><td>{escape(code_source_summary)}</td>'
-                f'<td>{escape(str(item.get("source_provider") or item.get("source") or "unknown"))}</td>'
-                f'<td>{escape(str(item.get("identity_resolution_status") or "legacy_not_resolved"))}</td>'
-                f'<td>{escape(str((item.get("fulltext_fetch_decision") or {}).get("reason") or "not_recorded"))}</td>'
-                f'<td>{escape(str(item.get("postfetch_state") or "legacy_active"))}</td>'
-                f'<td>{escape(str(item.get("citation_eligibility") or "legacy_review_required"))}</td>'
-                f'<td>{escape(", ".join(item.get("search_contexts") or [item.get("search_context") or "idea"]))}</td>'
-                f'<td>{escape("; ".join(item.get("search_queries") or [item.get("search_query") or ""]))}</td>'
-                f'<td>{escape(str(item.get("search_query_id") or "n/a"))}</td><td>{escape(str(item.get("combination_level") or "n/a"))}</td>'
-                f'<td>{escape(str(item.get("selection_policy") or "ranked_by_relevance_and_authority"))}</td>'
-                f'<td>{escape(score_weight)}</td><td>{escape(relevance)}</td><td>{escape(journal)}</td></tr>'
+                f"<td>{escape(str(item.get('bibtex_key') or ''))}</td>"
+                f"<td>{escape(', '.join(categories))}</td><td>{escape(str(item.get('reference_origin') or 'external_search'))}</td>"
+                f"<td>{escape(str(item.get('zotero_collection') or 'n/a'))}</td><td>{escape(str(item.get('local_logical_path') or 'n/a'))}</td>"
+                f"<td>{escape(str(item.get('local_file_id') or 'n/a'))}</td><td>{escape(str(item.get('metadata_status') or 'unknown'))}</td>"
+                f"<td>{escape(str(item.get('pdf_read_status') or 'not_parsed'))}</td><td>{escape(str((item.get('document_parses') or [{}])[0].get('route') or 'n/a') if isinstance((item.get('document_parses') or [{}])[0], dict) else 'n/a')}</td>"
+                f"<td>{escape(str(item.get('candidate_state') or 'unknown'))}</td><td>{escape(code_source_summary)}</td>"
+                f"<td>{escape(str(item.get('source_provider') or item.get('source') or 'unknown'))}</td>"
+                f"<td>{escape(str(item.get('identity_resolution_status') or 'legacy_not_resolved'))}</td>"
+                f"<td>{escape(str((item.get('fulltext_fetch_decision') or {}).get('reason') or 'not_recorded'))}</td>"
+                f"<td>{escape(str(item.get('postfetch_state') or 'legacy_active'))}</td>"
+                f"<td>{escape(str(item.get('citation_eligibility') or 'legacy_review_required'))}</td>"
+                f"<td>{escape(reading_order)}</td><td>{escape(citation_roles)}</td><td>{escape(evidence_status)}</td>"
+                f"<td>{escape(', '.join(item.get('search_contexts') or [item.get('search_context') or 'idea']))}</td>"
+                f"<td>{escape('; '.join(item.get('search_queries') or [item.get('search_query') or '']))}</td>"
+                f"<td>{escape(str(item.get('search_query_id') or 'n/a'))}</td><td>{escape(str(item.get('combination_level') or 'n/a'))}</td>"
+                f"<td>{escape(str(item.get('selection_policy') or 'ranked_by_relevance_and_authority'))}</td>"
+                f"<td>{escape(score_weight)}</td><td>{escape(relevance)}</td><td>{escape(journal)}</td></tr>"
             )
         source_summary = ", ".join(f"{source}: {count}" for source, count in sorted(source_counts.items())) or "none"
         options = "".join(f'<option value="{escape(source)}">{escape(source)}</option>' for source in sorted(source_options))
         snapshot_meta = f'<meta name="draftpaper-snapshot-hash" content="{escape(snapshot_hash, quote=True)}">' if snapshot_hash else ""
+        corpus_meta = f'<meta name="draftpaper-teaching-corpus-hash" content="{escape(corpus_hash, quote=True)}">' if corpus_hash else ""
         snapshot_attr = f' data-snapshot-hash="{escape(snapshot_hash, quote=True)}"' if snapshot_hash else ""
+        corpus_attr = f' data-teaching-corpus-hash="{escape(corpus_hash, quote=True)}"' if corpus_hash else ""
+        corpus_notice = (
+            f'<p data-teaching-corpus-status="{escape(corpus_status, quote=True)}">'
+            f"Teaching corpus: {escape(corpus_status)} · {escape(corpus_hash or 'pending confirmation')}</p>"
+        )
+        learning_portal_link = (
+            '<p><a href="../../guidance/learning/site/index.html#chapter/literature_map_and_positioning" '
+            'target="_blank" rel="noopener" data-i18n="formal_learning_portal">'
+            f"{escape(LOCALES['en']['formal_learning_portal'])}</a></p>"
+            if teaching_enrichment
+            else ""
+        )
         index_html = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8">{snapshot_meta}<title data-i18n="index_title">{LOCALES['en']['index_title']}</title>{_style()}{_script(LOCALES)}
+<html lang="en"><head><meta charset="utf-8">{snapshot_meta}{corpus_meta}<title data-i18n="index_title">{LOCALES["en"]["index_title"]}</title>{_style()}{_script(LOCALES)}
 <script>function filterSources() {{ const selected = document.getElementById('source-filter').value; document.querySelectorAll('tbody tr[data-source-categories]').forEach((row) => {{ const values = (row.dataset.sourceCategories || '').split('|'); row.style.display = !selected || values.includes(selected) ? '' : 'none'; }}); }}</script>
-</head><body{snapshot_attr}>{_language_switcher()}<h1 data-i18n="index_heading">{LOCALES['en']['index_heading']}</h1>
+</head><body{snapshot_attr}{corpus_attr}>{_language_switcher()}<h1 data-i18n="index_heading">{LOCALES["en"]["index_heading"]}</h1>
+  {corpus_notice}
+  {learning_portal_link}
 {_pipeline_summary_html(pipeline_summary)}
-<p><span data-i18n="source_counts">{LOCALES['en']['source_counts']}</span>: {escape(source_summary)}</p>
-<div class="toolbar"><label for="source-filter" data-i18n="filter_source">{LOCALES['en']['filter_source']}</label><select id="source-filter" onchange="filterSources()"><option value="" data-i18n="all">{LOCALES['en']['all']}</option>{options}</select></div>
-<table><thead><tr>{''.join(f'<th data-i18n="{key}">{LOCALES["en"][key]}</th>' for key in ('title','citation_key','source_categories','origin','zotero_collection','local_locator','file_id','metadata','pdf_parser','parser_route','candidate_state','code_sources','discovery_provider','identity_status','fulltext_decision','postfetch_status','citation_eligibility','context','search_query','query_id','combination','retention','citation_weight','relevance','journal_authority'))}</tr></thead><tbody>{''.join(index_rows)}</tbody></table>
+<p><span data-i18n="source_counts">{LOCALES["en"]["source_counts"]}</span>: {escape(source_summary)}</p>
+<div class="toolbar"><label for="source-filter" data-i18n="filter_source">{LOCALES["en"]["filter_source"]}</label><select id="source-filter" onchange="filterSources()"><option value="" data-i18n="all">{LOCALES["en"]["all"]}</option>{options}</select></div>
+  <table><thead><tr>{"".join(f'<th data-i18n="{key}">{LOCALES["en"][key]}</th>' for key in ("title", "citation_key", "source_categories", "origin", "zotero_collection", "local_locator", "file_id", "metadata", "pdf_parser", "parser_route", "candidate_state", "code_sources", "discovery_provider", "identity_status", "fulltext_decision", "postfetch_status", "citation_eligibility", "reading_order", "citation_role", "evidence_status", "context", "search_query", "query_id", "combination", "retention", "citation_weight", "relevance", "journal_authority"))}</tr></thead><tbody>{"".join(index_rows)}</tbody></table>
 {_quarantine_html(references_dir)}
 <noscript>JavaScript is disabled; the default English view remains available.</noscript></body></html>
 """

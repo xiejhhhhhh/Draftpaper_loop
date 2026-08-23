@@ -47,8 +47,8 @@ def render_command_risk_matrix() -> str:
         "",
         "## Commands",
         "",
-        "| Command | Risk | Stage | Mutates | Confirmation | Resource | MCP | Declared write roots |",
-        "|---|---|---|---:|---|---|---:|---|",
+        "| Command | Risk | Decision family | Packet | Receipt | Delegation | Stage | Mutates | Confirmation | Resource | MCP | Declared write roots |",
+        "|---|---|---|---|---|---|---|---:|---|---|---:|---|",
     ))
     for name, spec in sorted(COMMAND_SPECS.items()):
         writes = ", ".join(f"`{item}`" for item in spec.allowed_write_globs[:5]) or "none"
@@ -59,6 +59,10 @@ def render_command_risk_matrix() -> str:
             + " | ".join((
                 f"`{_cell(name)}`",
                 f"`{_cell(spec.risk_level)}`",
+                _cell(spec.decision_family),
+                _cell(spec.packet_policy),
+                _cell(spec.receipt_contract),
+                _cell(spec.delegation_policy),
                 _cell(spec.formal_stage),
                 "yes" if spec.mutates_project else "no",
                 _cell(spec.confirmation_policy),

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_summary.v6",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_id", "checkpoint_type", "review_state", "review_requirement", "decision_status", "decision_actor_type", "risk_class", "decision_brief", "scientific_decision_fingerprint", "human_brief_semantic_sha256", "confirmation_meaning_en", "audit_bundle_ref", "audit_bundle_sha256", "audit_render_policy", "presentation_sha256", "activity_window", "semantic_delta_from_last_confirmed", "confirmation_basis", "readability_report_ref", "reviewer_visibility_scope", "confirmation_continuity", "figure_claim_map_sha256", "scientific_figure_claim_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_summary.v6"},
+    "checkpoint_id": {"type": "string"},
+    "checkpoint_type": {"type": "string"},
+    "review_state": {"enum": ["confirmable", "stale", "blocked", "preview_only", "legacy_unqualified"]},
+    "review_requirement": {"enum": ["notify_only", "agent_delegable", "human_required"]},
+    "decision_status": {"type": "string"},
+    "decision_actor_type": {"enum": ["none", "system", "agent", "user"]},
+    "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
+    "decision_brief": {"type": "object"},
+    "scientific_decision_fingerprint": {"type": "object"},
+    "human_brief_semantic_sha256": {"type": "string"},
+    "confirmation_meaning_en": {"type": "string"},
+    "audit_bundle_ref": {"type": "string", "pattern": "\\.json$"},
+    "audit_bundle_sha256": {"type": "string"},
+    "audit_render_policy": {"const": "on_demand_cache_only"},
+    "presentation_sha256": {"type": "string"},
+    "activity_window": {"type": "object"},
+    "semantic_delta_from_last_confirmed": {"type": "object"},
+    "confirmation_basis": {"type": "object"},
+    "readability_report_ref": {"type": "string"},
+    "reviewer_visibility_scope": {"enum": ["author_decision", "internal_audit", "reviewer_visible", "release_public"]},
+    "confirmation_continuity": {"type": "object"},
+    "figure_claim_map_sha256": {"type": "string"},
+    "scientific_figure_claim_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

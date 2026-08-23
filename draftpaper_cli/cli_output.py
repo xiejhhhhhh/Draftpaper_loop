@@ -65,11 +65,12 @@ def prioritize_human_review(payload: Any) -> Any:
         value = payload.get(key)
         if key != review_key and value not in (None, [], {}):
             ordered[key] = value
-    excluded = set(ordered) | {"technical_audit_html"}
+    excluded = set(ordered) | {"technical_audit_html", "technical_audit_json"}
     ordered.update({key: value for key, value in payload.items() if key not in excluded})
-    technical_audit = payload.get("technical_audit_html")
+    technical_audit_key = "technical_audit_json" if payload.get("technical_audit_json") not in (None, [], {}) else "technical_audit_html"
+    technical_audit = payload.get(technical_audit_key)
     if technical_audit not in (None, [], {}):
-        ordered["technical_audit_html"] = technical_audit
+        ordered[technical_audit_key] = technical_audit
     return ordered
 
 
@@ -98,6 +99,7 @@ def compact_payload(payload: Any) -> Any:
             "continuity_status": (payload.get("confirmation_continuity") or {}).get("classification") if isinstance(payload.get("confirmation_continuity"), dict) else payload.get("continuity_status"),
             "unresolved_issues": payload.get("unresolved_issues"),
             "verified_next_action": payload.get("verified_next_action") or payload.get("next_action") or payload.get("recommended_next_action"),
+            "technical_audit_json": payload.get("technical_audit_json"),
             "technical_audit_html": payload.get("technical_audit_html"),
         }
         return {key: value for key, value in ordered.items() if value not in (None, [], {})}

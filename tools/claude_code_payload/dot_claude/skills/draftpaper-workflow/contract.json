@@ -1,13 +1,14 @@
 {
   "schema_version": "dpl.workflow_skill.v1",
   "skill_id": "draftpaper-workflow",
-  "skill_version": "0.41.1",
+  "skill_version": "0.42.0",
   "canonical_resource": "draftpaper_cli/resources/draftpaper_workflow/SKILL.md",
-  "required_control_commands": ["session-preflight", "status", "verify-next-action", "continue", "show-checkpoint-summary", "show-checkpoint-audit", "compare-checkpoint-decision", "explain-reconfirmation", "validate-checkpoint-readability", "show-confirmation-continuity", "preview-checkpoint-summary", "audit-evidence-identity", "audit-literature-integrity", "quarantine-orphan-literature", "review-policy-status", "evaluate-checkpoint-authority", "show-stage-activity", "audit-longitudinal-consistency", "show-scientific-baseline"],
+  "required_control_commands": ["session-preflight", "status", "verify-next-action", "continue", "validate-research-plan-review", "review-research-plan", "show-human-review-packet", "compare-research-plan-decision", "explain-research-plan-reconfirmation", "audit-research-plan-migration", "inspect-review-evidence", "show-checkpoint-summary", "show-checkpoint-audit", "render-checkpoint-audit", "compare-checkpoint-decision", "explain-reconfirmation", "validate-checkpoint-readability", "show-confirmation-continuity", "shadow-checkpoint-v6", "preview-checkpoint-summary", "audit-evidence-identity", "audit-literature-integrity", "review-literature-coverage", "confirm-literature-corpus", "quarantine-orphan-literature", "review-policy-status", "evaluate-checkpoint-authority", "show-stage-activity", "audit-longitudinal-consistency", "show-scientific-baseline"],
   "protected_actions": [
     "checkpoint",
     "resume",
     "confirm-research-plan",
+    "confirm-literature-corpus",
     "reopen-research-plan",
     "confirm-final-manuscript",
     "apply-result-downgrade",

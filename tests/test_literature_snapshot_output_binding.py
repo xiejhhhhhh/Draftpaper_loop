@@ -61,6 +61,8 @@ def test_all_reference_projections_share_one_snapshot_and_manifest_hashes(tmp_pa
 
     manifest = json.loads((references / "literature_output_manifest.json").read_text(encoding="utf-8"))
     assert manifest["snapshot_hash"] == snapshot_hash
+    corpus = json.loads((references / "literature_teaching_corpus_manifest.json").read_text(encoding="utf-8"))
+    assert corpus["snapshot_hash"] == snapshot_hash
     for artifact in manifest["artifacts"]:
         path = project / artifact["path"]
         assert path.is_file()

@@ -11,7 +11,7 @@ from draftpaper_cli.release_contract import build_release_manifest
 from draftpaper_cli.toml_compat import tomllib
 
 
-VERSION = "0.41.1"
+VERSION = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
 def _skill_version(path: Path) -> str:

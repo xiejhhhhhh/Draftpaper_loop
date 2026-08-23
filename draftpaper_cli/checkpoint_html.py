@@ -629,7 +629,8 @@ def render_checkpoint_decision_html(
     continuity = summary.get("confirmation_continuity") if isinstance(summary.get("confirmation_continuity"), dict) else {}
     delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
     decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
-    audit_href = _link(root, output_dir, "stage_audit.zh-CN.html")
+    audit_name = "stage_audit.json" if summary.get("schema_version") == "dpl.checkpoint_summary.v6" else "stage_audit.zh-CN.html"
+    audit_href = _link(root, output_dir, audit_name)
     summary_href = _link(root, output_dir, str(summary.get("stage_summary_path") or ""))
     request_href = _link(root, output_dir, "confirmation_request.json")
     readability_href = _link(root, output_dir, "checkpoint_readability_report.en.json" if locale == "en" else "checkpoint_readability_report.json")
@@ -726,8 +727,8 @@ def render_checkpoint_html(
     *,
     locale: str = "zh-CN",
 ) -> str:
-    """Render the decision view for v5 and retain the v3/v4 audit renderer."""
+    """Render the decision view for v5/v6 and retain the v3/v4 audit renderer."""
 
-    if summary.get("schema_version") == "dpl.checkpoint_summary.v5":
+    if summary.get("schema_version") in {"dpl.checkpoint_summary.v5", "dpl.checkpoint_summary.v6"}:
         return render_checkpoint_decision_html(root, output_dir, summary, request, locale=locale)
     return render_checkpoint_audit_html(root, output_dir, summary, request)

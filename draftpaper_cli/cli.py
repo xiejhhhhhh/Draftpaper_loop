@@ -222,11 +222,28 @@ def build_parser() -> argparse.ArgumentParser:
     revise_objective.add_argument("--objective-file", required=True)
     confirm_plan = subparsers.add_parser("confirm-research-plan", help="Human-confirm the exact research blueprint hash used by key-figure execution.")
     confirm_plan.add_argument("--project", required=True)
-    confirm_plan.add_argument("--plan-hash", required=True)
+    confirm_plan.add_argument("--plan-hash", default=None)
+    confirm_plan.add_argument("--decision-hash", default=None, help="v0.42 scientific decision hash; --plan-hash remains a compatibility alias.")
     confirm_plan.add_argument("--accept-limitations", action="store_true")
     reopen_plan = subparsers.add_parser("reopen-research-plan", help="Explicitly reopen a confirmed scientific contract before changing claims, data, methods, statistics, or figures.")
     reopen_plan.add_argument("--project", required=True)
     reopen_plan.add_argument("--reason", required=True)
+    validate_plan_review = subparsers.add_parser("validate-research-plan-review", help="Read-only readiness check before rendering a research-plan confirmation packet.")
+    validate_plan_review.add_argument("--project", required=True)
+    compare_plan_review = subparsers.add_parser("compare-research-plan-decision", help="Compare the active research-plan decision with the latest confirmed decision.")
+    compare_plan_review.add_argument("--project", required=True)
+    compare_plan_review.add_argument("--against", default="latest-confirmed")
+    explain_plan_review = subparsers.add_parser("explain-research-plan-reconfirmation", help="Explain why the active research plan does or does not require a new confirmation.")
+    explain_plan_review.add_argument("--project", required=True)
+    audit_plan_migration = subparsers.add_parser("audit-research-plan-migration", help="Read-only audit of a historical research-plan snapshot under the v0.42 semantic contract.")
+    audit_plan_migration.add_argument("--project", required=True)
+    show_plan_packet = subparsers.add_parser("show-human-review-packet", help="Show the readable research-plan review packet paths.")
+    show_plan_packet.add_argument("--project", required=True)
+    show_plan_packet.add_argument("--decision-family", default="scientific_plan")
+    inspect_review_evidence = subparsers.add_parser("inspect-review-evidence", help="Read one explicit, project-bound evidence reference without loading the full audit.")
+    inspect_review_evidence.add_argument("--project", required=True)
+    inspect_review_evidence.add_argument("--ref", required=True)
+    subparsers.add_parser("audit-human-checkpoint-policy", help="Verify explicit decision, packet, risk, and receipt policies for protected commands.")
     confirmed_alignment = subparsers.add_parser("validate-confirmed-figure-alignment", help="Reject any executable main figure that diverges from the human-confirmed blueprint.")
     confirmed_alignment.add_argument("--project", required=True)
     caption_validation = subparsers.add_parser("validate-figure-captions", help="Validate group-level headline, ordered panel descriptions, statistics, and claim boundaries.")
@@ -404,10 +421,13 @@ def build_parser() -> argparse.ArgumentParser:
     show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN", "en"], help="Summary language.")
     show_checkpoint.add_argument("--view", default="decision", choices=["decision", "audit"], help="Select the readable decision view or the technical audit view.")
 
-    show_checkpoint_audit = subparsers.add_parser("show-checkpoint-audit", help="Show the full technical audit path for a v5 checkpoint.")
+    show_checkpoint_audit = subparsers.add_parser("show-checkpoint-audit", help="Show the technical audit JSON path and the optional renderer route for a v6 checkpoint.")
     show_checkpoint_audit.add_argument("--project", required=True)
     show_checkpoint_audit.add_argument("--checkpoint-package-id", default=None)
     show_checkpoint_audit.add_argument("--checkpoint-hash", default=None)
+    render_checkpoint_audit = subparsers.add_parser("render-checkpoint-audit", help="Render a disposable HTML cache for one v6 technical audit JSON.")
+    render_checkpoint_audit.add_argument("--project", required=True)
+    render_checkpoint_audit.add_argument("--checkpoint-package-id", required=True)
 
     compare_checkpoint = subparsers.add_parser("compare-checkpoint-decision", help="Compare the current scientific decision with the latest confirmed one.")
     compare_checkpoint.add_argument("--project", required=True)
@@ -427,7 +447,7 @@ def build_parser() -> argparse.ArgumentParser:
     show_continuity.add_argument("--project", required=True)
     show_continuity.add_argument("--checkpoint-type", default="core_evidence")
 
-    rebuild_checkpoint_presentation = subparsers.add_parser("rebuild-checkpoint-presentation", help="Regenerate v5 checkpoint HTML without changing scientific identity.")
+    rebuild_checkpoint_presentation = subparsers.add_parser("rebuild-checkpoint-presentation", help="Regenerate v5/v6 decision HTML without changing scientific identity.")
     rebuild_checkpoint_presentation.add_argument("--project", required=True)
     rebuild_checkpoint_presentation.add_argument("--checkpoint-package-id", required=True)
 
@@ -438,6 +458,9 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint_shadow = subparsers.add_parser("shadow-checkpoint-v5", help="Run a read-only v5 checkpoint shadow audit outside the project directory.")
     checkpoint_shadow.add_argument("--project", required=True)
     checkpoint_shadow.add_argument("--output-root", default=None)
+    checkpoint_shadow_v6 = subparsers.add_parser("shadow-checkpoint-v6", help="Run a read-only v6 checkpoint shadow audit outside the project directory.")
+    checkpoint_shadow_v6.add_argument("--project", required=True)
+    checkpoint_shadow_v6.add_argument("--output-root", default=None)
 
     preview_checkpoint = subparsers.add_parser(
         "preview-checkpoint-summary",
@@ -513,6 +536,16 @@ def build_parser() -> argparse.ArgumentParser:
     parse_source_documents.add_argument("--timeout-seconds", type=int, default=600)
     coverage = subparsers.add_parser("review-literature-coverage", help="Review literature coverage by scientific role and source type.")
     coverage.add_argument("--project", required=True)
+    confirm_literature = subparsers.add_parser(
+        "confirm-literature-corpus",
+        help="Human-confirm the exact literature corpus hash used by teaching and project-role guidance.",
+    )
+    confirm_literature.add_argument("--project", required=True)
+    confirm_literature.add_argument(
+        "--packet-hash",
+        required=True,
+        help="Exact hash from references/literature_confirmation_packet.json after human review.",
+    )
 
     integrity = subparsers.add_parser("audit-literature-integrity", help="Audit work identity, score state, parser binding, and orphan full-text reachability.")
     integrity.add_argument("--project", required=True)
@@ -1360,8 +1393,10 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "explain-reconfirmation",
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
+    "inspect-review-evidence",
     "audit-checkpoint-v5-migration",
     "shadow-checkpoint-v5",
+    "shadow-checkpoint-v6",
 }
 
 

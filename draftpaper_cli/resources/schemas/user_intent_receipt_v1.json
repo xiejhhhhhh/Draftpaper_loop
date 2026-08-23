@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.user_intent_receipt.v1",
+  "type": "object",
+  "required": ["schema_version", "receipt_id", "decision_family", "intent", "actor_type", "actor_id", "reason", "created_at", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.user_intent_receipt.v1"},
+    "receipt_id": {"type": "string"},
+    "decision_family": {"type": "string"},
+    "intent": {"type": "string"},
+    "actor_type": {"const": "user"},
+    "actor_id": {"type": "string"},
+    "reason": {"type": "string"},
+    "created_at": {"type": "string"},
+    "receipt_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

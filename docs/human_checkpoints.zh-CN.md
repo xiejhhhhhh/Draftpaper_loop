@@ -1,18 +1,18 @@
 # 人工确认点成果包
 
-新建 checkpoint 使用 `dpl.checkpoint_summary.v5`。v1/v2 为只读历史记录；v3/v4
-仍可阅读以兼容旧项目，但不会被原地改写，也不会被静默当作 v5 科学决定。
+新建 checkpoint 使用 `dpl.checkpoint_summary.v6`。v1-v5 为只读历史记录：可阅读、比较
+和按需渲染审计，但不会被原地改写，也不会被静默升级为新的科学决定。
 
 ## 作者首先打开什么
 
-每个 v5 checkpoint 都会在 `review/checkpoints/<checkpoint_id>/` 写出一个可携带、
+每个 v6 checkpoint 都会在 `review/checkpoints/<checkpoint_id>/` 写出一个可携带、
 可离线阅读的成果包：
 
 ```text
 stage_summary.zh-CN.html              # 面向作者的可读决定页
 stage_summary.en.html                 # 同一决定的英文渲染页
-stage_audit.zh-CN.html                # 完整技术审计页
-stage_summary.json                    # v5 成果包合同
+stage_audit.json                      # 完整机器技术审计
+stage_summary.json                    # v6 成果包合同
 human_decision_brief_v1.json          # 作者看到的事实与决定陈述
 scientific_decision_fingerprint_v1.json
 checkpoint_audit_fingerprint_v1.json
@@ -35,13 +35,14 @@ Agent 在项目外临时制作的简化 sidecar。作者应能在约一分钟内
 - 什么变化会重新打开科学确认；
 - 本轮可阅读交付物与确认后的下一步。
 
-`stage_audit.zh-CN.html` 保留完整技术信息：当前活动窗口、产物清单、事务变化、
-验证表、证据身份、hash 和恢复细节。决定页会链接到它，但用户不需要先读完整审计
-才能理解自己将要确认的科学内容。
+`stage_audit.json` 保留完整技术信息：当前活动窗口、产物清单、事务变化、验证表、
+证据身份、hash 和恢复细节。普通确认不自动加载它；需要排障时使用
+`render-checkpoint-audit` 在 `.draftpaper/render_cache/audit/` 生成可丢弃 HTML，
+不会写回不可变成果包。
 
 ## 决定身份与连续确认
 
-v5 将三种身份分开记录：
+v6 将三种身份分开记录：
 
 | 身份 | 覆盖内容 | 变化后的行为 |
 |---|---|---|
@@ -77,20 +78,37 @@ C0 通知型阶段可以记录 `system_acknowledged`；C1/C2 仅在有效的 sco
 下可由 Agent 审查；C3 科学路线仍由用户确认，除非 continuity receipt 证明用户已经确认了
 完全相同的科学决定。Agent 只能写入 `agent_approved`，不能冒充 `user_confirmed`。
 
+## 文献语料确认
+
+正式文献教学使用独立且紧凑的人工确认点。先运行
+`review-literature-coverage`，阅读
+`references/literature_confirmation_packet.zh-CN.md`，再确认该确认包的精确 hash：
+
+```powershell
+draftpaper confirm-literature-corpus --project <project> --packet-hash <hash>
+```
+
+receipt 同时绑定 canonical reference registry、active literature snapshot 和当前项目的
+reference usage plan。它不会新增正文引用，也不会改写科学稿件。三者任一变化都会生成新的
+确认包；Learn 会回到 `corpus_confirmation_pending`，而不会沿用过期教学卡或无关历史文献。
+
 ## 命令
 
 ```powershell
 draftpaper show-checkpoint-summary --project <project> --view decision
 draftpaper show-checkpoint-summary --project <project> --view decision --language en
 draftpaper show-checkpoint-audit --project <project> --checkpoint-package-id <id>
+draftpaper render-checkpoint-audit --project <project> --checkpoint-package-id <id>
 draftpaper compare-checkpoint-decision --project <project> --against latest-confirmed
 draftpaper explain-reconfirmation --project <project> --checkpoint-package-id <id>
 draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id>
 draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id> --language en
 draftpaper show-confirmation-continuity --project <project> --checkpoint-type core_evidence
 draftpaper rebuild-checkpoint-presentation --project <project> --checkpoint-package-id <id>
-draftpaper audit-checkpoint-v5-migration --project <project> --checkpoint-hash <hash>
-draftpaper shadow-checkpoint-v5 --project <project> --output-root <项目目录外的输出目录>
+draftpaper shadow-checkpoint-v6 --project <project> --output-root <项目目录外的输出目录>
+draftpaper validate-research-plan-review --project <project>
+draftpaper show-human-review-packet --project <project>
+draftpaper inspect-review-evidence --project <project> --ref artifact:results/metrics.json
 draftpaper resume --project <project> --checkpoint-hash <hash>
 ```
 
@@ -104,13 +122,10 @@ draftpaper resume --project <project> --checkpoint-hash <hash>
 
 ## 旧包迁移与 shadow 核验
 
-`audit-checkpoint-v5-migration` 只读取历史成果包并报告下一步。它绝不改写历史 summary、
-转移用户 receipt，也不会把旧包 hash 当作当前 v5 科学决定。v1-v4 包最多可投影为比较预览；
-较早生成、尚未将 `FigureClaimMap` 纳入 scientific fingerprint 的 v5 包同样保持只读。较早
-核心证据 v5 包若尚未绑定可执行分析规格和方法合同，同样只能只读；除非已存在经核验的
-等价当前合同决定，否则流程仍需要一次新的 v5 C3 作者确认。
+v1-v5 包只能作为历史证据：可以通过迁移审计比较当前科学合同，但不能被静默续用。
+无法证明语义等价或缺少 hash-bound 用户 receipt 时，流程会创建一次新的 v6 C3 决定包。
 
-`shadow-checkpoint-v5` 用于现有项目的回归核验。`--output-root` 必须位于项目目录外。该命令
+`shadow-checkpoint-v6` 用于现有项目的回归核验。`--output-root` 必须位于项目目录外。该命令
 会记录 passport、ledger、promoted snapshot、checkpoint 记录和稿件 PDF 的前后 hash，再将 JSON
 与 HTML 报告写在项目外。未变化状态核验失败会直接阻断，不能在 shadow 审计过程中修复项目证据。
 
