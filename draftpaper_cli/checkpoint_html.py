@@ -16,6 +16,14 @@ _STATE_LABELS = {
     "preview_only": "仅预览，不可确认",
 }
 
+_STATE_LABELS_EN = {
+    "confirmable": "Ready for confirmation",
+    "stale": "Evidence is stale",
+    "blocked": "Blocking issue present",
+    "preview_only": "Preview only",
+    "legacy_unqualified": "Legacy package",
+}
+
 
 def _link(root: Path, output_dir: Path, relative: str) -> str:
     candidate = Path(relative.replace("\\", "/"))
@@ -527,15 +535,30 @@ def _statement_text(statement: dict[str, Any], locale: str) -> str:
     return _text(statement.get("text_zh"))
 
 
+def _semantic_delta_text(delta: dict[str, Any], locale: str) -> str:
+    if locale == "en" and _text(delta.get("summary_en")):
+        return _text(delta.get("summary_en"))
+    return _text(delta.get("summary_zh"))
+
+
 def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any], *, locale: str = "zh-CN") -> str:
+    """Render compact, copyable evidence locators for the decision page.
+
+    A decision brief can reuse the same canonical artifact across many facts
+    and statements.  Turning each repeated locator into an anchor made normal
+    research-plan pages exceed the author-page link budget, even though the
+    page already exposes the key deliverables and figures as links.  Keep the
+    full clickable artifact trail in the technical audit; the decision page
+    retains the exact, safe artifact locator as inline text.
+    """
+
     labels = _labels(locale)
     links = []
     for raw in refs[:5]:
         ref = str(raw or "")
         if ref.startswith("artifact:"):
             relative = ref[len("artifact:") :]
-            href = _link(root, output_dir, relative)
-            links.append(f'<a href="{href}">{_text(relative)}</a>' if href else _text(relative))
+            links.append(f'<code class="artifact-ref">{_text(relative)}</code>')
         elif ref.startswith("policy:"):
             links.append(labels["contract"])
         else:
@@ -579,8 +602,9 @@ def _brief_facts(root: Path, output_dir: Path, brief: dict[str, Any], *, locale:
         value = fact.get("value")
         rendered = json.dumps(value, ensure_ascii=False, sort_keys=True) if isinstance(value, (dict, list)) else _text(value)
         refs = _brief_ref_links(root, output_dir, list(fact.get("evidence_refs") or []), locale=locale)
+        label = _text(fact.get("label_en")) if locale == "en" else _text(fact.get("label_zh"))
         rows.append(
-            f'<li data-fact-id="{escape(fact_id)}"><strong>{_text(fact.get("label_zh"))}</strong>：{rendered}'
+            f'<li data-fact-id="{escape(fact_id)}"><strong>{label}</strong>：{rendered}'
             + (f'<small class="refs">{labels["evidence"]}{refs}</small>' if refs else "")
             + "</li>"
         )
@@ -601,7 +625,7 @@ def render_checkpoint_decision_html(
     labels = _labels(locale)
     brief = summary.get("decision_brief") if isinstance(summary.get("decision_brief"), dict) else {}
     state = str(summary.get("review_state") or "confirmable")
-    state_label = _STATE_LABELS.get(state, state)
+    state_label = (_STATE_LABELS_EN if locale == "en" else _STATE_LABELS).get(state, state)
     continuity = summary.get("confirmation_continuity") if isinstance(summary.get("confirmation_continuity"), dict) else {}
     delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
     decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
@@ -665,7 +689,7 @@ def render_checkpoint_decision_html(
 :root {{ --ink:#172033; --muted:#526071; --line:#d4dce7; --paper:#fff; --bg:#f6f8fb; --blue:#155eab; --blue-bg:#edf6ff; --green:#137333; --green-bg:#ecfdf3; --amber:#9a5800; --amber-bg:#fff8e8; }}
 * {{ box-sizing:border-box; }} body {{ margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif; line-height:1.64; }}
 main {{ max-width:980px; margin:0 auto; padding:26px 18px 56px; }} h1 {{ margin:0 0 9px; font-size:30px; line-height:1.25; }} h2 {{ margin:0 0 12px; font-size:20px; }} h3 {{ margin:0 0 7px; font-size:16px; }}
-p {{ overflow-wrap:anywhere; }} a {{ color:var(--blue); overflow-wrap:anywhere; }} code {{ display:block; padding:10px; border:1px solid var(--line); background:#f8fafc; white-space:pre-wrap; overflow-wrap:anywhere; font-family:Consolas,"SFMono-Regular",monospace; font-size:12px; }}
+p {{ overflow-wrap:anywhere; }} a {{ color:var(--blue); overflow-wrap:anywhere; }} code {{ display:block; padding:10px; border:1px solid var(--line); background:#f8fafc; white-space:pre-wrap; overflow-wrap:anywhere; font-family:Consolas,"SFMono-Regular",monospace; font-size:12px; }} .refs code.artifact-ref {{ display:inline; padding:0; border:0; background:transparent; font-size:inherit; }}
 .hero,.section {{ background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:20px; }} .hero {{ border-top:5px solid var(--blue); }} .section {{ margin-top:16px; }} .status {{ display:inline-block; padding:3px 9px; background:var(--blue-bg); color:var(--blue); font-weight:700; border-radius:4px; }}
 .lead {{ margin:14px 0 0; font-size:18px; font-weight:600; }} .muted,small {{ color:var(--muted); }} .notice {{ padding:11px 13px; border-left:4px solid var(--amber); background:var(--amber-bg); font-weight:600; }} .notice.success {{ border-color:var(--green); background:var(--green-bg); color:#14532d; }}
 ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li small {{ display:block; margin-top:3px; }} .refs {{ font-size:12px; }} .figure-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }} .figure {{ border:1px solid var(--line); padding:13px; min-width:0; }} .figure img {{ display:block; width:100%; max-height:230px; object-fit:contain; border:1px solid #e3e9f1; background:white; }}
@@ -681,7 +705,7 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 {continuity_note}
 <div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span><a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
 </header>
-<section class="section"><h2>{labels["changed"]}</h2><p>{_text(delta.get("summary_zh") or labels["first"])}</p>{change_html}</section>
+<section class="section"><h2>{labels["changed"]}</h2><p>{_semantic_delta_text(delta, locale) or labels["first"]}</p>{change_html}</section>
 <section class="section"><h2>{labels["confirming"]}</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []), locale=locale)}</section>
 <section class="section"><h2>{labels["facts"]}</h2>{_brief_facts(root, output_dir, brief, locale=locale)}<p class="muted">{labels["facts_note"]}</p></section>
 <section class="section"><h2>{labels["context"]}</h2>{_brief_statements(root, output_dir, list(brief.get("key_findings") or []), locale=locale)}</section>

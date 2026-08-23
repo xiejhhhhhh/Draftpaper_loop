@@ -10,7 +10,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw
 
-from draftpaper_cli.checkpoint_summary import write_stage_summary
+from draftpaper_cli.checkpoint_summary import write_stage_summary_v5
 from draftpaper_cli.code_ownership import trace_figures_to_code
 from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
@@ -47,6 +47,83 @@ def _write_figure(root: Path, relative: str) -> None:
 
 
 def _write_core_fixture(root: Path) -> None:
+    _write_text(root, "methods/src/anonymous_analysis.py", "# anonymous fixture\nprint('analysis-core')\n")
+    _write_json(
+        root,
+        "methods/executable_analysis_spec.json",
+        {
+            "schema_version": "dpl.executable_analysis_spec.v1",
+            "decision": "pass",
+            "analysis_specs": [
+                {
+                    "analysis_spec_id": "analysis-core",
+                    "task_id": "task-a",
+                    "estimand_id": "estimand-core",
+                    "cohort_view_id": "cohort-core-held-out",
+                    "sample_unit": "entity",
+                    "split_id": "test",
+                    "model_family": "anonymous-baseline",
+                    "implementation_entry_point": "methods/src/anonymous_analysis.py",
+                    "resampling": {
+                        "method": "none_declared",
+                        "uncertainty_semantics": "point_estimate_only",
+                    },
+                }
+            ],
+        },
+    )
+    _write_json(
+        root,
+        "methods/analysis_formula_ast.json",
+        {
+            "schema_version": "dpl.analysis_formula_ast.v1",
+            "formulas": [
+                {
+                    "formula_id": "macro-f1",
+                    "analysis_spec_id": "analysis-core",
+                    "ast": {"type": "symbol", "name": "macro_f1"},
+                }
+            ],
+        },
+    )
+    _write_json(
+        root,
+        "methods/resampling_contract.json",
+        {
+            "schema_version": "dpl.resampling_contract.v1",
+            "contracts": [
+                {
+                    "analysis_spec_id": "analysis-core",
+                    "method": "none_declared",
+                    "uncertainty_semantics": "point_estimate_only",
+                }
+            ],
+        },
+    )
+    _write_json(
+        root,
+        "methods/run_selection_policy.json",
+        {
+            "schema_version": "dpl.run_selection_policy.v1",
+            "selection_role": "primary",
+            "selection_metric": "macro_f1",
+            "selection_partition": "validation",
+            "locked_before_test_access": True,
+            "test_access_policy": "single held-out evaluation after selection lock",
+            "aggregation_policy": "prespecified_primary",
+            "headline_reporting_policy": "report the declared primary metric",
+        },
+    )
+    _write_json(
+        root,
+        "methods/method_code_manifest.json",
+        {
+            "confirmed_plan_hash": "plan-showcase",
+            "method_families": ["anonymous-baseline"],
+            "primary_metric": "macro_f1",
+            "verify_command_argv": ["{python}", "methods/src/anonymous_analysis.py"],
+        },
+    )
     _write_text(
         root,
         "results/tables/canonical_metrics.csv",
@@ -76,6 +153,7 @@ def _write_core_fixture(root: Path) -> None:
             "status": "success",
             "run_id": "run-core",
             "run_transaction_id": "txn-core",
+            "analysis_spec_id": "analysis-core",
             "cohort_id": "cohort-core",
             "sample_unit": "entity",
             "evaluation_split": "test",
@@ -238,7 +316,7 @@ def generate(output_root: Path) -> dict[str, Any]:
         elif stage == "core_evidence":
             _write_core_fixture(project)
         before = refresh_project_passport(project)["artifacts"]
-        report = write_stage_summary(
+        report = write_stage_summary_v5(
             project,
             stage=stage,
             command=f"test-showcase-{stage}",
@@ -260,6 +338,8 @@ def generate(output_root: Path) -> dict[str, Any]:
                 "review_state": json.loads((project / report["stage_summary_json"]).read_text(encoding="utf-8"))["review_state"],
                 "project_relative_html": report["stage_summary_zh_html"],
                 "absolute_html": report["absolute_stage_summary_zh_html"],
+                "project_relative_audit_html": report["stage_audit_zh_html"],
+                "absolute_audit_html": report["absolute_stage_audit_zh_html"],
                 "absolute_summary": report["absolute_stage_summary_json"],
                 "test_auto_confirmation": True,
             }

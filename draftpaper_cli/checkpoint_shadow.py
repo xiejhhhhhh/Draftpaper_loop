@@ -11,10 +11,10 @@ from typing import Any
 
 from .artifact_identity import canonical_json
 from .checkpoint_brief import build_human_decision_brief, validate_human_decision_brief
-from .checkpoint_fingerprint import build_scientific_decision_fingerprint
+from .checkpoint_fingerprint import build_scientific_decision_fingerprint, fingerprint_has_method_analysis_identity
+from .figure_claim_map import build_figure_claim_map, validate_figure_claim_map
 from .passport import project_root, utc_now
 from .state_kernel import atomic_write_json, atomic_write_text
-
 
 SHADOW_REPORT_SCHEMA = "dpl.checkpoint_v5_shadow_report.v1"
 _PROTECTED_FILES = (
@@ -96,6 +96,26 @@ def _summary_schema(path: Path | None) -> str | None:
         return None
     match = _SCHEMA_PATTERN.search(header)
     return match.group(1) if match else None
+
+
+def _pre_figure_claim_fingerprint(summary: dict[str, Any]) -> bool:
+    """Return whether a v5 package predates FigureClaimMap-bound science IDs."""
+
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    payload = fingerprint.get("canonical_payload") if isinstance(fingerprint, dict) else None
+    return not (
+        isinstance(payload, dict)
+        and isinstance(payload.get("figure_claim_map"), list)
+        and isinstance(summary.get("scientific_figure_claim_sha256"), str)
+        and bool(str(summary.get("scientific_figure_claim_sha256") or "").strip())
+    )
+
+
+def _pre_method_analysis_fingerprint(summary: dict[str, Any]) -> bool:
+    if str(summary.get("checkpoint_type") or summary.get("completed_stage") or "") != "core_evidence":
+        return False
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    return not fingerprint_has_method_analysis_identity(fingerprint if isinstance(fingerprint, dict) else {})
 
 
 def _safe_output_root(root: Path, output_root: str | Path | None) -> Path:
@@ -194,12 +214,40 @@ def shadow_checkpoint_v5(project: str | Path, *, output_root: str | Path | None 
             )
             continue
         if schema == "dpl.checkpoint_summary.v5":
+            if _pre_figure_claim_fingerprint(summary):
+                entries.append(
+                    {
+                        "checkpoint_id": summary.get("checkpoint_id") or record.get("checkpoint_id"),
+                        "summary_schema": schema,
+                        "status": "legacy_read_only",
+                        "reason_codes": ["legacy_v5_pre_figure_claim_fingerprint"],
+                        "migration_action": "create_new_v5_checkpoint_and_request_c3",
+                        "summary_path": str(path.resolve()) if path else None,
+                    }
+                )
+                continue
+            if _pre_method_analysis_fingerprint(summary):
+                entries.append(
+                    {
+                        "checkpoint_id": summary.get("checkpoint_id") or record.get("checkpoint_id"),
+                        "summary_schema": schema,
+                        "status": "legacy_read_only",
+                        "reason_codes": ["legacy_v5_pre_method_analysis_fingerprint"],
+                        "migration_action": "create_new_v5_checkpoint_and_request_c3",
+                        "summary_path": str(path.resolve()) if path else None,
+                    }
+                )
+                continue
             brief = build_human_decision_brief(summary)
-            fingerprint = build_scientific_decision_fingerprint(summary, brief)
+            figure_map = build_figure_claim_map(summary, brief)
+            fingerprint = build_scientific_decision_fingerprint(summary, brief, figure_claim_map=figure_map)
             stored = summary.get("scientific_decision_fingerprint") if isinstance(summary.get("scientific_decision_fingerprint"), dict) else {}
             problems = validate_human_decision_brief(brief)
+            problems.extend(item["code"] for item in validate_figure_claim_map(figure_map))
             if fingerprint.get("scientific_decision_sha256") != stored.get("scientific_decision_sha256"):
                 problems.append("scientific_fingerprint_projection_mismatch")
+            if figure_map.get("scientific_figure_claim_sha256") != summary.get("scientific_figure_claim_sha256"):
+                problems.append("scientific_figure_claim_projection_mismatch")
             entries.append(
                 {
                     "checkpoint_id": summary.get("checkpoint_id") or record.get("checkpoint_id"),

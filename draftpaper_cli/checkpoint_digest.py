@@ -9,22 +9,24 @@ scientific values from file names or free-form model output.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from .stale_sync import detect_artifact_drift
+from .artifact_identity import canonical_json
+from .checkpoint_scope import discover_checkpoint_scope_paths
+from .code_ownership import assess_figure_code_trace
 from .evidence_identity import (
     build_count_identity_report,
     compare_evidence,
     normalize_count_evidence,
     normalize_metric_evidence,
 )
-from .code_ownership import assess_figure_code_trace
 from .run_evidence_bundle import load_active_run_evidence_bundle
-from .checkpoint_scope import discover_checkpoint_scope_paths
-
+from .stale_sync import detect_artifact_drift
 
 STAGE_SCOPE_PREFIXES: dict[str, tuple[str, ...]] = {
     "research_plan": ("research_plan/", "journal_profile/", "plugins/"),
@@ -134,6 +136,16 @@ _CORE_PATHS = (
 
 _CSV_PREVIEW_LIMIT = 5
 _MAX_SUMMARY_ITEMS = 12
+_METHOD_ANALYSIS_VOLATILE_FIELDS = frozenset(
+    {
+        "created_at",
+        "generated_at",
+        "updated_at",
+        "recorded_at",
+        "selection_locked_at",
+        "runtime_fingerprint",
+    }
+)
 
 
 def _read_json(root: Path, relative: str) -> Any:
@@ -180,7 +192,151 @@ def _run_id_from_yaml(path: Path) -> str | None:
     return None
 
 
-def _generic_identity(root: Path, deliverables: list[dict[str, Any]], payload: dict[str, Any]) -> dict[str, str | None]:
+def _sha256_project_file(root: Path, reference: Any) -> tuple[str, str] | None:
+    """Return a hash for one declared project-local implementation file."""
+
+    raw = str(reference or "").strip().replace("\\", "/")
+    if not raw or "://" in raw:
+        return None
+    try:
+        path = (root / raw).resolve()
+        relative = path.relative_to(root.resolve()).as_posix()
+    except (OSError, ValueError):
+        return None
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+    except OSError:
+        return None
+    return relative, digest.hexdigest()
+
+
+def _method_analysis_identity(
+    root: Path,
+    *,
+    preferred_analysis_spec_ids: Iterable[Any] = (),
+) -> dict[str, Any]:
+    """Build a stable identity for the executed method and analysis contract.
+
+    This projection deliberately excludes logs, report timestamps, HTML, and
+    other presentation details. It includes only the declared analysis
+    semantics and project-local implementation entry points that can change
+    what the scientific checkpoint means.
+    """
+
+    analysis_payload = _read_json(root, "methods/executable_analysis_spec.json") or {}
+    all_specs = [item for item in analysis_payload.get("analysis_specs") or [] if isinstance(item, dict)]
+    all_specs.sort(key=lambda item: str(item.get("analysis_spec_id") or ""))
+    requested = sorted(
+        {
+            str(value).strip()
+            for value in preferred_analysis_spec_ids
+            if str(value or "").strip()
+        }
+    )
+    selected_specs = [
+        item for item in all_specs if str(item.get("analysis_spec_id") or "") in set(requested)
+    ] if requested else list(all_specs)
+    # Older result records may not name their analysis spec. In that case the
+    # entire declared executable contract is safer than silently omitting it.
+    if requested and not selected_specs:
+        selected_specs = list(all_specs)
+    selected_spec_ids = [
+        str(item.get("analysis_spec_id") or "").strip()
+        for item in selected_specs
+        if str(item.get("analysis_spec_id") or "").strip()
+    ]
+
+    formula_payload = _read_json(root, "methods/analysis_formula_ast.json") or {}
+    formulas = [item for item in formula_payload.get("formulas") or [] if isinstance(item, dict)]
+    if selected_spec_ids:
+        formulas = [item for item in formulas if str(item.get("analysis_spec_id") or "") in set(selected_spec_ids)]
+    formulas.sort(key=lambda item: (str(item.get("analysis_spec_id") or ""), str(item.get("formula_id") or "")))
+
+    resampling_payload = _read_json(root, "methods/resampling_contract.json") or {}
+    resampling = [item for item in resampling_payload.get("contracts") or [] if isinstance(item, dict)]
+    if selected_spec_ids:
+        resampling = [item for item in resampling if str(item.get("analysis_spec_id") or "") in set(selected_spec_ids)]
+    resampling.sort(key=lambda item: str(item.get("analysis_spec_id") or ""))
+
+    selection_payload = _read_json(root, "methods/run_selection_policy.json") or {}
+    selection_contract = {
+        key: selection_payload.get(key)
+        for key in (
+            "selection_role",
+            "selection_metric",
+            "selection_partition",
+            "locked_before_test_access",
+            "test_access_policy",
+            "aggregation_policy",
+            "headline_reporting_policy",
+        )
+        if selection_payload.get(key) not in (None, "", [], {})
+    }
+    method_manifest = _read_json(root, "methods/method_code_manifest.json") or {}
+    method_execution_contract = {
+        key: method_manifest.get(key)
+        for key in (
+            "confirmed_plan_hash",
+            "selected_input_data",
+            "selected_input_profile",
+            "method_families",
+            "required_data_features",
+            "primary_metric",
+            "minimum_primary_metric",
+            "method_data_contract",
+            "method_code_plan",
+            "method_formula_plan",
+            "verify_command_argv",
+        )
+        if method_manifest.get(key) not in (None, "", [], {})
+    }
+
+    implementation_paths = {
+        str(item.get("implementation_entry_point") or "").strip()
+        for item in selected_specs
+        if str(item.get("implementation_entry_point") or "").strip()
+    }
+    for token in method_execution_contract.get("verify_command_argv") or []:
+        value = str(token or "").strip()
+        if value.lower().endswith((".py", ".r", ".jl")):
+            implementation_paths.add(value)
+    hashed_implementations = [
+        item
+        for item in (_sha256_project_file(root, path) for path in implementation_paths)
+        if item is not None
+    ]
+    implementation_code_hashes = {
+        relative: digest
+        for relative, digest in sorted(hashed_implementations)
+    }
+    contract = {
+        "analysis_specs": selected_specs,
+        "analysis_formulas": formulas,
+        "resampling_contracts": resampling,
+        "run_selection_policy": selection_contract,
+        "method_execution_contract": method_execution_contract,
+        "implementation_code_hashes": implementation_code_hashes,
+    }
+    has_contract = bool(selected_specs or selection_contract or method_execution_contract or implementation_code_hashes)
+    return {
+        "analysis_spec_ids": selected_spec_ids,
+        "method_analysis_contract_sha256": (
+            hashlib.sha256(
+                canonical_json(contract, volatile_fields=_METHOD_ANALYSIS_VOLATILE_FIELDS).encode("utf-8")
+            ).hexdigest()
+            if has_contract
+            else None
+        ),
+        "method_analysis_identity_status": "bound" if selected_spec_ids and has_contract else "missing",
+    }
+
+
+def _generic_identity(root: Path, deliverables: list[dict[str, Any]], payload: dict[str, Any]) -> dict[str, Any]:
     """Extract only named identity fields from stage-local structured evidence."""
 
     plan_hash = str(payload.get("confirmed_plan_hash") or payload.get("plan_hash") or "") or None
@@ -224,6 +380,7 @@ def _generic_identity(root: Path, deliverables: list[dict[str, Any]], payload: d
         "sample_unit": sample_unit,
         "validation_design": validation_design,
         "evidence_snapshot_id": evidence_snapshot_id,
+        **_method_analysis_identity(root),
     }
 
 
@@ -658,6 +815,15 @@ def _core_evidence_digest(root: Path, rows: list[dict[str, Any]]) -> dict[str, A
     strict_primary_record = metric_identity.get("primary_metric", {}).get("record") if isinstance(metric_identity.get("primary_metric"), dict) else None
     strict_primary_record = strict_primary_record if isinstance(strict_primary_record, dict) else None
     strict_primary_ready = metric_status == "passed" and strict_primary_record is not None
+    active_context = active_bundle.get("bundle", {}).get("context") if isinstance(active_bundle.get("bundle"), dict) else {}
+    active_context = active_context if isinstance(active_context, dict) else {}
+    method_identity = _method_analysis_identity(
+        root,
+        preferred_analysis_spec_ids=(
+            strict_primary_record.get("analysis_spec_id") if strict_primary_record else None,
+            active_context.get("analysis_spec_id"),
+        ),
+    )
 
     key_findings: list[dict[str, Any]] = []
     if run_id and sample_unit and validation_design:
@@ -815,6 +981,16 @@ def _core_evidence_digest(root: Path, rows: list[dict[str, Any]]) -> dict[str, A
                 }
             )
     strict_primary_record = strict_primary_record or {}
+    if method_identity["method_analysis_identity_status"] != "bound":
+        consistency_checks.append(
+            {
+                "name_zh": "方法与分析规格身份",
+                "status": "missing_required_identity",
+                "detail_zh": "当前核心证据没有绑定可执行分析规格和方法合同；不能沿用或确认核心科学结论。",
+                "evidence": "methods/executable_analysis_spec.json",
+                "blocking": True,
+            }
+        )
     if metric_identity and metric_status in {"blocked", "legacy_unqualified"}:
         consistency_checks.append(
             {
@@ -939,6 +1115,13 @@ def _core_evidence_digest(root: Path, rows: list[dict[str, Any]]) -> dict[str, A
             "evidence": "results/figure_code_trace.json",
             "blocking": bool(figure_items) and not trace_by_figure,
         },
+        {
+            "name_zh": "方法与分析规格身份",
+            "status": "pass" if method_identity["method_analysis_identity_status"] == "bound" else "blocked",
+            "detail_zh": "方法合同、分析规格、选择与重采样规则及声明实现入口已绑定到本次科学决定。" if method_identity["method_analysis_identity_status"] == "bound" else "缺少可执行分析规格或方法合同身份，核心证据不能确认。",
+            "evidence": "methods/executable_analysis_spec.json",
+            "blocking": method_identity["method_analysis_identity_status"] != "bound",
+        },
     ]
     if metric_identity:
         validation_summary.append(
@@ -985,6 +1168,7 @@ def _core_evidence_digest(root: Path, rows: list[dict[str, Any]]) -> dict[str, A
             "metric_identity_report_path": "results/metric_identity_report.json" if metric_identity else None,
             "metric_definition_id": strict_primary_record.get("metric_definition_id"),
             "task_id": strict_primary_record.get("task_id"),
+            "analysis_spec_id": strict_primary_record.get("analysis_spec_id") or (method_identity["analysis_spec_ids"][0] if method_identity["analysis_spec_ids"] else None),
             "cohort_id": strict_primary_record.get("cohort_id") or binding.get("cohort_id") or binding.get("cohort"),
             "model_id": strict_primary_record.get("model_id"),
             "split_id": strict_primary_record.get("split_id"),
@@ -996,6 +1180,7 @@ def _core_evidence_digest(root: Path, rows: list[dict[str, Any]]) -> dict[str, A
             "active_run_evidence_bundle_status": active_bundle.get("status"),
             "active_run_evidence_bundle_path": active_bundle.get("bundle", {}).get("bundle_path") if isinstance(active_bundle.get("bundle"), dict) else None,
         },
+        "method_analysis_identity": method_identity,
         "promoted_evidence_snapshot_id": core.get("promoted_evidence_snapshot_id")
         or (_read_json(root, "results/promoted_evidence_snapshot.json") or {}).get("snapshot_id"),
     }
@@ -1357,11 +1542,7 @@ def build_stage_digest(
         narrative += "页面只支持在当前数据、方法、验证设计和证据边界内解释结果。"
         if review_state != "confirmable":
             narrative += "由于当前存在证据一致性问题，本页面暂不可用于哈希确认。"
-    elif stage == "result_support" and core.get("stage_narrative_zh"):
-        narrative = str(core["stage_narrative_zh"])
-        if review_state != "confirmable" and "不能" not in narrative:
-            narrative += "当前摘要存在阻断问题，不能直接确认。"
-    elif core.get("stage_narrative_zh"):
+    elif stage == "result_support" and core.get("stage_narrative_zh") or core.get("stage_narrative_zh"):
         narrative = str(core["stage_narrative_zh"])
         if review_state != "confirmable" and "不能" not in narrative:
             narrative += "当前摘要存在阻断问题，不能直接确认。"
@@ -1422,6 +1603,8 @@ def build_stage_digest(
         "cohort_label": metrics.get("validation_design"),
         "sample_unit": metrics.get("sample_unit") or core_identity.get("sample_unit"),
         "evidence_snapshot_id": core.get("promoted_evidence_snapshot_id") or core_identity.get("evidence_snapshot_id"),
+        "analysis_spec_ids": (core.get("method_analysis_identity") or {}).get("analysis_spec_ids") or core_identity.get("analysis_spec_ids") or [],
+        "method_analysis_contract_sha256": (core.get("method_analysis_identity") or {}).get("method_analysis_contract_sha256") or core_identity.get("method_analysis_contract_sha256"),
         "checkpoint_hash": checkpoint_hash,
     }
     return {

@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import subprocess
 import sys
 import tempfile
@@ -30,15 +30,84 @@ def write_passing_result_support(project_path: Path) -> None:
 
 
 def write_confirmable_core_evidence(project_path: Path) -> None:
-    """Build the smallest current v4 evidence set accepted by a C3 checkpoint."""
+    """Build the smallest current evidence set accepted by a C3 checkpoint."""
 
     from draftpaper_cli.code_ownership import trace_figures_to_code
     from draftpaper_cli.evidence_snapshot import confirmation_artifact_hash
     from draftpaper_cli.passport import refresh_project_passport
     from draftpaper_cli.project_state import update_stage_status
 
+    analysis = project_path / "methods" / "src" / "core_analysis.py"
+    analysis.parent.mkdir(parents=True, exist_ok=True)
+    analysis.write_text("print('core-analysis')\n", encoding="utf-8")
+    (project_path / "methods" / "executable_analysis_spec.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dpl.executable_analysis_spec.v1",
+                "analysis_specs": [
+                    {
+                        "analysis_spec_id": "analysis-core-test",
+                        "task_id": "task-core-test",
+                        "estimand_id": "estimand-core-test",
+                        "cohort_view_id": "cohort-core-test",
+                        "sample_unit": "source",
+                        "split_id": "held-out",
+                        "implementation_entry_point": "methods/src/core_analysis.py",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_path / "methods" / "analysis_formula_ast.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dpl.analysis_formula_ast.v1",
+                "formulas": [{"formula_id": "primary", "analysis_spec_id": "analysis-core-test", "ast": {"type": "symbol", "name": "score"}}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_path / "methods" / "resampling_contract.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dpl.resampling_contract.v1",
+                "contracts": [{"analysis_spec_id": "analysis-core-test", "method": "none_declared"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_path / "methods" / "run_selection_policy.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "dpl.run_selection_policy.v1",
+                "selection_role": "primary",
+                "selection_metric": "score",
+                "selection_partition": "validation",
+                "locked_before_test_access": True,
+                "test_access_policy": "held-out after selection lock",
+                "aggregation_policy": "prespecified_primary",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (project_path / "methods" / "method_code_manifest.json").write_text(
+        json.dumps(
+            {
+                "method_families": ["fixture-analysis"],
+                "primary_metric": "score",
+                "verify_command_argv": ["{python}", "methods/src/core_analysis.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
     run_manifest = project_path / "methods" / "run_manifest.yaml"
-    run_manifest.write_text(json.dumps({"status": "success", "run_id": "run-core-test"}), encoding="utf-8")
+    run_manifest.write_text(
+        json.dumps(
+            {"status": "success", "run_id": "run-core-test", "analysis_spec_id": "analysis-core-test"}
+        ),
+        encoding="utf-8",
+    )
     plotting = project_path / "methods" / "plotting" / "make_figure.py"
     plotting.parent.mkdir(parents=True, exist_ok=True)
     plotting.write_text("print('figure')\n", encoding="utf-8")

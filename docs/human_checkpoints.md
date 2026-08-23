@@ -47,7 +47,7 @@ v5 separates three identities:
 
 | Identity | Covers | Effect of a change |
 |---|---|---|
-| `scientific_decision_sha256` | data/cohort/split/sample unit, method/run, metric/uncertainty, figure semantics, and claim boundary | new C3 author decision |
+| `scientific_decision_sha256` | data/cohort/split/sample unit, executable analysis specification, method contract/run, metric/uncertainty, figure semantics, and claim boundary | new C3 author decision |
 | `audit_bundle_sha256` | artifact manifest, activity receipts, validation reports, and technical audit | audit refresh only |
 | `presentation_sha256` | decision-page rendering and localization | page rebuild only |
 
@@ -61,9 +61,11 @@ hash. This preserves the previous user decision; it never pretends that a
 system or Agent made a new scientific decision.
 
 Changes to a metric value or definition, uncertainty, cohort, split, sample
-unit, method/run identity, figure semantic series, or claim boundary always
-create a new scientific delta and require a new author decision. Unknown or
-incomplete identity is fail-closed and cannot use continuity.
+unit, executable analysis specification, method contract, declared
+implementation entry point, run identity, figure semantic series, or claim
+boundary always create a new scientific delta and require a new author
+decision. A core-evidence package without an executable analysis specification
+or method-contract identity is fail-closed and cannot use continuity.
 
 ## Bounded scope and review authority
 
@@ -114,11 +116,14 @@ remains a non-consumable derived package. Anonymous fixtures may use
 
 ## Legacy migration and shadow verification
 
-`audit-checkpoint-v5-migration` reads a v1-v4 package and reports the required
-next action. It never rewrites a historical summary, transfers a user receipt,
-or treats an old package hash as a v5 scientific decision. A v4 package may be
-projected only for comparison; unless an equivalent verified v5 decision
-already exists, the workflow requires a new v5 C3 decision.
+`audit-checkpoint-v5-migration` reads a historical package and reports the
+required next action. It never rewrites a historical summary, transfers a user
+receipt, or treats an old package hash as a current v5 scientific decision. A
+v1-v4 package may be projected only for comparison; an earlier v5 package that
+predates FigureClaimMap-bound scientific fingerprints is also read-only. A
+core-evidence v5 package that predates executable-analysis and method-contract
+identity binding is likewise read-only. Unless an equivalent decision under the
+current contract already exists, the workflow requires a new v5 C3 decision.
 
 `shadow-checkpoint-v5` is a regression audit for an existing project. Its
 `--output-root` must be outside the project directory. The command records

@@ -15,7 +15,6 @@ from typing import Any
 
 from .artifact_identity import canonical_json
 
-
 HUMAN_DECISION_BRIEF_SCHEMA = "dpl.human_decision_brief.v1"
 
 _IDENTITY_LABELS = {
@@ -25,6 +24,17 @@ _IDENTITY_LABELS = {
     "cohort_label": "队列说明",
     "sample_unit": "样本单位",
     "evidence_snapshot_id": "证据快照",
+    "analysis_spec_ids": "分析规格",
+}
+
+_IDENTITY_LABELS_EN = {
+    "plan_hash": "Research-plan identity",
+    "run_id": "Run identity",
+    "cohort_id": "Cohort identity",
+    "cohort_label": "Cohort description",
+    "sample_unit": "Sample unit",
+    "evidence_snapshot_id": "Evidence snapshot",
+    "analysis_spec_ids": "Analysis specifications",
 }
 
 _METRIC_LABELS = {
@@ -36,6 +46,17 @@ _METRIC_LABELS = {
     "model_id": "模型身份",
     "aggregation_id": "聚合口径",
     "uncertainty": "不确定性口径",
+}
+
+_METRIC_LABELS_EN = {
+    "metric": "Primary metric definition",
+    "metric_definition_id": "Metric-definition identity",
+    "value": "Primary metric value",
+    "validation_design": "Validation design",
+    "split_id": "Split identity",
+    "model_id": "Model identity",
+    "aggregation_id": "Aggregation contract",
+    "uncertainty": "Uncertainty contract",
 }
 
 
@@ -124,6 +145,8 @@ def _semantic_identity(identity: dict[str, Any], metric: dict[str, Any]) -> dict
         "sample_unit": identity.get("sample_unit") or metric.get("sample_unit"),
         "validation_design": identity.get("cohort_label") or metric.get("validation_design"),
         "evidence_snapshot_id": identity.get("evidence_snapshot_id"),
+        "analysis_spec_ids": identity.get("analysis_spec_ids") or metric.get("analysis_spec_id") or [],
+        "method_analysis_contract_sha256": identity.get("method_analysis_contract_sha256"),
         "metric": metric.get("metric"),
         "metric_definition_id": metric.get("metric_definition_id"),
         "value": metric.get("value"),
@@ -153,7 +176,15 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
     facts: list[dict[str, Any]] = []
     used_ids: set[str] = set()
 
-    def add_fact(kind: str, label_zh: str, value: Any, evidence_refs: Iterable[str], *, semantic_value: Any | None = None) -> str | None:
+    def add_fact(
+        kind: str,
+        label_zh: str,
+        value: Any,
+        evidence_refs: Iterable[str],
+        *,
+        label_en: str | None = None,
+        semantic_value: Any | None = None,
+    ) -> str | None:
         if value in (None, "", [], {}):
             return None
         base = f"{kind}-{len(facts) + 1}"
@@ -169,6 +200,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
                 "fact_id": fact_id,
                 "fact_type": kind,
                 "label_zh": label_zh,
+                "label_en": _text(label_en) or label_zh,
                 "value": value,
                 "evidence_refs": refs,
                 "semantic_value": value if semantic_value is None else semantic_value,
@@ -176,13 +208,13 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         )
         return fact_id
 
-    scope_fact = add_fact("scope", "本次决定范围", purpose, [f"policy:checkpoint:{stage}"])
+    scope_fact = add_fact("scope", "本次决定范围", purpose, [f"policy:checkpoint:{stage}"], label_en="Decision scope")
     identity = summary.get("identity") if isinstance(summary.get("identity"), dict) else {}
     metric = summary.get("core_metrics") if isinstance(summary.get("core_metrics"), dict) else {}
     identity_facts: list[str] = []
     for key, label in _IDENTITY_LABELS.items():
         ref = metric.get("metric_source") or identity.get("evidence_snapshot_id") or f"policy:checkpoint:{stage}"
-        fact_id = add_fact("identity", label, identity.get(key), [str(ref)])
+        fact_id = add_fact("identity", label, identity.get(key), [str(ref)], label_en=_IDENTITY_LABELS_EN[key])
         if fact_id:
             identity_facts.append(fact_id)
     metric_facts: list[str] = []
@@ -191,7 +223,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         if value in (None, "") and key == "validation_design":
             value = identity.get("cohort_label")
         ref = metric.get("metric_source") or metric.get("metric_identity_report_path") or f"policy:checkpoint:{stage}"
-        fact_id = add_fact("metric", label, value, [str(ref)])
+        fact_id = add_fact("metric", label, value, [str(ref)], label_en=_METRIC_LABELS_EN[key])
         if fact_id:
             metric_facts.append(fact_id)
 
@@ -201,6 +233,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             continue
         value = row.get("value")
         label = _text(row.get("count_definition_id") or row.get("label") or row.get("entity_type")) or f"样本流程节点 {index + 1}"
+        label_en = _text(row.get("label_en") or row.get("count_definition_id") or row.get("entity_type")) or f"Sample-flow node {index + 1}"
         fact_id = add_fact(
             "count",
             label,
@@ -212,6 +245,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
                 "filter_contract_id": row.get("filter_contract_id"),
             },
             _source_refs(row, fallback=metric.get("count_identity_report_path")),
+            label_en=label_en,
         )
         if fact_id:
             count_facts.append(fact_id)
@@ -222,7 +256,13 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         text = _text(item.get("summary_zh") if isinstance(item, dict) else item)
         if not text:
             continue
-        fact_id = add_fact("finding", f"关键发现 {index + 1}", text, _source_refs(item, fallback=metric.get("metric_source")))
+        fact_id = add_fact(
+            "finding",
+            f"关键发现 {index + 1}",
+            text,
+            _source_refs(item, fallback=metric.get("metric_source")),
+            label_en=f"Key finding {index + 1}",
+        )
         if fact_id:
             finding_facts.append(fact_id)
             findings.append(
@@ -242,7 +282,13 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         text = _text(item.get("summary_zh") if isinstance(item, dict) else item)
         if not text:
             continue
-        fact_id = add_fact("claim_boundary", f"论断边界 {index + 1}", text, _source_refs(item, fallback="core_evidence/core_evidence_report.json" if stage == "core_evidence" else None))
+        fact_id = add_fact(
+            "claim_boundary",
+            f"论断边界 {index + 1}",
+            text,
+            _source_refs(item, fallback="core_evidence/core_evidence_report.json" if stage == "core_evidence" else None),
+            label_en=f"Claim boundary {index + 1}",
+        )
         if fact_id:
             boundary_facts.append(fact_id)
             boundaries.append(
@@ -272,6 +318,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             _text(value["figure_id"]) or f"图 {index + 1}",
             value,
             _source_refs(figure, fallback=path),
+            label_en=_text(figure.get("title_en") or figure.get("figure_id")) or f"Figure {index + 1}",
             semantic_value={
                 "figure_id": _text(value["figure_id"]) or f"figure-{index + 1}",
                 "semantic_sha256": value["semantic_sha256"],

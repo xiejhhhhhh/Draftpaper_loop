@@ -1331,7 +1331,9 @@ def _main_without_passport_refresh(
         if result_sink is not None:
             result_sink.append((args, dict(result), exit_code))
         output_stream = result.pop("_dpl_output_stream", "stdout")
-        print(json.dumps(result, ensure_ascii=True), file=sys.stderr if output_stream == "stderr" else sys.stdout)
+        from .cli_output import prioritize_human_review
+
+        print(json.dumps(prioritize_human_review(result), ensure_ascii=True), file=sys.stderr if output_stream == "stderr" else sys.stdout)
         return exit_code
 
     print(json.dumps({"status": "error", "message": f"Registered handler missing for {args.command}."}, ensure_ascii=True), file=sys.stderr)

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "dpl.checkpoint_summary.v5",
   "type": "object",
-  "required": ["schema_version", "checkpoint_id", "checkpoint_type", "review_state", "review_requirement", "decision_status", "decision_actor_type", "risk_class", "decision_brief", "scientific_decision_fingerprint", "human_brief_semantic_sha256", "audit_bundle_ref", "audit_bundle_sha256", "presentation_sha256", "activity_window", "semantic_delta_from_last_confirmed", "confirmation_basis", "readability_report_ref", "reviewer_visibility_scope", "confirmation_continuity"],
+  "required": ["schema_version", "checkpoint_id", "checkpoint_type", "review_state", "review_requirement", "decision_status", "decision_actor_type", "risk_class", "decision_brief", "scientific_decision_fingerprint", "human_brief_semantic_sha256", "confirmation_meaning_en", "audit_bundle_ref", "audit_bundle_sha256", "presentation_sha256", "activity_window", "semantic_delta_from_last_confirmed", "confirmation_basis", "readability_report_ref", "reviewer_visibility_scope", "confirmation_continuity", "figure_claim_map_sha256", "scientific_figure_claim_sha256"],
   "properties": {
     "schema_version": {"const": "dpl.checkpoint_summary.v5"},
     "checkpoint_id": {"type": "string"},
@@ -15,6 +15,7 @@
     "decision_brief": {"type": "object"},
     "scientific_decision_fingerprint": {"type": "object"},
     "human_brief_semantic_sha256": {"type": "string"},
+    "confirmation_meaning_en": {"type": "string"},
     "audit_bundle_ref": {"type": "string"},
     "audit_bundle_sha256": {"type": "string"},
     "presentation_sha256": {"type": "string"},
@@ -23,7 +24,9 @@
     "confirmation_basis": {"type": "object"},
     "readability_report_ref": {"type": "string"},
     "reviewer_visibility_scope": {"enum": ["author_decision", "internal_audit", "reviewer_visible", "release_public"]},
-    "confirmation_continuity": {"type": "object"}
+    "confirmation_continuity": {"type": "object"},
+    "figure_claim_map_sha256": {"type": "string"},
+    "scientific_figure_claim_sha256": {"type": "string"}
   },
   "additionalProperties": true
 }

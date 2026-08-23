@@ -8,7 +8,7 @@ from typing import Any
 
 from .artifact_identity import canonical_json
 from .checkpoint_brief import brief_semantic_payload
-
+from .figure_claim_map import scientific_figure_claim_subject
 
 SCIENTIFIC_DECISION_FINGERPRINT_SCHEMA = "dpl.scientific_decision_fingerprint.v1"
 AUDIT_FINGERPRINT_SCHEMA = "dpl.checkpoint_audit_fingerprint.v1"
@@ -32,6 +32,11 @@ def _stable(value: Any, *, volatile_keys: frozenset[str] = _VOLATILE_KEYS) -> An
 def _identity(summary: dict[str, Any]) -> dict[str, Any]:
     identity = summary.get("identity") if isinstance(summary.get("identity"), dict) else {}
     metrics = summary.get("core_metrics") if isinstance(summary.get("core_metrics"), dict) else {}
+    analysis_spec_ids = identity.get("analysis_spec_ids") or metrics.get("analysis_spec_id") or []
+    if isinstance(analysis_spec_ids, str):
+        analysis_spec_ids = [analysis_spec_ids]
+    if not isinstance(analysis_spec_ids, list):
+        analysis_spec_ids = []
     return {
         "plan_hash": identity.get("plan_hash"),
         "run_id": identity.get("run_id") or metrics.get("run_id"),
@@ -43,16 +48,37 @@ def _identity(summary: dict[str, Any]) -> dict[str, Any]:
         "split_id": metrics.get("split_id"),
         "model_id": metrics.get("model_id"),
         "aggregation_id": metrics.get("aggregation_id"),
+        "analysis_spec_ids": sorted({str(value).strip() for value in analysis_spec_ids if str(value).strip()}),
+        "method_analysis_contract_sha256": identity.get("method_analysis_contract_sha256"),
     }
 
 
-def build_scientific_decision_fingerprint(summary: dict[str, Any], brief: dict[str, Any]) -> dict[str, Any]:
+def fingerprint_has_method_analysis_identity(fingerprint: Mapping[str, Any]) -> bool:
+    """Return whether a core-decision fingerprint binds method semantics."""
+
+    payload = fingerprint.get("canonical_payload") if isinstance(fingerprint, Mapping) else None
+    identity = payload.get("scientific_identity") if isinstance(payload, Mapping) else None
+    analysis_spec_ids = identity.get("analysis_spec_ids") if isinstance(identity, Mapping) else None
+    return bool(
+        isinstance(analysis_spec_ids, list)
+        and any(str(value).strip() for value in analysis_spec_ids)
+        and str(identity.get("method_analysis_contract_sha256") or "").strip()
+    )
+
+
+def build_scientific_decision_fingerprint(
+    summary: dict[str, Any],
+    brief: dict[str, Any],
+    *,
+    figure_claim_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Hash only the scientific subject of a decision, never derived layout."""
 
     payload = {
         "checkpoint_type": summary.get("checkpoint_type") or summary.get("completed_stage"),
         "scientific_identity": _identity(summary),
         "decision_brief": brief_semantic_payload(brief),
+        "figure_claim_map": scientific_figure_claim_subject(figure_claim_map or {}),
     }
     payload = _stable(payload)
     scientific_identity = payload["scientific_identity"]
@@ -64,8 +90,11 @@ def build_scientific_decision_fingerprint(summary: dict[str, Any], brief: dict[s
     requires_identity = payload["checkpoint_type"] == "core_evidence" or has_scientific_fact or any(
         value not in (None, "", [], {}) for value in scientific_identity.values()
     )
+    required_identity_fields = {"sample_unit", "validation_design"}
+    if payload["checkpoint_type"] == "core_evidence":
+        required_identity_fields.update({"analysis_spec_ids", "method_analysis_contract_sha256"})
     identity_complete = (
-        all(value not in (None, "", [], {}) for key, value in scientific_identity.items() if key in {"sample_unit", "validation_design"})
+        all(value not in (None, "", [], {}) for key, value in scientific_identity.items() if key in required_identity_fields)
         if requires_identity
         else True
     )
@@ -140,6 +169,7 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
             "requires_reconfirmation": True,
             "changes": [],
             "summary_zh": "这是该 checkpoint family 的首次有效科学确认，需要作者审阅并确认。",
+            "summary_en": "This is the first valid scientific confirmation for this checkpoint family and requires author review.",
         }
     previous_hash = str(previous.get("scientific_decision_sha256") or "")
     if not previous_hash or not current_hash:
@@ -148,6 +178,7 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
             "requires_reconfirmation": True,
             "changes": [],
             "summary_zh": "缺少可比较的科学决定指纹，不能自动沿用先前确认。",
+            "summary_en": "A comparable scientific-decision fingerprint is missing, so the prior confirmation cannot be reused automatically.",
         }
     if previous_hash == current_hash:
         return {
@@ -155,6 +186,7 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
             "requires_reconfirmation": False,
             "changes": [],
             "summary_zh": "与最近一次有效确认相比，数据、方法、验证身份、主图语义和论断边界均未发生科学变化；本次仅更新技术审计或呈现内容。",
+            "summary_en": "Compared with the latest valid confirmation, the data, method, validation identity, main-figure semantics, and claim boundary are unchanged; only technical-audit or presentation material changed.",
         }
     before = previous.get("canonical_payload") if isinstance(previous.get("canonical_payload"), dict) else {}
     after = current.get("canonical_payload") if isinstance(current.get("canonical_payload"), dict) else {}
@@ -165,6 +197,7 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
         "requires_reconfirmation": True,
         "changes": changes[:50],
         "summary_zh": f"相对最近一次有效确认，以下科学决定字段发生变化：{names}；需要新的作者确认。",
+        "summary_en": f"Compared with the latest valid confirmation, these scientific-decision fields changed: {names}; a new author confirmation is required.",
     }
 
 
@@ -176,4 +209,5 @@ __all__ = [
     "build_presentation_fingerprint",
     "build_scientific_decision_fingerprint",
     "compare_scientific_decisions",
+    "fingerprint_has_method_analysis_identity",
 ]

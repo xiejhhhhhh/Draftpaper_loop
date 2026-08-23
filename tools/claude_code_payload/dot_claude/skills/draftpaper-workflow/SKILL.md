@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.41.0
+version: 0.41.1
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -59,7 +59,9 @@ Every new checkpoint writes a v5 package with `stage_summary.zh-CN.html`
 The decision page covers the question, semantic delta, scientific context,
 figures, boundaries, exclusions, reopen conditions, and deliverables; never
 create a project-external readability sidecar. v1/v2 are read-only legacy;
-v3/v4 remain readable and are never rewritten.
+v3/v4 remain readable and are never rewritten. Earlier v5 packages created
+before FigureClaimMap-bound scientific fingerprints are also read-only; they
+must receive an explicit new C3 checkpoint before they can use continuity.
 The request binds `scientific_decision_sha256` and the DecisionBrief semantic
 hash, not the audit/package hash. Identical valid prior user decisions write a
 continuity receipt and continue as a notification. Metric, cohort, split,

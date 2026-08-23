@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -108,6 +110,7 @@ def _record_key(record: dict[str, Any]) -> tuple[str, ...]:
         str(record.get("entity_role") or ""),
         str(record.get("estimand_id") or ""),
         str(record.get("cohort_view_id") or ""),
+        str(record.get("cohort_id") or record.get("cohort") or ""),
         str(record.get("analysis_spec_id") or record.get("analysis_variant") or ""),
         str(record.get("run_id") or ""),
         str(record.get("model_id") or record.get("model") or ""),
@@ -168,14 +171,15 @@ def _conflicts(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "entity_role": key[0],
                     "estimand_id": key[1],
                     "cohort_view_id": key[2],
-                    "analysis_spec_id": key[3],
-                    "run_id": key[4],
-                    "model": key[5],
-                    "split_id": key[6],
-                    "sample_unit": key[7],
-                    "metric_dimension": key[8],
-                    "aggregation": key[9],
-                    "analysis_variant": key[10],
+                    "cohort_id": key[3],
+                    "analysis_spec_id": key[4],
+                    "run_id": key[5],
+                    "model": key[6],
+                    "split_id": key[7],
+                    "sample_unit": key[8],
+                    "metric_dimension": key[9],
+                    "aggregation": key[10],
+                    "analysis_variant": key[11],
                 },
                 "values": [item.get("value") for item in items],
                 "evidence_ids": [item.get("evidence_id") for item in items],
@@ -413,6 +417,198 @@ def _records_from_result_manifest(path: Path, project_path: Path) -> list[dict[s
     return records
 
 
+def _figure_table_path(project_path: Path, reference: Any) -> Path | None:
+    """Resolve a figure-declared compact table without leaving results/tables."""
+    relative = str(reference or "").strip().replace("\\", "/").removeprefix("./")
+    if not relative:
+        return None
+    if not relative.startswith("results/tables/"):
+        if "/" in relative:
+            return None
+        relative = f"results/tables/{relative}"
+    table_path = (project_path / relative).resolve()
+    tables_root = (project_path / "results" / "tables").resolve()
+    try:
+        table_path.relative_to(tables_root)
+    except ValueError:
+        return None
+    if table_path.suffix.lower() not in {".csv", ".tsv"} or not table_path.is_file():
+        return None
+    return table_path
+
+
+def _records_from_figure_bound_tables(project_path: Path) -> list[dict[str, Any]]:
+    """Register compact tables explicitly declared by generated figure metadata.
+
+    The registry stores the table hash with each cell. A content-addressed
+    ``table:<path>:<hash-prefix>`` evidence identifier is verified when present;
+    plain ``source_tables`` references remain supported for existing projects.
+    """
+    metadata = _read_json(project_path / "results" / "figure_metadata.json")
+    figures = [item for item in metadata.get("figures") or [] if isinstance(item, dict)]
+    if not figures:
+        return []
+
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    resolved = _read_json(project_path / "results" / "resolved_result_evidence.json")
+    primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
+    current_run_id = str(run_manifest.get("run_id") or primary.get("run_id") or "")
+    current_split = str(primary.get("split") or run_manifest.get("split") or "current_run")
+    analysis_payload = _read_json(project_path / "methods" / "executable_analysis_spec.json")
+    analysis_specs = [item for item in analysis_payload.get("analysis_specs") or [] if isinstance(item, dict)]
+    specs_by_figure = {
+        str(figure_id): spec
+        for spec in analysis_specs
+        for figure_id in spec.get("figure_ids") or []
+        if figure_id
+    }
+    default_spec = analysis_specs[0] if len(analysis_specs) == 1 else {}
+    figure_contract_payload = _read_json(project_path / "results" / "figure_contracts.json")
+    figure_contracts = [item for item in figure_contract_payload.get("contracts") or [] if isinstance(item, dict)]
+    contracts_by_figure = {
+        str(item.get("storyboard_id") or item.get("figure_id") or ""): item
+        for item in figure_contracts
+        if item.get("storyboard_id") or item.get("figure_id")
+    }
+
+    records: list[dict[str, Any]] = []
+    count_terms = {"count", "iterations", "pair_count", "source_count", "fold_seed_count", "epoch_count"}
+    aggregation_names = (
+        "mean", "median", "sd", "q025", "q975", "ci_low", "ci_high",
+        "observed", "fraction", "threshold",
+    )
+    for figure in figures:
+        figure_id = str(figure.get("figure_id") or figure.get("storyboard_id") or figure.get("id") or "figure")
+        analysis_spec = specs_by_figure.get(figure_id) or default_spec
+        contract = contracts_by_figure.get(figure_id) or {}
+        binding = {**contract, **analysis_spec}
+        table_references: dict[Path, str] = {}
+        source_table_hashes = figure.get("source_table_hashes")
+        source_table_hashes = source_table_hashes if isinstance(source_table_hashes, dict) else {}
+
+        for source_table in figure.get("source_tables") or []:
+            table_path = _figure_table_path(project_path, source_table)
+            if table_path is None:
+                continue
+            relative = table_path.relative_to(project_path).as_posix()
+            expected_hash = str(
+                source_table_hashes.get(str(source_table))
+                or source_table_hashes.get(relative)
+                or ""
+            ).removeprefix("sha256:")
+            table_references.setdefault(table_path, expected_hash)
+
+        for evidence_id in figure.get("evidence_ids") or []:
+            match = re.fullmatch(r"table:(.+):([0-9a-fA-F]{8,64})", str(evidence_id).strip())
+            if not match:
+                continue
+            table_path = _figure_table_path(project_path, match.group(1))
+            if table_path is not None:
+                table_references[table_path] = match.group(2).lower()
+
+        figure_text = " ".join(
+            str(figure.get(key) or "")
+            for key in ("scientific_question", "caption_draft", "figure_group", "result_claim", "interpretation")
+        ).lower()
+        cohort_figure = any(token in figure_text for token in ("sample", "cohort", "coverage", "missingness", "availability"))
+        for table_path, expected_hash_prefix in table_references.items():
+            source_hash = _sha256(table_path)
+            if expected_hash_prefix and not source_hash.startswith(expected_hash_prefix):
+                continue
+            try:
+                with table_path.open("r", encoding="utf-8-sig", newline="") as handle:
+                    delimiter = "\t" if table_path.suffix.lower() == ".tsv" else ","
+                    rows = list(csv.DictReader(handle, delimiter=delimiter))
+            except (OSError, UnicodeDecodeError, csv.Error):
+                continue
+            # Per-object tables can contain millions of values and are not
+            # manuscript scalar evidence. Aggregate tables stay small enough to
+            # register cell-by-cell for traceability.
+            if len(rows) > 500 or (rows and "source_id" in rows[0]):
+                continue
+            relative = table_path.relative_to(project_path).as_posix()
+            figure_analysis_spec = str(
+                figure.get("analysis_spec_id") or binding.get("analysis_spec_id") or ""
+            ).strip()
+            if figure_analysis_spec:
+                figure_analysis_spec = f"{figure_analysis_spec}|table:{relative}"
+            for row_index, row in enumerate(rows, start=1):
+                identity_columns = (
+                    "model", "time_encoding", "metric", "finding", "comparison", "coverage_variable",
+                    "quality_tier", "category", "comparison_model", "baseline_model",
+                )
+                identity_parts = [
+                    str(row.get(column) or "").strip()
+                    for column in identity_columns
+                    if str(row.get(column) or "").strip()
+                ]
+                model_id = " | ".join(dict.fromkeys(identity_parts)) or str(
+                    figure.get("model_id") or primary.get("model_id") or "not_applicable"
+                )
+                cohort_id = str(
+                    row.get("cohort_id") or row.get("cohort") or figure.get("cohort_id")
+                    or figure.get("cohort") or binding.get("cohort_id") or binding.get("cohort") or "main"
+                ).strip() or "main"
+                for column, raw_value in row.items():
+                    numeric = _numeric(raw_value)
+                    if numeric is None:
+                        continue
+                    normalized_column = re.sub(r"[^a-z0-9]+", "_", str(column).lower()).strip("_")
+                    if not normalized_column:
+                        continue
+                    unit = "count" if any(term in normalized_column for term in count_terms) else "score"
+                    aggregation = next(
+                        (name for name in aggregation_names if name in normalized_column),
+                        "reported_scalar",
+                    )
+                    record = _normalize_record(
+                        {
+                            "entity_role": f"result_metric_{normalized_column}",
+                            "value": numeric,
+                            "unit": unit,
+                            "cohort": cohort_id,
+                            "cohort_view_id": figure.get("cohort_view_id") or binding.get("cohort_view_id"),
+                            "estimand_id": figure.get("estimand_id") or binding.get("estimand_id"),
+                            "analysis_spec_id": figure_analysis_spec,
+                            "sample_unit": figure.get("sample_unit") or "figure_evidence",
+                            "run_id": str(figure.get("run_id") or current_run_id),
+                            "split": str(figure.get("split") or figure.get("split_unit") or current_split),
+                            "split_id": str(figure.get("split_id") or binding.get("split_id") or current_split),
+                            "model_id": model_id,
+                            "metric_dimension": unit,
+                            "aggregation": aggregation,
+                            "analysis_variant": "figure_bound_table",
+                            "confidence": "figure_metadata_bound",
+                            "target_sections": _figure_metric_target_sections(
+                                normalized_column,
+                                numeric,
+                                unit=unit,
+                                cohort_figure=cohort_figure,
+                            ),
+                            "figure_ids": [figure_id],
+                            "allowed_interpretation": figure.get("result_claim") or figure.get("claim_boundary") or "",
+                        },
+                        source_artifact=relative,
+                        source_hash=source_hash,
+                    )
+                    if record:
+                        record["evidence_id"] = stable_evidence_id(
+                            "figure_table_cell",
+                            title=f"{figure_id}|{relative}|{row_index}|{normalized_column}|{raw_value}|{source_hash}",
+                            sequence=len(records) + 1,
+                        )
+                        _finalize_binding(record)
+                        # The registry is canonical scientific evidence, not
+                        # a generic table index. A figure may declare a
+                        # supporting table before its estimand/cohort/split
+                        # binding exists; keep that table in the audit surface
+                        # but do not promote its numeric cells into the
+                        # scientific registry yet.
+                        if record["binding_complete"]:
+                            records.append(record)
+    return records
+
+
 def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     """Build a domain-neutral registry from explicitly structured evidence only."""
     state = load_project(project)
@@ -428,6 +624,7 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     result_manifest = state.path / "results" / "result_manifest.yaml"
     if result_manifest.exists():
         records.extend(_records_from_result_manifest(result_manifest, state.path))
+    records.extend(_records_from_figure_bound_tables(state.path))
     resolved = _read_json(state.path / "results" / "resolved_result_evidence.json")
     primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
     typed_metric_report = _read_json(state.path / "results" / "metric_identity_report.json")
@@ -461,6 +658,9 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         "generated_at": utc_now(),
         "project_id": state.metadata.get("project_id"),
         "record_count": len(records),
+        "figure_table_binding_count": sum(
+            1 for record in records if record.get("analysis_variant") == "figure_bound_table"
+        ),
         "records": records,
         "preferred_run_id": str(primary.get("run_id") or ""),
         "preferred_model_id": str(primary.get("model_id") or primary.get("model") or ""),
@@ -481,8 +681,8 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         },
         "typed_blocking_statuses": typed_blocking,
         "required_binding_fields": list(REQUIRED_BINDING_FIELDS),
-        "semantic_key": ["estimand_id", "cohort_view_id", "analysis_spec_id", "run_id", "model_id", "split_id", "aggregation", "metric_dimension"],
-        "policy": "Only structured evidence bound to estimand/cohort-view/analysis-spec/run/model/split/aggregation/dimension may guide quantitative manuscript claims; numeric value and free text are not identity keys.",
+        "semantic_key": ["estimand_id", "cohort_view_id", "cohort_id", "analysis_spec_id", "run_id", "model_id", "split_id", "aggregation", "metric_dimension"],
+        "policy": "Only structured evidence bound to estimand/cohort-view/cohort/analysis-spec/run/model/split/aggregation/dimension may guide quantitative manuscript claims; numeric value and free text are not identity keys.",
     }
     output = state.path / EVIDENCE_REGISTRY_JSON
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -16,7 +16,6 @@ from .execution_policy import redact_sensitive
 from .passport import collect_artifacts, load_project_passport, project_root, read_jsonl, utc_now
 from .state_kernel import atomic_write_json, atomic_write_text
 
-
 CHECKPOINT_SUMMARY_SCHEMA = "dpl.checkpoint_summary.v3"
 CHECKPOINT_SUMMARY_V4_SCHEMA = "dpl.checkpoint_summary.v4"
 CHECKPOINT_SUMMARY_V5_SCHEMA = "dpl.checkpoint_summary.v5"
@@ -61,6 +60,26 @@ _PATH_KEY_TOKENS = (
 
 class CheckpointSummaryError(RuntimeError):
     """Raised when a reviewable checkpoint summary cannot be committed."""
+
+
+def _confirmation_meaning_en(summary: dict[str, Any], *, continuity_eligible: bool) -> str:
+    explicit = str(summary.get("confirmation_meaning_en") or "").strip()
+    if explicit:
+        return explicit
+    if continuity_eligible:
+        return (
+            "The current scientific decision is identical to the prior author-approved decision. "
+            "The workflow may continue while preserving that approval; only the technical audit was refreshed."
+        )
+    if str(summary.get("review_state") or "") != "confirmable":
+        return (
+            "This checkpoint is readable but cannot be confirmed until its blocking or stale evidence is repaired "
+            "and a new checkpoint package is created."
+        )
+    return (
+        "After confirmation, the workflow may continue only through this checkpoint's allowed downstream route. "
+        "Confirmation does not replace the author's scientific judgment."
+    )
 
 
 def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = False) -> list[str]:
@@ -129,6 +148,7 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
             "decision_brief",
             "scientific_decision_fingerprint",
             "human_brief_semantic_sha256",
+            "confirmation_meaning_en",
             "audit_bundle_ref",
             "audit_bundle_sha256",
             "presentation_sha256",
@@ -138,6 +158,8 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
             "readability_report_ref",
             "reviewer_visibility_scope",
             "confirmation_continuity",
+            "figure_claim_map_sha256",
+            "scientific_figure_claim_sha256",
         )
     issues = [f"Missing required checkpoint summary field: {key}" for key in required if key not in summary]
     if issues:
@@ -205,9 +227,12 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
             issues.append("Confirmation contract test marker does not match summary.")
     if summary.get("test_auto_confirmation") and not summary.get("test_mode"):
         issues.append("test_auto_confirmation requires test_mode=true.")
-    if summary.get("review_state") == "confirmable" and summary.get("stage_status") != "ready_for_human_review":
-        if schema == CHECKPOINT_SUMMARY_SCHEMA:
-            issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
+    if (
+        summary.get("review_state") == "confirmable"
+        and summary.get("stage_status") != "ready_for_human_review"
+        and schema == CHECKPOINT_SUMMARY_SCHEMA
+    ):
+        issues.append("A confirmable summary must have stage_status=ready_for_human_review.")
     if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA}:
         if summary.get("review_requirement") not in {"notify_only", "agent_delegable", "human_required"}:
             issues.append("v4 review_requirement is not recognized.")
@@ -232,11 +257,45 @@ def _checkpoint_summary_contract_issues(summary: Any, *, allow_legacy: bool = Fa
             issues.append("v5 confirmation_basis must be an object.")
         if not isinstance(summary.get("confirmation_continuity"), dict):
             issues.append("v5 confirmation_continuity must be an object.")
+        if not isinstance(summary.get("confirmation_meaning_en"), str) or not summary.get("confirmation_meaning_en").strip():
+            issues.append("v5 confirmation_meaning_en must be a non-empty string.")
         if summary.get("reviewer_visibility_scope") not in {"author_decision", "internal_audit", "reviewer_visible", "release_public"}:
             issues.append("v5 reviewer_visibility_scope is not recognized.")
+        if not isinstance(summary.get("figure_claim_map_sha256"), str) or not summary.get("figure_claim_map_sha256").strip():
+            issues.append("v5 figure_claim_map_sha256 must be a non-empty string.")
+        if not isinstance(summary.get("scientific_figure_claim_sha256"), str) or not summary.get("scientific_figure_claim_sha256").strip():
+            issues.append("v5 scientific_figure_claim_sha256 must be a non-empty string.")
     if summary.get("review_state") != "confirmable" and summary.get("confirmation_contract", {}).get("confirmation_command_allowed"):
         issues.append("Non-confirmable summary cannot allow a confirmation command.")
     return issues
+
+
+def _pre_figure_claim_v5_contract(summary: dict[str, Any]) -> bool:
+    """Identify a historical v5 package before FigureClaimMap bound C3 semantics.
+
+    It remains readable evidence but cannot be resumed or silently upgraded
+    under the current scientific-decision contract.
+    """
+
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    payload = fingerprint.get("canonical_payload") if isinstance(fingerprint, dict) else None
+    return not (
+        isinstance(payload, dict)
+        and isinstance(payload.get("figure_claim_map"), list)
+        and isinstance(summary.get("scientific_figure_claim_sha256"), str)
+        and bool(str(summary.get("scientific_figure_claim_sha256") or "").strip())
+    )
+
+
+def _pre_method_analysis_v5_contract(summary: dict[str, Any]) -> bool:
+    """Keep old core-evidence v5 packages read-only under the complete contract."""
+
+    if str(summary.get("checkpoint_type") or summary.get("completed_stage") or "") != "core_evidence":
+        return False
+    from .checkpoint_fingerprint import fingerprint_has_method_analysis_identity
+
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    return not fingerprint_has_method_analysis_identity(fingerprint if isinstance(fingerprint, dict) else {})
 
 
 def _hash_payload(payload: Any) -> str:
@@ -838,10 +897,10 @@ def write_stage_summary_v4(
 
     root = project_root(project)
     data = dict(payload or {})
-    from .stage_activity import build_stage_activity_bundle
     from .review_policy import classify_checkpoint_risk, classify_review_requirement
-    from .scientific_baseline import load_active_baseline
     from .revision_cycle import load_active_revision_cycle
+    from .scientific_baseline import load_active_baseline
+    from .stage_activity import build_stage_activity_bundle
 
     base = write_stage_summary(
         root,
@@ -1022,12 +1081,12 @@ def write_stage_summary_v5(
 
     brief = build_human_decision_brief(summary)
     brief_issues = validate_human_decision_brief(brief)
-    fingerprint = build_scientific_decision_fingerprint(summary, brief)
+    figure_map = build_figure_claim_map(summary, brief)
+    fingerprint = build_scientific_decision_fingerprint(summary, brief, figure_claim_map=figure_map)
     previous_receipt = latest_valid_user_receipt(root, checkpoint_type=stage)
     previous_fingerprint = (previous_receipt or {}).get("scientific_decision_fingerprint") if isinstance((previous_receipt or {}).get("scientific_decision_fingerprint"), dict) else None
     delta = compare_scientific_decisions(previous_fingerprint, fingerprint)
     brief["semantic_delta"] = delta
-    figure_map = build_figure_claim_map(summary, brief)
     figure_issues = validate_figure_claim_map(figure_map)
     repair_failures = [*figure_issues]
     repair_failures.extend({"code": "decision_brief_contract", "detail_zh": issue} for issue in brief_issues)
@@ -1106,6 +1165,7 @@ def write_stage_summary_v5(
     summary["decision_brief"] = brief
     summary["scientific_decision_fingerprint"] = fingerprint
     summary["human_brief_semantic_sha256"] = brief["brief_semantic_sha256"]
+    summary["confirmation_meaning_en"] = _confirmation_meaning_en(summary, continuity_eligible=bool(continuity.get("eligible")))
     summary["audit_bundle_ref"] = f"{relative_dir}/stage_audit.zh-CN.html"
     summary["audit_bundle_sha256"] = audit_fingerprint["audit_bundle_sha256"]
     summary["presentation_sha256"] = presentation_fingerprint["presentation_sha256"]
@@ -1132,6 +1192,7 @@ def write_stage_summary_v5(
     }
     summary["figure_claim_map_ref"] = f"{relative_dir}/figure_claim_map_v1.json"
     summary["figure_claim_map_sha256"] = figure_map["figure_claim_map_sha256"]
+    summary["scientific_figure_claim_sha256"] = figure_map["scientific_figure_claim_sha256"]
     summary["evidence_repair_route_ref"] = f"{relative_dir}/evidence_binding_failure_receipt.json"
     summary["confirmation_contract"] = {
         "requires_user_decision": requirement != "notify_only" and decision_status not in {"agent_approved", "user_confirmed", "system_acknowledged", "continuity_preserved"},
@@ -1171,38 +1232,104 @@ def write_stage_summary_v5(
         "recovery_command": request.get("recovery_command"),
         "created_at": utc_now(),
     }
-    agent.update(
-        {
-            "schema_version": AGENT_PAYLOAD_V2_SCHEMA,
-            "summary_schema": CHECKPOINT_SUMMARY_V5_SCHEMA,
-            "stage_summary_zh_html": {
-                "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
-                "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
-            },
-            "human_decision_html": {
-                "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
-                "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
-            },
-            "human_decision_html_en": {
-                "project_relative_path": f"{relative_dir}/stage_summary.en.html",
-                "absolute_path": str((output_dir / "stage_summary.en.html").resolve()),
-            },
-            "technical_audit_html": {
-                "project_relative_path": f"{relative_dir}/stage_audit.zh-CN.html",
-                "absolute_path": str((output_dir / "stage_audit.zh-CN.html").resolve()),
-            },
-            "decision_brief": str((output_dir / "human_decision_brief_v1.json").resolve()),
-            "scientific_decision_sha256": fingerprint["scientific_decision_sha256"],
-            "human_brief_semantic_sha256": brief["brief_semantic_sha256"],
-            "semantic_delta_summary_zh": delta.get("summary_zh"),
-            "continuity_status": continuity.get("classification"),
-            "reconfirmation_reason_codes": continuity.get("reason_codes") or [],
-            "latest_user_visible_deliverables": brief.get("latest_user_visible_deliverables") or [],
-            "confirmation_command": request["confirmation_command"],
-            "confirmation_contract": summary["confirmation_contract"],
-            "stage_summary_sha256": summary_hash,
-        }
+    decision_path = {
+        "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
+        "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
+    }
+    decision_path_en = {
+        "project_relative_path": f"{relative_dir}/stage_summary.en.html",
+        "absolute_path": str((output_dir / "stage_summary.en.html").resolve()),
+    }
+    audit_path = {
+        "project_relative_path": f"{relative_dir}/stage_audit.zh-CN.html",
+        "absolute_path": str((output_dir / "stage_audit.zh-CN.html").resolve()),
+    }
+    review_points: list[str] = []
+    for group in ("confirming", "claim_boundaries", "not_confirming", "reopen_conditions"):
+        for item in brief.get(group) or []:
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get("text_zh") or "").strip()
+            if text and text not in review_points:
+                review_points.append(text)
+            if len(review_points) >= 5:
+                break
+        if len(review_points) >= 5:
+            break
+    decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
+    decision_summary = next(
+        (
+            str(item.get("text_zh") or "").strip()
+            for item in brief.get("confirming") or []
+            if isinstance(item, dict) and str(item.get("text_zh") or "").strip()
+        ),
+        str(summary.get("stage_purpose_zh") or ""),
     )
+    authority_reason = (
+        "本次科学决定与最近一次有效作者确认相同，系统只沿用原确认。"
+        if continuity.get("eligible")
+        else f"当前审查主体由 {(authority_source or {}).get('policy') or 'review_policy'!s} 决定。"
+    )
+    ordered_agent_keys = {
+        "primary_human_review_html",
+        "human_decision_html",
+        "human_decision_html_en",
+        "stage_summary_zh_html",
+        "stage_completion_summary_zh",
+        "decision_question_zh",
+        "decision_summary_zh",
+        "semantic_delta_summary_zh",
+        "semantic_delta_summary_en",
+        "review_points_zh",
+        "decision_actor_type",
+        "decision_authority_reason_zh",
+        "confirmation_meaning_zh",
+        "confirmation_meaning_en",
+        "scientific_decision_sha256",
+        "human_brief_semantic_sha256",
+        "continuity_status",
+        "reconfirmation_reason_codes",
+        "latest_user_visible_deliverables",
+        "confirmation_command",
+        "confirmation_contract",
+        "decision_brief",
+        "stage_summary_sha256",
+        "schema_version",
+        "summary_schema",
+        "technical_audit_html",
+    }
+    agent_remainder = {key: value for key, value in agent.items() if key not in ordered_agent_keys}
+    # Preserve insertion order so the first fields are the text and paths an
+    # Agent must present to an author, while the technical audit remains last.
+    agent = {
+        "primary_human_review_html": decision_path,
+        "human_decision_html": decision_path,
+        "human_decision_html_en": decision_path_en,
+        "stage_summary_zh_html": decision_path,
+        "stage_completion_summary_zh": summary["stage_narrative_zh"],
+        "decision_question_zh": str(decision_question.get("text_zh") or summary["stage_purpose_zh"]),
+        "decision_summary_zh": decision_summary,
+        "semantic_delta_summary_zh": str(delta.get("summary_zh") or ""),
+        "semantic_delta_summary_en": str(delta.get("summary_en") or ""),
+        "review_points_zh": review_points,
+        "decision_actor_type": decision_actor_type,
+        "decision_authority_reason_zh": authority_reason,
+        "confirmation_meaning_zh": summary["confirmation_meaning_zh"],
+        "confirmation_meaning_en": summary["confirmation_meaning_en"],
+        "scientific_decision_sha256": fingerprint["scientific_decision_sha256"],
+        "human_brief_semantic_sha256": brief["brief_semantic_sha256"],
+        "continuity_status": continuity.get("classification"),
+        "reconfirmation_reason_codes": continuity.get("reason_codes") or [],
+        "latest_user_visible_deliverables": brief.get("latest_user_visible_deliverables") or [],
+        "confirmation_command": request["confirmation_command"],
+        "confirmation_contract": summary["confirmation_contract"],
+        "decision_brief": str((output_dir / "human_decision_brief_v1.json").resolve()),
+        "stage_summary_sha256": summary_hash,
+        "schema_version": AGENT_PAYLOAD_V2_SCHEMA,
+        "summary_schema": CHECKPOINT_SUMMARY_V5_SCHEMA,
+        **agent_remainder,
+        "technical_audit_html": audit_path,
+    }
     contract_issues = _checkpoint_summary_contract_issues(summary)
     if contract_issues:
         raise CheckpointSummaryError("Checkpoint v5 summary contract failed: " + "; ".join(contract_issues))
@@ -1262,6 +1389,20 @@ def write_stage_summary_v5(
         "human_brief_semantic_sha256": brief["brief_semantic_sha256"],
         "audit_bundle_sha256": audit_fingerprint["audit_bundle_sha256"],
         "presentation_sha256": presentation_fingerprint["presentation_sha256"],
+        "semantic_delta_summary_zh": str(delta.get("summary_zh") or ""),
+        "semantic_delta_summary_en": str(delta.get("summary_en") or ""),
+        "stage_completion_summary_zh": summary["stage_narrative_zh"],
+        "decision_question_zh": str(decision_question.get("text_zh") or summary["stage_purpose_zh"]),
+        "decision_summary_zh": decision_summary,
+        "review_points_zh": review_points,
+        "confirmation_meaning_zh": summary["confirmation_meaning_zh"],
+        "confirmation_meaning_en": summary["confirmation_meaning_en"],
+        "decision_actor_type": decision_actor_type,
+        "decision_authority_reason_zh": authority_reason,
+        "primary_human_review_html": decision_path,
+        "technical_audit_html": audit_path,
+        "confirmation_command": request["confirmation_command"],
+        "latest_user_visible_deliverables": brief.get("latest_user_visible_deliverables") or [],
         "confirmation_continuity": summary["confirmation_continuity"],
         "readability_report": f"{relative_dir}/checkpoint_readability_report.json",
     }
@@ -1293,6 +1434,12 @@ def show_checkpoint_summary(
         return {"status": "not_found", "project_path": str(root), "checkpoint_hash": checkpoint_hash, "language": language}
     summary = json.loads(summary_path.read_text(encoding="utf-8-sig"))
     schema = str(summary.get("schema_version") or "")
+    pre_figure_claim_v5 = schema == CHECKPOINT_SUMMARY_V5_SCHEMA and _pre_figure_claim_v5_contract(summary)
+    pre_method_analysis_v5 = schema == CHECKPOINT_SUMMARY_V5_SCHEMA and _pre_method_analysis_v5_contract(summary)
+    legacy_v5_reason_codes = [
+        *(["legacy_v5_pre_figure_claim_fingerprint"] if pre_figure_claim_v5 else []),
+        *(["legacy_v5_pre_method_analysis_fingerprint"] if pre_method_analysis_v5 else []),
+    ]
     request_path = summary_path.parent / "confirmation_request.json"
     if schema in {CHECKPOINT_SUMMARY_V4_SCHEMA, CHECKPOINT_SUMMARY_V5_SCHEMA} and not (summary_path.parent / "stage_activity_bundle.json").is_file():
         return {
@@ -1304,7 +1451,7 @@ def show_checkpoint_summary(
             "reasons": ["Missing v4 stage_activity_bundle.json companion."],
             "summary": summary,
         }
-    if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
+    if schema == CHECKPOINT_SUMMARY_V5_SCHEMA and not legacy_v5_reason_codes:
         v5_required = (
             "stage_audit.zh-CN.html",
             "stage_summary.en.html",
@@ -1326,7 +1473,7 @@ def show_checkpoint_summary(
                 "reasons": ["Missing v5 checkpoint companions: " + ", ".join(missing_v5)],
                 "summary": summary,
             }
-    legacy = schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS
+    legacy = schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS or bool(legacy_v5_reason_codes)
     contract_issues = _checkpoint_summary_contract_issues(summary)
     if not legacy and contract_issues:
         return {
@@ -1348,10 +1495,14 @@ def show_checkpoint_summary(
         "review_state": summary.get("review_state") or ("legacy" if legacy else "unknown"),
         "requires_preview": legacy,
         "preview_command": (
-            f'python -m draftpaper_cli.cli preview-checkpoint-summary --project "{root}"'
+            f'python -m draftpaper_cli.cli audit-checkpoint-v5-migration --project "{root}" --checkpoint-hash "{_checkpoint_record_hash(root, selected) or checkpoint_hash or ""}"'
+            if legacy_v5_reason_codes
+            else f'python -m draftpaper_cli.cli preview-checkpoint-summary --project "{root}"'
             if legacy
             else None
         ),
+        "migration_action": "create_new_v5_checkpoint_and_request_c3" if legacy_v5_reason_codes else None,
+        "legacy_reason_codes": legacy_v5_reason_codes,
         "summary": summary,
         "summary_schema": schema,
         "contract_issues": [],
@@ -1794,16 +1945,34 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                 except (OSError, ValueError) as exc:
                     reasons.append(f"Invalid v5 companion JSON: {exc}")
                 else:
+                    from .checkpoint_fingerprint import build_scientific_decision_fingerprint
+                    from .figure_claim_map import build_figure_claim_map, validate_figure_claim_map
+
                     if brief != summary.get("decision_brief"):
                         reasons.append("Human decision brief file differs from the v5 summary.")
                     if fingerprint != summary.get("scientific_decision_fingerprint"):
                         reasons.append("Scientific decision fingerprint file differs from the v5 summary.")
+                    recomputed_figure_map = build_figure_claim_map(summary, brief)
+                    if figure_map != recomputed_figure_map:
+                        reasons.append("FigureClaimMap file differs from the v5 summary projection.")
+                    figure_issues = validate_figure_claim_map(figure_map)
+                    if figure_issues:
+                        reasons.append("FigureClaimMap contains unresolved alignment issues.")
+                    recomputed_fingerprint = build_scientific_decision_fingerprint(
+                        summary,
+                        brief,
+                        figure_claim_map=figure_map,
+                    )
+                    if fingerprint != recomputed_fingerprint:
+                        reasons.append("Scientific fingerprint no longer matches the current FigureClaimMap projection.")
                     if readability.get("status") != "passed":
                         reasons.append("Checkpoint decision page did not pass readability validation.")
                     if readability_en.get("status") != "passed":
                         reasons.append("English checkpoint decision page did not pass readability validation.")
                     if figure_map.get("figure_claim_map_sha256") != summary.get("figure_claim_map_sha256"):
                         reasons.append("FigureClaimMap hash differs from the v5 summary.")
+                    if figure_map.get("scientific_figure_claim_sha256") != summary.get("scientific_figure_claim_sha256"):
+                        reasons.append("Scientific FigureClaimMap hash differs from the v5 summary.")
                     if audit_fingerprint.get("audit_bundle_sha256") != summary.get("audit_bundle_sha256"):
                         reasons.append("Audit fingerprint differs from the v5 summary.")
     current = {str(item.get("path")): item for item in collect_artifacts(root) if isinstance(item, dict)}
@@ -1849,11 +2018,50 @@ def attach_checkpoint_summary(
         checkpoint_id=str(payload.get("checkpoint_id") or "") or None,
         checkpoint_hash=str(payload.get("checkpoint_hash") or "") or None,
     )
-    result = dict(payload)
-    result["stage_summary_zh_html"] = {
+    decision_path = {
         "project_relative_path": report["stage_summary_zh_html"],
         "absolute_path": report["absolute_stage_summary_zh_html"],
         "source_semantic_sha256": report["stage_summary_sha256"],
+    }
+    audit_path = {
+        "project_relative_path": report["stage_audit_zh_html"],
+        "absolute_path": report["absolute_stage_audit_zh_html"],
+    }
+    review_keys = {
+        "stage_completion_summary_zh",
+        "primary_human_review_html",
+        "human_decision_html",
+        "semantic_delta_summary_zh",
+        "semantic_delta_summary_en",
+        "review_points_zh",
+        "decision_actor_type",
+        "decision_authority_reason_zh",
+        "confirmation_meaning_zh",
+        "confirmation_meaning_en",
+        "confirmation_command",
+        "technical_audit_html",
+        "stage_summary_zh_html",
+        "checkpoint_summary",
+        "primary_artifacts",
+        "unresolved_issues",
+        "stage_summary_sha256",
+        "scientific_decision_sha256",
+    }
+    result = {
+        "stage_completion_summary_zh": report["stage_completion_summary_zh"],
+        "primary_human_review_html": decision_path,
+        "human_decision_html": decision_path,
+        "semantic_delta_summary_zh": report["semantic_delta_summary_zh"],
+        "semantic_delta_summary_en": report["semantic_delta_summary_en"],
+        "review_points_zh": report["review_points_zh"],
+        "decision_actor_type": report["decision_actor_type"],
+        "decision_authority_reason_zh": report["decision_authority_reason_zh"],
+        "confirmation_meaning_zh": report["confirmation_meaning_zh"],
+        "confirmation_meaning_en": report["confirmation_meaning_en"],
+        "confirmation_command": report["confirmation_command"],
+        "technical_audit_html": audit_path,
+        **{key: value for key, value in payload.items() if key not in review_keys},
+        "stage_summary_zh_html": decision_path,
     }
     result["checkpoint_summary"] = {
         "checkpoint_id": report["checkpoint_id"],

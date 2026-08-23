@@ -28,6 +28,8 @@ def _scientific_summary(*, split_id: str = "split-a", metric_value: float = 0.71
             "sample_unit": "source",
             "cohort_label": "source-held-out",
             "evidence_snapshot_id": "snapshot-a",
+            "analysis_spec_ids": ["analysis-a"],
+            "method_analysis_contract_sha256": "method-contract-a",
         },
         "core_metrics": {
             "run_id": "run-a",
@@ -89,6 +91,41 @@ def test_scientific_fingerprint_ignores_presentation_but_detects_split_and_metri
     assert diff["classification"] == "scientific_change"
     assert diff["requires_reconfirmation"] is True
     assert any("split_id" in item["field"] or "value" in item["field"] for item in diff["changes"])
+
+
+def test_scientific_fingerprint_requires_reconfirmation_for_method_contract_changes() -> None:
+    first_summary = _scientific_summary()
+    first = build_scientific_decision_fingerprint(first_summary, build_human_decision_brief(first_summary))
+    changed_summary = copy.deepcopy(first_summary)
+    changed_summary["identity"]["method_analysis_contract_sha256"] = "method-contract-b"
+    changed_summary["identity"]["analysis_spec_ids"] = ["analysis-b"]
+
+    changed = build_scientific_decision_fingerprint(changed_summary, build_human_decision_brief(changed_summary))
+
+    assert changed["identity_complete"] is True
+    assert compare_scientific_decisions(first, changed)["requires_reconfirmation"] is True
+
+
+def test_ten_prose_citation_and_format_cycles_preserve_the_scientific_decision() -> None:
+    confirmed_summary = _scientific_summary()
+    confirmed = build_scientific_decision_fingerprint(confirmed_summary, build_human_decision_brief(confirmed_summary))
+
+    for index in range(10):
+        presentation_only = copy.deepcopy(confirmed_summary)
+        presentation_only["stage_narrative_zh"] = f"第 {index + 1} 次文字、引用与排版更新。"
+        presentation_only["artifact_manifest"] = {
+            "citation_mapping_revision": index + 1,
+            "pdf_layout_revision": index + 1,
+            "rendered_at": f"2026-08-23T00:{index:02d}:00Z",
+        }
+        presentation_only["citation_audit"] = {"style": "AAS", "rendered_bibliography": f"revision-{index + 1}"}
+        current = build_scientific_decision_fingerprint(
+            presentation_only,
+            build_human_decision_brief(presentation_only),
+        )
+        decision = compare_scientific_decisions(confirmed, current)
+        assert decision["classification"] == "no_scientific_change"
+        assert decision["requires_reconfirmation"] is False
 
 
 def test_v5_checkpoint_page_is_readable_and_same_science_continues_without_new_user_hash(tmp_path: Path) -> None:

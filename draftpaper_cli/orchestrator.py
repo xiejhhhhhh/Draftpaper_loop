@@ -1473,16 +1473,33 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     from .checkpoint_summary import _publish_checkpoint_index
 
     _publish_checkpoint_index(state.path, final_summary)
+    decision_path = {
+        "project_relative_path": final_summary["stage_summary_zh_html"],
+        "absolute_path": final_summary["absolute_stage_summary_zh_html"],
+        "source_semantic_sha256": final_summary["stage_summary_sha256"],
+    }
+    audit_path = {
+        "project_relative_path": final_summary["stage_audit_zh_html"],
+        "absolute_path": final_summary["absolute_stage_audit_zh_html"],
+    }
     return {
+        "stage_completion_summary_zh": final_summary["stage_completion_summary_zh"],
+        "primary_human_review_html": decision_path,
+        "human_decision_html": decision_path,
+        "semantic_delta_summary_zh": final_summary["semantic_delta_summary_zh"],
+        "semantic_delta_summary_en": final_summary["semantic_delta_summary_en"],
+        "review_points_zh": final_summary["review_points_zh"],
+        "decision_actor_type": final_summary["decision_actor_type"],
+        "decision_authority_reason_zh": final_summary["decision_authority_reason_zh"],
+        "confirmation_meaning_zh": final_summary["confirmation_meaning_zh"],
+        "confirmation_meaning_en": final_summary["confirmation_meaning_en"],
+        "confirmation_command": final_summary["confirmation_command"],
+        "technical_audit_html": audit_path,
         "status": "checkpoint_created",
         "project_path": str(state.path),
         "checkpoint_hash": base["hash"],
         "stage_summary_sha256": final_summary["stage_summary_sha256"],
-        "stage_summary_zh_html": {
-            "project_relative_path": final_summary["stage_summary_zh_html"],
-            "absolute_path": final_summary["absolute_stage_summary_zh_html"],
-            "source_semantic_sha256": final_summary["stage_summary_sha256"],
-        },
+        "stage_summary_zh_html": decision_path,
         "checkpoint_summary": {
             "checkpoint_id": final_summary["checkpoint_id"],
             "project_relative_dir": final_summary["project_relative_dir"],

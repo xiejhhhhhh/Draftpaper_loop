@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.41.0.** Human checkpoints now separate the author decision from the technical audit. The default `stage_summary.zh-CN.html` is a short, evidence-bound page explaining what is being confirmed, what changed since the prior confirmation, the scientific context, main figures, claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html` retains the complete activity, artifact, validation, and hash trail. A scientific decision fingerprint distinguishes real data/method/cohort/split/metric/figure/claim changes from regenerated manifests, HTML, citation mapping, and PDF presentation; identical decisions receive a continuity receipt instead of repeated C3 confirmation. v0.40.0's discipline-aware literature identity and on-demand full-text loop remains in place. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.41.1.** Human checkpoints separate the author decision from the technical audit. The default `stage_summary.zh-CN.html` is a short, evidence-bound page explaining what is being confirmed, what changed since the prior confirmation, the scientific context, main figures, claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html` retains the complete activity, artifact, validation, and hash trail. A scientific decision fingerprint distinguishes real data/method/cohort/split/metric/figure/claim changes from regenerated manifests, HTML, citation mapping, and PDF presentation; identical decisions receive a continuity receipt instead of repeated C3 confirmation. v0.41.1 also verifies the v5 page across the anonymous showcase and preserves cohort-bound figure-table evidence without promoting unbound data. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -510,6 +510,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.41.1 (2026-08-23) -- v5 confirmation-page and evidence-binding hardening
+
+- The anonymous checkpoint showcase now generates the real v5 decision/audit package for research-plan, data, methods, result-support, core-evidence, and quality checkpoints. This exercises the same readable page, bilingual gate, confirmation contract, and audit separation that normal checkpoint creation uses.
+- Repeated artifact evidence in the decision narrative is now rendered as an exact copyable locator, while primary deliverables and figures remain linked. This prevents an otherwise valid decision page from failing only because one canonical artifact supports several facts or statements.
+- Figure-declared compact tables can contribute content-addressed evidence only when their cohort, estimand, run, model, split, and analysis bindings are complete. Cohort identity now participates in conflict keys, so the same metric from distinct cohorts is not reported as a false conflict.
+- Core-evidence continuity now includes a stable executable-analysis and method-contract identity. Changes to the analysis specification, selection or resampling contract, declared implementation entry point, or its project-local code hash require a new C3; prose, citation mapping, HTML, and PDF presentation changes do not. Earlier core-evidence v5 packages lacking this identity remain readable but are migration-only.
+
 ### v0.41.0 (2026-08-23) -- Readable scientific decisions and semantic reconfirmation
 
 - New checkpoints use `dpl.checkpoint_summary.v5`: `stage_summary.zh-CN.html` is the formal author decision page, while `stage_audit.zh-CN.html` retains the complete technical audit. Both derive from one canonical package; no project-external Agent sidecar is needed.

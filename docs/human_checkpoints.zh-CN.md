@@ -45,7 +45,7 @@ v5 将三种身份分开记录：
 
 | 身份 | 覆盖内容 | 变化后的行为 |
 |---|---|---|
-| `scientific_decision_sha256` | 数据/cohort/split/样本单位、方法与 run、指标与不确定性、图表语义、论断边界 | 重新触发 C3 作者确认 |
+| `scientific_decision_sha256` | 数据/cohort/split/样本单位、可执行分析规格、方法合同与 run、指标与不确定性、图表语义、论断边界 | 重新触发 C3 作者确认 |
 | `audit_bundle_sha256` | artifact manifest、活动收据、验证报告和技术审计 | 仅刷新审计 |
 | `presentation_sha256` | 决定页渲染与本地化 | 仅重建页面 |
 
@@ -56,9 +56,10 @@ confirmation request 绑定的是科学决定 hash 和 DecisionBrief 的语义 h
 再次输入 C3 hash。这表示沿用旧的用户科学决定，绝不表示系统或 Agent 替用户做了新的
 科学判断。
 
-只要指标数值或定义、不确定性、cohort、split、样本单位、方法/run 身份、主图语义系列
-或论断边界发生变化，就必须生成新的语义差异并要求作者重新确认。身份未知或不完整时
-严格阻断，不能使用 continuity。
+只要指标数值或定义、不确定性、cohort、split、样本单位、可执行分析规格、方法合同、
+声明实现入口、run 身份、主图语义系列或论断边界发生变化，就必须生成新的语义差异并
+要求作者重新确认。核心证据缺少可执行分析规格或方法合同身份时严格阻断，不能使用
+continuity。
 
 ## 有界范围与审查主体
 
@@ -103,9 +104,11 @@ draftpaper resume --project <project> --checkpoint-hash <hash>
 
 ## 旧包迁移与 shadow 核验
 
-`audit-checkpoint-v5-migration` 只读取 v1-v4 成果包并报告下一步。它绝不改写历史 summary、
-转移用户 receipt，也不会把旧包 hash 当作 v5 科学决定。v4 包最多可投影为比较预览；除非已
-存在经核验的等价 v5 决定，否则流程仍需要一次新的 v5 C3 作者确认。
+`audit-checkpoint-v5-migration` 只读取历史成果包并报告下一步。它绝不改写历史 summary、
+转移用户 receipt，也不会把旧包 hash 当作当前 v5 科学决定。v1-v4 包最多可投影为比较预览；
+较早生成、尚未将 `FigureClaimMap` 纳入 scientific fingerprint 的 v5 包同样保持只读。较早
+核心证据 v5 包若尚未绑定可执行分析规格和方法合同，同样只能只读；除非已存在经核验的
+等价当前合同决定，否则流程仍需要一次新的 v5 C3 作者确认。
 
 `shadow-checkpoint-v5` 用于现有项目的回归核验。`--output-root` 必须位于项目目录外。该命令
 会记录 passport、ledger、promoted snapshot、checkpoint 记录和稿件 PDF 的前后 hash，再将 JSON

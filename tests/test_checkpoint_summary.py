@@ -74,7 +74,10 @@ class CheckpointSummaryTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            self.assertEqual(json.loads(shown.stdout)["status"], "ready_for_human_review")
+            shown_payload = json.loads(shown.stdout)
+            self.assertEqual(shown_payload["status"], "ready_for_human_review")
+            self.assertEqual(next(iter(shown_payload)), "stage_summary_zh_html")
+            self.assertEqual(shown_payload["stage_summary_zh_html"]["project_relative_path"], checkpoint["stage_summary_zh_html"]["project_relative_path"])
 
     def test_missing_companion_or_tampered_summary_is_not_consumable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -34,6 +34,41 @@ def _tokens(value: Any) -> list[str]:
     return sorted(set(tokens))
 
 
+def scientific_figure_claim_subject(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the figure-to-claim facts that affect a scientific decision.
+
+    The rendered-file path and generated map row ID are package presentation
+    details.  The plotted semantic identity, cohort/split, series and quantity
+    contracts, and linked manuscript claim are the parts an author is actually
+    approving, so only those participate in the scientific fingerprint.
+    """
+
+    keys = (
+        "figure_id",
+        "figure_semantic_sha256",
+        "claim_statement_id",
+        "claim_fact_refs",
+        "expected_split_id",
+        "expected_cohort_id",
+        "caption_split_id",
+        "caption_cohort_id",
+        "figure_split_id",
+        "figure_cohort_id",
+        "plotted_series_ids",
+        "caption_series_ids",
+        "claim_series_ids",
+        "figure_quantity_kind",
+        "caption_quantity_kind",
+        "claim_quantity_kind",
+    )
+    rows = []
+    for entry in payload.get("entries") or []:
+        if not isinstance(entry, dict):
+            continue
+        rows.append({key: entry.get(key) for key in keys})
+    return sorted(rows, key=lambda item: canonical_json(item))
+
+
 def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> dict[str, Any]:
     figures = [
         item
@@ -84,6 +119,8 @@ def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> di
         "entries": rows,
         "claim_boundary_statement_ids": [item.get("statement_id") for item in brief.get("claim_boundaries") or [] if isinstance(item, dict)],
     }
+    payload["scientific_figure_claim_subject"] = scientific_figure_claim_subject(payload)
+    payload["scientific_figure_claim_sha256"] = _hash(payload["scientific_figure_claim_subject"])
     payload["figure_claim_map_sha256"] = _hash(payload)
     return payload
 
@@ -149,4 +186,9 @@ def validate_figure_claim_map(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return issues
 
 
-__all__ = ["FIGURE_CLAIM_MAP_SCHEMA", "build_figure_claim_map", "validate_figure_claim_map"]
+__all__ = [
+    "FIGURE_CLAIM_MAP_SCHEMA",
+    "build_figure_claim_map",
+    "scientific_figure_claim_subject",
+    "validate_figure_claim_map",
+]

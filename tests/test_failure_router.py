@@ -1,4 +1,4 @@
-from draftpaper_cli.cli_output import compact_payload
+from draftpaper_cli.cli_output import compact_payload, prioritize_human_review
 from draftpaper_cli.command_registry import command_spec
 from draftpaper_cli.failure_router import classify_failure, primary_route, route_failure
 
@@ -53,3 +53,31 @@ def test_compact_cli_payload_keeps_decision_issues_artifacts_and_next_action() -
     assert compact["blocking_issue_count"] == 1
     assert compact["artifact_paths"] == ["quality_checks/quality_report.json"]
     assert "large_debug_payload" not in compact
+
+
+def test_checkpoint_cli_output_leads_with_the_readable_page_and_defers_the_audit() -> None:
+    decision = {
+        "project_relative_path": "review/checkpoints/core/stage_summary.zh-CN.html",
+        "absolute_path": "C:/project/review/checkpoints/core/stage_summary.zh-CN.html",
+    }
+    audit = {
+        "project_relative_path": "review/checkpoints/core/stage_audit.zh-CN.html",
+        "absolute_path": "C:/project/review/checkpoints/core/stage_audit.zh-CN.html",
+    }
+    payload = {
+        "status": "checkpoint_created",
+        "technical_audit_html": audit,
+        "stage_summary_zh_html": decision,
+        "stage_completion_summary_zh": "已生成可读确认页和技术审计附件。",
+        "confirmation_command": "draftpaper resume --checkpoint-hash checkpoint-a",
+    }
+
+    full = prioritize_human_review(payload)
+    assert list(full)[0] == "stage_summary_zh_html"
+    assert list(full)[1] == "stage_completion_summary_zh"
+    assert list(full)[-1] == "technical_audit_html"
+
+    compact = compact_payload(payload)
+    assert list(compact)[0] == "primary_human_review_html"
+    assert compact["primary_human_review_html"] == decision
+    assert list(compact)[-1] == "technical_audit_html"

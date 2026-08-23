@@ -102,6 +102,22 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
     action = status.get("next_action") or {}
     command = str(action.get("command") or "")
     cli = str(action.get("cli") or "")
+
+    def checkpoint_review_paths() -> dict[str, Any]:
+        decision = action.get("stage_summary_zh_html")
+        audit = action.get("stage_audit_zh_html")
+        paths: dict[str, Any] = {}
+        if isinstance(decision, dict):
+            paths["primary_human_review_html"] = decision
+            paths["stage_summary_zh_html"] = decision
+        if isinstance(audit, dict):
+            paths["technical_audit_html"] = audit
+            paths["stage_audit_zh_html"] = audit
+        for key in ("checkpoint_id", "scientific_decision_sha256", "stage_summary_json"):
+            if action.get(key) not in (None, ""):
+                paths[key] = action[key]
+        return paths
+
     if command in {"agent_action_required", "human_action_required"}:
         return {
             "status": "passed",
@@ -111,6 +127,7 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
             "cli_present": False,
             "missing_required_options": [],
             "reason": action.get("reason"),
+            **checkpoint_review_paths(),
         }
     if command == "choose-result-route":
         result = {
@@ -127,6 +144,7 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
             "checkpoint_sha256": action.get("checkpoint_sha256"),
             "route_options": action.get("route_options") or [],
             "reason": action.get("reason"),
+            **checkpoint_review_paths(),
         }
         from .checkpoint_summary import show_checkpoint_summary
 
@@ -157,6 +175,7 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
         "missing_required_options": missing,
         "cli": cli or None,
         "reason": action.get("reason"),
+        **checkpoint_review_paths(),
     }
 
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -327,6 +328,167 @@ class EvidenceRegistryTests(unittest.TestCase):
                 {"analysis-a", "analysis-b"},
             )
             self.assertTrue(all(item["binding_complete"] for item in registry["records"]))
+
+    def test_same_metric_in_distinct_cohorts_does_not_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Cohort-specific external validation", field="astronomy")
+            (project.path / "results" / "resolved_result_evidence.json").write_text(
+                json.dumps({
+                    "evidence_records": [
+                        {
+                            "entity_role": "result_metric_macro_f1",
+                            "value": 0.82,
+                            "unit": "score",
+                            "cohort_id": "main",
+                            "cohort_view_id": "held_out",
+                            "estimand_id": "classification",
+                            "analysis_spec_id": "source_held_out",
+                            "sample_unit": "source",
+                            "split_id": "source_held_out",
+                            "run_id": "run-1",
+                            "model_id": "model-a",
+                            "metric_dimension": "score",
+                            "aggregation": "mean",
+                        },
+                        {
+                            "entity_role": "result_metric_macro_f1",
+                            "value": 0.76,
+                            "unit": "score",
+                            "cohort_id": "external",
+                            "cohort_view_id": "held_out",
+                            "estimand_id": "classification",
+                            "analysis_spec_id": "source_held_out",
+                            "sample_unit": "source",
+                            "split_id": "source_held_out",
+                            "run_id": "run-1",
+                            "model_id": "model-a",
+                            "metric_dimension": "score",
+                            "aggregation": "mean",
+                        },
+                    ]
+                }),
+                encoding="utf-8",
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            self.assertEqual(registry["status"], "ready")
+            self.assertEqual(registry["blocking_conflict_count"], 0)
+
+    def test_content_addressed_figure_tables_are_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Figure table evidence", field="astronomy")
+            table = project.path / "results" / "tables" / "external.csv"
+            table.parent.mkdir(parents=True, exist_ok=True)
+            table.write_text(
+                "cohort,time_encoding,source_count,macro_f1,balanced_accuracy\n"
+                "external,time2vec,40,0.7953964194,0.8\n",
+                encoding="utf-8",
+            )
+            digest = hashlib.sha256(table.read_bytes()).hexdigest()
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [{
+                        "figure_id": "external-validation",
+                        "cohort_id": "external",
+                        "cohort_view_id": "external-cohort",
+                        "estimand_id": "external-transfer",
+                        "analysis_spec_id": "external-source-validation",
+                        "sample_unit": "source",
+                        "split": "source_held_out",
+                        "split_id": "source_held_out",
+                        "model_id": "time2vec",
+                        "evidence_ids": [f"table:external.csv:{digest[:16]}"],
+                    }]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            table_records = [
+                item for item in registry["records"]
+                if item["source_artifact"] == "results/tables/external.csv"
+            ]
+            self.assertEqual(registry["figure_table_binding_count"], 3)
+            self.assertEqual(
+                {item["entity_role"] for item in table_records},
+                {
+                    "result_metric_source_count",
+                    "result_metric_macro_f1",
+                    "result_metric_balanced_accuracy",
+                },
+            )
+            self.assertTrue(all(item["binding_complete"] for item in table_records))
+
+    def test_figure_declared_source_tables_are_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Figure source-table evidence", field="astronomy")
+            table = project.path / "results" / "tables" / "summary.tsv"
+            table.parent.mkdir(parents=True, exist_ok=True)
+            table.write_text(
+                "cohort\tsource_count\tmacro_f1\n"
+                "external\t25\t0.72\n",
+                encoding="utf-8",
+            )
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [{
+                        "figure_id": "external-summary",
+                        "cohort_id": "external",
+                        "cohort_view_id": "external-cohort",
+                        "estimand_id": "external-transfer",
+                        "analysis_spec_id": "external-source-validation",
+                        "sample_unit": "source",
+                        "split": "source_held_out",
+                        "split_id": "source_held_out",
+                        "model_id": "time2vec",
+                        "source_tables": ["results/tables/summary.tsv"],
+                    }]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            table_records = [
+                item for item in registry["records"]
+                if item["source_artifact"] == "results/tables/summary.tsv"
+            ]
+            self.assertEqual(len(table_records), 2)
+            self.assertTrue(all(item["binding_complete"] for item in table_records))
+
+    def test_unbound_figure_tables_are_not_promoted_to_canonical_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Unbound figure table", field="astronomy")
+            table = project.path / "results" / "tables" / "draft.csv"
+            table.parent.mkdir(parents=True, exist_ok=True)
+            table.write_text("source_count,macro_f1\n25,0.72\n", encoding="utf-8")
+            (project.path / "results" / "figure_metadata.json").write_text(
+                json.dumps({
+                    "figures": [{
+                        "figure_id": "draft-figure",
+                        "source_tables": ["results/tables/draft.csv"],
+                    }]
+                }),
+                encoding="utf-8",
+            )
+            (project.path / "methods" / "run_manifest.yaml").write_text(
+                json.dumps({"status": "success", "run_id": "run-1"}), encoding="utf-8"
+            )
+
+            registry = build_scientific_evidence_registry(project.path)
+
+            self.assertEqual(registry["incomplete_binding_count"], 0)
+            self.assertFalse(
+                any(item["source_artifact"] == "results/tables/draft.csv" for item in registry["records"])
+            )
 
 
 if __name__ == "__main__":

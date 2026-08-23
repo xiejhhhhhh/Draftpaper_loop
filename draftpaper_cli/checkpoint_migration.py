@@ -16,9 +16,13 @@ from typing import Any
 
 from .artifact_identity import canonical_json
 from .checkpoint_brief import build_human_decision_brief, validate_human_decision_brief
-from .checkpoint_fingerprint import build_scientific_decision_fingerprint, compare_scientific_decisions
+from .checkpoint_fingerprint import (
+    build_scientific_decision_fingerprint,
+    compare_scientific_decisions,
+    fingerprint_has_method_analysis_identity,
+)
+from .figure_claim_map import build_figure_claim_map
 from .passport import project_root
-
 
 MIGRATION_AUDIT_SCHEMA = "dpl.checkpoint_v4_v5_migration_audit.v1"
 _LEGACY_SCHEMAS = frozenset({"dpl.checkpoint_summary.v1", "dpl.checkpoint_summary.v2", "dpl.checkpoint_summary.v3", "dpl.checkpoint_summary.v4"})
@@ -96,6 +100,31 @@ def _matching_v5(root: Path, *, stage: str, fingerprint: dict[str, Any]) -> tupl
     return None, None
 
 
+def _pre_figure_claim_fingerprint(summary: dict[str, Any]) -> bool:
+    """Identify a v5 package created before FigureClaimMap entered the decision hash.
+
+    Those packages remain immutable evidence records.  They cannot supply a
+    continuity decision under the stronger contract, but they are not corrupt
+    merely because the current renderer knows additional scientific fields.
+    """
+
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    payload = fingerprint.get("canonical_payload") if isinstance(fingerprint, dict) else None
+    return not (
+        isinstance(payload, dict)
+        and isinstance(payload.get("figure_claim_map"), list)
+        and isinstance(summary.get("scientific_figure_claim_sha256"), str)
+        and bool(str(summary.get("scientific_figure_claim_sha256") or "").strip())
+    )
+
+
+def _pre_method_analysis_fingerprint(summary: dict[str, Any]) -> bool:
+    if str(summary.get("checkpoint_type") or summary.get("completed_stage") or "") != "core_evidence":
+        return False
+    fingerprint = summary.get("scientific_decision_fingerprint")
+    return not fingerprint_has_method_analysis_identity(fingerprint if isinstance(fingerprint, dict) else {})
+
+
 def audit_checkpoint_v5_migration(project: str | Path, *, checkpoint_hash: str | None = None) -> dict[str, Any]:
     """Inspect legacy checkpoint readiness without touching project state."""
 
@@ -125,6 +154,22 @@ def audit_checkpoint_v5_migration(project: str | Path, *, checkpoint_hash: str |
         "rollback": {"required": False, "reason": "This command is read-only and does not create or overwrite a checkpoint package."},
     }
     if schema == "dpl.checkpoint_summary.v5":
+        if _pre_figure_claim_fingerprint(summary):
+            return {
+                **base,
+                "status": "legacy_read_only",
+                "migration_action": "create_new_v5_checkpoint_and_request_c3",
+                "reason_codes": ["legacy_v5_pre_figure_claim_fingerprint"],
+                "scientific_decision_sha256": (summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"),
+            }
+        if _pre_method_analysis_fingerprint(summary):
+            return {
+                **base,
+                "status": "legacy_read_only",
+                "migration_action": "create_new_v5_checkpoint_and_request_c3",
+                "reason_codes": ["legacy_v5_pre_method_analysis_fingerprint"],
+                "scientific_decision_sha256": (summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"),
+            }
         return {
             **base,
             "status": "already_v5",
@@ -146,7 +191,8 @@ def audit_checkpoint_v5_migration(project: str | Path, *, checkpoint_hash: str |
         }
     brief = build_human_decision_brief(summary)
     issues = validate_human_decision_brief(brief)
-    fingerprint = build_scientific_decision_fingerprint(summary, brief)
+    figure_map = build_figure_claim_map(summary, brief)
+    fingerprint = build_scientific_decision_fingerprint(summary, brief, figure_claim_map=figure_map)
     stage = str(base["checkpoint_type"] or "")
     matching_record, matching_summary = _matching_v5(root, stage=stage, fingerprint=fingerprint)
     if issues or fingerprint.get("identity_complete") is not True:
