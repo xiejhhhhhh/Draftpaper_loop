@@ -96,7 +96,7 @@ def route_failure(predicate: str, artifact: str = "", *, detail: str = "") -> Fa
         "artifact_stale": ("sync-artifact-stale", "Synchronize the declared artifact dependency state before rerunning its owner."),
         "citation_support": ("audit-citations --final", "Refresh or repair citation support against the final assembled manuscript."),
         "manuscript_semantic": ("apply-section-revision", "Repair the affected manuscript claim without reopening scientific execution."),
-        "reproducibility_package": ("prepare-independent-review", "Rebuild and smoke-test the dependency-closed anonymous review bundle."),
+        "reproducibility_package": ("prepare-independent-manuscript-review", "Rebuild and smoke-test the dependency-closed anonymous review bundle."),
         "render_quality": ("compile-latex-pdf", "Repair publication rendering without changing scientific evidence."),
         "scientific_analysis": ("prepare-analysis-revision", "Repair or supplement the declared scientific analysis."),
         "figure_contract": ("plan-figures", "Reopen figure planning because the scientific figure contract itself changed or failed."),

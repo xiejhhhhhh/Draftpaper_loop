@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from draftpaper_cli.install_profiles import inspect_install_profiles
+from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.release_contract import build_release_manifest
 from draftpaper_cli.toml_compat import tomllib
 
@@ -11,9 +12,9 @@ from draftpaper_cli.toml_compat import tomllib
 def test_v0350_release_identity_and_literature_contracts() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     manifest = build_release_manifest()
-    assert version == "0.40.0"
+    assert version == "0.41.0"
     assert manifest["package_version"] == version
-    assert manifest["command_count"] == 252
+    assert manifest["command_count"] == len(COMMAND_SPECS)
     assert {"benchmark-literature-quality", "benchmark-document-parsers"} <= set(manifest["required_cli_commands"])
     matrix = json.loads(Path("docs/capability_truth_matrix.json").read_text(encoding="utf-8"))
     record = next(item for item in matrix["capabilities"] if item["capability_id"] == "cross_discipline_literature_and_document_quality")

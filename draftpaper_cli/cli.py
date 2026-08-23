@@ -402,6 +402,33 @@ def build_parser() -> argparse.ArgumentParser:
     show_checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     show_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional checkpoint hash; defaults to the latest checkpoint.")
     show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN"], help="Summary language.")
+    show_checkpoint.add_argument("--view", default="decision", choices=["decision", "audit"], help="Select the readable decision view or the technical audit view.")
+
+    show_checkpoint_audit = subparsers.add_parser("show-checkpoint-audit", help="Show the full technical audit path for a v5 checkpoint.")
+    show_checkpoint_audit.add_argument("--project", required=True)
+    show_checkpoint_audit.add_argument("--checkpoint-package-id", default=None)
+    show_checkpoint_audit.add_argument("--checkpoint-hash", default=None)
+
+    compare_checkpoint = subparsers.add_parser("compare-checkpoint-decision", help="Compare the current scientific decision with the latest confirmed one.")
+    compare_checkpoint.add_argument("--project", required=True)
+    compare_checkpoint.add_argument("--checkpoint-hash", default=None)
+    compare_checkpoint.add_argument("--against", default="latest-confirmed")
+
+    explain_reconfirmation = subparsers.add_parser("explain-reconfirmation", help="Explain why a checkpoint does or does not need new author confirmation.")
+    explain_reconfirmation.add_argument("--project", required=True)
+    explain_reconfirmation.add_argument("--checkpoint-package-id", default=None)
+
+    validate_checkpoint_readability = subparsers.add_parser("validate-checkpoint-readability", help="Read the decision-page readability gate for a v5 checkpoint.")
+    validate_checkpoint_readability.add_argument("--project", required=True)
+    validate_checkpoint_readability.add_argument("--checkpoint-package-id", default=None)
+
+    show_continuity = subparsers.add_parser("show-confirmation-continuity", help="Show the latest reusable scientific confirmation receipt.")
+    show_continuity.add_argument("--project", required=True)
+    show_continuity.add_argument("--checkpoint-type", default="core_evidence")
+
+    rebuild_checkpoint_presentation = subparsers.add_parser("rebuild-checkpoint-presentation", help="Regenerate v5 checkpoint HTML without changing scientific identity.")
+    rebuild_checkpoint_presentation.add_argument("--project", required=True)
+    rebuild_checkpoint_presentation.add_argument("--checkpoint-package-id", required=True)
 
     preview_checkpoint = subparsers.add_parser(
         "preview-checkpoint-summary",
@@ -1316,6 +1343,12 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "evaluate-checkpoint-authority",
     "show-stage-activity",
     "show-scientific-baseline",
+    "show-checkpoint-summary",
+    "show-checkpoint-audit",
+    "compare-checkpoint-decision",
+    "explain-reconfirmation",
+    "validate-checkpoint-readability",
+    "show-confirmation-continuity",
 }
 
 

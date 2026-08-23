@@ -229,6 +229,19 @@ def write_passing_figure_contract_gate(project_path: Path) -> None:
 
 
 class AnalysisCodeGenerationTests(unittest.TestCase):
+    def test_literature_sources_accept_unevaluated_citation_weights(self) -> None:
+        from draftpaper_cli.analysis_code import _literature_sources
+
+        sources = _literature_sources(
+            [
+                {"bibtex_key": "Alpha", "title": "Alpha", "citation_weight": None},
+                {"bibtex_key": "Beta", "title": "Beta", "citation_weight": None},
+            ]
+        )
+
+        self.assertEqual([item["citation_key"] for item in sources], ["Alpha", "Beta"])
+        self.assertTrue(all(item["citation_weight"] is None for item in sources))
+
     def test_generate_analysis_code_refuses_to_overwrite_promoted_evidence(self) -> None:
         from draftpaper_cli.analysis_code import AnalysisCodeGenerationError, generate_analysis_code
         from draftpaper_cli.evidence_snapshot import create_evidence_snapshot

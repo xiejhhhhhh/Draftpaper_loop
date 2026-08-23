@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.40.0.** Draftpaper-loop now includes a discipline-aware literature identity and evidence-fetch loop: discipline-routed providers discover candidates, symmetric discipline conflicts and tiered topic anchors screen them, and the shortlist then receives DOI/title/author/year identity checks. The vendored paper-fetch adapter in Core fetches full text only when evidence requires it, followed by a second relevance check against resolved metadata and text. `discipline_unknown` no longer receives a perfect match; difficult astronomy/ecology cross-recalls enter review or quarantine instead of the active snapshot, citation pool, or Agent writing context. The bilingual literature HTML summarizes discovery, identity, fetch decisions, post-fetch status, and quarantine reasons. v0.39.0's delegated review, activity-backed checkpoint narratives, immutable scientific baselines, and longitudinal drift governance remain in place. pypdf remains the default local PDF parser and MinerU remains optional. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.41.0.** Human checkpoints now separate the author decision from the technical audit. The default `stage_summary.zh-CN.html` is a short, evidence-bound page explaining what is being confirmed, what changed since the prior confirmation, the scientific context, main figures, claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html` retains the complete activity, artifact, validation, and hash trail. A scientific decision fingerprint distinguishes real data/method/cohort/split/metric/figure/claim changes from regenerated manifests, HTML, citation mapping, and PDF presentation; identical decisions receive a continuity receipt instead of repeated C3 confirmation. v0.40.0's discipline-aware literature identity and on-demand full-text loop remains in place. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -49,7 +49,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
-**Checkpoint transparency and runtime identity.** Before any human confirmation, Draftpaper-loop writes a Chinese stage-summary HTML, artifact manifest, confirmation request, and unresolved-issues list. The Agent shows both the project-relative path and the machine-absolute path. `session-preflight` binds the source checkout, wheel, Python, command registry, schema registry, Skill copies, and plugin catalog before project writes.
+**Checkpoint transparency and runtime identity.** Before any human confirmation, Draftpaper-loop writes a readable Chinese decision page, a separate technical audit page, artifact manifest, confirmation request, DecisionBrief, scientific fingerprint, and readability report. The Agent shows the readable page's project-relative and machine-absolute path first, then the audit path and confirmation meaning. `session-preflight` binds the source checkout, wheel, Python, command registry, schema registry, Skill copies, and plugin catalog before project writes.
 <!-- /capability:checkpoint_summary_and_runtime_handshake -->
 
 <!-- capability:metadata_first_research_code_sources -->
@@ -68,7 +68,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 See [Discipline-aware literature discovery and identity](docs/discipline_aware_literature.md) for commands and status semantics.
 <!-- /capability:discipline_aware_literature_identity -->
 
-**Evidence identity and complete stage review.** The framework validates typed `MetricEvidence`, `CountEvidence`, `AggregationContract`, `PrimaryMetricContract`, `RunEvidenceBundle`, and `FigureCodeTrace v2` before Result Support or checkpoint review. A `dpl.checkpoint_summary.v4` package exposes complete deliverables, transaction changes, evidence identity, actual Agent activity, review requirement, decision actor, immutable baseline references, validation state, recovery route, hashes, and both project-relative and machine-absolute paths through synchronized JSON/HTML/Agent outputs. Identity is checked before values are compared, so different cohorts, runs, models, validation designs, or denominators are reported as non-comparable rather than silently merged.
+**Evidence identity and readable stage review.** The framework validates typed `MetricEvidence`, `CountEvidence`, `AggregationContract`, `PrimaryMetricContract`, `RunEvidenceBundle`, and `FigureCodeTrace v2` before Result Support or checkpoint review. A `dpl.checkpoint_summary.v5` package separates the author-facing `HumanDecisionBrief` from the complete audit bundle, records scientific/audit/presentation fingerprints, bounds StageActivity to the current checkpoint window, and aligns main figures with their claim statements. Identity is checked before values are compared, so different cohorts, runs, models, validation designs, or denominators are reported as non-comparable rather than silently merged.
 
 ### From the early releases to the current framework
 
@@ -79,6 +79,7 @@ See [Discipline-aware literature discovery and identity](docs/discipline_aware_l
 - **v0.34-v0.35: cross-discipline literature quality and document evidence.** Query Contract v2 preserves multilingual topic anchors, provider routing follows discipline and language, relevance and role coverage are content-based, and local PDFs are normalized into work-bound evidence passages. pypdf remains the default; official MinerU Agent is an authorized, quality-triggered upgrade, while self-hosted CPU/GPU MinerU is represented only by a generic endpoint contract and deployment guidance.
 - **v0.36-v0.37: code sources, checkpoint transparency, and release-quality closure.** Retained literature now discovers GitHub/Zenodo metadata-only code sources while preserving version DOI, paper-era lineage, license, and provider receipts; human checkpoints produce Chinese stage packages with dual paths; runtime preflight, semantic drift governance, archive security, Ruff no-new-debt, source/wheel/Skill/schema parity, and a Definition of Done audit protect release consistency. Stars/forks and paper/software citations rank and explain candidates, but do not replace scientific validation.
 - **v0.37.1-v0.40: delegated review, longitudinal consistency, and literature identity.** Tiered Agent delegation, StageActivityBundle, immutable baselines, and canonical facts protect repeated runs. Query Contract v3, symmetric discipline conflicts, default identity resolution, evidence-on-demand full text, post-fetch review, active-snapshot reachability, and rollback-capable quarantine prevent cross-discipline false recall and historical orphan re-entry.
+- **v0.41: readable scientific confirmation and semantic continuity.** New v5 checkpoint packages make the decision page readable without sacrificing the technical audit. Scientific, audit, and presentation identities are separate; no-op presentation or derived-artifact rebuilds preserve a valid author decision, while changes to a metric, cohort, split, method, figure semantics, or claim boundary reopen C3 with an explicit semantic delta.
 
 Version numbers explain capability origin. Daily use follows the current research question and project state; `status`, `doctor`, and `run-pipeline` recommend the next action.
 
@@ -178,16 +179,15 @@ The three concentrated human checkpoints are:
 2. **Core result and claim-support confirmation:** inspect verified runs, core figures, metrics, uncertainty, and maximum supported claim strength, then select the next route.
 3. **Final manuscript and release confirmation:** inspect the completion packet, candidate PDF, final citation audit, two blind-review reports, and release hash together.
 
-Before any of these checkpoints is presented, Draftpaper-loop writes one
-offline, Chinese review package under
-`review/checkpoints/<checkpoint_id>/`. Open
-`stage_summary.zh-CN.html` first: it summarizes what the stage generated,
-modified, deployed, and validated, what failed or remains unresolved, and the
-exact artifacts to inspect. The Agent response includes both the project
-relative path and the current machine's absolute path, plus one confirmation
-command. `stage_summary.json`, `artifact_manifest.json`, and
-`confirmation_request.json` bind the decision to semantic/evidence identities;
-an upstream scientific change invalidates the old checkpoint. See
+Before any of these checkpoints is presented, Draftpaper-loop writes an offline
+package under `review/checkpoints/<checkpoint_id>/`. Open
+`stage_summary.zh-CN.html` first: it is the formal author decision page, with
+the scientific question, before/after semantic delta, main facts and figures,
+claim boundary, exclusions, and reopen conditions. `stage_audit.zh-CN.html`
+contains the complete technical audit. The Agent response gives both pages'
+project-relative and absolute paths. `scientific_decision_sha256`, rather than
+the changing audit package hash, determines whether a new C3 decision is
+needed; unchanged science receives a continuity receipt. See
 [Human Checkpoint Packages](docs/human_checkpoints.md).
 
 ### Two routes when result support is insufficient
@@ -510,6 +510,13 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.41.0 (2026-08-23) -- Readable scientific decisions and semantic reconfirmation
+
+- New checkpoints use `dpl.checkpoint_summary.v5`: `stage_summary.zh-CN.html` is the formal author decision page, while `stage_audit.zh-CN.html` retains the complete technical audit. Both derive from one canonical package; no project-external Agent sidecar is needed.
+- `HumanDecisionBrief`, `scientific_decision_fingerprint_v1`, audit/presentation fingerprints, bounded `StageActivityBundle v2`, `FigureClaimMap`, readability checks, and manifest-first scope make the requested decision understandable while preserving traceability.
+- Confirmation requests now bind the scientific decision and Brief semantics. Rebuilt HTML, PDF, manifests, citation maps, and other derived presentation artifacts no longer cause repeated C3; unchanged science writes a continuity receipt and continues as a notification. Metric, uncertainty, cohort, split, sample-unit, method/run, figure-semantic, or claim-boundary changes remain fail-closed and require a new author decision.
+- Added `show-checkpoint-audit`, `compare-checkpoint-decision`, `explain-reconfirmation`, `validate-checkpoint-readability`, `show-confirmation-continuity`, and `rebuild-checkpoint-presentation`. The Agent payload leads with exact readable and audit paths plus semantic delta and confirmation meaning.
+
 ### v0.40.0 (2026-08-20) -- Discipline-aware identity checks and on-demand full text
 
 - Query Contract v3 separates entity/project, discipline, method, generic, and multilingual alias-group evidence. Shared words such as `population`, `classification`, `catalog`, and `diversity` cannot pass the topic gate by themselves.

@@ -20,6 +20,7 @@ from .project_state import load_project
 from .review_rule_runtime import assess_review_rules
 from .manuscript_quality import assess_results_manuscript_quality, build_results_narrative_contract
 from .scientific_figure_quality import assess_scientific_figure_quality
+from .evidence_snapshot import confirmation_artifact_hash
 
 
 REPORT_JSON = "review/result_discipline_review_report.json"
@@ -118,7 +119,10 @@ def _numeric_metrics(project_path: Path) -> list[dict[str, Any]]:
 
 def _audit_results_semantics(project_path: Path, text: str) -> dict[str, Any]:
     issues = []
-    prose = re.sub(r"\\begin\{figure\}.*?\\end\{figure\}", "", text, flags=re.DOTALL)
+    # Figure environments legitimately contain local asset paths in
+    # ``\includegraphics``. Remove both standard and full-width (figure*)
+    # environments before looking for path-like language in manuscript prose.
+    prose = re.sub(r"\\begin\{figure\*?\}.*?\\end\{figure\*?\}", "", text, flags=re.DOTALL)
     internal_pattern = re.compile(r"(?:[A-Za-z]:\\|(?:results|data|methods|code)/[^\s{}]+\.(?:csv|tsv|json|py|png))", re.IGNORECASE)
     for match in internal_pattern.finditer(prose):
         issues.append({"kind": "internal_artifact_language", "severity": "repair_required", "detail": match.group(0)})
@@ -187,8 +191,24 @@ def review_results_with_discipline_rules(project: str | Path) -> dict[str, Any]:
         if len(narrative_contract.get("figure_groups") or []) >= 3
         else {"decision": "not_assessed", "score": None, "issues": []}
     )
+    figure_quality_path = state.path / "results" / "scientific_figure_quality_report.json"
+    existing_figure_quality = _read_json(figure_quality_path)
+    core_evidence = _read_json(state.path / "core_evidence" / "core_evidence_report.json")
+    confirmed_figure_quality_hash = str(
+        (core_evidence.get("input_artifact_hashes") or {}).get(
+            "results/scientific_figure_quality_report.json"
+        )
+        or ""
+    )
+    confirmed_figure_quality_is_current = bool(
+        existing_figure_quality
+        and confirmed_figure_quality_hash
+        and confirmation_artifact_hash(figure_quality_path) == confirmed_figure_quality_hash
+    )
     figure_quality = (
-        assess_scientific_figure_quality(state.path)
+        existing_figure_quality
+        if confirmed_figure_quality_is_current
+        else assess_scientific_figure_quality(state.path)
         if len(narrative_contract.get("figure_groups") or []) >= 3
         else {"decision": "not_assessed", "score": None, "issues": []}
     )

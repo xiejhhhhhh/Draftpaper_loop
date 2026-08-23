@@ -305,8 +305,8 @@ def _render_baseline_refs(summary: dict[str, Any], output_dir: Path) -> str:
     )
 
 
-def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
-    """Render one portable, self-contained Chinese checkpoint review page."""
+def render_checkpoint_audit_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+    """Render the complete technical audit companion for a checkpoint."""
 
     review_state = str(summary.get("review_state") or "confirmable")
     state_label = _STATE_LABELS.get(review_state, review_state)
@@ -455,3 +455,140 @@ th {{ background:#eef2f7; white-space:nowrap; }}
 <section class="section confirm"><h2>本次确认意味着什么</h2><p>{_text(confirmation.get("meaning_zh") or summary.get("confirmation_meaning_zh"))}</p><p><strong>拒绝或要求修改：</strong>{_text(confirmation.get("refinement_route_zh") or summary.get("rejection_or_refinement_route_zh"))}</p><p><strong>确认命令：</strong>{command_html}</p></section>
 <section class="section"><h2>证据与文件身份</h2><p>机器摘要：{json_html}　·　产物清单：{manifest_html}</p><p><strong>stage summary hash：</strong><code>{_text(summary.get("stage_summary_sha256") or request.get("stage_summary_sha256"))}</code></p><p><strong>摘要生成命令：</strong>{_text(summary.get("command"))}</p><p><strong>确认合同：</strong>{_text((summary.get("confirmation_contract") or {}).get("source_of_truth") or "未登记")}；用户确认要求：{_text((summary.get("confirmation_contract") or {}).get("requires_user_decision"))}</p></section>
 </main></body></html>\n'''
+
+
+def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any]) -> str:
+    links = []
+    for raw in refs[:5]:
+        ref = str(raw or "")
+        if ref.startswith("artifact:"):
+            relative = ref[len("artifact:") :]
+            href = _link(root, output_dir, relative)
+            links.append(f'<a href="{href}">{_text(relative)}</a>' if href else _text(relative))
+        elif ref.startswith("policy:"):
+            links.append("确认合同")
+        else:
+            links.append(_text(ref))
+    return "、".join(links)
+
+
+def _brief_statements(root: Path, output_dir: Path, statements: list[Any]) -> str:
+    rows = []
+    for statement in statements:
+        if not isinstance(statement, dict):
+            continue
+        refs = [*list(statement.get("evidence_refs") or []), *list(statement.get("claim_refs") or [])]
+        ref_html = _brief_ref_links(root, output_dir, refs)
+        rows.append(
+            '<li><span>'
+            + _text(statement.get("text_zh"))
+            + "</span>"
+            + (f'<small class="refs">证据：{ref_html}</small>' if ref_html else "")
+            + "</li>"
+        )
+    return "<ul>" + "".join(rows) + "</ul>" if rows else '<p class="muted">未登记。</p>'
+
+
+def render_checkpoint_decision_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+    """Render the compact, evidence-bound page that the author actually reads."""
+
+    brief = summary.get("decision_brief") if isinstance(summary.get("decision_brief"), dict) else {}
+    state = str(summary.get("review_state") or "confirmable")
+    state_label = _STATE_LABELS.get(state, state)
+    continuity = summary.get("confirmation_continuity") if isinstance(summary.get("confirmation_continuity"), dict) else {}
+    delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
+    decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
+    audit_href = _link(root, output_dir, "stage_audit.zh-CN.html")
+    summary_href = _link(root, output_dir, str(summary.get("stage_summary_path") or ""))
+    request_href = _link(root, output_dir, "confirmation_request.json")
+    readability_href = _link(root, output_dir, "checkpoint_readability_report.json")
+    confirmation_command = request.get("confirmation_command") if (summary.get("confirmation_contract") or {}).get("confirmation_command_allowed") else None
+    continuity_note = ""
+    if continuity.get("eligible"):
+        continuity_note = '<p class="notice success">本次科学决定与最近一次作者确认一致，系统将沿用原确认；技术审计已更新，不需要重复输入确认 hash。</p>'
+    elif delta.get("classification") == "scientific_change":
+        continuity_note = '<p class="notice warning">检测到科学决定变化。请先阅读下方变化说明，再决定是否确认、要求修订或拒绝。</p>'
+    elif state != "confirmable":
+        continuity_note = '<p class="notice warning">当前存在阻断或过期证据；页面可阅读，但不能用于确认。</p>'
+    figures = []
+    for item in brief.get("figure_claims") or []:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("project_relative_path") or "")
+        statement = item.get("statement") if isinstance(item.get("statement"), dict) else {}
+        href = _link(root, output_dir, path)
+        figures.append(
+            '<article class="figure">'
+            f'<h3>{_text(item.get("figure_id"))}</h3>'
+            + (f'<a href="{href}"><img src="{href}" alt="{_text(item.get("figure_id"))}"></a>' if href and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".svg"} else "")
+            + f'<p>{_text(statement.get("text_zh"))}</p>'
+            + (f'<small class="refs">证据：{_brief_ref_links(root, output_dir, list(statement.get("evidence_refs") or []))}</small>' if statement.get("evidence_refs") else "")
+            + "</article>"
+        )
+    figure_html = "".join(figures) or '<p class="muted">本次没有主图作为独立科学决定项。</p>'
+    changes = []
+    for item in delta.get("changes") or []:
+        if not isinstance(item, dict):
+            continue
+        changes.append(f'<li><code>{_text(item.get("field"))}</code>：{_text(item.get("before"))} → {_text(item.get("after"))}</li>')
+    change_html = "<ul>" + "".join(changes) + "</ul>" if changes else ""
+    deliverables = []
+    for item in brief.get("latest_user_visible_deliverables") or []:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("project_relative_path") or "")
+        href = _link(root, output_dir, path)
+        deliverables.append(
+            f'<li><a href="{href}">{_text(item.get("title_zh") or path)}</a>'
+            f'<small>{_text(item.get("purpose_zh"))}</small></li>'
+        )
+    deliverable_html = "<ul>" + "".join(deliverables) + "</ul>" if deliverables else '<p class="muted">本阶段未登记额外可阅读产物。</p>'
+    confirmation_html = (
+        f'<code>{_text(confirmation_command)}</code>'
+        if confirmation_command
+        else '<p class="muted">当前不需要新的作者确认命令；请查阅上方状态和连续性说明。</p>'
+    )
+    return f'''<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{_text(summary.get("checkpoint_title_zh") or "Draftpaper 科学确认")}</title>
+<style>
+:root {{ --ink:#172033; --muted:#526071; --line:#d4dce7; --paper:#fff; --bg:#f6f8fb; --blue:#155eab; --blue-bg:#edf6ff; --green:#137333; --green-bg:#ecfdf3; --amber:#9a5800; --amber-bg:#fff8e8; }}
+* {{ box-sizing:border-box; }} body {{ margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif; line-height:1.64; }}
+main {{ max-width:980px; margin:0 auto; padding:26px 18px 56px; }} h1 {{ margin:0 0 9px; font-size:30px; line-height:1.25; }} h2 {{ margin:0 0 12px; font-size:20px; }} h3 {{ margin:0 0 7px; font-size:16px; }}
+p {{ overflow-wrap:anywhere; }} a {{ color:var(--blue); overflow-wrap:anywhere; }} code {{ display:block; padding:10px; border:1px solid var(--line); background:#f8fafc; white-space:pre-wrap; overflow-wrap:anywhere; font-family:Consolas,"SFMono-Regular",monospace; font-size:12px; }}
+.hero,.section {{ background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:20px; }} .hero {{ border-top:5px solid var(--blue); }} .section {{ margin-top:16px; }} .status {{ display:inline-block; padding:3px 9px; background:var(--blue-bg); color:var(--blue); font-weight:700; border-radius:4px; }}
+.lead {{ margin:14px 0 0; font-size:18px; font-weight:600; }} .muted,small {{ color:var(--muted); }} .notice {{ padding:11px 13px; border-left:4px solid var(--amber); background:var(--amber-bg); font-weight:600; }} .notice.success {{ border-color:var(--green); background:var(--green-bg); color:#14532d; }}
+ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li small {{ display:block; margin-top:3px; }} .refs {{ font-size:12px; }} .figure-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }} .figure {{ border:1px solid var(--line); padding:13px; min-width:0; }} .figure img {{ display:block; width:100%; max-height:230px; object-fit:contain; border:1px solid #e3e9f1; background:white; }}
+.meta {{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:14px; color:var(--muted); font-size:13px; }} .meta a {{ font-weight:600; }}
+@media (max-width:680px) {{ main {{ padding:14px 10px 42px; }} .hero,.section {{ padding:15px; }} h1 {{ font-size:25px; }} .figure-grid {{ grid-template-columns:minmax(0,1fr); }} .figure img {{ max-height:none; }} }}
+</style>
+</head>
+<body><main>
+<header class="hero">
+<span class="status">{_text(state_label)}</span>
+<h1>{_text(summary.get("checkpoint_title_zh") or "Draftpaper 科学确认")}</h1>
+<p class="lead">{_text(decision_question.get("text_zh") or summary.get("stage_purpose_zh"))}</p>
+{continuity_note}
+<div class="meta"><span>科学决定：<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span><a href="{audit_href}">打开完整技术审计</a><a href="{summary_href}">机器摘要</a><a href="{request_href}">确认合同</a><a href="{readability_href}">可读性检查</a></div>
+</header>
+<section class="section"><h2>相对上次确认的变化</h2><p>{_text(delta.get("summary_zh") or "这是首次科学确认。")}</p>{change_html}</section>
+<section class="section"><h2>本次确认什么</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []))}</section>
+<section class="section"><h2>样本、验证与主结果</h2>{_brief_statements(root, output_dir, list(brief.get("key_findings") or []))}<p class="muted">详细数值、身份和运行证据可在技术审计页追溯。</p></section>
+<section class="section"><h2>主图支持的结论</h2><div class="figure-grid">{figure_html}</div></section>
+<section class="section"><h2>论断边界</h2>{_brief_statements(root, output_dir, list(brief.get("claim_boundaries") or []))}</section>
+<section class="section"><h2>本次不确认什么</h2>{_brief_statements(root, output_dir, list(brief.get("not_confirming") or []))}</section>
+<section class="section"><h2>何时会重新要求科学确认</h2>{_brief_statements(root, output_dir, list(brief.get("reopen_conditions") or []))}</section>
+<section class="section"><h2>本阶段可阅读产物</h2>{deliverable_html}</section>
+<section class="section"><h2>确认后的含义</h2>{_brief_statements(root, output_dir, list(brief.get("downstream_effects") or []))}<p><strong>确认命令</strong></p>{confirmation_html}</section>
+</main></body></html>\n'''
+
+
+def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+    """Render the decision view for v5 and retain the v3/v4 audit renderer."""
+
+    if summary.get("schema_version") == "dpl.checkpoint_summary.v5":
+        return render_checkpoint_decision_html(root, output_dir, summary, request)
+    return render_checkpoint_audit_html(root, output_dir, summary, request)

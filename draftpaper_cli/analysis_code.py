@@ -144,7 +144,16 @@ def _select_tabular_input(inventory: dict[str, Any], *, method_text: str = "", r
 
 def _literature_sources(items: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
     sources = []
-    for item in sorted(items, key=lambda entry: entry.get("citation_weight", 0), reverse=True):
+    def sortable_weight(entry: dict[str, Any]) -> float:
+        value = entry.get("citation_weight")
+        if value is None:
+            return 0.0
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    for item in sorted(items, key=sortable_weight, reverse=True):
         title = str(item.get("title") or "").strip()
         if not title:
             continue

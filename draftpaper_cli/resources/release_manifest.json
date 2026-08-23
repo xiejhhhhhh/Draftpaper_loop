@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.40.0",
-  "workflow_skill_sha256": "914c29fbe350681a44e39d79f3bdf7df0822dbe83e73a95d0f73a6c260c18932",
-  "workflow_contract_sha256": "700612716ccb0273e213e8d4a026b748d5679a454360ae99148f7a72d76e2427",
+  "package_version": "0.41.0",
+  "workflow_skill_sha256": "c8c5255cc0a07a00d6bc3a18acd8b36fdf7cc6ad3a029f3895a63fa898ce5fd5",
+  "workflow_contract_sha256": "ec194344e3113e871c3947fb905f0c273ff1779bd60e1692ec776b7fbd137b42",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 252,
+  "command_count": 258,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -55,7 +55,13 @@
     "begin-revision-cycle",
     "audit-longitudinal-consistency",
     "reconcile-project-drift",
-    "show-scientific-baseline"
+    "show-scientific-baseline",
+    "show-checkpoint-audit",
+    "compare-checkpoint-decision",
+    "explain-reconfirmation",
+    "validate-checkpoint-readability",
+    "show-confirmation-continuity",
+    "rebuild-checkpoint-presentation"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "resource_schema_status": "passed",
@@ -86,25 +92,36 @@
   },
   "checkpoint_contract": {
     "status": "passed",
-    "summary_schema": "dpl.checkpoint_summary.v4",
+    "summary_schema": "dpl.checkpoint_summary.v5",
     "schema_files": {
-      "summary": "resources/schemas/checkpoint_summary_v4.json",
+      "summary": "resources/schemas/checkpoint_summary_v5.json",
       "artifact_manifest": "resources/schemas/checkpoint_artifact_manifest_v2.json",
-      "confirmation_request": "resources/schemas/confirmation_request_v1.json",
+      "confirmation_request": "resources/schemas/confirmation_request_v2.json",
       "change_report": "resources/schemas/checkpoint_change_report_v1.json",
       "unresolved_issues": "resources/schemas/checkpoint_unresolved_issues_v1.json",
-      "agent_payload": "resources/schemas/checkpoint_agent_payload_v1.json"
+      "agent_payload": "resources/schemas/checkpoint_agent_payload_v2.json",
+      "decision_brief": "resources/schemas/human_decision_brief_v1.json",
+      "scientific_decision_fingerprint": "resources/schemas/scientific_decision_fingerprint_v1.json",
+      "confirmation_continuity_receipt": "resources/schemas/confirmation_continuity_receipt_v1.json",
+      "stage_activity": "resources/schemas/stage_activity_bundle_v2.json",
+      "readability_report": "resources/schemas/checkpoint_readability_report_v1.json",
+      "figure_claim_map": "resources/schemas/figure_claim_map_v1.json"
     },
     "missing_schema_files": [],
     "required_companions": [
       "stage_summary.zh-CN.html",
+      "stage_audit.zh-CN.html",
       "stage_summary.json",
+      "human_decision_brief_v1.json",
+      "scientific_decision_fingerprint_v1.json",
       "stage_activity_bundle.json",
       "artifact_manifest.json",
       "confirmation_request.json",
       "change_report.json",
       "unresolved_issues.json",
-      "agent_payload.json"
+      "agent_payload.json",
+      "checkpoint_readability_report.json",
+      "figure_claim_map_v1.json"
     ],
     "agent_paths": [
       "project_relative_path",
@@ -112,7 +129,7 @@
     ]
   },
   "review_governance": {
-    "summary_schema": "dpl.checkpoint_summary.v4",
+    "summary_schema": "dpl.checkpoint_summary.v5",
     "workflow_trace_schema": "dpl.workflow_trace.v2",
     "command_transaction_schema": "dpl.command_transaction.v3",
     "modes": [
@@ -123,6 +140,7 @@
     "agent_decision_status": "agent_approved",
     "user_decision_status": "user_confirmed",
     "c3_human_only": true,
+    "semantic_continuity_receipt": "dpl.confirmation_continuity_receipt.v1",
     "immutable_baseline_schema": "dpl.scientific_baseline_bundle.v1",
     "revision_cycle_schema": "dpl.revision_cycle.v1",
     "fact_registry_schema": "dpl.canonical_fact_registry.v2"

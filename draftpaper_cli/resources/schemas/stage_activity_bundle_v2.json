@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.stage_activity_bundle.v2",
+  "type": "object",
+  "required": ["schema_version", "bundle_id", "stage", "activity_window", "actions", "artifact_changes", "coverage", "bundle_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.stage_activity_bundle.v2"},
+    "bundle_id": {"type": "string"},
+    "stage": {"type": "string"},
+    "activity_window": {"type": "object"},
+    "actions": {"type": "array"},
+    "artifact_changes": {"type": "array"},
+    "coverage": {"type": "object"},
+    "bundle_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

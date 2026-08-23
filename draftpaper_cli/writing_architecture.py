@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 import hashlib
 import json
 import re
@@ -340,12 +341,25 @@ def _hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _revision_equivalence_key(text: str) -> str:
+    """Ignore opaque LaTeX cross-reference targets when matching local edits."""
+    return re.sub(r"\\(?:ref|autoref|eqref)\{[^}]+\}", r"\\ref{<label>}", text)
+
+
 def _paragraphs(text: str) -> list[str]:
     prose = re.sub(
         r"\\begin\{(?:figure\*?|table\*?|deluxetable\*?)\}.*?\\end\{(?:figure\*?|table\*?|deluxetable\*?)\}",
         "",
         text,
         flags=re.S,
+    )
+    # Publication-table inclusions are layout instructions, not prose
+    # paragraphs. Keeping them in the editor input creates false short-
+    # paragraph and job-alignment defects for otherwise complete Results text.
+    prose = re.sub(
+        r"(?m)^\s*\\input\{(?:tables/|\.\./results/tables/)[^{}\n]+\}\s*$",
+        "",
+        prose,
     )
     sectioning_command = re.compile(
         r"^\\(?:part|chapter|section|subsection|subsubsection|paragraph|subparagraph)\*?\s*\{"
@@ -485,12 +499,21 @@ def record_scientific_editor_revision(
     before_paragraphs = _paragraphs(before)
     after_paragraphs = _paragraphs(after)
     changes: list[dict[str, Any]] = []
-    for index in range(max(len(before_paragraphs), len(after_paragraphs))):
-        previous = before_paragraphs[index] if index < len(before_paragraphs) else ""
-        current = after_paragraphs[index] if index < len(after_paragraphs) else ""
-        if previous != current:
+    matcher = SequenceMatcher(
+        a=[_revision_equivalence_key(item) for item in before_paragraphs],
+        b=[_revision_equivalence_key(item) for item in after_paragraphs],
+        autojunk=False,
+    )
+    for change_kind, before_start, before_end, after_start, after_end in matcher.get_opcodes():
+        if change_kind == "equal":
+            continue
+        span = max(before_end - before_start, after_end - after_start)
+        for offset in range(span):
+            previous = before_paragraphs[before_start + offset] if before_start + offset < before_end else ""
+            current = after_paragraphs[after_start + offset] if after_start + offset < after_end else ""
+            paragraph_index = after_start + offset + 1 if after_start + offset < after_end else before_start + offset + 1
             changes.append({
-                "paragraph_index": index + 1,
+                "paragraph_index": paragraph_index,
                 "before_hash": _hash_text(previous),
                 "after_hash": _hash_text(current),
             })

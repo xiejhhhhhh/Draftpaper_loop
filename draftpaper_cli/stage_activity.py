@@ -19,7 +19,8 @@ from .state_kernel import atomic_write_json
 from .workflow_trace import TRACE_PATH
 
 
-STAGE_ACTIVITY_SCHEMA = "dpl.stage_activity_bundle.v1"
+STAGE_ACTIVITY_SCHEMA = "dpl.stage_activity_bundle.v2"
+LEGACY_STAGE_ACTIVITY_SCHEMA = "dpl.stage_activity_bundle.v1"
 
 _ACTION_LABELS = {
     "read": "读取",
@@ -81,6 +82,33 @@ def _stage_prefixes(stage: str) -> tuple[str, ...]:
     return STAGE_SCOPE_PREFIXES.get(stage, (f"{stage}/", "review/"))
 
 
+def _last_checkpoint_boundary(root: Path, stage: str) -> dict[str, Any] | None:
+    """Return the prior checkpoint boundary without treating it as activity."""
+
+    rows = [
+        row
+        for row in read_jsonl(root / "checkpoint_ledger.jsonl")
+        if isinstance(row, dict) and row.get("kind") == "checkpoint" and str(row.get("stage") or "") == stage
+    ]
+    if not rows:
+        return None
+    latest = rows[-1]
+    return {
+        "checkpoint_hash": latest.get("hash"),
+        "checkpoint_id": latest.get("checkpoint_id"),
+        "created_at": latest.get("created_at"),
+    }
+
+
+def _in_window(row: dict[str, Any], start_at: str | None, end_at: str | None) -> bool:
+    timestamp = str(row.get("completed_at") or row.get("recorded_at") or row.get("started_at") or "")
+    if start_at and timestamp and timestamp <= start_at:
+        return False
+    if end_at and timestamp and timestamp > end_at:
+        return False
+    return True
+
+
 def _matches_stage(stage: str, command: str, row_stage: str | None) -> bool:
     if row_stage and row_stage == stage:
         return True
@@ -96,11 +124,10 @@ def _artifact_operations(
 ) -> list[dict[str, Any]]:
     before = {str(item.get("path")): item for item in (before_artifacts or []) if item.get("path")}
     current = {str(item.get("path")): item for item in collect_artifacts(root) if item.get("path")}
-    paths = sorted(
-        path
-        for path in set(before) | set(current)
-        if any(path.startswith(prefix) for prefix in _stage_prefixes(stage))
-    )
+    from .checkpoint_digest import discover_stage_paths
+
+    scoped_paths = set(discover_stage_paths(root, stage))
+    paths = sorted(path for path in set(before) | set(current) if path in scoped_paths)
     operations: list[dict[str, Any]] = []
     for path in paths:
         old = before.get(path)
@@ -266,19 +293,25 @@ def build_stage_activity_bundle(
     before_artifacts: Iterable[dict[str, Any]] | None = None,
     activity_rows: Iterable[dict[str, Any]] | None = None,
     stage_goal_zh: str | None = None,
+    window_start_at: str | None = None,
+    window_end_at: str | None = None,
 ) -> dict[str, Any]:
     root = project_root(project)
-    traces = list(activity_rows or read_jsonl(root / TRACE_PATH))
-    transactions = read_jsonl(root / TRANSACTION_LEDGER_PATH)
+    explicit_activity_rows = list(activity_rows) if activity_rows is not None else None
+    previous_boundary = _last_checkpoint_boundary(root, stage)
+    start_at = window_start_at or str((previous_boundary or {}).get("created_at") or "") or None
+    end_at = window_end_at or utc_now()
+    traces = explicit_activity_rows if explicit_activity_rows is not None else read_jsonl(root / TRACE_PATH)
+    transactions = [] if explicit_activity_rows is not None else read_jsonl(root / TRANSACTION_LEDGER_PATH)
     actions: list[dict[str, Any]] = []
     for row in traces:
-        if _matches_stage(stage, str(row.get("command") or ""), row.get("stage")):
+        if _matches_stage(stage, str(row.get("command") or ""), row.get("stage")) and _in_window(row, start_at, end_at):
             actions.append(_trace_action(row, stage=stage))
     known_ids = {str(item.get("command_id")) for item in traces if item.get("command_id")}
     for row in transactions:
         if str(row.get("command_id") or "") in known_ids:
             continue
-        if _matches_stage(stage, str(row.get("command") or ""), row.get("stage")):
+        if _matches_stage(stage, str(row.get("command") or ""), row.get("stage")) and _in_window(row, start_at, end_at):
             actions.append(_transaction_action(row, stage=stage))
     if command and not actions:
         actions.append(
@@ -322,6 +355,13 @@ def build_stage_activity_bundle(
         "stage": stage,
         "command": command,
         "stage_goal_zh": stage_goal,
+        "activity_window": {
+            "start_boundary": previous_boundary,
+            "start_at": start_at,
+            "end_at": end_at,
+            "mode": "explicit_current_command" if explicit_activity_rows is not None else "since_previous_checkpoint",
+            "includes_historical_checkpoint_rows": False,
+        },
         "narrative_zh": sentence,
         "actions": actions,
         "artifact_changes": artifacts,
@@ -341,7 +381,7 @@ def build_stage_activity_bundle(
         },
         "created_at": utc_now(),
     }
-    bundle["bundle_sha256"] = _hash(bundle)
+    bundle["bundle_sha256"] = _hash({key: value for key, value in bundle.items() if key not in {"bundle_sha256", "created_at"}})
     return bundle
 
 
@@ -374,6 +414,7 @@ def _project_id(project: Path) -> str | None:
 
 
 __all__ = [
+    "LEGACY_STAGE_ACTIVITY_SCHEMA",
     "STAGE_ACTIVITY_SCHEMA",
     "build_stage_activity_bundle",
     "infer_stage",

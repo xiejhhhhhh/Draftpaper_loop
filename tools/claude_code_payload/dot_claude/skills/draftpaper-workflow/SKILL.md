@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.40.0
+version: 0.41.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -53,22 +53,20 @@ this writes only a migration receipt and runtime lock. If a transaction reports
 
 ## Human checkpoints
 
-Every checkpoint must produce the portable package
-`review/checkpoints/<checkpoint_id>/stage_summary.zh-CN.html`,
+Every new checkpoint writes a v5 package with `stage_summary.zh-CN.html`
+(readable decision page), `stage_audit.zh-CN.html` (technical audit),
 `stage_summary.json`, `artifact_manifest.json`, and `confirmation_request.json`.
-The current summary contract is `dpl.checkpoint_summary.v4`; v1/v2 packages are
-read-only legacy records and v3 packages remain read-compatible. The v4
-summary, HTML, and Agent payload must expose the same identity, sample-flow,
-review requirement, decision actor, StageActivityBundle, baseline references,
-and recovery route.
-The Agent response must show project-relative and absolute paths, primary
-artifacts, unresolved issues, and the meaning of confirmation. Open the HTML
-before asking the user to confirm. It must separate unchanged deliverables
-from transaction changes and show figures, tables, code, reports, run identity,
-CSV previews, evidence identity, and code traces. `preview-checkpoint-summary`
-creates a non-consumable preview that changes no ledger or index and exposes no
-resume command. Stale, blocked, identity-missing, and preview pages cannot be
-confirmed.
+The decision page covers the question, semantic delta, scientific context,
+figures, boundaries, exclusions, reopen conditions, and deliverables; never
+create a project-external readability sidecar. v1/v2 are read-only legacy;
+v3/v4 remain readable and are never rewritten.
+The request binds `scientific_decision_sha256` and the DecisionBrief semantic
+hash, not the audit/package hash. Identical valid prior user decisions write a
+continuity receipt and continue as a notification. Metric, cohort, split,
+sample-unit, method, figure-semantic, or claim-boundary changes require C3.
+Show readable relative/absolute paths first, then the audit path, delta,
+artifacts, issues, and confirmation meaning. Previews, stale, blocked, and
+identity-missing packages cannot be confirmed.
 
 Agent review may continue only inside an active, hash-bound delegation and
 must record `agent_approved`; it must never write `user_confirmed`. C0

@@ -79,7 +79,7 @@ def test_two_reviewers_inspect_one_frozen_generated_manuscript_without_baseline(
             for group in manifest["frozen_artifacts"].values()
             for record in group
         ]
-        assert names == {"bundle_manifest.json", *(record["path"] for record in frozen_records)}
+        assert names == {record["path"] for record in frozen_records}
         for record in frozen_records:
             payload = archive.read(record["path"])
             assert __import__("hashlib").sha256(payload).hexdigest() == record["sha256"]
@@ -89,10 +89,11 @@ def test_two_reviewers_inspect_one_frozen_generated_manuscript_without_baseline(
         "latex/main.tex",
         "latex/sections/results.tex",
         "references/library.bib",
-        "references/reference_registry.json",
-        "results/promoted_evidence_snapshot.json",
-        "core_evidence/core_evidence_report.json",
     }.issubset(names)
+    assert "core_evidence/core_evidence_report.json" not in names
+    assert "results/promoted_evidence_snapshot.json" not in names
+    assert "references/reference_registry.json" not in names
+    assert "bundle_manifest.json" not in names
     assert not any("baseline" in name.lower() or "original" in name.lower() for name in names)
     assert not any("quality_report" in name.lower() or "audit" in name.lower() for name in names)
     assert "not the ZIP container byte hash" in manifest["bundle_hash_semantics"]
@@ -179,6 +180,48 @@ def test_review_bundle_excludes_reproducibility_file_with_private_locator(tmp_pa
     ]
 
 
+def test_review_bundle_withholds_hash_verifier_and_internal_json_report(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    verifier = project / "methods" / "scripts" / "verify_frozen_release.py"
+    verifier.parent.mkdir(parents=True, exist_ok=True)
+    verifier.write_text("print('internal verification')\n", encoding="utf-8")
+    internal = project / "results" / "tables" / "reproducibility" / "frozen_release_expectations.json"
+    internal.parent.mkdir(parents=True, exist_ok=True)
+    internal.write_text(json.dumps({"file_sha256": {"result.csv": "not-for-review"}}), encoding="utf-8")
+
+    prepared = prepare_independent_manuscript_review(project)
+    manifest = json.loads((project / "quality_checks" / "blind_reviews" / "submission_bundle_manifest.json").read_text(encoding="utf-8"))
+    with zipfile.ZipFile(project / prepared["bundle"]) as archive:
+        names = set(archive.namelist())
+
+    assert "methods/scripts/verify_frozen_release.py" not in names
+    assert "results/tables/reproducibility/frozen_release_expectations.json" not in names
+    assert {"path": "methods/scripts/verify_frozen_release.py", "reason": "internal_hash_verifier"} in manifest["excluded_reproducibility_files"]
+
+
+def test_review_bundle_includes_declared_release_inputs_without_manifest(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    release_readme = project / "reproducibility" / "README.md"
+    release_readme.parent.mkdir(parents=True, exist_ok=True)
+    release_readme.write_text("Released inputs.\n", encoding="utf-8")
+    input_dir = project / "data" / "reproducibility_inputs"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    data = input_dir / "tokens.npz"
+    data.write_bytes(b"released tokens")
+    digest = __import__("hashlib").sha256(data.read_bytes()).hexdigest()
+    (input_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": "test", "files": [{"path": "tokens.npz", "sha256": digest, "size_bytes": data.stat().st_size}]}),
+        encoding="utf-8",
+    )
+
+    prepared = prepare_independent_manuscript_review(project)
+    with zipfile.ZipFile(project / prepared["bundle"]) as archive:
+        names = set(archive.namelist())
+
+    assert "data/reproducibility_inputs/tokens.npz" in names
+    assert "data/reproducibility_inputs/manifest.json" not in names
+
+
 def test_independent_report_rejects_original_or_quality_ratio_fields(tmp_path: Path) -> None:
     project = _project(tmp_path)
     prepared = prepare_independent_manuscript_review(project)
@@ -241,19 +284,26 @@ def test_anonymous_review_tex_redacts_identity_and_preserves_front_matter_contra
         "\\documentclass{aastex701}\n"
         "\\begin{document}\n"
         "\\title{Study}\n"
-        "\\author{Jinray Xie}\n"
+        "\\shortauthors{Xie et al.}\n"
+        "\\author[orcid=0000-0000-0000-0000]{Jinray Xie}\n"
         "\\affiliation{University}\n"
         "\\email{author@example.org}\n"
+        "\\correspondingauthor{Jinray Xie}\n"
         "\\graphicspath{{../}}\n"
         "\\section{Introduction}\nText.\n"
+        "\\begin{contribution}\nJinray Xie wrote the manuscript.\n\\end{contribution}\n"
         "\\end{document}\n"
     )
 
     assert "Jinray Xie" not in rendered
     assert "author@example.org" not in rendered
+    assert "Xie et al." not in rendered
+    assert "wrote the manuscript" not in rendered
     assert "\\author{Anonymous Manuscript}" in rendered
+    assert "\\shortauthors{Anonymous}" in rendered
     assert "\\affiliation{Withheld for anonymous review}" in rendered
     assert "\\email{withheld@anonymous.invalid}" in rendered
+    assert "\\begin{contribution}\nWithheld for anonymous review." in rendered
     assert "\\graphicspath{{../../../}}" in rendered
 
 

@@ -12,8 +12,8 @@ CITATION_PATTERN = re.compile(
     r"\\(?:cite|citep|citet|parencite|autocite|textcite)\*?(?:\[[^\]]*\]){0,2}\{",
     re.IGNORECASE,
 )
-FIGURE_PATTERN = re.compile(r"\\begin\{figure\}|\\includegraphics", re.IGNORECASE)
-TABLE_PATTERN = re.compile(r"\\begin\{table\}", re.IGNORECASE)
+FIGURE_PATTERN = re.compile(r"\\begin\{figure\*?\}|\\includegraphics", re.IGNORECASE)
+TABLE_PATTERN = re.compile(r"\\begin\{table\*?\}", re.IGNORECASE)
 BULLET_PATTERN = re.compile(r"\\begin\{(?:itemize|enumerate|description)\}|\\item\b", re.IGNORECASE)
 BOLD_PATTERN = re.compile(r"\\(?:textbf|bfseries)\b", re.IGNORECASE)
 FORMULA_PATTERN = re.compile(
@@ -39,7 +39,7 @@ class WritingQualityIssue:
 
 
 def _strip_latex_noise(tex: str) -> str:
-    text = re.sub(r"\\begin\{(?:figure|table)\}.*?\\end\{(?:figure|table)\}", " ", tex, flags=re.S)
+    text = re.sub(r"\\begin\{(?:figure|table)\*?\}.*?\\end\{(?:figure|table)\*?\}", " ", tex, flags=re.S)
     text = re.sub(r"\\(?:section|subsection|subsubsection|caption|label|includegraphics)(?:\[[^\]]*\])?\{[^{}]*\}", " ", text)
     text = re.sub(r"\\cite[a-zA-Z*]*(?:\[[^\]]*\]){0,2}\{[^{}]*\}", " citation ", text)
     text = re.sub(r"\\[A-Za-z]+(?:\[[^\]]*\])?", " ", text)
@@ -53,7 +53,7 @@ def _word_count(tex: str) -> int:
 
 
 def _paragraph_count(tex: str) -> int:
-    cleaned = re.sub(r"\\begin\{(?:figure|table)\}.*?\\end\{(?:figure|table)\}", "\n\n", tex, flags=re.S)
+    cleaned = re.sub(r"\\begin\{(?:figure|table)\*?\}.*?\\end\{(?:figure|table)\*?\}", "\n\n", tex, flags=re.S)
     blocks = [block.strip() for block in re.split(r"\n\s*\n", cleaned) if block.strip()]
     narrative = []
     for block in blocks:
@@ -131,7 +131,7 @@ def evaluate_section_quality(section: str, tex: str, *, figure_count: int | None
                 ))
                 continue
             tail = re.sub(r"\s+", " ", chunk[-500:])
-            if "\\end{figure}" not in tail and "\\end{table}" not in tail:
+            if not re.search(r"\\end\{(?:figure|table)\*?\}", tail, flags=re.IGNORECASE):
                 issues.append(WritingQualityIssue(
                     "error",
                     "result_subsection_missing_figure",

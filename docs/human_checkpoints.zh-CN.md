@@ -1,114 +1,110 @@
-# 分级审查点成果包
+# 人工确认点成果包
 
-当前阶段摘要合同为 `dpl.checkpoint_summary.v4`。v1/v2 只能只读审计；v3 仍可
-读取以保持旧项目兼容，但不会原地重写 hash。v4 把“证据是否健康”“谁应审查”和
-“谁已经决定”拆为 `review_state`、`review_requirement` 与 `decision_status`，因此
-并非每个 checkpoint 都需要用户手动点击确认。
+新建 checkpoint 使用 `dpl.checkpoint_summary.v5`。v1/v2 为只读历史记录；v3/v4
+仍可阅读以兼容旧项目，但不会被原地改写，也不会被静默当作 v5 科学决定。
 
-每个 checkpoint 都会写出一个可离线审阅的阶段成果包。只有需要作者判断的 C3
-科学路线、互斥选择、作者身份、许可证、第三方代码执行、最终稿与发布才会强制
-停在用户面前；C0 通知型阶段会保留成果包后自动继续，C1/C2 只有在用户事先授予
-有效 delegation 时才可由 Agent 审查。Agent 决定永远记为 `agent_approved`，不会
-冒充 `user_confirmed`。成果包位于：
+## 作者首先打开什么
+
+每个 v5 checkpoint 都会在 `review/checkpoints/<checkpoint_id>/` 写出一个可携带、
+可离线阅读的成果包：
 
 ```text
-review/checkpoints/<checkpoint_id>/
-├── stage_summary.zh-CN.html
-├── stage_summary.json
-├── stage_activity_bundle.json
-├── artifact_manifest.json
-├── confirmation_request.json
-├── change_report.json
-├── unresolved_issues.json
-└── agent_payload.json
+stage_summary.zh-CN.html              # 面向作者的可读决定页
+stage_audit.zh-CN.html                # 完整技术审计页
+stage_summary.json                    # v5 成果包合同
+human_decision_brief_v1.json          # 作者看到的事实与决定陈述
+scientific_decision_fingerprint_v1.json
+checkpoint_audit_fingerprint_v1.json
+checkpoint_presentation_fingerprint_v1.json
+stage_activity_bundle.json
+artifact_manifest.json
+figure_claim_map_v1.json
+confirmation_request.json
+agent_payload.json
+checkpoint_readability_report.json
 ```
 
-中文 HTML 是面向用户的主入口。第一屏先用一段有收据支撑的中文说明 Agent
-实际读取、分析、生成、修改、复用、验证、重试、跳过和失败了什么；随后展示
-完整图表、表格、代码、报告、运行证据、相对上一快照的变化、未解决事项、审查
-主体、纵向基线和恢复路线。Agent 返回中同时显示项目相对路径和当前机器绝对路径。
+应先打开 `stage_summary.zh-CN.html`。它是正式、hash-bound 的作者决定页，不是
+Agent 在项目外临时制作的简化 sidecar。作者应能在约一分钟内看清：
 
-v4 的 `stage_summary.json` 明确登记 `identity`、`core_metrics`、`sample_flow`、
-`review_state`、`review_requirement`、`decision_status`、`decision_actor_type`、
-`StageActivityBundle`、`baseline_refs`、`confirmation_contract` 和恢复路线。HTML、
-JSON、Agent payload 和 `stage_activity_bundle.json` 必须从同一事实层生成。`confirmable`
-只表示机器合同通过，不表示用户已经确认科学含义。
+- 这次究竟要确认什么科学决定；
+- 相对上次有效确认真正改变了什么；
+- 样本、验证设计、主结果、主图和论断边界；
+- 哪些内容明确不属于本次确认；
+- 什么变化会重新打开科学确认；
+- 本轮可阅读交付物与确认后的下一步。
 
-checkpoint 绑定的是语义 identity 和 evidence identity，不绑定报告时间戳、
-HTML 样式或机器绝对路径。数据、方法、运行、指标、cohort 或证据上游发生
-变化时，旧 checkpoint 会失效，`resume` 不得继续消费。
+`stage_audit.zh-CN.html` 保留完整技术信息：当前活动窗口、产物清单、事务变化、
+验证表、证据身份、hash 和恢复细节。决定页会链接到它，但用户不需要先读完整审计
+才能理解自己将要确认的科学内容。
 
-查看和继续命令：
+## 决定身份与连续确认
+
+v5 将三种身份分开记录：
+
+| 身份 | 覆盖内容 | 变化后的行为 |
+|---|---|---|
+| `scientific_decision_sha256` | 数据/cohort/split/样本单位、方法与 run、指标与不确定性、图表语义、论断边界 | 重新触发 C3 作者确认 |
+| `audit_bundle_sha256` | artifact manifest、活动收据、验证报告和技术审计 | 仅刷新审计 |
+| `presentation_sha256` | 决定页渲染与本地化 | 仅重建页面 |
+
+confirmation request 绑定的是科学决定 hash 和 DecisionBrief 的语义 hash，不再绑定整份
+审计页或重新编译后的 PDF。若最近一次有效用户 receipt 与当前科学身份、决定陈述身份
+完全一致，且不存在 missing、stale、conflict 或无法分类的证据，系统会写入
+`confirmation_continuity_receipt.json`。新 checkpoint 变为通知型阶段并可继续，用户无需
+再次输入 C3 hash。这表示沿用旧的用户科学决定，绝不表示系统或 Agent 替用户做了新的
+科学判断。
+
+只要指标数值或定义、不确定性、cohort、split、样本单位、方法/run 身份、主图语义系列
+或论断边界发生变化，就必须生成新的语义差异并要求作者重新确认。身份未知或不完整时
+严格阻断，不能使用 continuity。
+
+## 有界范围与审查主体
+
+`StageActivityBundle v2` 从上一个合法 checkpoint 边界之后开始，只记录当前窗口，
+不会把历史 checkpoint、resume 或无关重试重新叙述为本轮工作。artifact selection 遵循
+manifest-first 和有界 stage discovery：旧的 `review/checkpoints/`、缓存、lineage 和
+历史结果目录不会仅因文件存在就进入当前决定包。
+
+决定页属于 `author_decision`。内部 ledger、trace、package hash 与审计附件属于
+`internal_audit`；独立稿件审查只能读取 `reviewer_visible` 的材料。`FigureClaimMap`
+将主图与决定陈述绑定；当图表元数据、caption 元数据和当前证据身份中已声明的
+cohort/split 不一致时，系统会阻断确认。
+
+C0 通知型阶段可以记录 `system_acknowledged`；C1/C2 仅在有效的 scoped Agent delegation
+下可由 Agent 审查；C3 科学路线仍由用户确认，除非 continuity receipt 证明用户已经确认了
+完全相同的科学决定。Agent 只能写入 `agent_approved`，不能冒充 `user_confirmed`。
+
+## 命令
 
 ```powershell
-python -m draftpaper_cli.cli show-checkpoint-summary --project <project>
-python -m draftpaper_cli.cli resume --project <project> --checkpoint-hash <hash>
+draftpaper show-checkpoint-summary --project <project> --view decision
+draftpaper show-checkpoint-audit --project <project> --checkpoint-package-id <id>
+draftpaper compare-checkpoint-decision --project <project> --against latest-confirmed
+draftpaper explain-reconfirmation --project <project> --checkpoint-package-id <id>
+draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id>
+draftpaper show-confirmation-continuity --project <project> --checkpoint-type core_evidence
+draftpaper rebuild-checkpoint-presentation --project <project> --checkpoint-package-id <id>
+draftpaper resume --project <project> --checkpoint-hash <hash>
 ```
 
-启用受控 Agent 审查时，先由用户显式配置一次策略和授权范围：
+`compare-checkpoint-decision`、`explain-reconfirmation` 和
+`validate-checkpoint-readability` 为只读命令。重建 presentation 只会重写两个 HTML
+与可读性报告，不会改变科学决定指纹，也不会制造新的确认义务。
 
-```powershell
-python -m draftpaper_cli.cli configure-review-policy --project <project> --mode balanced
-python -m draftpaper_cli.cli grant-agent-review --project <project> --scope data,methods --max-risk C1 --expires-at <ISO-8601 时间>
-python -m draftpaper_cli.cli evaluate-checkpoint-authority --project <project> --checkpoint-hash <hash>
-```
-
-delegation 会绑定项目、策略 hash、运行时身份、风险等级、阶段、可选修订周期、
-过期时间和允许的 change class。过期、撤销、篡改、summary hash 改变、运行时不一致、
-未解决阻断项或外部副作用都会阻止 Agent 审查；撤销会写独立 receipt，不会改写原授权
-文件。
-
-Agent 必须给出摘要路径、重点产物路径、未解决事项数量、审查主体、确认含义和一条
-合法命令，不能只显示“请确认”。当前版本按阶段或一次外部编辑批次生成一个原子
-确认点；多 claim 独立分治仍不属于当前版本。
-
-`blocked`、`stale`、`preview_only`、身份缺失和 `legacy_unqualified` 页面不得
-提供确认命令。匿名 fixture showcase 可以同时记录 `test_mode=true` 和
-`test_auto_confirmation=true` 以测试页面流程，但该标记不能进入真实项目的
-确认记录、ledger 或 active pointer。
-
-其中 `stage_activity_bundle.json` 是 Agent/CLI 活动、事务和 artifact diff 的事实汇总；
-`change_report.json` 汇总本阶段生成、修改、部署、验证和失败的内容；
-`unresolved_issues.json` 是未解决事项的机器可读投影；`agent_payload.json` 保存
-Agent 需要展示的项目相对路径、本机绝对路径、重点产物和审查含义。它们与摘要、
-artifact manifest 和 confirmation request 一起缺一不可。摘要样式、时间戳和本机
-绝对路径变化不会改变科学 checkpoint hash，但上游证据变化会使旧 checkpoint 失效。
-
-## 完整阶段产物与事务变更
-
-HTML 中将两类信息分开显示。**完整阶段产物**是用户需要审阅的范围：
-本阶段相关的全部图表、表格、文字报告、运行清单、证据文件和代码文件，
-包括 checkpoint 前已经存在且本次没有发生字节变化的文件。**事务变更**只
-记录相对上一份 passport 快照的新增、修改、部署、失败和未变化项。因此，
-事务变更为空并不表示本阶段没有生成或交付内容。
-
-对于 `core_evidence`，摘要会读取项目内的核心证据报告、结果有效性与论断
-支撑报告、指标 CSV 的有限预览、图表元数据以及图表到绘图代码的追踪记录。
-每个产物都显示项目相对路径、本地哈希、用途，并在可能时显示图像或有限行数
-的表格预览。HTML 是完整产物的审阅索引，不替代原始文件；原始路径和哈希仍
-是最终依据。
-
-如果上游证据已经发生漂移，先使用只读预览命令：
-
-```powershell
-python -m draftpaper_cli.cli preview-checkpoint-summary --project <project> --checkpoint-hash <hash>
-```
-
-预览会写入派生的 `*-preview` 包，但不会修改 checkpoint ledger 或索引。预览
-明确不可消费，并隐藏 resume 确认命令。应先处理漂移并生成新的 canonical
-checkpoint，再请求用户进行人工确认。
+`blocked`、`stale`、`preview_only`、身份缺失、legacy 或 conflict 的成果包都不能显示
+作者确认命令。`preview-checkpoint-summary` 仍只生成不可消费的派生包。匿名 fixture 可使用
+`test_auto_confirmation=true`，但该标记绝不能确认真实项目。
 
 ## 运行时身份升级
 
-`session-preflight` 默认会阻止旧项目继续使用不同的 wheel、源码提交、命令
-注册表、schema 或 Skill。只有确认当前代码版本已经完成发布候选验证后，才可
-显式接受运行时更新：
+当 wheel、源码提交、命令注册表、schema registry 或 workflow Skill 与项目中记录的
+runtime 不一致时，`session-preflight` 会阻止旧项目继续。完成发布候选验证后，才能显式
+接受该 runtime migration：
 
 ```powershell
 python -m draftpaper_cli.cli session-preflight --project <project> --accept-runtime-update
 ```
 
-该选项只更新 `.draftpaper/runtime_lock.json` 并写入 runtime migration receipt，
-不会修改研究蓝图、passport、数据、方法、结果或任何科学 checkpoint。没有明确
-接受时不要使用该选项；运行时更新完成后仍必须重新执行 `status`、
-`verify-next-action` 和相应的科学证据门禁。
+该命令只更新 `.draftpaper/runtime_lock.json` 并写入 migration receipt，不会改写研究证据、
+科学决定或 checkpoint 成果包。

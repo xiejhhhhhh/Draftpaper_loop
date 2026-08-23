@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.40.0。** Draftpaper-loop 新增学科感知的文献身份与证据抓取闭环：学科化 provider 先发现候选，对称学科冲突和分层主题锚点先筛选，shortlist 再核验 DOI、标题、作者与年份；Core 内置的 vendored paper-fetch adapter 默认只按证据需求补抓全文，并在抓取后依据真实元数据和正文重新评分。`discipline_unknown` 不再被当作满分匹配，生态学与天文学等困难跨学科误召回会进入 review 或 quarantine，不能进入活动快照、引用池和 Agent 写作上下文。双语文献 HTML 会汇总发现、身份解析、全文决策、抓取后状态和隔离原因。v0.39.0 的分级 Agent 审查、活动事实阶段叙事、不可变科学基线和纵向漂移治理继续保留；pypdf 仍是默认本地 PDF 解析器，MinerU 仍是可选升级。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.41.0。** 人工确认点现在将“作者要确认的科学决定”与“技术审计”分开：默认的 `stage_summary.zh-CN.html` 是短小、绑定证据的可读决定页，说明确认对象、相对上次的语义变化、科学上下文、主图、论断边界、排除范围和重新确认条件；`stage_audit.zh-CN.html` 保留完整活动、产物、验证和 hash 审计。科学决定指纹可区分真正的数据/方法/cohort/split/指标/图表/论断变化与 manifest、HTML、引用映射或 PDF 重建；科学内容相同则写入 continuity receipt，不再反复要求 C3。v0.40.0 的学科感知文献身份与按需全文闭环继续保留。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -49,7 +49,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
-**确认点透明度与运行时身份。** 每次人工确认前，Draftpaper-loop 都会生成中文阶段总结 HTML、artifact manifest、confirmation request 和未解决事项，并在 Agent 框同时给出项目相对路径和本机绝对路径。`session-preflight` 会在写入项目之前绑定源码 checkout、wheel、Python、CommandSpec、schema registry、Skill 副本和 plugin catalog。
+**确认点透明度与运行时身份。** 每次人工确认前，Draftpaper-loop 都会生成中文可读决定页、独立技术审计页、artifact manifest、confirmation request、DecisionBrief、科学指纹和可读性报告。Agent 会先给出决定页的项目相对路径与本机绝对路径，再给审计页路径和确认含义。`session-preflight` 会在写入项目之前绑定源码 checkout、wheel、Python、CommandSpec、schema registry、Skill 副本和 plugin catalog。
 <!-- /capability:checkpoint_summary_and_runtime_handshake -->
 
 <!-- capability:metadata_first_research_code_sources -->
@@ -68,7 +68,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 操作方式见[学科感知文献检索与身份核验](docs/discipline_aware_literature.zh-CN.md)。
 <!-- /capability:discipline_aware_literature_identity -->
 
-**证据身份与完整阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v4` 阶段包通过同源的 JSON/HTML/Agent 载荷展示完整阶段产物、事务变化、实际 Agent 活动、审查要求、决定主体、科学基线、证据身份、验证状态、恢复路线、hash，以及项目相对路径和本机绝对路径。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
+**证据身份与可读阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v5` 将作者可读的 `HumanDecisionBrief` 与完整审计包分离，记录 scientific/audit/presentation 三类指纹，将 StageActivity 限定在当前 checkpoint window，并把主图与决定陈述绑定。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
 
 ### 从早期版本到当前框架
 
@@ -79,6 +79,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - **v0.34-v0.35：全学科文献质量与文档证据。** Query Contract v2 保留多语言主题锚点，provider 按学科和语言规划，相关性与角色覆盖由内容证据决定，本地 PDF 规范化为绑定 work identity 的 evidence passage。pypdf 是默认路径；官方 MinerU Agent 只在授权且满足质量条件时升级；自建 CPU/GPU MinerU 只通过通用 endpoint 合同和部署建议支持。
 - **v0.36-v0.37：代码来源、阶段透明度与发布质量闭环。** 保留文献时同步发现 GitHub/Zenodo metadata-only 代码来源，保留 version DOI、paper-era lineage、许可证和 provider receipt；人工确认前生成中文阶段成果包并返回双重路径；runtime preflight、语义漂移治理、归档安全审查、Ruff no-new-debt、源码/wheel/Skill/schema parity 和 Definition of Done 审计共同保护发布一致性。stars/forks 和论文/软件引用量用于候选排序与解释，不能替代科研验证。
 - **v0.37.1-v0.40：委托审查、纵向一致性与文献身份闭环。** 分级 Agent delegation、StageActivityBundle、不可变科学基线和 canonical facts 保护多轮执行；Query Contract v3、对称学科冲突、默认身份解析、按需全文、抓取后复核、active snapshot 可达性和可回滚 quarantine 共同阻止跨学科误召回及历史 orphan 重新进入写作上下文。
+- **v0.41：可读科学确认与语义连续性。** v5 checkpoint 让决定页可读而不丢失技术审计；科学、审计与呈现身份分离。派生产物或呈现重建会沿用有效用户确认；指标、cohort、split、方法、图表语义或论断边界变化会用明确的语义差异重新打开 C3。
 
 版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
 
@@ -179,12 +180,12 @@ idea、已有数据、项目代码与文献
 3. **最终稿与发布确认**：一起查看作者补全 packet、候选 PDF、最终引用审计、两位盲评意见和 release hash。
 
 在展示上述任一确认点之前，Draftpaper-loop 会先在
-`review/checkpoints/<checkpoint_id>/` 写出一个离线中文成果包。用户应先打开
-`stage_summary.zh-CN.html`，查看本阶段生成、修改、部署、验证、失败和未解决
-事项，以及需要检查的具体文件。Agent 同时给出项目相对路径和当前机器绝对路径，
-并提供唯一确认命令。`stage_summary.json`、`artifact_manifest.json` 和
-`confirmation_request.json` 将确认绑定到语义/evidence identity；上游科研内容
-改变后旧 checkpoint 会失效。详见[人工确认点成果包](docs/human_checkpoints.zh-CN.md)。
+`review/checkpoints/<checkpoint_id>/` 写出一个离线成果包。用户应先打开
+`stage_summary.zh-CN.html`：它是正式作者决定页，展示科学问题、相对上次的语义变化、
+主事实与主图、论断边界、排除范围和重新确认条件；`stage_audit.zh-CN.html` 才保存完整
+技术审计。Agent 会同时给出两页的项目相对路径和本机绝对路径。决定是否需要新的 C3
+由 `scientific_decision_sha256` 而非不断变化的审计包 hash 决定；科学内容未变时会使用
+continuity receipt。详见[人工确认点成果包](docs/human_checkpoints.zh-CN.md)。
 
 ### 结果支撑不足时的两条路线
 
@@ -502,6 +503,13 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.41.0（2026-08-23）-- 可读科学决定与语义重确认
+
+- 新建 checkpoint 使用 `dpl.checkpoint_summary.v5`：`stage_summary.zh-CN.html` 成为正式作者决定页，`stage_audit.zh-CN.html` 保留完整技术审计；两者来自同一 canonical package，不再需要 Agent 在项目外另做可读 sidecar。
+- 新增 `HumanDecisionBrief`、`scientific_decision_fingerprint_v1`、审计/呈现指纹、有界 `StageActivityBundle v2`、`FigureClaimMap`、可读性检查和 manifest-first scope，使用户可理解确认内容而不牺牲可追溯性。
+- confirmation request 改为绑定科学决定和 Brief 语义。HTML、PDF、manifest、引用映射及其它派生产物重建不再反复触发 C3；科学内容不变时写入 continuity receipt 并作为通知型阶段继续。指标、不确定性、cohort、split、样本单位、方法/run、图表语义或论断边界变化仍严格要求新的作者决定。
+- 新增 `show-checkpoint-audit`、`compare-checkpoint-decision`、`explain-reconfirmation`、`validate-checkpoint-readability`、`show-confirmation-continuity` 和 `rebuild-checkpoint-presentation`；Agent 载荷优先返回可读页与审计页的准确路径、语义差异和确认含义。
+
 ### v0.40.0（2026-08-20）-- 学科感知文献身份核验与按需全文
 
 - Query Contract 升级为 v3，将实体/项目锚点、学科锚点、方法锚点、通用词和中英文同义词组分层计分；`population`、`classification`、`catalog`、`diversity` 等共享词不能单独通过主题门禁。

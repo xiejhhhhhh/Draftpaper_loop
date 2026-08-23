@@ -225,6 +225,16 @@ def route_stage_code(project: str | Path, *, mode: str = "copy", keep_compat_lau
         source = state.path / item["source_path"]
         target = state.path / item["canonical_path"]
         if item["owner_stage"] in {"data", "methods"}:
+            # ``code/`` is a compatibility workspace.  Once a project owns a
+            # stage-local implementation, re-running a trace must not copy an
+            # older compatibility launcher over that canonical source.
+            if (
+                item["source_path"].startswith("code/")
+                and source.resolve() != target.resolve()
+                and target.exists()
+            ):
+                routed.append({**item, "routed": False, "route_action": "preserve_existing_stage_owned"})
+                continue
             _copy_or_move(source, target, mode)
             routed.append({**item, "routed": True})
             if keep_compat_launchers and item["source_path"].startswith("code/") and mode == "move":
@@ -380,6 +390,22 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
         for path in _scan_python_files(state.path)
         if _project_relative(state.path, path).startswith(("methods/plotting/", "methods/scripts/"))
     ]
+    # Prefer the selected-run dependency closure whenever the execution
+    # manifest identifies an entry point.  The previous filename heuristic
+    # only searched ``methods/scripts`` and could bind a current figure to an
+    # obsolete compatibility launcher while its real renderer lived in
+    # ``methods/src``.  A closure binds the executable entry point together
+    # with every project-local module it imports.
+    try:
+        from .reproducibility_bundle import python_dependency_closure, selected_run_roots
+
+        execution_files = [
+            _project_relative(state.path, path)
+            for path in python_dependency_closure(state.path, selected_run_roots(state.path))
+            if "/tests/" not in _project_relative(state.path, path)
+        ]
+    except Exception:
+        execution_files = []
     run_manifest = _read_json(state.path / "methods" / "run_manifest.yaml", {})
     resolved_evidence = _read_json(state.path / "results" / "resolved_result_evidence.json", {})
     count_report = _read_json(state.path / "results" / "count_identity_report.json", {})
@@ -396,10 +422,20 @@ def trace_figures_to_code(project: str | Path) -> dict[str, Any]:
     for item in figures or []:
         figure_id = str(item.get("figure_id") or item.get("storyboard_id") or Path(str(item.get("path") or "")).stem)
         matched = []
-        for relative in plotting_files:
+        for relative in execution_files:
             text = _read_text(state.path / relative)
             if figure_id in text or Path(str(item.get("path") or "")).name in text or "figure" in relative:
                 matched.append(relative)
+        # A run-level closure is deliberately retained even when only the
+        # renderer names a particular figure: preprocessing, diagnostics, and
+        # input resolution can materially affect every output in that run.
+        if matched and execution_files:
+            matched = list(execution_files)
+        if not matched:
+            for relative in plotting_files:
+                text = _read_text(state.path / relative)
+                if figure_id in text or Path(str(item.get("path") or "")).name in text or "figure" in relative:
+                    matched.append(relative)
         if not matched and plotting_files:
             matched = [plotting_files[0]]
         figure_relative = str(item.get("path") or "").replace("\\", "/")

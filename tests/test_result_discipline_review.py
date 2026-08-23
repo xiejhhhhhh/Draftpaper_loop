@@ -26,6 +26,58 @@ def test_result_review_repairs_incomplete_trace_without_routing_to_plugin_rescue
     assert saved["recommended_next_action"]["command"] == "write-introduction"
 
 
+def test_result_review_reuses_the_core_evidence_bound_figure_quality_report(tmp_path, monkeypatch) -> None:
+    import draftpaper_cli.result_discipline_review as module
+    from draftpaper_cli.evidence_snapshot import confirmation_artifact_hash
+
+    project = create_project(
+        root=tmp_path,
+        idea="Snapshot-bound figure quality",
+        field="machine learning",
+        target_journal="Test",
+    ).path
+    (project / "results" / "results.tex").write_text("Figure 1 summarizes the result.\n", encoding="utf-8")
+    (project / "results" / "figure_plugin_trace_report.json").write_text(
+        json.dumps({"decision": "pass", "figure_checks": []}),
+        encoding="utf-8",
+    )
+    quality_path = project / "results" / "scientific_figure_quality_report.json"
+    quality_path.write_text(
+        json.dumps({"decision": "pass", "score": 1.0, "marker": "human-confirmed"}),
+        encoding="utf-8",
+    )
+    (project / "core_evidence" / "core_evidence_report.json").write_text(
+        json.dumps({
+            "input_artifact_hashes": {
+                "results/scientific_figure_quality_report.json": confirmation_artifact_hash(quality_path),
+            }
+        }),
+        encoding="utf-8",
+    )
+    before = quality_path.read_bytes()
+    monkeypatch.setattr(
+        module,
+        "build_results_narrative_contract",
+        lambda *args, **kwargs: {"figure_groups": [{}, {}, {}]},
+    )
+    monkeypatch.setattr(
+        module,
+        "assess_results_manuscript_quality",
+        lambda *args, **kwargs: {"decision": "pass", "score": 1.0, "issues": []},
+    )
+
+    def fail_if_reassessed(*args, **kwargs):
+        raise AssertionError("A core-evidence-bound figure-quality report must not be regenerated.")
+
+    monkeypatch.setattr(module, "assess_scientific_figure_quality", fail_if_reassessed)
+
+    result = module.review_results_with_discipline_rules(project)
+
+    assert result["decision"] == "pass"
+    assert quality_path.read_bytes() == before
+
+
+
 def test_result_review_flags_untraceable_metric_and_internal_artifact_language(tmp_path) -> None:
     from draftpaper_cli.result_discipline_review import review_results_with_discipline_rules
 
@@ -45,6 +97,29 @@ def test_result_review_flags_untraceable_metric_and_internal_artifact_language(t
     assert all(item["severity"] == "repair_required" for item in saved["results_semantic_audit"]["issues"] if item["kind"] != "missing_figure_interpretation")
     assert saved["recommended_next_action"]["command"] == "prepare-results-semantic-repair"
     assert not (project / "review" / "result_support_reopen_request.json").exists()
+
+
+def test_result_review_ignores_figure_star_asset_paths_but_not_prose_paths(tmp_path) -> None:
+    from draftpaper_cli import result_discipline_review as module
+
+    project = create_project(root=tmp_path, idea="Figure-star path audit", field="geography", target_journal="Test").path
+    text = (
+        "Figure~\\ref{fig:one} summarizes the registered evidence domain.\n"
+        "\\begin{figure*}\n"
+        "\\includegraphics{results/figures/fig_01.png}\n"
+        "\\caption{Evidence domain.}\n"
+        "\\label{fig:one}\n"
+        "\\end{figure*}\n"
+    )
+
+    audit = module._audit_results_semantics(project, text)
+
+    assert not any(item["kind"] == "internal_artifact_language" for item in audit["issues"])
+    prose_audit = module._audit_results_semantics(
+        project,
+        text + "The value was copied from results/tables/metrics.csv.\n",
+    )
+    assert any(item["kind"] == "internal_artifact_language" for item in prose_audit["issues"])
 
 
 def test_result_review_reopens_result_support_for_evidence_failures(tmp_path, monkeypatch) -> None:

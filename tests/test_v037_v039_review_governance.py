@@ -23,15 +23,19 @@ from draftpaper_cli.scientific_baseline import create_scientific_baseline
 from draftpaper_cli.workflow_macros import continue_workflow
 
 
-def test_v4_checkpoint_contains_activity_narrative_and_is_hash_valid(tmp_path: Path) -> None:
-    project = create_project(root=tmp_path / "project", idea="v4 checkpoint", field="generic").path
+def test_v5_checkpoint_separates_decision_page_from_activity_audit_and_is_hash_valid(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path / "project", idea="v5 checkpoint", field="generic").path
     checkpoint = checkpoint_project(project, stage="data")
     summary_path = project / checkpoint["checkpoint_summary"]["stage_summary_json"]
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    assert summary["schema_version"] == "dpl.checkpoint_summary.v4"
+    assert summary["schema_version"] == "dpl.checkpoint_summary.v5"
     assert summary["stage_activity_bundle"]["actions"]
     assert summary["review_requirement"] == "agent_delegable"
-    assert "Agent实际工作" in (summary_path.parent / "stage_summary.zh-CN.html").read_text(encoding="utf-8")
+    decision_html = (summary_path.parent / "stage_summary.zh-CN.html").read_text(encoding="utf-8")
+    audit_html = (summary_path.parent / "stage_audit.zh-CN.html").read_text(encoding="utf-8")
+    assert "本次确认什么" in decision_html
+    assert "Agent实际工作" not in decision_html
+    assert "Agent实际工作" in audit_html
     ledger_event = json.loads((project / "checkpoint_ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
     assert validate_checkpoint_summary(project, ledger_event)["valid"] is True
 
@@ -220,8 +224,8 @@ def test_revocation_preserves_original_delegation_and_blocks_future_review(tmp_p
     assert evaluate_checkpoint_authority(project, checkpoint_hash=checkpoint["checkpoint_hash"])["can_agent_review"] is False
 
 
-def test_v4_checkpoint_requires_activity_companion(tmp_path: Path) -> None:
-    project = create_project(root=tmp_path / "project", idea="v4 companion", field="generic").path
+def test_v5_checkpoint_requires_activity_companion(tmp_path: Path) -> None:
+    project = create_project(root=tmp_path / "project", idea="v5 companion", field="generic").path
     checkpoint = checkpoint_project(project, stage="data")
     summary_dir = project / checkpoint["checkpoint_summary"]["project_relative_dir"]
     (summary_dir / "stage_activity_bundle.json").unlink()

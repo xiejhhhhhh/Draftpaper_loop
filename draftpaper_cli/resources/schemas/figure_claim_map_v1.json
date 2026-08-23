@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.figure_claim_map.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_type", "entries", "figure_claim_map_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.figure_claim_map.v1"},
+    "checkpoint_type": {"type": "string"},
+    "entries": {"type": "array"},
+    "figure_claim_map_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

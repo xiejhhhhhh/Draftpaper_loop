@@ -1,125 +1,123 @@
 # Human Checkpoint Packages
 
-The current checkpoint contract is `dpl.checkpoint_summary.v4`. v1/v2
-summaries remain readable for audit, and v3 packages remain read-compatible;
-legacy packages are not upgraded in place. v4 adds review requirement,
-decision actor, StageActivityBundle, and scientific-baseline references.
+New checkpoints use `dpl.checkpoint_summary.v5`. v1/v2 records are read-only
+legacy packages; v3/v4 remain readable and are never overwritten or silently
+treated as a v5 scientific decision.
 
-Draftpaper-loop pauses for a human decision only after it has written one
-portable checkpoint package. The package is offline and reviewable without the
-CLI or a web service:
+## What the author opens first
+
+Every v5 checkpoint writes a portable package under
+`review/checkpoints/<checkpoint_id>/`:
 
 ```text
-review/checkpoints/<checkpoint_id>/
-├── stage_summary.zh-CN.html
-├── stage_summary.json
-├── stage_activity_bundle.json
-├── artifact_manifest.json
-├── confirmation_request.json
-├── change_report.json
-├── unresolved_issues.json
-└── agent_payload.json
+stage_summary.zh-CN.html              # readable author decision page
+stage_audit.zh-CN.html                # complete technical audit page
+stage_summary.json                    # v5 package contract
+human_decision_brief_v1.json          # facts and decision statements shown to the author
+scientific_decision_fingerprint_v1.json
+checkpoint_audit_fingerprint_v1.json
+checkpoint_presentation_fingerprint_v1.json
+stage_activity_bundle.json
+artifact_manifest.json
+figure_claim_map_v1.json
+confirmation_request.json
+agent_payload.json
+checkpoint_readability_report.json
 ```
 
-The Chinese HTML is the primary user-facing artifact. It explains the stage
-purpose, scientific summary, generated files, modified files, deployments and
-bindings, validation results, failures, unresolved issues, primary inspection
-targets, confirmation meaning, rejection route, and the exact confirmation
-command. Each path is shown relative to the project and, in the Agent response,
-as an absolute path on the current machine.
+Open `stage_summary.zh-CN.html` first. It is the formal, hash-bound decision
+page, not a reduced sidecar made by an Agent. In roughly one minute it states:
 
-The v4 summary explicitly records `identity`, `core_metrics`, `sample_flow`,
-`review_state`, `review_requirement`, `decision_status`, `decision_actor_type`,
-`stage_activity_bundle`, `baseline_refs`, `confirmation_contract`, and the
-recovery route. The HTML, JSON, and Agent payload are projections of the same
-summary facts. `confirmable` means that the machine contract passed; it does
-not mean that the user has confirmed the scientific interpretation. An
-authorized Agent decision is `agent_approved`, never `user_confirmed`; C3
-remains human-only.
+- what scientific decision is requested;
+- what changed since the last valid author decision;
+- the sample, validation design, main result, main figures, and claim boundary;
+- what is explicitly outside this confirmation;
+- what would reopen scientific confirmation; and
+- the readable deliverables and next action.
 
-Checkpoint state and decision authority are separate. C0 notification packages
-are system-acknowledged and may continue automatically while remaining fully
-inspectable. C1 packages may be reviewed by an Agent only under a current,
-hash-bound delegation. C2 packages additionally require explicit scientific-
-freeze authority and an independent reviewer Agent. C3 scientific routes,
-external side effects, licenses, author identity, and release remain human-only.
-Delegation eligibility is rechecked against the policy hash, runtime identity,
-scope, revision cycle, expiry, change-class boundary, unresolved items, and
-summary validation before every Agent decision. Revocation writes a separate
-receipt and never rewrites the original delegation file.
+`stage_audit.zh-CN.html` contains the full technical trail: bounded current
+activity window, artifact inventory, transaction delta, validation tables,
+evidence identity, hashes, and recovery details. It is linked from the decision
+page but is not required for ordinary author comprehension.
 
-The checkpoint binds semantic and evidence identities, not report timestamps,
-HTML styling, or machine-specific absolute paths. Changing an upstream data,
-method, run, metric, cohort, or evidence artifact invalidates the old
-checkpoint. A stale checkpoint cannot be consumed by `resume`.
+## Decision identity and continuity
 
-Use:
+v5 separates three identities:
+
+| Identity | Covers | Effect of a change |
+|---|---|---|
+| `scientific_decision_sha256` | data/cohort/split/sample unit, method/run, metric/uncertainty, figure semantics, and claim boundary | new C3 author decision |
+| `audit_bundle_sha256` | artifact manifest, activity receipts, validation reports, and technical audit | audit refresh only |
+| `presentation_sha256` | decision-page rendering and localization | page rebuild only |
+
+The confirmation request binds the scientific decision hash and the semantic
+DecisionBrief hash, not the full audit page or a regenerated PDF. If the latest
+valid user receipt has exactly the same scientific and brief identities, and no
+missing, stale, conflict, or unclassified evidence exists, Draftpaper-loop
+writes `confirmation_continuity_receipt.json`. The new checkpoint becomes a
+notification and can continue without asking the author to enter another C3
+hash. This preserves the previous user decision; it never pretends that a
+system or Agent made a new scientific decision.
+
+Changes to a metric value or definition, uncertainty, cohort, split, sample
+unit, method/run identity, figure semantic series, or claim boundary always
+create a new scientific delta and require a new author decision. Unknown or
+incomplete identity is fail-closed and cannot use continuity.
+
+## Bounded scope and review authority
+
+`StageActivityBundle v2` begins after the previous checkpoint boundary and
+does not narrate historic checkpoints, resumes, or unrelated retries. Artifact
+selection is manifest-first with bounded stage discovery; old
+`review/checkpoints/`, cache, lineage, and historical result directories are
+not promoted into a current decision package merely because they exist.
+
+The decision page is author-visible. Internal ledgers, trace rows, package
+hashes, and audit attachments remain `internal_audit`; independent manuscript
+review must consume only `reviewer_visible` material. `FigureClaimMap` binds a
+main figure to its decision statement and blocks declared cohort/split conflicts
+between figure metadata, caption metadata, and the active evidence identity.
+
+C0 notification packages may record `system_acknowledged`; C1/C2 packages may
+use a valid scoped Agent delegation; C3 scientific routes remain human-only
+unless a continuity receipt proves that the author has already confirmed the
+identical scientific decision. An Agent may record `agent_approved`, never
+`user_confirmed`.
+
+## Commands
 
 ```powershell
-python -m draftpaper_cli.cli show-checkpoint-summary --project <project>
-python -m draftpaper_cli.cli resume --project <project> --checkpoint-hash <hash>
+draftpaper show-checkpoint-summary --project <project> --view decision
+draftpaper show-checkpoint-audit --project <project> --checkpoint-package-id <id>
+draftpaper compare-checkpoint-decision --project <project> --against latest-confirmed
+draftpaper explain-reconfirmation --project <project> --checkpoint-package-id <id>
+draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id>
+draftpaper show-confirmation-continuity --project <project> --checkpoint-type core_evidence
+draftpaper rebuild-checkpoint-presentation --project <project> --checkpoint-package-id <id>
+draftpaper resume --project <project> --checkpoint-hash <hash>
 ```
 
-The Agent must show the summary path, primary artifact paths, unresolved issue
-count, confirmation meaning, and one command. It must never ask for an
-unexplained “please confirm”. The current version groups one stage or external
-edit batch into one atomic checkpoint; multi-claim decomposition remains a
-future feature.
+`compare-checkpoint-decision`, `explain-reconfirmation`, and
+`validate-checkpoint-readability` are read-only. Rebuilding presentation can
+rewrite only the two HTML files and readability report; it does not alter the
+scientific decision fingerprint or create a new confirmation obligation.
 
-`blocked`, `stale`, `preview_only`, identity-missing, and `legacy_unqualified`
-pages must not expose a confirmation command. An anonymous fixture showcase may
-set `test_mode=true` and `test_auto_confirmation=true` to exercise the page
-flow, but those markers must never enter a real project's confirmation record,
-ledger, or active pointer.
-
-`change_report.json` is the machine-readable summary of generated, modified,
-deployed, validated, and failed content. `unresolved_issues.json` is the
-structured unresolved-issue projection, and `agent_payload.json` contains the
-exact relative/absolute paths, primary artifacts, confirmation meaning, and
-the single confirmation command. All companions are required for a consumable
-checkpoint. Presentation-only changes to the HTML do not change the scientific
-checkpoint hash, while upstream evidence changes invalidate it.
-
-## Complete deliverables versus transaction changes
-
-The HTML has two separate views. **Complete stage deliverables** is the review
-scope: every relevant figure, table, text report, run manifest, evidence file,
-and code file that belongs to the stage, including artifacts whose bytes were
-unchanged at checkpoint time. **Transaction changes** is only the delta from
-the previous passport snapshot. An empty delta therefore never means that the
-stage produced nothing.
-
-For `core_evidence`, the summary also reads the project-local core-evidence
-report, validity and support reports, metric CSV previews, figure metadata, and
-figure-to-code trace. Each listed artifact has a project-relative link, a local
-hash, a purpose, and an optional image or bounded table preview. The HTML is a
-review index, not a replacement for the original files; the original paths and
-hashes remain the source of truth.
-
-When an upstream artifact has drifted, use the read-only preview command:
-
-```powershell
-python -m draftpaper_cli.cli preview-checkpoint-summary --project <project> --checkpoint-hash <hash>
-```
-
-The preview writes a derived `*-preview` package without changing the ledger or
-checkpoint index. It is explicitly non-consumable and hides the resume command.
-Resolve the drift and create a new canonical checkpoint before asking for a
-human confirmation.
+`blocked`, `stale`, `preview_only`, identity-missing, legacy, or conflict
+packages never expose an author confirmation command. `preview-checkpoint-summary`
+remains a non-consumable derived package. Anonymous fixtures may use
+`test_auto_confirmation=true`, but that marker cannot confirm a real project.
 
 ## Runtime identity updates
 
-`session-preflight` intentionally blocks an existing project when its wheel,
-source commit, command registry, schema, or workflow Skill differs from the
-recorded runtime. After the new runtime has passed release-candidate checks,
-accept the runtime migration explicitly:
+`session-preflight` blocks an existing project when its wheel, source commit,
+command registry, schema registry, or workflow Skill differs from the recorded
+runtime. After release-candidate validation, accept that runtime migration
+explicitly:
 
 ```powershell
 python -m draftpaper_cli.cli session-preflight --project <project> --accept-runtime-update
 ```
 
-This only updates `.draftpaper/runtime_lock.json` and writes a runtime migration
-receipt. It does not change the research plan, passport, data, methods, results,
-or any scientific checkpoint. Without explicit acceptance, do not use the flag;
-after migration, rerun `status`, `verify-next-action`, and the applicable
-scientific evidence gates.
+The command only updates `.draftpaper/runtime_lock.json` and writes a migration
+receipt. It does not alter research evidence, a scientific decision, or a
+checkpoint package.

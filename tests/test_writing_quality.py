@@ -45,6 +45,21 @@ class WritingQualityTests(unittest.TestCase):
 
         self.assertIn("methods_missing_formula", codes)
 
+    def test_results_accepts_a_starred_figure_at_the_end_of_a_subsection(self) -> None:
+        tex = (
+            "\\section{Results}\n"
+            "\\subsection{Full-width result}\n"
+            "The empirical pattern and its scientific boundary are explained here.\n\n"
+            "\\begin{figure*}[htbp]\n"
+            "\\includegraphics{result.png}\n"
+            "\\caption{A full-width result figure.}\n"
+            "\\end{figure*}\n"
+        )
+
+        codes = {issue.code for issue in evaluate_section_quality("results", tex, figure_count=5)}
+
+        self.assertNotIn("result_subsection_missing_figure", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

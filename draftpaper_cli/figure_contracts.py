@@ -145,7 +145,7 @@ def assess_project_figure_contracts(project: str | Path) -> dict[str, Any]:
     """Run project-level figure checks and persist their normalized assessment."""
     root = Path(project)
     try:
-        gate = assess_figure_contracts(root, propagate_stage_state=False)
+        gate = assess_figure_contracts(root, propagate_stage_state=True)
     except FigureContractGateError as exc:
         gate = {"decision": "blocked", "issues": [{"kind": "gate_error", "severity": "blocking", "detail": str(exc)}]}
     try:

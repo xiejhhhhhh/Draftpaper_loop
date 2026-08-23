@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from .project_scaffold import _write_json
 from .project_state import load_project, update_stage_status
@@ -50,7 +50,41 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def _metric_semantics(metric: str) -> str:
+def _is_controlled_implementation_check(metric_context: Mapping[str, Any] | None = None) -> bool:
+    """Return true only for an explicitly declared, controlled implementation check.
+
+    A score such as F1 is not intrinsically a model-performance metric.  For
+    example, an F1 computed against injected audit anomalies checks whether a
+    declared rule implementation recovers its controlled truth set; it is not
+    crop-classification accuracy, external validation, or predictive skill.
+    The distinction must be supplied by registered metric identity metadata,
+    never inferred from a favourable numeric value.
+    """
+
+    context = metric_context or {}
+    validation_design = str(
+        context.get("validation_design_id") or context.get("validation_design") or ""
+    ).strip().lower().replace("-", "_")
+    cohort = str(context.get("cohort_id") or context.get("cohort") or "").strip().lower().replace("-", "_")
+    interpretation = " ".join(
+        str(context.get(key) or "")
+        for key in ("interpretation_scope", "interpretation", "metric_label", "task_id", "sample_unit")
+    ).lower()
+
+    if "controlled_anomaly_injection" in validation_design:
+        return True
+    if "anomaly_injection" in cohort and "controlled" in interpretation:
+        return True
+    return "controlled" in interpretation and (
+        "implementation recovery" in interpretation
+        or "audit anomal" in interpretation
+        or "not crop-classification" in interpretation
+    )
+
+
+def _metric_semantics(metric: str, *, metric_context: Mapping[str, Any] | None = None) -> str:
+    if _is_controlled_implementation_check(metric_context):
+        return "controlled_implementation_check"
     normalized = metric.strip().lower().replace("-", "_")
     if normalized in {"p", "p_value", "pvalue", "p_val", "pval"}:
         return "statistical_significance"
@@ -72,11 +106,16 @@ def _metric_family(metric: Any) -> str:
     return normalized
 
 
-def _default_threshold(metric: str, configured_threshold: Any) -> float | None:
+def _default_threshold(
+    metric: str,
+    configured_threshold: Any,
+    *,
+    metric_context: Mapping[str, Any] | None = None,
+) -> float | None:
     threshold = _to_float(configured_threshold)
     if threshold is not None:
         return threshold
-    semantics = _metric_semantics(metric)
+    semantics = _metric_semantics(metric, metric_context=metric_context)
     if semantics == "statistical_significance":
         return 0.05
     if semantics == "effect_size_correlation":
@@ -84,12 +123,19 @@ def _default_threshold(metric: str, configured_threshold: Any) -> float | None:
     return None
 
 
-def _interpret_metric(metric: str, observed: float | None, threshold: float | None) -> dict[str, Any]:
-    semantics = _metric_semantics(metric)
+def _interpret_metric(
+    metric: str,
+    observed: float | None,
+    threshold: float | None,
+    *,
+    metric_context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    semantics = _metric_semantics(metric, metric_context=metric_context)
     result = {
         "metric_semantics": semantics,
         "evidence_strength": "not_assessed",
         "statistical_interpretation": "",
+        "interpretation_scope": "",
         "metric_issues": [],
     }
     issues: list[str] = result["metric_issues"]
@@ -97,6 +143,22 @@ def _interpret_metric(metric: str, observed: float | None, threshold: float | No
         issues.append(f"Primary metric {metric} is missing from parsed method metrics.")
         result["evidence_strength"] = "missing_metric"
         result["statistical_interpretation"] = "The declared primary metric could not be evaluated from method outputs."
+        return result
+
+    if semantics == "controlled_implementation_check":
+        declared_scope = str((metric_context or {}).get("interpretation_scope") or (metric_context or {}).get("interpretation") or "").strip()
+        result["interpretation_scope"] = declared_scope or (
+            "Controlled implementation recovery only; not crop-classification validation, external validation, or predictive performance."
+        )
+        result["statistical_interpretation"] = (
+            f"The observed {metric}={observed:.3g} measures recovery of controlled audit anomalies against the declared injected truth set. "
+            "It is an implementation check and does not estimate crop-classification accuracy, external validation, or predictive performance."
+        )
+        if threshold is not None and observed < threshold:
+            result["evidence_strength"] = "controlled_implementation_below_threshold"
+            issues.append(f"Controlled implementation check {metric}={observed:.3g} is below threshold {threshold:.3g}.")
+        else:
+            result["evidence_strength"] = "controlled_implementation_recovery"
         return result
 
     if semantics == "statistical_significance":
@@ -213,6 +275,11 @@ def _diagnose_failure(
     elif metric_semantics == "statistical_significance" and evidence_strength == "not_statistically_significant":
         causes.append("method")
         actions.append("Do not treat the tested association as statistically significant; revise the hypothesis test, sample definition, covariates, or claim strength.")
+    elif metric_semantics == "controlled_implementation_check" and minimum_value is not None and metric_value is not None and metric_value < minimum_value:
+        causes.append("method")
+        actions.append(
+            "Inspect the declared audit-rule implementation and injected anomaly truth set; do not reinterpret the controlled recovery score as model performance."
+        )
     elif minimum_value is not None and metric_value is not None and metric_value < minimum_value:
         if "data" not in causes and data_decision == "pass":
             causes.append("method")
@@ -293,6 +360,8 @@ def _render_md(report: dict[str, Any]) -> str:
         "",
         f"Statistical interpretation: {report.get('statistical_interpretation')}",
         "",
+        f"Interpretation scope: {report.get('metric_interpretation_scope')}",
+        "",
         "## Diagnosis",
         "",
     ]
@@ -338,7 +407,6 @@ def assess_result_validity(
     figure_execution_diagnosis = _read_json(state.path / "results" / "figure_execution_diagnosis.json")
     metric = (primary_metric or requirements.get("primary_metric") or "f1").strip().lower()
     threshold = minimum_value if minimum_value is not None else requirements.get("minimum_primary_metric")
-    threshold_float = _default_threshold(metric, threshold)
     metrics = run_manifest.get("metrics") or {}
     resolved_evidence: dict[str, Any] = {}
     try:
@@ -356,9 +424,31 @@ def assess_result_validity(
         if _metric_family(primary.get("metric_name")) == _metric_family(metric)
         else resolved_candidates[0] if resolved_candidates else {}
     )
+    primary_metric_contract = _read_json(state.path / "methods" / "primary_metric_contract.json")
+    metric_context: dict[str, Any] = dict(primary_metric_contract)
+    for key in (
+        "metric_name",
+        "metric_definition_id",
+        "metric_label",
+        "task_id",
+        "cohort_id",
+        "sample_unit",
+        "model",
+        "model_id",
+        "validation_design",
+        "validation_design_id",
+        "split",
+        "split_id",
+        "aggregation",
+        "aggregation_id",
+    ):
+        value = resolved_metric.get(key)
+        if value not in (None, ""):
+            metric_context[key] = value
+    threshold_float = _default_threshold(metric, threshold, metric_context=metric_context)
     observed = _to_float(resolved_metric.get("value")) if resolved_metric else _to_float(metrics.get(metric))
     missing_outputs = _missing_outputs(state.path, run_manifest)
-    metric_interpretation = _interpret_metric(metric, observed, threshold_float)
+    metric_interpretation = _interpret_metric(metric, observed, threshold_float, metric_context=metric_context)
     issues = []
     if run_manifest.get("status") != "success":
         issues.append("Method run manifest is not successful.")
@@ -426,6 +516,9 @@ def assess_result_validity(
         "minimum_value": threshold_float,
         "evidence_strength": evidence_strength,
         "statistical_interpretation": metric_interpretation["statistical_interpretation"],
+        "metric_interpretation_scope": metric_interpretation["interpretation_scope"],
+        "primary_metric_task_id": metric_context.get("task_id") or "",
+        "primary_metric_validation_design_id": metric_context.get("validation_design_id") or metric_context.get("validation_design") or "",
         "issues": issues,
         "failure_causes": causes,
         "recommended_actions": actions,

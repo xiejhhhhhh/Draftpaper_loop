@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.confirmation_continuity_receipt.v1",
+  "type": "object",
+  "required": ["schema_version", "receipt_id", "checkpoint_type", "checkpoint_package_id", "previous_decision_receipt_id", "previous_scientific_decision_sha256", "current_scientific_decision_sha256", "human_brief_semantic_sha256", "current_audit_bundle_sha256", "semantic_delta_class", "decision_effect", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.confirmation_continuity_receipt.v1"},
+    "receipt_id": {"type": "string"},
+    "checkpoint_type": {"type": "string"},
+    "checkpoint_package_id": {"type": "string"},
+    "previous_decision_receipt_id": {"type": "string"},
+    "previous_scientific_decision_sha256": {"type": "string"},
+    "current_scientific_decision_sha256": {"type": "string"},
+    "human_brief_semantic_sha256": {"type": "string"},
+    "current_audit_bundle_sha256": {"type": "string"},
+    "semantic_delta_class": {"const": "no_scientific_change"},
+    "decision_effect": {"const": "preserve_previous_user_confirmation"},
+    "receipt_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

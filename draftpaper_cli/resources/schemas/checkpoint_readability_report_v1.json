@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.checkpoint_readability_report.v1",
+  "type": "object",
+  "required": ["schema_version", "visible_character_count", "table_count", "link_count", "checks", "status", "report_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.checkpoint_readability_report.v1"},
+    "visible_character_count": {"type": "integer"},
+    "table_count": {"type": "integer"},
+    "link_count": {"type": "integer"},
+    "checks": {"type": "object"},
+    "status": {"enum": ["passed", "blocked"]},
+    "report_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

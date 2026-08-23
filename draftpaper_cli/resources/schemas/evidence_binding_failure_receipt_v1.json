@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_binding_failure_receipt.v1",
+  "type": "object",
+  "required": ["schema_version", "failures", "repair_order", "loop_guard", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_binding_failure_receipt.v1"},
+    "failures": {"type": "array"},
+    "recommended_repair_layer": {"type": ["string", "null"]},
+    "repair_order": {"type": "array"},
+    "loop_guard": {"type": "object"},
+    "receipt_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

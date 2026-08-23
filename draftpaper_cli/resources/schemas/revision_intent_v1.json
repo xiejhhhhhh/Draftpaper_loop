@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.revision_intent.v1",
+  "type": "object",
+  "required": ["schema_version", "intent", "allowed_change_classes", "protected_artifacts", "expected_artifacts", "revision_intent_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.revision_intent.v1"},
+    "intent": {"type": "string"},
+    "allowed_change_classes": {"type": "array", "minItems": 1},
+    "protected_artifacts": {"type": "array"},
+    "expected_artifacts": {"type": "array"},
+    "revision_intent_sha256": {"type": "string"}
+  },
+  "additionalProperties": false
+}

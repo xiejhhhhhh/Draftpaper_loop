@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
+import os
 import py_compile
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
+
+
+REVIEW_SAFE_TEST_MARKER = "# draftpaper: review-safe"
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -117,9 +126,48 @@ def python_dependency_closure(root: Path, entry_points: list[Path] | None = None
     module_tokens = {path.stem for path in closure}
     for test in root.glob("methods/tests/test_*.py"):
         text = test.read_text(encoding="utf-8-sig", errors="replace")
-        if any(re.search(rf"\b{re.escape(token)}\b", text) for token in module_tokens):
+        if REVIEW_SAFE_TEST_MARKER in text and any(re.search(rf"\b{re.escape(token)}\b", text) for token in module_tokens):
             closure.add(test.resolve())
     return sorted(closure)
+
+
+def selected_reproducibility_inputs(root: Path, *, include_manifest: bool = True) -> list[Path]:
+    """Return checksummed project-relative inputs declared for anonymous review.
+
+    Projects that do not provide this optional input bundle preserve the
+    existing code-only review behavior.  When a manifest is present, every
+    declared input must be available and match its recorded identity.
+    """
+
+    manifest_path = root / "data" / "reproducibility_inputs" / "manifest.json"
+    if not manifest_path.is_file():
+        return []
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("Reproducibility input manifest is unreadable.") from exc
+    if not str(manifest.get("schema_version") or "").strip():
+        raise ValueError("Reproducibility input manifest has no schema_version.")
+    base = manifest_path.parent.resolve()
+    selected = [manifest_path.resolve()] if include_manifest else []
+    for record in manifest.get("files") or []:
+        if not isinstance(record, dict):
+            raise ValueError("Reproducibility input manifest contains a non-object file record.")
+        relative = str(record.get("path") or "")
+        expected_hash = str(record.get("sha256") or "")
+        expected_size = record.get("size_bytes")
+        candidate = (base / relative).resolve()
+        try:
+            candidate.relative_to(base)
+        except ValueError as exc:
+            raise ValueError(f"Reproducibility input escapes the declared root: {relative}") from exc
+        if not candidate.is_file():
+            raise ValueError(f"Reproducibility input is missing: {relative}")
+        content = candidate.read_bytes()
+        if hashlib.sha256(content).hexdigest() != expected_hash or len(content) != expected_size:
+            raise ValueError(f"Reproducibility input identity mismatch: {relative}")
+        selected.append(candidate)
+    return sorted(set(selected))
 
 
 def smoke_dependency_closure(root: Path, paths: list[Path]) -> dict[str, Any]:
@@ -131,11 +179,66 @@ def smoke_dependency_closure(root: Path, paths: list[Path]) -> dict[str, Any]:
             py_compile.compile(str(path), doraise=True)
         except py_compile.PyCompileError as exc:
             failures.append({"path": path.relative_to(root).as_posix(), "error": str(exc)})
+    clean_room: dict[str, Any] = {
+        "status": "not_run",
+        "review_safe_test_count": 0,
+        "failures": [],
+    }
+    if not failures:
+        with tempfile.TemporaryDirectory(prefix="draftpaper-blind-review-") as temporary:
+            staging = Path(temporary)
+            for path in paths:
+                try:
+                    relative = path.relative_to(root)
+                except ValueError:
+                    continue
+                target = staging / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+            tests = sorted((staging / "methods" / "tests").glob("test_*.py"))
+            tests = [
+                test
+                for test in tests
+                if REVIEW_SAFE_TEST_MARKER in test.read_text(encoding="utf-8-sig", errors="replace")
+            ]
+            clean_room["review_safe_test_count"] = len(tests)
+            if tests:
+                environment = dict(os.environ)
+                source_dir = staging / "methods" / "src"
+                environment["PYTHONPATH"] = str(source_dir) + (
+                    os.pathsep + environment["PYTHONPATH"]
+                    if environment.get("PYTHONPATH")
+                    else ""
+                )
+                completed = subprocess.run(
+                    [sys.executable, "-m", "unittest", "discover", "-s", "methods/tests", "-p", "test_*.py"],
+                    cwd=staging,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    capture_output=True,
+                    timeout=180,
+                    check=False,
+                    env=environment,
+                )
+                clean_room.update(
+                    {
+                        "status": "passed" if completed.returncode == 0 else "blocked",
+                        "returncode": completed.returncode,
+                        "stdout": completed.stdout[-8000:],
+                        "stderr": completed.stderr[-8000:],
+                    }
+                )
+                if completed.returncode != 0:
+                    failures.append({"path": "methods/tests", "error": "clean_room_review_safe_tests_failed"})
+            else:
+                clean_room["status"] = "not_available"
     return {
         "decision": "pass" if not failures else "blocked",
         "compiled_python_file_count": sum(path.suffix == ".py" for path in paths),
+        "clean_room": clean_room,
         "failures": failures,
-        "policy": "The selected-run dependency closure must compile before the anonymous review bundle is released.",
+        "policy": "Selected-run sources must compile; review-safe tests execute from an isolated staging directory when supplied.",
     }
 
 

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
@@ -61,6 +62,48 @@ PDF_OUTPUTS = [
     "latex/main.compile.log",
     "latex/pdf_compile_manifest.json",
 ]
+
+
+def _pdf_compile_input_hashes(project_path: Path) -> dict[str, str]:
+    """Hash the assembled sources and publication assets consumed by LaTeX."""
+    candidates = {
+        project_path / "latex" / "main.tex",
+        project_path / "latex" / "library.bib",
+        *list((project_path / "latex" / "sections").glob("*.tex")),
+        *list((project_path / "latex").glob("*.bst")),
+        *list((project_path / "writing" / "table_fragments").glob("*.tex")),
+        *list((project_path / "results" / "tables").glob("*.tex")),
+        *list((project_path / "results" / "figures").glob("*")),
+    }
+    return {
+        path.relative_to(project_path).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(candidates)
+        if path.is_file()
+    }
+
+
+def pdf_compile_is_current(project: str | Path, manifest: dict[str, Any] | None = None) -> bool:
+    """Return whether the recorded PDF was built from the current assembled inputs."""
+    project_path = Path(project)
+    pdf_path = project_path / "latex" / "main.pdf"
+    if manifest is None:
+        manifest_path = project_path / "latex" / "pdf_compile_manifest.json"
+        if not manifest_path.is_file():
+            return False
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            return False
+    if manifest.get("status") != "success" or not pdf_path.is_file():
+        return False
+    recorded_inputs = manifest.get("input_artifact_hashes")
+    if not isinstance(recorded_inputs, dict) or not recorded_inputs:
+        return False
+    if recorded_inputs != _pdf_compile_input_hashes(project_path):
+        return False
+    return manifest.get("pdf_sha256") == hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+
+
 class LatexAssemblyError(RuntimeError):
     """Raised when final LaTeX assembly would use incomplete or stale inputs."""
 
@@ -418,13 +461,152 @@ def _validate_citations(project_path: Path, sections: dict[str, str]) -> tuple[s
     return citation_keys, bib_keys
 
 
+def _compact_data_roles_table(project_path: Path) -> str | None:
+    """Render the canonical Table 1 values at a readable review width.
+
+    The machine-readable result table retains every registered field.  The
+    manuscript projection uses five wrapped columns and omits only the
+    redundant key-field column, which lets the role, unit, count, audit use,
+    and claim boundary stay readable without a shrink-to-fit transform.
+    """
+    source = project_path / "results" / "tables" / "table_01_data_roles.csv"
+    if not source.is_file():
+        return None
+    try:
+        with source.open("r", encoding="utf-8-sig", newline="") as stream:
+            records = list(csv.DictReader(stream))
+    except (OSError, csv.Error):
+        return None
+    required = {
+        "Dataset or asset",
+        "Analytical role",
+        "Observation unit",
+        "Spatial/temporal support",
+        "n",
+        "Validation use",
+        "Qualification",
+    }
+    if not records or not required.issubset(records[0]):
+        return None
+    rendered_rows = []
+    for record in records:
+        values = [
+            f"{record['Dataset or asset']}; {record['Analytical role']}",
+            f"{record['Observation unit']}; {record['Spatial/temporal support']}",
+            record["n"],
+            record["Validation use"],
+            record["Qualification"],
+        ]
+        rendered_rows.append(" & ".join(_safe_latex_text(value) for value in values) + r" \\")
+    return "\n".join([
+        r"\begin{table*}[!t]",
+        r"\centering",
+        r"\footnotesize",
+        r"\renewcommand{\arraystretch}{1.16}",
+        r"\setlength{\tabcolsep}{3.0pt}",
+        r"\caption{Data sources, analytical units, and validation roles. GEE = Google Earth Engine; CRS = coordinate reference system. Cartographic context and injected anomalies are not independent external ground truth.}",
+        r"\label{tab:data-roles}",
+        r"\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}p{0.20\textwidth}r>{\raggedright\arraybackslash}p{0.24\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}@{}}",
+        r"\toprule",
+        r"\textbf{Asset and declared role} & \textbf{Unit and support} & \textbf{n} & \textbf{Audit or validation use} & \textbf{Interpretive boundary} \\",
+        r"\midrule",
+        *rendered_rows,
+        r"\bottomrule",
+        r"\end{tabular}",
+        r"\end{table*}",
+        "",
+    ])
+
+
+def _compact_self_audit_table(project_path: Path) -> str | None:
+    """Render the canonical B0--B4 ablation in readable audit columns."""
+    source = project_path / "results" / "tables" / "table_02_self_audit_ablation.csv"
+    if not source.is_file():
+        return None
+    try:
+        with source.open("r", encoding="utf-8-sig", newline="") as stream:
+            records = list(csv.DictReader(stream))
+    except (OSError, csv.Error):
+        return None
+    required = {
+        "Variant",
+        "Added rule",
+        "Retained n (%)",
+        "Delta retained n",
+        "Newly flagged n",
+        "Unique support Q",
+        "Reporting units U",
+        "Raw Neff",
+        "Category purity",
+        "Rank stability",
+        "Event denominator",
+    }
+    if not records or not required.issubset(records[0]):
+        return None
+    rendered_rows = []
+    for record in records:
+        values = [
+            record["Variant"],
+            record["Added rule"],
+            f"{record['Retained n (%)']}; delta n = {record['Delta retained n']}",
+            f"{record['Newly flagged n']}; {record['Event denominator']}",
+            f"Q = {record['Unique support Q']}; U = {record['Reporting units U']}; Neff = {record['Raw Neff']}",
+            record["Category purity"],
+            record["Rank stability"],
+        ]
+        rendered_rows.append(" & ".join(_safe_latex_text(value) for value in values) + r" \\")
+    return "\n".join([
+        r"\begin{table*}[!t]",
+        r"\centering",
+        r"\scriptsize",
+        r"\renewcommand{\arraystretch}{1.14}",
+        r"\setlength{\tabcolsep}{2.5pt}",
+        r"\caption{Quantitative self-audit ablation and denominator changes across B0--B4. New-event denominators remain explicit; B2--B4 rank stability is NE (one unit).}",
+        r"\label{tab:self-audit-ablation}",
+        r"\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.23\textwidth}>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}@{}}",
+        r"\toprule",
+        r"\textbf{Variant} & \textbf{Added rule} & \textbf{Retained $n$ and delta} & \textbf{New event and denominator} & \textbf{Support ($Q$, $U$, $N_{\mathrm{eff}}$)} & \textbf{Category purity} & \textbf{Rank stability} \\",
+        r"\midrule",
+        *rendered_rows,
+        r"\bottomrule",
+        r"\end{tabular}",
+        r"\end{table*}",
+        "",
+    ])
+
+
 def _copy_sections(project_path: Path, sections: dict[str, str]) -> list[str]:
     section_dir = project_path / "latex" / "sections"
     section_dir.mkdir(parents=True, exist_ok=True)
     outputs = []
     for name, content in sections.items():
         relative = f"latex/sections/{name}.tex"
-        (project_path / relative).write_text(content, encoding="utf-8")
+        rendered = content
+        if name == "results":
+            compact_table = _compact_data_roles_table(project_path)
+            compact_self_audit = _compact_self_audit_table(project_path)
+            compact_relative = "latex/sections/table_01_data_roles_review.tex"
+            if compact_table is not None:
+                (project_path / compact_relative).write_text(compact_table, encoding="utf-8")
+                outputs.append(compact_relative)
+            compact_self_audit_relative = "latex/sections/table_02_self_audit_ablation_review.tex"
+            if compact_self_audit is not None:
+                (project_path / compact_self_audit_relative).write_text(compact_self_audit, encoding="utf-8")
+                outputs.append(compact_self_audit_relative)
+
+            # Candidate prose refers to publication tables by their semantic
+            # manuscript namespace. Resolve that namespace only in the
+            # assembled source, where the LaTeX working directory is `latex/`.
+            def _resolve_result_table(match: re.Match[str]) -> str:
+                table_name = match.group(1)
+                if compact_table is not None and Path(table_name).stem == "table_01_data_roles":
+                    return r"\input{sections/table_01_data_roles_review}"
+                if compact_self_audit is not None and Path(table_name).stem == "table_02_self_audit_ablation":
+                    return r"\input{sections/table_02_self_audit_ablation_review}"
+                return rf"\input{{../results/tables/{table_name}}}"
+
+            rendered = re.sub(r"\\input\{tables/([^{}\n]+)\}", _resolve_result_table, rendered)
+        (project_path / relative).write_text(rendered, encoding="utf-8")
         outputs.append(relative)
     return outputs
 
@@ -567,8 +749,30 @@ def _render_result_artifacts(project_path: Path) -> tuple[str, list[str]]:
     return "\n\n".join(blocks).rstrip() + ("\n" if blocks else ""), labels
 
 
-def _validate_result_cross_references(sections: dict[str, str], artifact_tex: str) -> None:
+def _semantic_result_table_sources(project_path: Path, source: str) -> list[str]:
+    """Return declared publication-table fragments for cross-reference checks.
+
+    Section candidates refer to result tables through the stable semantic
+    namespace ``tables/<name>``.  The physical table fragments live under
+    ``results/tables`` and are resolved only when assembling the manuscript.
+    Include their labels in the validation source so valid table references
+    are not mistaken for missing manuscript artifacts.
+    """
+    table_dir = project_path / "results" / "tables"
+    fragments: list[str] = []
+    for raw_name in dict.fromkeys(re.findall(r"\\input\{tables/([^{}\n]+)\}", source)):
+        name = Path(raw_name).name
+        table_path = table_dir / name
+        if table_path.suffix.lower() != ".tex":
+            table_path = table_path.with_suffix(".tex")
+        if table_path.is_file():
+            fragments.append(table_path.read_text(encoding="utf-8-sig"))
+    return fragments
+
+
+def _validate_result_cross_references(project_path: Path, sections: dict[str, str], artifact_tex: str) -> None:
     source = "\n".join([*sections.values(), artifact_tex])
+    source = "\n".join([source, *_semantic_result_table_sources(project_path, source)])
     references = set(re.findall(r"\\ref\{([^{}]+)\}", source))
     labels = set(re.findall(r"\\label\{([^{}]+)\}", source))
     unresolved = sorted(reference for reference in references if reference.startswith(("fig:", "tab:")) and reference not in labels)
@@ -770,6 +974,9 @@ def _write_pdf_manifest(project_path: Path, payload: dict[str, Any]) -> None:
         "bbl_sha256": hashlib.sha256(bbl.read_bytes()).hexdigest() if bbl.is_file() else None,
         "engine": "BibTeX",
     }
+    payload["input_artifact_hashes"] = _pdf_compile_input_hashes(project_path)
+    pdf = project_path / "latex" / "main.pdf"
+    payload["pdf_sha256"] = hashlib.sha256(pdf.read_bytes()).hexdigest() if pdf.is_file() else None
     _write_json(project_path / "latex" / "pdf_compile_manifest.json", payload)
     _set_latex_manifest(project_path)
 
@@ -1047,7 +1254,7 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
     _copy_sections(state.path, sections)
     _copy_bibtex(state.path)
     result_artifacts, result_labels = _render_result_artifacts(state.path)
-    _validate_result_cross_references(sections, result_artifacts)
+    _validate_result_cross_references(state.path, sections, result_artifacts)
     (state.path / "latex" / "sections" / "result_artifacts.tex").write_text(result_artifacts, encoding="utf-8")
     main_tex = latex_dir / "main.tex"
     main_tex.write_text(_render_main(state.path, state.metadata), encoding="utf-8")

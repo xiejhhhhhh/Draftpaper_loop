@@ -26,6 +26,7 @@ from .passport import (
 from .project_scaffold import STAGE_ORDER
 from .project_state import ProjectStateError, load_project
 from .stale_sync import detect_artifact_drift
+from .latex_assembly import pdf_compile_is_current
 from .artifact_repository import ArtifactRepository
 from .command_registry import pipeline_stage_commands
 from .writing_coordinator import (
@@ -291,6 +292,15 @@ def _functional_release_is_current(project_path: Path, release: dict[str, Any]) 
     expected = release.get("accepted_candidate_hashes") or {}
     if not isinstance(expected, dict) or not expected:
         return False
+    promoted_snapshot_id = str(
+        _read_report(project_path, "results/promoted_evidence_snapshot.json").get("snapshot_id") or ""
+    )
+    if promoted_snapshot_id:
+        release_snapshot_ids = release.get("evidence_snapshot_ids") or []
+        if not isinstance(release_snapshot_ids, list) or [str(item) for item in release_snapshot_ids] != [
+            promoted_snapshot_id
+        ]:
+            return False
     for section, digest in expected.items():
         candidate = project_path / "writing" / "candidates" / f"{section}.tex"
         if not candidate.is_file():
@@ -300,7 +310,117 @@ def _functional_release_is_current(project_path: Path, release: dict[str, Any]) 
         ).hexdigest()
         if normalized_text_hash != str(digest):
             return False
+        if promoted_snapshot_id:
+            acceptance = _read_report(
+                project_path,
+                f"writing/section_acceptance/{section}.json",
+            )
+            if (
+                acceptance.get("status") != "accepted"
+                or acceptance.get("formal_release_eligible") is not True
+                or acceptance.get("candidate_hash") != normalized_text_hash
+                or acceptance.get("evidence_snapshot_id") != promoted_snapshot_id
+            ):
+                return False
     return True
+
+
+def _independent_review_action(project_path: Path) -> dict[str, Any]:
+    manifest = _read_report(
+        project_path,
+        "quality_checks/blind_reviews/submission_bundle_manifest.json",
+    )
+    bundle_hash = str(manifest.get("bundle_hash") or "")
+    if not bundle_hash:
+        return {
+            "stage": "reproducibility_package",
+            "command": "prepare-independent-manuscript-review",
+            "cli": _cli_for(project_path, "prepare-independent-manuscript-review"),
+            "reason": "Freeze and smoke-test one anonymous manuscript bundle before independent review.",
+        }
+    current_pdf = project_path / "latex" / "main.pdf"
+    frozen_pdf = next(
+        (
+            item
+            for item in ((manifest.get("frozen_artifacts") or {}).get("manuscript") or [])
+            if isinstance(item, dict) and item.get("path") == "latex/main.pdf"
+        ),
+        None,
+    )
+    if (
+        not current_pdf.is_file()
+        or frozen_pdf is not None
+        and frozen_pdf.get("sha256") != hashlib.sha256(current_pdf.read_bytes()).hexdigest()
+    ):
+        return {
+            "stage": "reproducibility_package",
+            "command": "prepare-independent-manuscript-review",
+            "cli": _cli_for(project_path, "prepare-independent-manuscript-review"),
+            "reason": "The anonymous review bundle must be rebuilt from the current compiled manuscript.",
+        }
+    report_paths: dict[str, Path] = {}
+    for slot in ("reviewer_01", "reviewer_02"):
+        report_path = project_path / "quality_checks" / "blind_reviews" / slot / "report.json"
+        report = _read_report(
+            project_path,
+            f"quality_checks/blind_reviews/{slot}/report.json",
+        )
+        if report.get("frozen_submission_bundle_hash") == bundle_hash:
+            report_paths[slot] = report_path
+            continue
+        incoming = project_path / "quality_checks" / "blind_reviews" / f"incoming_{slot}.json"
+        incoming_payload = _read_report(
+            project_path,
+            f"quality_checks/blind_reviews/incoming_{slot}.json",
+        )
+        if incoming_payload.get("frozen_submission_bundle_hash") == bundle_hash:
+            return {
+                "stage": "independent_manuscript_review",
+                "command": "record-independent-manuscript-review",
+                "cli": (
+                    _cli_for(project_path, "record-independent-manuscript-review")
+                    + f' --reviewer {slot} --input "{incoming}"'
+                ),
+                "reason": f"Validate and record the independent report for {slot} against the frozen bundle.",
+                "reviewer": slot,
+                "input": str(incoming),
+            }
+        return {
+            "stage": "independent_manuscript_review",
+            "command": "record-independent-manuscript-review",
+            "cli": None,
+            "reason": f"An independent reviewer must inspect the frozen bundle and provide the structured report for {slot}.",
+            "reviewer": slot,
+            "bundle": "quality_checks/blind_reviews/anonymous_submission_bundle.zip",
+            "bundle_hash": bundle_hash,
+        }
+    aggregate = _read_report(project_path, "quality_checks/blind_reviews/aggregate.json")
+    recorded_hashes = {
+        f"quality_checks/blind_reviews/{slot}/report.json": hashlib.sha256(path.read_bytes()).hexdigest()
+        for slot, path in report_paths.items()
+    }
+    aggregate_current = bool(
+        aggregate.get("frozen_submission_bundle_hash") == bundle_hash
+        and aggregate.get("reviewer_report_sha256") == recorded_hashes
+    )
+    if not aggregate_current:
+        return {
+            "stage": "independent_manuscript_review",
+            "command": "assess-manuscript-quality-release",
+            "cli": _cli_for(project_path, "assess-manuscript-quality-release"),
+            "reason": "Aggregate the two current independent reports into the manuscript release decision.",
+        }
+    if aggregate.get("status") == "passed":
+        return {
+            "stage": "quality_checks",
+            "command": "quality-check",
+            "cli": _cli_for(project_path, "quality-check"),
+            "reason": "Refresh the final quality report with the passing independent-review aggregate.",
+        }
+    return _review_sequence_action(
+        project_path,
+        "The independent manuscript review requires revision",
+    )
 
 
 def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
@@ -347,6 +467,8 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
             from .failure_router import primary_route
 
             route = primary_route(quality)
+            if route and route.get("domain") == "reproducibility_package":
+                return _independent_review_action(project_path)
             if route and route.get("domain") != "manuscript_semantic":
                 command = str(route.get("command") or "diagnose-gate-failures")
                 return {
@@ -740,6 +862,8 @@ def _gate_failure_action(project_path: Path) -> dict[str, Any] | None:
 
         route = primary_route(quality)
         if route:
+            if route.get("domain") == "reproducibility_package":
+                return _independent_review_action(project_path)
             command = str(route.get("command") or "diagnose-gate-failures")
             return {
                 "stage": str(route.get("domain") or "quality_checks"),
@@ -869,9 +993,11 @@ def _next_stage(project_path: Path, metadata: dict[str, Any]) -> str | None:
             if (
                 stage in released_writing_stages
                 and functional_release_current
+                and not stage_meta.get("stale")
             ):
                 # A functional section release freezes the accepted candidate
-                # hashes. Optional manifest backfills cannot supersede it.
+                # hashes. Optional manifest backfills cannot supersede it, but
+                # an explicitly stale scientific section must be regenerated.
                 continue
             if (
                 stage_meta.get("status") in COMPLETE_STATUSES
@@ -1021,6 +1147,17 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
             "command": "reopen-core-evidence",
             "cli": _cli_for(project_path, "reopen-core-evidence") + ' --reason "Upstream scientific evidence requires regeneration."',
             "reason": f"Stage {stage} requires scientific regeneration, so the previously promoted core-evidence snapshot must be explicitly reopened first.",
+        }
+    if (
+        stage in {"quality_checks", None}
+        and (project_path / "latex" / "main.tex").is_file()
+        and not pdf_compile_is_current(project_path)
+    ):
+        return {
+            "stage": "latex",
+            "command": "compile-latex-pdf",
+            "cli": _cli_for(project_path, "compile-latex-pdf"),
+            "reason": "Compile the current assembled LaTeX sources before final review and quality checks.",
         }
     failure_action = _gate_failure_action(project_path)
     if failure_action:
@@ -1257,7 +1394,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
     ):
         pipeline_state = "release_ready"
     elif (state.path / "latex" / "main.pdf").is_file() and command in {
-        "prepare-independent-review", "record-independent-review", "assess-manuscript-quality-release"
+        "prepare-independent-manuscript-review", "record-independent-manuscript-review", "assess-manuscript-quality-release"
     }:
         pipeline_state = "draft_pdf_ready"
     return {
@@ -1288,7 +1425,7 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     passport = load_project_passport(state.path)
     if passport.get("awaiting_checkpoint"):
         raise OrchestratorError("A checkpoint is already awaiting resume.")
-    from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v4
+    from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v5
 
     before_artifacts = load_project_passport(state.path).get("artifacts") or []
     base = {
@@ -1299,18 +1436,18 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         "project_id": state.metadata.get("project_id"),
         "next_action": _next_action(state.path, state.metadata),
     }
-    summary = write_stage_summary_v4(
-        state.path,
-        stage=stage,
-        command="checkpoint",
-        payload={"status": "checkpoint_created", "next_action": base["next_action"], "note": note},
-        before_artifacts=before_artifacts,
-        publish_index=False,
+    # Allocate the immutable package id before rendering.  Earlier versions
+    # rendered a provisional and a final summary solely to discover this id;
+    # that made a checkpoint's own generated files leak into its activity and
+    # scope.  The ledger hash is now allocated first, then one v5 package is
+    # written atomically against that boundary.
+    id_seed = json.dumps(
+        {"stage": stage, "note": note, "created_at": base["created_at"], "project_id": base["project_id"]},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
     )
-    base["checkpoint_id"] = summary["checkpoint_id"]
-    base["stage_summary_sha256"] = summary["stage_summary_sha256"]
-    base["stage_summary_json"] = summary["stage_summary_json"]
-    base["stage_summary_zh_html"] = summary["stage_summary_zh_html"]
+    base["checkpoint_id"] = f"{stage}-{hashlib.sha256(id_seed.encode('utf-8')).hexdigest()[:12]}"
     if stage == "core_evidence":
         try:
             subject = evidence_confirmation_subject(state.path)
@@ -1318,20 +1455,20 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
     base["hash"] = _checkpoint_hash(base)
-    final_summary = write_stage_summary_v4(
+    final_summary = write_stage_summary_v5(
         state.path,
         stage=stage,
         command="checkpoint",
         payload={"status": "checkpoint_created", "next_action": base["next_action"], "note": note},
         before_artifacts=before_artifacts,
-        checkpoint_id=summary["checkpoint_id"],
+        checkpoint_id=base["checkpoint_id"],
         checkpoint_hash=base["hash"],
         publish_index=False,
     )
-    # The final summary is rendered after the checkpoint hash is known.  Bind
-    # the ledger event to that final semantic summary, not the provisional
-    # pre-hash summary written during the first pass.
     base["stage_summary_sha256"] = final_summary["stage_summary_sha256"]
+    base["scientific_decision_sha256"] = final_summary["scientific_decision_sha256"]
+    base["stage_summary_json"] = final_summary["stage_summary_json"]
+    base["stage_summary_zh_html"] = final_summary["stage_summary_zh_html"]
     append_checkpoint_event(state.path, base)
     from .checkpoint_summary import _publish_checkpoint_index
 
@@ -1356,11 +1493,14 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
             "change_report": final_summary["absolute_change_report"],
             "unresolved_issues": final_summary["absolute_unresolved_issues"],
             "agent_payload": final_summary["absolute_agent_payload"],
+            "stage_audit": final_summary["absolute_stage_audit_zh_html"],
+            "human_decision_brief": str((state.path / final_summary["human_decision_brief"]).resolve()),
         },
         "primary_artifacts": agent_artifact_paths(state.path, final_summary["inspection_targets"]),
         "unresolved_issues": final_summary["unresolved_issues"],
         "checkpoint_ledger": str(state.path / PASSPORT_FILES["checkpoint_ledger"]),
         "next_action": base["next_action"],
+        "confirmation_continuity": final_summary["confirmation_continuity"],
     }
 
 

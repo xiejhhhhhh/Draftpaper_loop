@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.scientific_decision_fingerprint.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_type", "canonical_payload", "scientific_decision_sha256", "identity_complete"],
+  "properties": {
+    "schema_version": {"const": "dpl.scientific_decision_fingerprint.v1"},
+    "checkpoint_type": {"type": "string"},
+    "canonical_payload": {"type": "object"},
+    "scientific_decision_sha256": {"type": "string"},
+    "identity_complete": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

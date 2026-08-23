@@ -34,6 +34,7 @@ DECISION_STATUSES = frozenset(
         "not_required",
         "pending",
         "system_acknowledged",
+        "continuity_preserved",
         "agent_approved",
         "user_confirmed",
         "rejected",
@@ -505,12 +506,14 @@ def evaluate_checkpoint_authority(project: str | Path, *, checkpoint_hash: str) 
     def check(name: str, passed: bool, detail: str = "") -> None:
         checks.append({"name": name, "passed": bool(passed), "detail": detail})
 
-    check("current_v4_summary", summary.get("schema_version") == "dpl.checkpoint_summary.v4", "Agent delegation never consumes a legacy or v3 package.")
+    is_current_summary = summary.get("schema_version") in {"dpl.checkpoint_summary.v4", "dpl.checkpoint_summary.v5"}
+    continuity_preserved = bool((summary.get("confirmation_continuity") or {}).get("eligible")) and summary.get("decision_status") == "continuity_preserved"
+    check("current_checkpoint_summary", is_current_summary, "Agent delegation never consumes a legacy or v3 package.")
     check("summary_validation", valid_summary, "; ".join(validation_reasons))
     check("review_state_confirmable", summary.get("review_state") == "confirmable")
     check("no_blocking_unresolved", not _has_blocking_unresolved(summary))
     check("no_external_side_effect", not _has_external_side_effect(summary))
-    check("not_c3", risk != "C3", "C3 routes are always human-only.")
+    check("not_c3_or_preserved_continuity", risk != "C3" or continuity_preserved, "C3 routes are human-only unless the exact prior user scientific decision is preserved.")
 
     delegations = list_delegations(project, active_only=False)
     eligible: list[dict[str, Any]] = []
@@ -572,7 +575,7 @@ def evaluate_checkpoint_authority(project: str | Path, *, checkpoint_hash: str) 
         "risk_class": risk,
         "review_state": summary.get("review_state"),
         "review_requirement": requirement,
-        "decision_status": "pending" if requirement != "notify_only" else "not_required",
+        "decision_status": summary.get("decision_status") or ("pending" if requirement != "notify_only" else "not_required"),
         "policy_mode": policy.get("mode"),
         "policy_sha256": policy_hash,
         "runtime_fingerprint": runtime,
@@ -642,6 +645,9 @@ def review_checkpoint(
         "runtime_fingerprint": authority.get("runtime_fingerprint"),
         "evidence_snapshot_id": _summary_evidence_snapshot(project, checkpoint_hash),
         "baseline_id": _summary_baseline_id(project, checkpoint_hash),
+        "scientific_decision_fingerprint": _summary_scientific_fingerprint(project, checkpoint_hash),
+        "scientific_decision_sha256": (_summary_scientific_fingerprint(project, checkpoint_hash) or {}).get("scientific_decision_sha256"),
+        "human_brief_semantic_sha256": _summary_brief_semantic_sha(project, checkpoint_hash),
         "eligibility_checks": authority.get("eligibility_checks") or [],
         "created_at": utc_now(),
     }
@@ -710,6 +716,9 @@ def record_user_checkpoint_confirmation(
         "runtime_fingerprint": authority.get("runtime_fingerprint"),
         "evidence_snapshot_id": _summary_evidence_snapshot(project, checkpoint_hash),
         "baseline_id": _summary_baseline_id(project, checkpoint_hash),
+        "scientific_decision_fingerprint": _summary_scientific_fingerprint(project, checkpoint_hash),
+        "scientific_decision_sha256": (_summary_scientific_fingerprint(project, checkpoint_hash) or {}).get("scientific_decision_sha256"),
+        "human_brief_semantic_sha256": _summary_brief_semantic_sha(project, checkpoint_hash),
         "eligibility_checks": authority.get("eligibility_checks") or [],
         "note": note,
         "created_at": utc_now(),
@@ -747,6 +756,9 @@ def acknowledge_notification_checkpoint(
         "runtime_fingerprint": authority.get("runtime_fingerprint"),
         "evidence_snapshot_id": _summary_evidence_snapshot(project, checkpoint_hash),
         "baseline_id": _summary_baseline_id(project, checkpoint_hash),
+        "scientific_decision_fingerprint": _summary_scientific_fingerprint(project, checkpoint_hash),
+        "scientific_decision_sha256": (_summary_scientific_fingerprint(project, checkpoint_hash) or {}).get("scientific_decision_sha256"),
+        "human_brief_semantic_sha256": _summary_brief_semantic_sha(project, checkpoint_hash),
         "eligibility_checks": authority.get("eligibility_checks") or [],
         "created_at": utc_now(),
     }
@@ -801,6 +813,17 @@ def _summary_baseline_id(project: str | Path, checkpoint_hash: str) -> str | Non
     summary = _summary_payload(project, checkpoint_hash)
     refs = summary.get("baseline_refs") if isinstance(summary.get("baseline_refs"), dict) else {}
     value = refs.get("active_baseline_id")
+    return str(value) if value else None
+
+
+def _summary_scientific_fingerprint(project: str | Path, checkpoint_hash: str) -> dict[str, Any] | None:
+    summary = _summary_payload(project, checkpoint_hash)
+    payload = summary.get("scientific_decision_fingerprint")
+    return payload if isinstance(payload, dict) else None
+
+
+def _summary_brief_semantic_sha(project: str | Path, checkpoint_hash: str) -> str | None:
+    value = _summary_payload(project, checkpoint_hash).get("human_brief_semantic_sha256")
     return str(value) if value else None
 
 

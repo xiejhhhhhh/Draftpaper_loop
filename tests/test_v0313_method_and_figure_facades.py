@@ -46,3 +46,23 @@ def test_figure_contract_facade_normalizes_one_deduplicated_issue_list() -> None
         "caption_contract",
     ]
     assert all(set(item) >= {"source", "code", "severity", "message"} for item in report["issues"])
+
+
+def test_project_figure_contract_facade_propagates_stage_state(monkeypatch, tmp_path: Path) -> None:
+    import draftpaper_cli.figure_contracts as contracts
+
+    observed: dict[str, object] = {}
+
+    def fake_gate(project: Path, *, propagate_stage_state: bool = True) -> dict[str, object]:
+        observed["project"] = project
+        observed["propagate_stage_state"] = propagate_stage_state
+        return {"decision": "pass", "issues": []}
+
+    monkeypatch.setattr(contracts, "assess_figure_contracts", fake_gate)
+    monkeypatch.setattr(contracts, "validate_confirmed_figure_alignment", lambda project: {"decision": "pass"})
+    monkeypatch.setattr(contracts, "validate_figure_captions", lambda project: {"decision": "pass"})
+
+    report = contracts.assess_project_figure_contracts(tmp_path)
+
+    assert report["decision"] == "pass"
+    assert observed == {"project": tmp_path, "propagate_stage_state": True}

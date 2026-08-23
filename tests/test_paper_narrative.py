@@ -185,6 +185,32 @@ tables: []
             self.assertEqual(revision["iteration"], 1)
             self.assertTrue(repair["tasks"])
 
+    def test_scientific_editor_records_local_paragraph_insertion_without_shift_churn(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            before = project.path / "before.tex"
+            after = project.path / "after.tex"
+            before.write_text(
+                "\\section{Results}\n\n"
+                "First Figure~\\ref{fig:old-first} paragraph.\n\n"
+                "Second Figure~\\ref{fig:old-second} paragraph.\n\n"
+                "Third paragraph.\n\nFourth paragraph.\n",
+                encoding="utf-8",
+            )
+            after.write_text(
+                "\\section{Results}\n\n"
+                "Revised first Figure~\\ref{fig:new-first} paragraph.\n\n"
+                "Inserted paragraph.\n\n"
+                "Second Figure~\\ref{fig:new-second} paragraph.\n\n"
+                "Third paragraph.\n\nFourth paragraph.\n",
+                encoding="utf-8",
+            )
+
+            revision = record_scientific_editor_revision(project.path, "results", before, after, 1)
+
+            self.assertEqual(len(revision["changed_paragraphs"]), 2)
+            self.assertEqual([item["paragraph_index"] for item in revision["changed_paragraphs"]], [1, 2])
+
     def test_scientific_editor_ignores_latex_figure_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = self._project(tmp)
@@ -200,6 +226,23 @@ tables: []
             candidate.write_text(text, encoding="utf-8")
             editor = prepare_scientific_editor(project.path, "results", candidate)
             self.assertFalse(any("internal_artifact_language" in task["issues"] for task in editor["tasks"]))
+
+    def test_scientific_editor_ignores_semantic_result_table_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project(tmp)
+            text = (
+                "\\section{Results}\n\n"
+                "This paragraph establishes the study boundary, explains the observed evidence, and limits "
+                "interpretation to the declared cohort and validation design. It contains enough scientific "
+                "reasoning to stand on its own.\n\n"
+                "\\input{tables/table_01_data_roles}\n"
+            )
+            candidate = project.path / "candidate_with_table.tex"
+            candidate.write_text(text, encoding="utf-8")
+
+            editor = prepare_scientific_editor(project.path, "results", candidate)
+
+            self.assertFalse(any(task["paragraph_index"] == 2 for task in editor["tasks"]))
 
     def test_scientific_editor_aligns_ordered_jobs_without_internal_figure_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -136,6 +137,85 @@ def _write_fake_tool(tool_dir: Path, name: str, *, writes_pdf: bool = False) -> 
 
 
 class LatexAssemblyTests(unittest.TestCase):
+    def test_copy_sections_resolves_semantic_result_table_inputs(self) -> None:
+        from draftpaper_cli.latex_assembly import _copy_sections
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            _copy_sections(
+                project_path,
+                {"results": "\\input{tables/table_01_data_roles}\n"},
+            )
+
+            rendered = (project_path / "latex" / "sections" / "results.tex").read_text(encoding="utf-8")
+            self.assertEqual(rendered, "\\input{../results/tables/table_01_data_roles}\n")
+
+    def test_copy_sections_projects_data_roles_table_at_readable_width(self) -> None:
+        from draftpaper_cli.latex_assembly import _copy_sections
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            source = project_path / "results" / "tables" / "table_01_data_roles.csv"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text(
+                "Dataset or asset,Analytical role,Observation unit,Spatial/temporal support,n,Validation use,Qualification\n"
+                "Asset registry,Audit registry,Asset record,Declared CRS and year,161,Schema audit,Not a label set\n",
+                encoding="utf-8",
+            )
+
+            _copy_sections(project_path, {"results": "\\input{tables/table_01_data_roles}\n"})
+
+            rendered = (project_path / "latex" / "sections" / "results.tex").read_text(encoding="utf-8")
+            table = (project_path / "latex" / "sections" / "table_01_data_roles_review.tex").read_text(encoding="utf-8")
+            self.assertEqual(rendered, "\\input{sections/table_01_data_roles_review}\n")
+            self.assertIn(r"\footnotesize", table)
+            self.assertNotIn(r"\resizebox", table)
+            self.assertIn(r"\label{tab:data-roles}", table)
+
+    def test_copy_sections_projects_self_audit_table_at_readable_width(self) -> None:
+        from draftpaper_cli.latex_assembly import _copy_sections
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            source = project_path / "results" / "tables" / "table_02_self_audit_ablation.csv"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text(
+                "Variant,Added rule,Retained n (%),Delta retained n,Newly flagged n,Unique support Q,Reporting units U,Raw Neff,Category purity,Rank stability,Event denominator\n"
+                "B0,Self audit check,3000 (100%),0,0 [baseline],154,84,2.2207,0.7710,rho=0.641,registered sample cohort (N=3000)\n",
+                encoding="utf-8",
+            )
+
+            _copy_sections(project_path, {"results": "\\input{tables/table_02_self_audit_ablation}\n"})
+
+            rendered = (project_path / "latex" / "sections" / "results.tex").read_text(encoding="utf-8")
+            table = (project_path / "latex" / "sections" / "table_02_self_audit_ablation_review.tex").read_text(encoding="utf-8")
+            self.assertEqual(rendered, "\\input{sections/table_02_self_audit_ablation_review}\n")
+            self.assertNotIn(r"\resizebox", table)
+            self.assertIn(r"\label{tab:self-audit-ablation}", table)
+
+    def test_result_cross_reference_uses_declared_semantic_table_fragment(self) -> None:
+        from draftpaper_cli.latex_assembly import _validate_result_cross_references
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            table_path = project_path / "results" / "tables" / "table_03_inward_buffer_diagnostics.tex"
+            table_path.parent.mkdir(parents=True, exist_ok=True)
+            table_path.write_text(
+                "\\begin{table}\\caption{Buffer diagnostics.}\\label{tab:inward-buffer-diagnostics}\\end{table}\n",
+                encoding="utf-8",
+            )
+
+            _validate_result_cross_references(
+                project_path,
+                {
+                    "results": (
+                        "Table~\\ref{tab:inward-buffer-diagnostics} summarizes the diagnostic.\n"
+                        "\\input{tables/table_03_inward_buffer_diagnostics}\n"
+                    ),
+                },
+                "",
+            )
+
     def test_aastex_metadata_without_authors_receives_review_placeholder_affiliation(self) -> None:
         from draftpaper_cli.latex_assembly import _apply_manuscript_metadata, _ensure_aastex_author_block
 
@@ -382,7 +462,7 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertIn("no local LaTeX engine", manifest["message"])
 
     def test_compile_latex_pdf_uses_local_engine_and_writes_manifest(self) -> None:
-        from draftpaper_cli.latex_assembly import assemble_latex, compile_latex_pdf
+        from draftpaper_cli.latex_assembly import assemble_latex, compile_latex_pdf, pdf_compile_is_current
 
         with tempfile.TemporaryDirectory() as tmp:
             project_path = prepared_project(tmp)
@@ -402,8 +482,14 @@ class LatexAssemblyTests(unittest.TestCase):
             manifest = json.loads((project_path / "latex" / "pdf_compile_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "success")
             self.assertIn("xelatex", manifest["engine"])
+            self.assertTrue(manifest["input_artifact_hashes"])
+            self.assertEqual(manifest["pdf_sha256"], hashlib.sha256((project_path / "latex" / "main.pdf").read_bytes()).hexdigest())
+            self.assertTrue(pdf_compile_is_current(project_path, manifest))
             skipped = [item for item in manifest["commands"] if item.get("status") == "skipped"]
             self.assertEqual(skipped[0]["reason"], "aux file does not request BibTeX")
+
+            (project_path / "latex" / "main.tex").write_text("changed after compilation\n", encoding="utf-8")
+            self.assertFalse(pdf_compile_is_current(project_path, manifest))
 
     def test_local_bibstyle_fallback_copies_available_natbib_style(self) -> None:
         from draftpaper_cli.latex_assembly import _ensure_local_bibstyle_fallback

@@ -1,4 +1,5 @@
 from draftpaper_cli.cli_output import compact_payload
+from draftpaper_cli.command_registry import command_spec
 from draftpaper_cli.failure_router import classify_failure, primary_route, route_failure
 
 
@@ -9,7 +10,8 @@ def test_failure_domains_do_not_route_citations_or_reproducibility_to_figures() 
     assert citation.command == "sync-artifact-stale"
     assert "plan-figures" in citation.prohibited_commands
     assert reproducibility.domain == "reproducibility_package"
-    assert reproducibility.command == "prepare-independent-review"
+    assert reproducibility.command == "prepare-independent-manuscript-review"
+    assert command_spec(reproducibility.command) is not None
     assert "plan-figures" in reproducibility.prohibited_commands
 
 

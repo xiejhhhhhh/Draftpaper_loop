@@ -50,7 +50,13 @@ def create_scientific_baseline(
     if facts is not None:
         registry_result = create_fact_registry(root, facts=facts, baseline_id=None, revision_cycle_id=revision_cycle_id, parent_registry_id=(registry or {}).get("registry_id"))
         registry = registry_result["registry"]
-    artifact_hashes = {
+    # A scientific baseline must not churn because an HTML report, manifest,
+    # citation map, PDF layout, or unrelated project file was regenerated.
+    # Use the same canonical set as the promoted evidence snapshot instead.
+    from .evidence_snapshot import _artifact_hashes
+
+    artifact_hashes = _artifact_hashes(root)
+    audit_artifact_hashes = {
         str(item.get("path")): str(item.get("evidence_sha256") or item.get("semantic_sha256") or item.get("byte_sha256") or item.get("sha256"))
         for item in collect_artifacts(root)
         if item.get("path")
@@ -76,12 +82,24 @@ def create_scientific_baseline(
         "manuscript_snapshot_id": _first_from_project(root, ("latex/manuscript_snapshot.json", "writing/manuscript_snapshot.json"), ("snapshot_id", "manuscript_snapshot_id")),
         "decision_receipt_id": decision_receipt_id,
         "runtime_fingerprint": _first_from_project(root, (".draftpaper/runtime_lock.json",), ("runtime_fingerprint", "source_commit")),
+        "canonical_scientific_artifact_hashes": artifact_hashes,
+        # Retained as a read-compatible alias for consumers of baseline v1.
         "artifact_hashes": artifact_hashes,
         "reason": reason,
         "created_at": utc_now(),
     }
-    baseline_id = "baseline-" + _hash(core)[:20]
-    payload = {"schema_version": BASELINE_SCHEMA, "baseline_id": baseline_id, **core}
+    scientific_baseline_sha256 = _hash(core)
+    # The immutable record also retains an audit-only artifact snapshot for
+    # external-edit restoration.  It is not used as scientific identity by
+    # checkpoint continuity or evidence promotion.
+    baseline_id = "baseline-" + _hash({"scientific_baseline_sha256": scientific_baseline_sha256, "audit_artifact_hashes": audit_artifact_hashes})[:20]
+    payload = {
+        "schema_version": BASELINE_SCHEMA,
+        "baseline_id": baseline_id,
+        "scientific_baseline_sha256": scientific_baseline_sha256,
+        **core,
+        "audit_artifact_hashes": audit_artifact_hashes,
+    }
     payload["baseline_sha256"] = _hash(payload)
     path = root / BASELINE_DIR / f"{baseline_id}.json"
     if path.exists():

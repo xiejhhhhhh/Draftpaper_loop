@@ -43,6 +43,9 @@ SCORE_DIMENSIONS = {
     "prose_naturalness_cross_section_coherence",
 }
 
+REVIEW_VISIBLE_TABLE_SUFFIXES = {".csv", ".parquet", ".fits", ".fit", ".fz", ".npy", ".npz"}
+INTERNAL_HASH_VERIFIER_FILENAMES = {"verify_frozen_release.py"}
+
 REPRODUCIBILITY_ALLOWLIST = (
     "data/source_provenance.json",
     "methods/model_provenance.json",
@@ -52,6 +55,14 @@ REPRODUCIBILITY_GLOBS = (
     "data/scripts/*.py",
     "methods/scripts/*.py",
     "methods/tests/*.py",
+)
+RELEASE_REPRODUCIBILITY_PATHS = (
+    "reproducibility/README.md",
+    "methods/requirements-publication.txt",
+    "methods/scripts/reproduce_full_analysis.py",
+    "methods/src/event_level_multimodal_pipeline.py",
+    "methods/src/time_aware_transformer.py",
+    "methods/src/multimodal_fusion.py",
 )
 PRIVATE_LOCATOR_PATTERNS = (
     re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/]"),
@@ -157,7 +168,7 @@ def _declared_identity(root: Path) -> list[str]:
             if name and "anonymous" not in name.lower():
                 names.append(name)
     main = (root / "latex" / "main.tex").read_text(encoding="utf-8-sig", errors="replace")
-    for value in re.findall(r"\\author\{([^}]*)\}", main):
+    for value in re.findall(r"\\author(?:\[[^\]]*\])?\{([^}]*)\}", main):
         cleaned = re.sub(r"\\\w+\{([^}]*)\}", r"\1", value).strip()
         if cleaned and not any(token in cleaned.lower() for token in ("anonymous", "placeholder", "to be supplied")):
             names.append(cleaned)
@@ -201,10 +212,11 @@ def _pdf_is_extractable(pdf: Path) -> bool:
 
 def _anonymize_review_tex(tex: str) -> str:
     tex = re.sub(
-        r"(?m)^\s*\\(?:author|affiliation|email|orcid|ead|cortext|address)(?:\[[^\]]*\])?[^\n]*\n?",
+        r"(?m)^\s*\\(?:author|affiliation|email|orcid|ead|cortext|address|correspondingauthor)(?:\[[^\]]*\])?[^\n]*\n?",
         "",
         tex,
     )
+    tex = re.sub(r"\\shortauthors\{[^{}]*\}", r"\\shortauthors{Anonymous}", tex)
     title = re.search(r"\\title\{[^{}]*\}", tex)
     author_block = (
         "\n\\author{Anonymous Manuscript}"
@@ -216,6 +228,12 @@ def _anonymize_review_tex(tex: str) -> str:
     tex = re.sub(
         r"\\begin\{acknowledgments\}.*?\\end\{acknowledgments\}",
         "\\\\begin{acknowledgments}\nWithheld for anonymous review.\n\\\\end{acknowledgments}",
+        tex,
+        flags=re.S,
+    )
+    tex = re.sub(
+        r"\\begin\{contribution\}.*?\\end\{contribution\}",
+        "\\\\begin{contribution}\nWithheld for anonymous review.\n\\\\end{contribution}",
         tex,
         flags=re.S,
     )
@@ -244,7 +262,7 @@ def _anonymize_review_tex(tex: str) -> str:
     return tex
 
 
-def _compile_anonymous_review_pdf(root: Path) -> tuple[Path, list[Path]]:
+def _compile_anonymous_review_pdf(root: Path, identities: list[str]) -> tuple[Path, list[Path]]:
     source_dir = root / "latex"
     build_dir = root / REVIEW_ROOT / "anonymous_build"
     if build_dir.exists():
@@ -256,7 +274,19 @@ def _compile_anonymous_review_pdf(root: Path) -> tuple[Path, list[Path]]:
     copied_sources = [main]
     for source in (source_dir / "sections").glob("*.tex"):
         target = build_dir / "sections" / source.name
-        shutil.copyfile(source, target)
+        if source.name == "availability.tex":
+            section_text = (
+                "\\section{Data and Code Availability}\\label{sec:data-code-availability}\n\n"
+                "Repository and persistent-identifier details are withheld for anonymous review. "
+                "The frozen review supplement contains the author-generated reproducibility materials "
+                "needed to assess the reported analysis; third-party survey products are not redistributed.\n"
+            )
+        else:
+            section_text = _sanitize_anonymous_text(
+                source.read_text(encoding="utf-8-sig", errors="replace"), identities
+            )
+        section_text = section_text.replace("../writing/", "../../../writing/")
+        target.write_text(section_text, encoding="utf-8")
         copied_sources.append(target)
     shutil.copyfile(source_dir / "library.bib", build_dir / "library.bib")
 
@@ -323,15 +353,35 @@ def _sanitize_anonymous_text(text: str, identities: list[str]) -> str:
 
 
 def _review_reproducibility_files(root: Path, identities: list[str]) -> tuple[list[Path], list[dict[str, str]]]:
-    from .reproducibility_bundle import python_dependency_closure, selected_run_roots
+    from .reproducibility_bundle import (
+        python_dependency_closure,
+        selected_reproducibility_inputs,
+        selected_run_roots,
+    )
 
-    candidates = [root / relative for relative in REPRODUCIBILITY_ALLOWLIST]
-    candidates.extend(python_dependency_closure(root, selected_run_roots(root)))
+    release_readme = root / "reproducibility" / "README.md"
+    if release_readme.is_file():
+        # A project can publish a deliberately curated source-and-data release.
+        # Do not silently substitute internal verification scripts for this
+        # reader-facing package.
+        candidates = [root / relative for relative in RELEASE_REPRODUCIBILITY_PATHS]
+    else:
+        candidates = [root / relative for relative in REPRODUCIBILITY_ALLOWLIST]
+        candidates.extend(python_dependency_closure(root, selected_run_roots(root)))
+    # The manifest is a coordinator-only integrity record. Its declared data
+    # files are reviewable; the checksums themselves are not.
+    candidates.extend(selected_reproducibility_inputs(root, include_manifest=False))
     accepted: list[Path] = []
     excluded: list[dict[str, str]] = []
     lowered_identities = [item.lower() for item in identities if item.strip()]
     for path in sorted({item.resolve() for item in candidates if item.is_file()}):
         relative = path.relative_to(root.resolve()).as_posix()
+        if path.name.lower() in INTERNAL_HASH_VERIFIER_FILENAMES:
+            excluded.append({"path": relative, "reason": "internal_hash_verifier"})
+            continue
+        if path.suffix.lower() in {".fits", ".fit", ".fz", ".npy", ".npz", ".parquet"}:
+            accepted.append(path)
+            continue
         try:
             text = path.read_text(encoding="utf-8-sig", errors="replace")
         except OSError:
@@ -354,20 +404,6 @@ def _review_reproducibility_files(root: Path, identities: list[str]) -> tuple[li
     return accepted, excluded
 
 
-def _anonymous_evidence_copy(root: Path, path: Path, identities: list[str]) -> Path:
-    if not path.is_file():
-        return path
-    text = path.read_text(encoding="utf-8-sig", errors="replace")
-    if not any(pattern.search(text) for pattern in ANONYMOUS_IDENTITY_PATTERNS) and not any(
-        identity.lower() in text.lower() for identity in identities
-    ):
-        return path
-    target = root / REVIEW_ROOT / "anonymous_build" / "evidence" / path.name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(_sanitize_anonymous_text(text, identities), encoding="utf-8")
-    return target
-
-
 def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]:
     state = load_project(project)
     root = state.path
@@ -383,7 +419,7 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
                 "The review PDF still contains declared author identity. Compile an anonymized manuscript before preparing the bundle: "
                 + ", ".join(visible)
             )
-        pdf, anonymous_sources = _compile_anonymous_review_pdf(root)
+        pdf, anonymous_sources = _compile_anonymous_review_pdf(root, identities)
         remaining = _pdf_contains_identity(pdf, identities)
         if remaining or _pdf_contains_generic_identity(pdf):
             raise IndependentReviewError("Anonymous review build still contains declared identity: " + ", ".join(remaining))
@@ -392,11 +428,15 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
     from .reproducibility_bundle import selected_result_assets, smoke_dependency_closure
 
     figures, tables = selected_result_assets(root)
-    references = [root / "references" / "reference_registry.json", root / "references" / "library.bib"]
-    snapshots = [
-        _anonymous_evidence_copy(root, root / "results" / "promoted_evidence_snapshot.json", identities),
-        _anonymous_evidence_copy(root, root / "core_evidence" / "core_evidence_report.json", identities),
-    ]
+    # Result-support JSON reports can contain internal evidence routing or
+    # hashes.  Reviewers receive the numerical data products used to support
+    # the manuscript, not internal release-verification records.
+    tables = [path for path in tables if path.suffix.lower() in REVIEW_VISIBLE_TABLE_SUFFIXES]
+    # Independent reviewers inspect only the publication-facing manuscript,
+    # result data, bibliography source, and reproducibility code.  Project
+    # hashes, evidence snapshots, audit reports, and review ledgers remain
+    # coordinator-only material and must never enter the reviewer archive.
+    references = [root / "references" / "library.bib"]
     reproducibility, excluded_reproducibility = _review_reproducibility_files(root, identities)
     reproducibility_smoke = smoke_dependency_closure(root, reproducibility)
     if reproducibility_smoke.get("decision") != "pass":
@@ -406,7 +446,6 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
         "figures": _relative_hashes(root, figures),
         "tables": _relative_hashes(root, tables),
         "references": _relative_hashes(root, references),
-        "evidence": _relative_hashes(root, snapshots),
         "reproducibility": _relative_hashes(root, reproducibility),
     }
     core = {
@@ -422,6 +461,13 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
             "reviewers_cannot_see_other_reports": True,
             "automatic_scores_withheld": True,
             "prior_audits_withheld": True,
+            "internal_hashes_and_evidence_withheld": True,
+            "reviewer_visible_scope": [
+                "anonymous manuscript PDF and LaTeX source",
+                "publication figures and supporting result tables",
+                "BibTeX bibliography source",
+                "analysis and plotting code",
+            ],
             "required_dimensions": sorted(SCORE_DIMENSIONS),
             "required_grounding": ["page", "section", "figure_or_table_when_applicable"],
             "reproducibility_supplement_is_anonymized_and_locator_safe": True,
@@ -460,7 +506,6 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
     zip_path = root / BUNDLE_ZIP
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("bundle_manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
         for relative, content in _frozen_archive_payloads(root, frozen):
             archive.writestr(relative, content)
     return {
@@ -470,7 +515,7 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
         "bundle": BUNDLE_ZIP,
         "manifest": BUNDLE_MANIFEST,
         "reviewer_slots": ["reviewer_01", "reviewer_02"],
-        "policy": "Both reviewers inspect this same anonymous generated manuscript. No original manuscript, A/B comparison, quality ratio or unblinding input is permitted.",
+        "policy": "Both reviewers inspect the same anonymous source-and-data package. Internal hashes, evidence assessments, prior audits, and reviewer reports are withheld.",
     }
 
 

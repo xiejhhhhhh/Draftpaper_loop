@@ -231,6 +231,27 @@ def _write_aas_html(base: Path) -> Path:
 
 
 class QualityGateUpgradeTests(unittest.TestCase):
+    def test_pdf_success_manifest_without_current_source_hashes_is_stale(self) -> None:
+        from draftpaper_cli.quality_gate import _check_pdf
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            latex = project_path / "latex"
+            latex.mkdir(parents=True)
+            (latex / "main.tex").write_text("current source\n", encoding="utf-8")
+            (latex / "library.bib").write_text("", encoding="utf-8")
+            (latex / "main.pdf").write_bytes(b"old pdf")
+            (latex / "pdf_compile_manifest.json").write_text(
+                json.dumps({"status": "success"}),
+                encoding="utf-8",
+            )
+            issues = []
+
+            report = _check_pdf(project_path, issues)
+
+            self.assertEqual(report["status"], "stale")
+            self.assertIn("pdf_compile_stale", {issue.code for issue in issues})
+
     def test_quality_check_passes_for_complete_assembled_project(self) -> None:
         from draftpaper_cli.paper_quality_parity import assess_paper_quality_parity
         from draftpaper_cli.quality_gate import run_quality_check

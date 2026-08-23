@@ -412,7 +412,10 @@ def reconcile_project_drift(
     changes = [item for item in packet.get("changes") or [] if isinstance(item, dict)]
     semantic_changes = [item for item in changes if item.get("scientific_semantics_changed") is True]
     baseline = load_active_baseline(root) or {}
-    baseline_hashes = baseline.get("artifact_hashes") or {}
+    # v0.41 stores a narrow canonical scientific set separately from the
+    # audit snapshot.  Restoration detection is an audit operation, so it may
+    # use the latter without turning all project files into scientific facts.
+    baseline_hashes = baseline.get("audit_artifact_hashes") or baseline.get("artifact_hashes") or {}
     current_artifacts = {
         str(item.get("path") or ""): item
         for item in collect_artifacts(root)

@@ -22,6 +22,8 @@ SNAPSHOT_ARTIFACTS = [
     "results/figure_plan.json",
     "results/figure_contracts.json",
     "results/figure_metadata.json",
+]
+DERIVED_AUDIT_ARTIFACTS = [
     "results/figure_semantic_validation_report.json",
     "results/confirmed_figure_alignment_report.json",
     "results/figure_caption_validation_report.json",
@@ -111,6 +113,14 @@ def _artifact_hashes(project_path: Path) -> dict[str, str]:
     }
 
 
+def _derived_audit_hashes(project_path: Path) -> dict[str, str]:
+    return {
+        path.relative_to(project_path).as_posix(): confirmation_artifact_hash(path)
+        for path in (project_path / item for item in DERIVED_AUDIT_ARTIFACTS)
+        if path.is_file()
+    }
+
+
 def _snapshot_id(artifacts: dict[str, str]) -> str:
     canonical = json.dumps(artifacts, sort_keys=True, ensure_ascii=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:20]
@@ -170,12 +180,16 @@ def create_evidence_snapshot(project: str | Path) -> dict[str, Any]:
     """Freeze the scientific evidence version accepted at the human checkpoint."""
     state = load_project(project)
     artifacts = _artifact_hashes(state.path)
+    derived_audit_artifacts = _derived_audit_hashes(state.path)
     payload = {
         "schema_version": "dpl.evidence_snapshot.v2",
         "snapshot_id": _snapshot_id(artifacts),
         "promoted_at": utc_now(),
         "status": "promoted",
         "artifacts": artifacts,
+        "canonical_scientific_artifacts": artifacts,
+        "derived_audit_artifacts": derived_audit_artifacts,
+        "audit_artifacts_reopen_core_evidence": False,
         "reopen_required_on_change": True,
     }
     _write_json(state.path / PROMOTED_EVIDENCE_SNAPSHOT_JSON, payload)

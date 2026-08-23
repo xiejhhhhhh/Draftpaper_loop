@@ -130,6 +130,19 @@ class StageOwnedCodeTests(unittest.TestCase):
             self.assertTrue((project.path / "results" / "figure_code_trace.json").exists())
             self.assertEqual(trace["traces"][0]["code_files"][0], "methods/plotting/make_final_figures.py")
 
+    def test_rerouting_preserves_existing_stage_owned_implementation(self) -> None:
+        from draftpaper_cli.code_ownership import route_stage_code
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._project_with_legacy_code(tmp)
+            route_stage_code(project.path)
+            canonical = project.path / "methods" / "scripts" / "train_timeaware_transformer.py"
+            canonical.write_text("# project-specific canonical implementation\n", encoding="utf-8")
+
+            route_stage_code(project.path)
+
+            self.assertEqual(canonical.read_text(encoding="utf-8"), "# project-specific canonical implementation\n")
+
     def test_cli_stage_code_commands(self) -> None:
         from draftpaper_cli.passport import refresh_project_passport
 

@@ -48,9 +48,20 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
 
 
+def _citation_weight_for_sort(entry: dict[str, Any]) -> float:
+    """Return a sortable weight while preserving unevaluated values in output."""
+    value = entry.get("citation_weight")
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _extract_literature_methods(items: list[dict[str, Any]], limit: int = 10) -> list[dict[str, Any]]:
     extracted: list[dict[str, Any]] = []
-    for item in sorted(items, key=lambda entry: entry.get("citation_weight", 0), reverse=True):
+    for item in sorted(items, key=_citation_weight_for_sort, reverse=True):
         summary = item.get("deep_summary") or {}
         method_text = str(summary.get("methods") or item.get("abstract") or "").strip()
         if not method_text:

@@ -648,6 +648,8 @@ def _check_latex_hygiene(project_path: Path, issues: list[QualityIssue]) -> dict
 
 
 def _check_pdf(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]:
+    from .latex_assembly import pdf_compile_is_current
+
     manifest_path = project_path / "latex" / "pdf_compile_manifest.json"
     pdf_path = project_path / "latex" / "main.pdf"
     if not manifest_path.exists():
@@ -660,6 +662,14 @@ def _check_pdf(project_path: Path, issues: list[QualityIssue]) -> dict[str, Any]
         issues.append(QualityIssue("warning", "pdf_compile_skipped", str(manifest.get("message") or "PDF compilation skipped."), "latex/pdf_compile_manifest.json"))
     elif status == "success" and not pdf_path.exists():
         issues.append(QualityIssue("error", "pdf_missing_after_success", "PDF manifest says success but latex/main.pdf is missing.", "latex/main.pdf"))
+    elif status == "success" and not pdf_compile_is_current(project_path, manifest):
+        status = "stale"
+        issues.append(QualityIssue(
+            "error",
+            "pdf_compile_stale",
+            "latex/main.pdf was not compiled from the current assembled LaTeX sources and publication assets.",
+            "latex/pdf_compile_manifest.json",
+        ))
     return {"status": status, "pdf_exists": pdf_path.exists(), "manifest": str(manifest_path)}
 
 

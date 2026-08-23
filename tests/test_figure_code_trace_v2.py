@@ -39,3 +39,30 @@ def test_trace_v2_becomes_stale_after_figure_or_code_changes(tmp_path) -> None:
     issue_kinds = {issue["kind"] for check in validation["checks"] for issue in check["issues"]}
     assert "figure_hash_changed" in issue_kinds
     assert "producer_code_hash_changed" in issue_kinds
+
+
+def test_trace_prefers_selected_run_dependency_closure(tmp_path) -> None:
+    project, _, _ = _fixture(tmp_path)
+    entry = project / "methods" / "scripts" / "run_analysis.py"
+    renderer = project / "methods" / "src" / "project_renderer.py"
+    entry.parent.mkdir(parents=True, exist_ok=True)
+    renderer.parent.mkdir(parents=True, exist_ok=True)
+    entry.write_text(
+        "from pathlib import Path\nimport sys\nsys.path.insert(0, str(Path(__file__).parents[1] / 'src'))\nfrom project_renderer import render\nrender()\n",
+        encoding="utf-8",
+    )
+    renderer.write_text("def render():\n    return 'figure1.png'\n", encoding="utf-8")
+    (project / "methods" / "run_manifest.yaml").write_text(
+        json.dumps({
+            "status": "success",
+            "run_id": "run-1",
+            "run_transaction_id": "txn-1",
+            "command_argv": ["python", "methods/scripts/run_analysis.py"],
+        }),
+        encoding="utf-8",
+    )
+
+    report = trace_figures_to_code(project)
+
+    assert "methods/scripts/run_analysis.py" in report["traces"][0]["code_files"]
+    assert "methods/src/project_renderer.py" in report["traces"][0]["code_files"]

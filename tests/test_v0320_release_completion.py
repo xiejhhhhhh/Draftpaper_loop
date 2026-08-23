@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from draftpaper_cli.release_contract import build_release_manifest
+from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.toml_compat import tomllib
 
 
@@ -16,9 +17,9 @@ def test_v0320_release_identity_and_scope() -> None:
     version = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     manifest = build_release_manifest()
 
-    assert version == "0.40.0"
+    assert version == "0.41.0"
     assert manifest["package_version"] == version
-    assert manifest["command_count"] == 252
+    assert manifest["command_count"] == len(COMMAND_SPECS)
     assert len(manifest["release_fixture_ids"]) == 5
     assert manifest["resource_schema_status"] == "passed"
     assert manifest["release_security"]["public_pypi_publish"] is False

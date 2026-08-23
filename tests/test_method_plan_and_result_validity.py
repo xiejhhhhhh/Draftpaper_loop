@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
-from draftpaper_cli.method_plan import _resolve_primary_metric, collect_method_plan
+from draftpaper_cli.method_plan import _extract_literature_methods, _resolve_primary_metric, collect_method_plan
 from draftpaper_cli.passport import refresh_project_passport
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.references import write_reference_outputs
@@ -46,6 +46,17 @@ def prepare_project(project_path: Path) -> None:
 
 
 class MethodPlanAndResultValidityTests(unittest.TestCase):
+    def test_literature_method_sort_accepts_unevaluated_citation_weights(self) -> None:
+        items = [
+            {"bibtex_key": "Alpha", "citation_weight": None, "abstract": "Alpha method."},
+            {"bibtex_key": "Beta", "citation_weight": None, "abstract": "Beta method."},
+        ]
+
+        extracted = _extract_literature_methods(items)
+
+        self.assertEqual([item["citation_key"] for item in extracted], ["Alpha", "Beta"])
+        self.assertTrue(all(item["citation_weight"] is None for item in extracted))
+
     def test_classification_primary_metric_precedes_adjustment_regression(self) -> None:
         metric = _resolve_primary_metric(
             None,

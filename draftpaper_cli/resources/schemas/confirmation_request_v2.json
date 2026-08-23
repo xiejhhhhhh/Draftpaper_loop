@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.confirmation_request.v2",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_id", "checkpoint_package_id", "scientific_decision_sha256", "human_brief_semantic_sha256", "semantic_delta_class", "continuity_eligible", "allowed_decisions", "requires_user_decision"],
+  "properties": {
+    "schema_version": {"const": "dpl.confirmation_request.v2"},
+    "checkpoint_id": {"type": "string"},
+    "checkpoint_package_id": {"type": "string"},
+    "scientific_decision_sha256": {"type": "string"},
+    "human_brief_semantic_sha256": {"type": "string"},
+    "semantic_delta_class": {"type": "string"},
+    "continuity_eligible": {"type": "boolean"},
+    "allowed_decisions": {"type": "array"},
+    "requires_user_decision": {"type": "boolean"},
+    "confirmation_command": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

@@ -126,6 +126,102 @@ def write_formal_writing_release(project_path: Path) -> None:
 
 
 class OrchestratorPassportTests(unittest.TestCase):
+    def test_independent_review_action_records_a_current_incoming_report(self) -> None:
+        from draftpaper_cli.orchestrator import _independent_review_action
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            pdf = project_path / "latex" / "main.pdf"
+            pdf.parent.mkdir(parents=True)
+            pdf.write_bytes(b"current pdf")
+            bundle_hash = "bundle-current"
+            manifest = project_path / "quality_checks" / "blind_reviews" / "submission_bundle_manifest.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(json.dumps({
+                "bundle_hash": bundle_hash,
+                "frozen_artifacts": {
+                    "manuscript": [{
+                        "path": "latex/main.pdf",
+                        "sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+                    }]
+                },
+            }), encoding="utf-8")
+            incoming = manifest.parent / "incoming_reviewer_01.json"
+            incoming.write_text(
+                json.dumps({"frozen_submission_bundle_hash": bundle_hash}),
+                encoding="utf-8",
+            )
+
+            action = _independent_review_action(project_path)
+
+            self.assertEqual(action["command"], "record-independent-manuscript-review")
+            self.assertEqual(action["reviewer"], "reviewer_01")
+            self.assertIn(str(incoming), action["cli"])
+
+    def test_next_action_compiles_current_latex_before_quality_routes(self) -> None:
+        from draftpaper_cli.orchestrator import _next_action
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = Path(tmp)
+            latex = project_path / "latex"
+            latex.mkdir(parents=True)
+            (latex / "main.tex").write_text("current source\n", encoding="utf-8")
+            (latex / "library.bib").write_text("", encoding="utf-8")
+            (latex / "main.pdf").write_bytes(b"stale pdf")
+            (latex / "pdf_compile_manifest.json").write_text(
+                json.dumps({"status": "success"}),
+                encoding="utf-8",
+            )
+
+            with mock.patch("draftpaper_cli.orchestrator._next_stage", return_value="quality_checks"):
+                action = _next_action(project_path, {"stages": {}})
+
+            self.assertEqual(action["command"], "compile-latex-pdf")
+
+    def test_functional_release_with_old_evidence_snapshot_is_not_current(self) -> None:
+        from draftpaper_cli.orchestrator import _functional_release_is_current
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Snapshot-bound release", field="workflow engineering")
+            write_formal_writing_release(project.path)
+            release_path = project.path / "quality" / "functional_quality_release.json"
+            release = json.loads(release_path.read_text(encoding="utf-8"))
+
+            promoted_path = project.path / "results" / "promoted_evidence_snapshot.json"
+            promoted = json.loads(promoted_path.read_text(encoding="utf-8"))
+            promoted["snapshot_id"] = "new-promoted-snapshot"
+            promoted_path.write_text(json.dumps(promoted), encoding="utf-8")
+
+            self.assertFalse(_functional_release_is_current(project.path, release))
+
+            release["evidence_snapshot_ids"] = ["new-promoted-snapshot"]
+            self.assertFalse(_functional_release_is_current(project.path, release))
+
+            for section in release["accepted_candidate_hashes"]:
+                acceptance_path = project.path / "writing" / "section_acceptance" / f"{section}.json"
+                acceptance = json.loads(acceptance_path.read_text(encoding="utf-8"))
+                acceptance["evidence_snapshot_id"] = "new-promoted-snapshot"
+                acceptance_path.write_text(json.dumps(acceptance), encoding="utf-8")
+
+            self.assertTrue(_functional_release_is_current(project.path, release))
+
+    def test_functional_release_does_not_skip_explicitly_stale_writing_stage(self) -> None:
+        from draftpaper_cli.orchestrator import STAGE_ORDER, _next_stage
+
+        stages = {
+            stage: {"status": "completed", "stale": False}
+            for stage in STAGE_ORDER
+        }
+        stages["results"] = {"status": "stale", "stale": True}
+
+        with mock.patch("draftpaper_cli.orchestrator._functional_release_is_current", return_value=True), mock.patch(
+            "draftpaper_cli.orchestrator._stage_is_current",
+            side_effect=lambda project_path, stage, stage_meta: stage != "results",
+        ):
+            next_stage = _next_stage(Path("unused-project"), {"stages": stages})
+
+        self.assertEqual(next_stage, "results")
+
     def test_passport_tracks_stage_owned_method_entrypoint_from_code_manifest(self) -> None:
         from draftpaper_cli.passport import refresh_project_passport
         from draftpaper_cli.stale_sync import detect_artifact_drift

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.human_decision_brief.v1",
+  "type": "object",
+  "required": ["schema_version", "checkpoint_type", "decision_id", "decision_question", "facts", "confirming", "not_confirming", "reopen_conditions", "semantic_subject", "brief_semantic_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.human_decision_brief.v1"},
+    "checkpoint_type": {"type": "string"},
+    "decision_id": {"type": "string"},
+    "decision_question": {"type": "object"},
+    "facts": {"type": "array", "minItems": 1},
+    "confirming": {"type": "array", "minItems": 1},
+    "not_confirming": {"type": "array", "minItems": 1},
+    "reopen_conditions": {"type": "array", "minItems": 1},
+    "semantic_subject": {"type": "object"},
+    "brief_semantic_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

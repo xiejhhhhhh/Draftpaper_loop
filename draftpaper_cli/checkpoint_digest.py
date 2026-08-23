@@ -23,6 +23,7 @@ from .evidence_identity import (
 )
 from .code_ownership import assess_figure_code_trace
 from .run_evidence_bundle import load_active_run_evidence_bundle
+from .checkpoint_scope import discover_checkpoint_scope_paths
 
 
 STAGE_SCOPE_PREFIXES: dict[str, tuple[str, ...]] = {
@@ -380,75 +381,21 @@ def _iter_code_paths(value: Any, root: Path) -> Iterable[str]:
 
 
 def discover_stage_paths(root: Path, stage: str) -> list[str]:
-    """Return stage-owned evidence paths that sparse manifests do not expose.
+    """Return bounded, manifest-first stage evidence paths.
 
-    Stage manifests remain authoritative for large external products. This
-    discovery pass adds small, reviewable stage-owned files so a checkpoint
-    cannot silently omit a generated manuscript, report, script, table, or
-    figure merely because a plugin forgot to repeat the path in its payload.
+    A previous implementation recursively searched broad ``review/``,
+    ``results/``, ``methods/`` and ``data/`` prefixes.  That made a new core
+    evidence decision page absorb old packages and unrelated work.  The scope
+    builder keeps stage-owned discovery as a safety net, while manifests,
+    payload refs and explicit canonical evidence determine promotion.
     """
 
-    candidates: set[str] = set()
-    discoverable_suffixes = {
-        ".csv",
-        ".html",
-        ".ipynb",
-        ".jl",
-        ".json",
-        ".md",
-        ".pdf",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".py",
-        ".r",
-        ".sh",
-        ".tex",
-        ".tsv",
-        ".yaml",
-        ".yml",
-    }
-    prefixes = STAGE_SCOPE_PREFIXES.get(stage, (f"{stage}/",))
-    for prefix in prefixes:
-        directory = root / prefix.rstrip("/")
-        if not directory.is_dir():
-            continue
-        for path in directory.rglob("*"):
-            if not path.is_file() or path.suffix.lower() not in discoverable_suffixes:
-                continue
-            relative = path.relative_to(root).as_posix()
-            if any(relative.startswith(excluded) for excluded in _DISCOVERY_EXCLUDED_PREFIXES):
-                continue
-            try:
-                if path.stat().st_size <= 32 * 1024 * 1024:
-                    candidates.add(relative)
-            except OSError:
-                continue
+    canonical_paths: list[str] = []
     if stage == "core_evidence":
-        candidates.update(_CORE_PATHS)
+        canonical_paths.extend(_CORE_PATHS)
         trace = _read_json(root, "results/figure_code_trace.json")
-        candidates.update(_iter_code_paths(trace, root))
-        candidates.update(
-            path.relative_to(root).as_posix()
-            for directory in (root / "results" / "figures", root / "results" / "tables")
-            if directory.is_dir()
-            for path in directory.rglob("*")
-            if path.is_file() and path.suffix.lower() in {".png", ".pdf", ".csv", ".json"}
-        )
-        candidates.update(
-            path.relative_to(root).as_posix()
-            for directory in (
-                root / "methods" / "scripts",
-                root / "methods" / "plotting",
-                root / "methods" / "src",
-                root / "code" / "scripts",
-                root / "code" / "src",
-            )
-            if directory.is_dir()
-            for path in directory.rglob("*")
-            if path.is_file() and path.suffix.lower() in {".py", ".r", ".jl", ".ipynb", ".sh", ".yaml", ".yml", ".json"}
-        )
-    return sorted(path for path in candidates if (root / path).is_file())
+        canonical_paths.extend(_iter_code_paths(trace, root))
+    return discover_checkpoint_scope_paths(root, stage=stage, canonical_paths=canonical_paths)
 
 
 def _load_csv_preview(root: Path, relative: str) -> dict[str, Any] | None:
