@@ -55,12 +55,27 @@ def build_scientific_decision_fingerprint(summary: dict[str, Any], brief: dict[s
         "decision_brief": brief_semantic_payload(brief),
     }
     payload = _stable(payload)
+    scientific_identity = payload["scientific_identity"]
+    semantic_facts = ((brief.get("semantic_subject") or {}).get("facts") or [])
+    has_scientific_fact = any(
+        isinstance(item, Mapping) and item.get("fact_type") in {"metric", "count", "figure"}
+        for item in semantic_facts
+    )
+    requires_identity = payload["checkpoint_type"] == "core_evidence" or has_scientific_fact or any(
+        value not in (None, "", [], {}) for value in scientific_identity.values()
+    )
+    identity_complete = (
+        all(value not in (None, "", [], {}) for key, value in scientific_identity.items() if key in {"sample_unit", "validation_design"})
+        if requires_identity
+        else True
+    )
     return {
         "schema_version": SCIENTIFIC_DECISION_FINGERPRINT_SCHEMA,
         "checkpoint_type": payload["checkpoint_type"],
         "canonical_payload": payload,
         "scientific_decision_sha256": _hash(payload),
-        "identity_complete": all(value not in (None, "", [], {}) for key, value in payload["scientific_identity"].items() if key in {"sample_unit", "validation_design"}),
+        "identity_complete": identity_complete,
+        "identity_requirement": "scientific" if requires_identity else "non_scientific_stage",
     }
 
 

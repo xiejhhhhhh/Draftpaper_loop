@@ -509,6 +509,7 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 - 新增 `HumanDecisionBrief`、`scientific_decision_fingerprint_v1`、审计/呈现指纹、有界 `StageActivityBundle v2`、`FigureClaimMap`、可读性检查和 manifest-first scope，使用户可理解确认内容而不牺牲可追溯性。
 - confirmation request 改为绑定科学决定和 Brief 语义。HTML、PDF、manifest、引用映射及其它派生产物重建不再反复触发 C3；科学内容不变时写入 continuity receipt 并作为通知型阶段继续。指标、不确定性、cohort、split、样本单位、方法/run、图表语义或论断边界变化仍严格要求新的作者决定。
 - 新增 `show-checkpoint-audit`、`compare-checkpoint-decision`、`explain-reconfirmation`、`validate-checkpoint-readability`、`show-confirmation-continuity` 和 `rebuild-checkpoint-presentation`；Agent 载荷优先返回可读页与审计页的准确路径、语义差异和确认含义。
+- 新增只读的 `audit-checkpoint-v5-migration` 与将报告写在项目外的 `shadow-checkpoint-v5`。v1-v4 旧包绝不被原地改写或静默晋升；旧项目先审计，仅在确有需要时生成新的 v5 C3 决定。
 
 ### v0.40.0（2026-08-20）-- 学科感知文献身份核验与按需全文
 

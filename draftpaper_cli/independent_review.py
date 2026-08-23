@@ -17,6 +17,7 @@ import yaml
 from .latex_assembly import _aux_requests_bibtex, _ensure_local_bibstyle_fallback, _find_latex_executable
 from .project_scaffold import utc_now
 from .project_state import load_project
+from .reviewer_visibility import REVIEWER_VISIBLE_SCOPE, validate_reviewer_visible_frozen
 
 
 REVIEW_ROOT = "quality_checks/blind_reviews"
@@ -448,6 +449,10 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
         "references": _relative_hashes(root, references),
         "reproducibility": _relative_hashes(root, reproducibility),
     }
+    visibility_issues = validate_reviewer_visible_frozen(frozen)
+    if visibility_issues:
+        details = ", ".join(f"{item['path']} ({item['code']})" for item in visibility_issues)
+        raise IndependentReviewError("Internal audit material cannot enter a reviewer-visible bundle: " + details)
     core = {
         "schema_version": "dpl.independent_review_bundle.v1",
         "project_id_hash": hashlib.sha256(str(state.metadata.get("project_id")).encode()).hexdigest(),
@@ -461,7 +466,8 @@ def prepare_independent_manuscript_review(project: str | Path) -> dict[str, Any]
             "reviewers_cannot_see_other_reports": True,
             "automatic_scores_withheld": True,
             "prior_audits_withheld": True,
-            "internal_hashes_and_evidence_withheld": True,
+        "internal_hashes_and_evidence_withheld": True,
+        "visibility_scope": REVIEWER_VISIBLE_SCOPE,
             "reviewer_visible_scope": [
                 "anonymous manuscript PDF and LaTeX source",
                 "publication figures and supporting result tables",

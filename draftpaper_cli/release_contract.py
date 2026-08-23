@@ -294,6 +294,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "missing_schema_files": missing_checkpoint_schema_files,
             "required_companions": [
                 "stage_summary.zh-CN.html",
+                "stage_summary.en.html",
                 "stage_audit.zh-CN.html",
                 "stage_summary.json",
                 "human_decision_brief_v1.json",
@@ -305,6 +306,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
                 "unresolved_issues.json",
                 "agent_payload.json",
                 "checkpoint_readability_report.json",
+                "checkpoint_readability_report.en.json",
                 "figure_claim_map_v1.json",
             ],
             "agent_paths": ["project_relative_path", "absolute_path"],

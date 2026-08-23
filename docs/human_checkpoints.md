@@ -11,6 +11,7 @@ Every v5 checkpoint writes a portable package under
 
 ```text
 stage_summary.zh-CN.html              # readable author decision page
+stage_summary.en.html                 # English rendering of the same decision
 stage_audit.zh-CN.html                # complete technical audit page
 stage_summary.json                    # v5 package contract
 human_decision_brief_v1.json          # facts and decision statements shown to the author
@@ -88,12 +89,16 @@ identical scientific decision. An Agent may record `agent_approved`, never
 
 ```powershell
 draftpaper show-checkpoint-summary --project <project> --view decision
+draftpaper show-checkpoint-summary --project <project> --view decision --language en
 draftpaper show-checkpoint-audit --project <project> --checkpoint-package-id <id>
 draftpaper compare-checkpoint-decision --project <project> --against latest-confirmed
 draftpaper explain-reconfirmation --project <project> --checkpoint-package-id <id>
 draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id>
+draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id> --language en
 draftpaper show-confirmation-continuity --project <project> --checkpoint-type core_evidence
 draftpaper rebuild-checkpoint-presentation --project <project> --checkpoint-package-id <id>
+draftpaper audit-checkpoint-v5-migration --project <project> --checkpoint-hash <hash>
+draftpaper shadow-checkpoint-v5 --project <project> --output-root <outside-project-directory>
 draftpaper resume --project <project> --checkpoint-hash <hash>
 ```
 
@@ -106,6 +111,21 @@ scientific decision fingerprint or create a new confirmation obligation.
 packages never expose an author confirmation command. `preview-checkpoint-summary`
 remains a non-consumable derived package. Anonymous fixtures may use
 `test_auto_confirmation=true`, but that marker cannot confirm a real project.
+
+## Legacy migration and shadow verification
+
+`audit-checkpoint-v5-migration` reads a v1-v4 package and reports the required
+next action. It never rewrites a historical summary, transfers a user receipt,
+or treats an old package hash as a v5 scientific decision. A v4 package may be
+projected only for comparison; unless an equivalent verified v5 decision
+already exists, the workflow requires a new v5 C3 decision.
+
+`shadow-checkpoint-v5` is a regression audit for an existing project. Its
+`--output-root` must be outside the project directory. The command records
+before/after hashes for the passport, ledgers, promoted snapshot, checkpoint
+records, and manuscript PDF, then writes JSON and HTML reports outside the
+project. A failed unchanged-state check is a blocker, never a reason to repair
+project evidence during the audit.
 
 ## Runtime identity updates
 

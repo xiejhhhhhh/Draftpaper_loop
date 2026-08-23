@@ -409,10 +409,40 @@ def _html_link(output_dir: Path, root: Path, relative: str) -> str:
     return escape(target)
 
 
-def _render_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+def _render_html(
+    root: Path,
+    output_dir: Path,
+    summary: dict[str, Any],
+    request: dict[str, Any],
+    *,
+    locale: str = "zh-CN",
+) -> str:
     from .checkpoint_html import render_checkpoint_html
 
-    return render_checkpoint_html(root, output_dir, summary, request)
+    return render_checkpoint_html(root, output_dir, summary, request, locale=locale)
+
+
+def _previous_repair_layers(root: Path, stage: str) -> list[str]:
+    """Read prior repair classes without treating old audit files as evidence."""
+
+    layers: list[str] = []
+    for record in reversed(_checkpoint_index_records(root)):
+        if str(record.get("checkpoint_type") or record.get("stage") or "") != stage:
+            continue
+        relative = _relative_project_path(root, str(record.get("stage_summary_json") or ""))
+        if not relative:
+            continue
+        receipt_path = root / Path(relative).parent / "evidence_binding_failure_receipt.json"
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        for item in receipt.get("failures") or []:
+            if isinstance(item, dict) and item.get("repair_layer"):
+                layers.append(str(item["repair_layer"]))
+        if layers:
+            break
+    return layers
 
 
 def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:
@@ -440,6 +470,7 @@ def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:
             "scientific_decision_sha256": report.get("scientific_decision_sha256"),
             "stage_summary_json": f"{relative_dir}/stage_summary.json",
             "stage_summary_zh_html": f"{relative_dir}/stage_summary.zh-CN.html",
+            "stage_summary_en_html": f"{relative_dir}/stage_summary.en.html" if report.get("schema_version") == CHECKPOINT_SUMMARY_V5_SCHEMA else None,
             "stage_audit_zh_html": f"{relative_dir}/stage_audit.zh-CN.html" if report.get("schema_version") == CHECKPOINT_SUMMARY_V5_SCHEMA else None,
             "created_at": report.get("created_at"),
         }
@@ -1000,8 +1031,10 @@ def write_stage_summary_v5(
     figure_issues = validate_figure_claim_map(figure_map)
     repair_failures = [*figure_issues]
     repair_failures.extend({"code": "decision_brief_contract", "detail_zh": issue} for issue in brief_issues)
-    repair = route_evidence_failures(repair_failures)
+    repair = route_evidence_failures(repair_failures, failure_history=_previous_repair_layers(root, stage))
     blocking_codes = [str(item.get("code") or "") for item in figure_issues] + (["decision_brief_contract"] if brief_issues else [])
+    if (repair.get("loop_guard") or {}).get("stop_and_report"):
+        blocking_codes.append("repeated_failure_class_requires_root_cause")
     if blocking_codes:
         summary["review_state"] = "blocked"
         summary["stage_status"] = "blocked"
@@ -1015,6 +1048,14 @@ def write_stage_summary_v5(
             for item in figure_issues
         )
         unresolved.extend({"summary_zh": issue, "blocking": True, "source": "human_decision_brief_v1.json"} for issue in brief_issues)
+        if (repair.get("loop_guard") or {}).get("stop_and_report"):
+            unresolved.append(
+                {
+                    "summary_zh": "同一证据失败类型重复出现；必须先完成根因报告，不能继续进行局部循环修复。",
+                    "blocking": True,
+                    "source": "evidence_binding_failure_receipt.json",
+                }
+            )
         summary["unresolved"] = unresolved
 
     audit_fingerprint = build_audit_fingerprint(summary, activity, manifest)
@@ -1026,6 +1067,8 @@ def write_stage_summary_v5(
         brief_semantic_sha256=str(brief.get("brief_semantic_sha256") or ""),
         review_state=str(summary.get("review_state") or "blocked"),
         blocked_reason_codes=blocking_codes,
+        semantic_delta_class=str(delta.get("classification") or ""),
+        unresolved_issues=list(summary.get("unresolved") or []),
     )
     risk_class = classify_checkpoint_risk(summary)
     normal_requirement = classify_review_requirement(summary)
@@ -1075,6 +1118,10 @@ def write_stage_summary_v5(
         "package_summary_sha256": None,
     }
     summary["readability_report_ref"] = f"{relative_dir}/checkpoint_readability_report.json"
+    summary["readability_reports"] = {
+        "zh-CN": f"{relative_dir}/checkpoint_readability_report.json",
+        "en": f"{relative_dir}/checkpoint_readability_report.en.json",
+    }
     summary["reviewer_visibility_scope"] = str(data.get("reviewer_visibility_scope") or "author_decision")
     summary["confirmation_continuity"] = {
         "eligible": bool(continuity.get("eligible")),
@@ -1136,6 +1183,10 @@ def write_stage_summary_v5(
                 "project_relative_path": f"{relative_dir}/stage_summary.zh-CN.html",
                 "absolute_path": str((output_dir / "stage_summary.zh-CN.html").resolve()),
             },
+            "human_decision_html_en": {
+                "project_relative_path": f"{relative_dir}/stage_summary.en.html",
+                "absolute_path": str((output_dir / "stage_summary.en.html").resolve()),
+            },
             "technical_audit_html": {
                 "project_relative_path": f"{relative_dir}/stage_audit.zh-CN.html",
                 "absolute_path": str((output_dir / "stage_audit.zh-CN.html").resolve()),
@@ -1167,20 +1218,27 @@ def write_stage_summary_v5(
     atomic_write_json(output_dir / "evidence_binding_failure_receipt.json", repair)
     atomic_write_text(output_dir / "stage_audit.zh-CN.html", render_checkpoint_audit_html(root, output_dir, summary, request))
     decision_html = _render_html(root, output_dir, summary, request)
+    decision_html_en = _render_html(root, output_dir, summary, request, locale="en")
     atomic_write_text(output_dir / "stage_summary.zh-CN.html", decision_html)
+    atomic_write_text(output_dir / "stage_summary.en.html", decision_html_en)
     readability = build_checkpoint_readability_report(html=decision_html, brief=brief)
+    readability_en = build_checkpoint_readability_report(html=decision_html_en, brief=brief, locale="en")
     atomic_write_json(output_dir / "checkpoint_readability_report.json", readability)
-    if readability.get("status") != "passed":
-        raise CheckpointSummaryError("Checkpoint decision page failed readability gate: " + ", ".join(readability.get("failure_codes") or []))
+    atomic_write_json(output_dir / "checkpoint_readability_report.en.json", readability_en)
+    if readability.get("status") != "passed" or readability_en.get("status") != "passed":
+        failures = [*list(readability.get("failure_codes") or []), *[f"en:{code}" for code in readability_en.get("failure_codes") or []]]
+        raise CheckpointSummaryError("Checkpoint decision page failed readability gate: " + ", ".join(failures))
     required_files = (
         output_dir / "stage_summary.json",
         output_dir / "stage_summary.zh-CN.html",
+        output_dir / "stage_summary.en.html",
         output_dir / "stage_audit.zh-CN.html",
         output_dir / "confirmation_request.json",
         output_dir / "agent_payload.json",
         output_dir / "human_decision_brief_v1.json",
         output_dir / "scientific_decision_fingerprint_v1.json",
         output_dir / "checkpoint_readability_report.json",
+        output_dir / "checkpoint_readability_report.en.json",
         output_dir / "figure_claim_map_v1.json",
     )
     if not all(path.is_file() for path in required_files):
@@ -1196,6 +1254,8 @@ def write_stage_summary_v5(
         "absolute_stage_summary_zh_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
         "stage_audit_zh_html": f"{relative_dir}/stage_audit.zh-CN.html",
         "absolute_stage_audit_zh_html": str((output_dir / "stage_audit.zh-CN.html").resolve()),
+        "stage_summary_en_html": f"{relative_dir}/stage_summary.en.html",
+        "absolute_stage_summary_en_html": str((output_dir / "stage_summary.en.html").resolve()),
         "human_decision_brief": f"{relative_dir}/human_decision_brief_v1.json",
         "scientific_decision_fingerprint": f"{relative_dir}/scientific_decision_fingerprint_v1.json",
         "scientific_decision_sha256": fingerprint["scientific_decision_sha256"],
@@ -1247,9 +1307,11 @@ def show_checkpoint_summary(
     if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
         v5_required = (
             "stage_audit.zh-CN.html",
+            "stage_summary.en.html",
             "human_decision_brief_v1.json",
             "scientific_decision_fingerprint_v1.json",
             "checkpoint_readability_report.json",
+            "checkpoint_readability_report.en.json",
             "figure_claim_map_v1.json",
             "evidence_binding_failure_receipt.json",
         )
@@ -1276,6 +1338,7 @@ def show_checkpoint_summary(
             "reasons": contract_issues,
             "summary": summary,
         }
+    preferred_html_name = "stage_summary.en.html" if language == "en" and schema == CHECKPOINT_SUMMARY_V5_SCHEMA else "stage_summary.zh-CN.html"
     return {
         "status": "legacy_summary" if legacy else "ready_for_human_review",
         "project_path": str(root),
@@ -1296,6 +1359,19 @@ def show_checkpoint_summary(
             "project_relative_path": summary_path.parent.joinpath("stage_summary.zh-CN.html").relative_to(root).as_posix(),
             "absolute_path": str(summary_path.parent.joinpath("stage_summary.zh-CN.html").resolve()),
             "source_semantic_sha256": summary.get("stage_summary_sha256"),
+        },
+        "stage_summary_en_html": (
+            {
+                "project_relative_path": summary_path.parent.joinpath("stage_summary.en.html").relative_to(root).as_posix(),
+                "absolute_path": str(summary_path.parent.joinpath("stage_summary.en.html").resolve()),
+            }
+            if schema == CHECKPOINT_SUMMARY_V5_SCHEMA
+            else None
+        ),
+        "author_decision_html": {
+            "project_relative_path": summary_path.parent.joinpath(preferred_html_name).relative_to(root).as_posix(),
+            "absolute_path": str(summary_path.parent.joinpath(preferred_html_name).resolve()),
+            "locale": "en" if preferred_html_name.endswith(".en.html") else "zh-CN",
         },
         "stage_audit_zh_html": (
             {
@@ -1414,21 +1490,33 @@ def explain_reconfirmation(project: str | Path, *, checkpoint_package_id: str | 
     }
 
 
-def validate_checkpoint_readability(project: str | Path, *, checkpoint_package_id: str | None = None) -> dict[str, Any]:
+def validate_checkpoint_readability(
+    project: str | Path,
+    *,
+    checkpoint_package_id: str | None = None,
+    language: str = "zh-CN",
+) -> dict[str, Any]:
     root = project_root(project)
     record = _checkpoint_record_by_package_id(root, checkpoint_package_id) if checkpoint_package_id else _latest_checkpoint_record(root)
     if not record:
         return {"status": "not_found", "project_path": str(root)}
     relative = _relative_project_path(root, str(record.get("stage_summary_json") or ""))
     path = root / relative if relative else None
-    report_path = path.parent / "checkpoint_readability_report.json" if path else None
+    report_name = "checkpoint_readability_report.en.json" if language == "en" else "checkpoint_readability_report.json"
+    report_path = path.parent / report_name if path else None
     if not report_path or not report_path.is_file():
         return {"status": "not_found", "project_path": str(root), "reason": "checkpoint_readability_report_missing"}
     try:
         report = json.loads(report_path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         return {"status": "invalid", "project_path": str(root), "reason": str(exc)}
-    return {"status": report.get("status") or "invalid", "project_path": str(root), "report": report, "report_path": str(report_path.resolve())}
+    return {
+        "status": report.get("status") or "invalid",
+        "project_path": str(root),
+        "language": "en" if language == "en" else "zh-CN",
+        "report": report,
+        "report_path": str(report_path.resolve()),
+    }
 
 
 def show_confirmation_continuity(project: str | Path, *, checkpoint_type: str = "core_evidence") -> dict[str, Any]:
@@ -1477,18 +1565,24 @@ def rebuild_checkpoint_presentation(project: str | Path, *, checkpoint_package_i
         return {"status": "unsupported_legacy_summary", "project_path": str(root)}
     audit_html = render_checkpoint_audit_html(root, output_dir, summary, request)
     decision_html = _render_html(root, output_dir, summary, request)
+    decision_html_en = _render_html(root, output_dir, summary, request, locale="en")
     report = build_checkpoint_readability_report(html=decision_html, brief=summary.get("decision_brief") or {})
+    report_en = build_checkpoint_readability_report(html=decision_html_en, brief=summary.get("decision_brief") or {}, locale="en")
     atomic_write_text(output_dir / "stage_audit.zh-CN.html", audit_html)
     atomic_write_text(output_dir / "stage_summary.zh-CN.html", decision_html)
+    atomic_write_text(output_dir / "stage_summary.en.html", decision_html_en)
     atomic_write_json(output_dir / "checkpoint_readability_report.json", report)
+    atomic_write_json(output_dir / "checkpoint_readability_report.en.json", report_en)
     return {
-        "status": report.get("status"),
+        "status": "passed" if report.get("status") == "passed" and report_en.get("status") == "passed" else "blocked",
         "project_path": str(root),
         "checkpoint_id": checkpoint_package_id,
         "presentation_sha256": summary.get("presentation_sha256"),
         "decision_html": str((output_dir / "stage_summary.zh-CN.html").resolve()),
+        "decision_html_en": str((output_dir / "stage_summary.en.html").resolve()),
         "audit_html": str((output_dir / "stage_audit.zh-CN.html").resolve()),
         "readability_report": str((output_dir / "checkpoint_readability_report.json").resolve()),
+        "readability_report_en": str((output_dir / "checkpoint_readability_report.en.json").resolve()),
     }
 
 
@@ -1678,9 +1772,11 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                         reasons.append("Agent payload activity bundle hash differs from stage summary.")
         if schema == CHECKPOINT_SUMMARY_V5_SCHEMA:
             v5_paths = {
+                "stage_summary.en.html": path.parent / "stage_summary.en.html",
                 "human_decision_brief_v1.json": path.parent / "human_decision_brief_v1.json",
                 "scientific_decision_fingerprint_v1.json": path.parent / "scientific_decision_fingerprint_v1.json",
                 "checkpoint_readability_report.json": path.parent / "checkpoint_readability_report.json",
+                "checkpoint_readability_report.en.json": path.parent / "checkpoint_readability_report.en.json",
                 "figure_claim_map_v1.json": path.parent / "figure_claim_map_v1.json",
                 "checkpoint_audit_fingerprint_v1.json": path.parent / "checkpoint_audit_fingerprint_v1.json",
             }
@@ -1692,6 +1788,7 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                     brief = json.loads(v5_paths["human_decision_brief_v1.json"].read_text(encoding="utf-8-sig"))
                     fingerprint = json.loads(v5_paths["scientific_decision_fingerprint_v1.json"].read_text(encoding="utf-8-sig"))
                     readability = json.loads(v5_paths["checkpoint_readability_report.json"].read_text(encoding="utf-8-sig"))
+                    readability_en = json.loads(v5_paths["checkpoint_readability_report.en.json"].read_text(encoding="utf-8-sig"))
                     figure_map = json.loads(v5_paths["figure_claim_map_v1.json"].read_text(encoding="utf-8-sig"))
                     audit_fingerprint = json.loads(v5_paths["checkpoint_audit_fingerprint_v1.json"].read_text(encoding="utf-8-sig"))
                 except (OSError, ValueError) as exc:
@@ -1703,6 +1800,8 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
                         reasons.append("Scientific decision fingerprint file differs from the v5 summary.")
                     if readability.get("status") != "passed":
                         reasons.append("Checkpoint decision page did not pass readability validation.")
+                    if readability_en.get("status") != "passed":
+                        reasons.append("English checkpoint decision page did not pass readability validation.")
                     if figure_map.get("figure_claim_map_sha256") != summary.get("figure_claim_map_sha256"):
                         reasons.append("FigureClaimMap hash differs from the v5 summary.")
                     if audit_fingerprint.get("audit_bundle_sha256") != summary.get("audit_bundle_sha256"):

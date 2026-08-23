@@ -401,7 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
     show_checkpoint = subparsers.add_parser("show-checkpoint-summary", help="Read the current Chinese human-checkpoint summary and exact local paths.")
     show_checkpoint.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     show_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional checkpoint hash; defaults to the latest checkpoint.")
-    show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN"], help="Summary language.")
+    show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN", "en"], help="Summary language.")
     show_checkpoint.add_argument("--view", default="decision", choices=["decision", "audit"], help="Select the readable decision view or the technical audit view.")
 
     show_checkpoint_audit = subparsers.add_parser("show-checkpoint-audit", help="Show the full technical audit path for a v5 checkpoint.")
@@ -421,6 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate_checkpoint_readability = subparsers.add_parser("validate-checkpoint-readability", help="Read the decision-page readability gate for a v5 checkpoint.")
     validate_checkpoint_readability.add_argument("--project", required=True)
     validate_checkpoint_readability.add_argument("--checkpoint-package-id", default=None)
+    validate_checkpoint_readability.add_argument("--language", default="zh-CN", choices=["zh-CN", "en"])
 
     show_continuity = subparsers.add_parser("show-confirmation-continuity", help="Show the latest reusable scientific confirmation receipt.")
     show_continuity.add_argument("--project", required=True)
@@ -429,6 +430,14 @@ def build_parser() -> argparse.ArgumentParser:
     rebuild_checkpoint_presentation = subparsers.add_parser("rebuild-checkpoint-presentation", help="Regenerate v5 checkpoint HTML without changing scientific identity.")
     rebuild_checkpoint_presentation.add_argument("--project", required=True)
     rebuild_checkpoint_presentation.add_argument("--checkpoint-package-id", required=True)
+
+    checkpoint_migration = subparsers.add_parser("audit-checkpoint-v5-migration", help="Read-only readiness audit for migrating a legacy checkpoint to v5.")
+    checkpoint_migration.add_argument("--project", required=True)
+    checkpoint_migration.add_argument("--checkpoint-hash", default=None)
+
+    checkpoint_shadow = subparsers.add_parser("shadow-checkpoint-v5", help="Run a read-only v5 checkpoint shadow audit outside the project directory.")
+    checkpoint_shadow.add_argument("--project", required=True)
+    checkpoint_shadow.add_argument("--output-root", default=None)
 
     preview_checkpoint = subparsers.add_parser(
         "preview-checkpoint-summary",
@@ -1349,6 +1358,8 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "explain-reconfirmation",
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
+    "audit-checkpoint-v5-migration",
+    "shadow-checkpoint-v5",
 }
 
 

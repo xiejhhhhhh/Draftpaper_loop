@@ -49,3 +49,16 @@ Evidence failures are routed in this order:
 
 This prevents a wording edit from hiding an evidence identity error, and
 prevents an unnecessary figure redraw from becoming the default response.
+
+## Legacy packages and read-only shadow checks
+
+Legacy v1-v4 checkpoint packages remain immutable historical records. The
+`audit-checkpoint-v5-migration` command can inspect them and may construct a
+comparison preview for v4, but it never rewrites a package or treats a legacy
+receipt as a v5 approval. If equivalence cannot be proven against a verified
+v5 decision, the next valid route is an explicit v5 C3 decision.
+
+Run `shadow-checkpoint-v5` only with an output directory outside the project.
+It verifies the v5 projection and hashes project state before and after the
+read-only audit. The shadow report is regression evidence, not a project
+artifact and not a substitute for author confirmation.

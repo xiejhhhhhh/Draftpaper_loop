@@ -108,6 +108,38 @@ def _value_sentence(label: str, value: Any) -> str:
     return f"{label}：{rendered}。" if rendered else ""
 
 
+def _semantic_identity(identity: dict[str, Any], metric: dict[str, Any]) -> dict[str, Any]:
+    """Keep only scientific identity in the Brief's semantic subject.
+
+    A checkpoint may be rebuilt on another machine or with a regenerated
+    report.  Paths, report locators, and presentation text remain in the
+    readable Brief, but cannot decide whether the author must reconfirm the
+    science.
+    """
+
+    return {
+        "plan_hash": identity.get("plan_hash"),
+        "run_id": identity.get("run_id") or metric.get("run_id"),
+        "cohort_id": identity.get("cohort_id") or metric.get("cohort_id"),
+        "sample_unit": identity.get("sample_unit") or metric.get("sample_unit"),
+        "validation_design": identity.get("cohort_label") or metric.get("validation_design"),
+        "evidence_snapshot_id": identity.get("evidence_snapshot_id"),
+        "metric": metric.get("metric"),
+        "metric_definition_id": metric.get("metric_definition_id"),
+        "value": metric.get("value"),
+        "uncertainty": metric.get("uncertainty"),
+        "split_id": metric.get("split_id"),
+        "model_id": metric.get("model_id"),
+        "aggregation_id": metric.get("aggregation_id"),
+    }
+
+
+def _semantic_sort(values: Iterable[Any]) -> list[Any]:
+    """Canonicalize list order without changing the user-facing display order."""
+
+    return sorted(values, key=canonical_json)
+
+
 def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN") -> dict[str, Any]:
     """Create a bounded decision brief from an already-built checkpoint summary.
 
@@ -193,7 +225,16 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         fact_id = add_fact("finding", f"关键发现 {index + 1}", text, _source_refs(item, fallback=metric.get("metric_source")))
         if fact_id:
             finding_facts.append(fact_id)
-            findings.append(_statement(f"finding-{index + 1}", text, fact_refs=[fact_id], evidence_refs=_source_refs(item)))
+            findings.append(
+                _statement(
+                    f"finding-{index + 1}",
+                    text,
+                    fact_refs=[fact_id],
+                    evidence_refs=_source_refs(item),
+                    semantic_key={"finding": text},
+                    text_en=_text(item.get("summary_en")) if isinstance(item, dict) else None,
+                )
+            )
 
     boundary_facts: list[str] = []
     boundaries: list[dict[str, Any]] = []
@@ -204,7 +245,16 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         fact_id = add_fact("claim_boundary", f"论断边界 {index + 1}", text, _source_refs(item, fallback="core_evidence/core_evidence_report.json" if stage == "core_evidence" else None))
         if fact_id:
             boundary_facts.append(fact_id)
-            boundaries.append(_statement(f"boundary-{index + 1}", text, fact_refs=[fact_id], evidence_refs=_source_refs(item)))
+            boundaries.append(
+                _statement(
+                    f"boundary-{index + 1}",
+                    text,
+                    fact_refs=[fact_id],
+                    evidence_refs=_source_refs(item),
+                    semantic_key={"claim_boundary": text},
+                    text_en=_text(item.get("summary_en")) if isinstance(item, dict) else None,
+                )
+            )
 
     figure_claims: list[dict[str, Any]] = []
     figure_facts: list[str] = []
@@ -217,7 +267,16 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             "semantic_sha256": figure.get("after_semantic_sha256") or figure.get("evidence_sha256"),
             "interpretation": text,
         }
-        fact_id = add_fact("figure", _text(value["figure_id"]) or f"图 {index + 1}", value, _source_refs(figure, fallback=path))
+        fact_id = add_fact(
+            "figure",
+            _text(value["figure_id"]) or f"图 {index + 1}",
+            value,
+            _source_refs(figure, fallback=path),
+            semantic_value={
+                "figure_id": _text(value["figure_id"]) or f"figure-{index + 1}",
+                "semantic_sha256": value["semantic_sha256"],
+            },
+        )
         if fact_id:
             figure_facts.append(fact_id)
             statement_text = f"{_text(value['figure_id']) or f'图 {index + 1}'}：{text or '已登记为本次确认范围内的图表证据。'}"
@@ -230,7 +289,11 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
                         statement_text,
                         fact_refs=[fact_id],
                         evidence_refs=_source_refs(figure, fallback=path),
-                        semantic_key=value,
+                        semantic_key={
+                            "figure_id": _text(value["figure_id"]) or f"figure-{index + 1}",
+                            "semantic_sha256": value["semantic_sha256"],
+                        },
+                        text_en=_text(figure.get("interpretation_summary_en") or figure.get("caption_en")),
                     ),
                 }
             )
@@ -241,7 +304,8 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             f"本次需要确认的是：{purpose}",
             fact_refs=[scope_fact] if scope_fact else [],
             evidence_refs=[f"policy:checkpoint:{stage}"],
-            semantic_key={"stage": stage, "purpose": purpose},
+            semantic_key={"stage": stage},
+            text_en=f"This checkpoint confirms the scientific basis and claim boundary for {stage}.",
         )
     ]
     context_refs = [*identity_facts, *metric_facts, *count_facts]
@@ -252,7 +316,16 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             if value not in (None, ""):
                 context_bits.append(_value_sentence(label, value).rstrip("。"))
         text = "；".join(context_bits) + "。" if context_bits else "本次确认依赖已登记的样本、验证与指标身份。"
-        confirming.append(_statement("scientific-context", text, fact_refs=context_refs, evidence_refs=[metric.get("metric_source") or f"policy:checkpoint:{stage}"], semantic_key={"identity": identity, "metric": metric}))
+        confirming.append(
+            _statement(
+                "scientific-context",
+                text,
+                fact_refs=context_refs,
+                evidence_refs=[metric.get("metric_source") or f"policy:checkpoint:{stage}"],
+                semantic_key=_semantic_identity(identity, metric),
+                text_en="The registered sample, validation design, and primary metric define this decision.",
+            )
+        )
     confirming.extend(findings[:4])
     confirming.extend(item["statement"] for item in figure_claims[:6])
 
@@ -262,6 +335,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             "本次不确认 HTML 排版、PDF 重编译、manifest 排序、绝对路径或其它派生产物的技术变化。",
             evidence_refs=["policy:checkpoint:presentation"],
             semantic_key="derived_and_presentation_changes_are_not_scientific_decisions",
+            text_en="This decision does not approve HTML layout, PDF recompilation, manifest ordering, absolute paths, or other derived presentation changes.",
         ),
         _statement(
             "not-confirming-outside-boundary",
@@ -269,6 +343,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             fact_refs=boundary_facts or ([scope_fact] if scope_fact else []),
             evidence_refs=["policy:checkpoint:claim-boundary"],
             semantic_key={"stage": stage, "boundary_count": len(boundary_facts)},
+            text_en="This decision does not extend the evidence beyond the registered sample, method, validation design, or claim boundary.",
         ),
     ]
     reopen_conditions = [
@@ -278,6 +353,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             fact_refs=context_refs or ([scope_fact] if scope_fact else []),
             evidence_refs=["policy:checkpoint:scientific-change"],
             semantic_key="identity_metric_method_change_requires_reconfirmation",
+            text_en="A change to the dataset, cohort, sample unit, split, method, primary metric, uncertainty, or run identity requires a new scientific confirmation.",
         ),
         _statement(
             "reopen-figure-or-claim",
@@ -285,6 +361,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             fact_refs=[*figure_facts, *boundary_facts] or ([scope_fact] if scope_fact else []),
             evidence_refs=["policy:checkpoint:figure-claim-change"],
             semantic_key="figure_or_claim_boundary_change_requires_reconfirmation",
+            text_en="A change to main-figure semantic evidence or a manuscript claim boundary requires a new scientific confirmation.",
         ),
     ]
     downstream_effects = [
@@ -293,7 +370,8 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             _text(summary.get("confirmation_meaning_zh")) or "确认后，工作流只会沿当前阶段允许的下游路线继续。",
             fact_refs=[scope_fact] if scope_fact else [],
             evidence_refs=[f"policy:checkpoint:{stage}"],
-            semantic_key={"stage": stage, "review_state": summary.get("review_state")},
+            semantic_key={"stage": stage},
+            text_en="After confirmation, the workflow may continue only along the downstream route allowed by this stage.",
         )
     ]
     deliverables = [
@@ -321,20 +399,19 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         ]
     semantic_subject = {
         "checkpoint_type": stage,
-        "facts": [
+        "facts": _semantic_sort([
             {
                 "fact_id": item["fact_id"],
                 "fact_type": item["fact_type"],
                 "semantic_value": item["semantic_value"],
-                "evidence_refs": item["evidence_refs"],
             }
             for item in facts
-        ],
-        "confirming": [item["semantic_key"] for item in confirming],
-        "not_confirming": [item["semantic_key"] for item in not_confirming],
-        "claim_boundaries": [item["semantic_key"] for item in boundaries],
-        "figure_claims": [item["statement"]["semantic_key"] for item in figure_claims],
-        "reopen_conditions": [item["semantic_key"] for item in reopen_conditions],
+        ]),
+        "confirming": _semantic_sort([item["semantic_key"] for item in confirming]),
+        "not_confirming": _semantic_sort([item["semantic_key"] for item in not_confirming]),
+        "claim_boundaries": _semantic_sort([item["semantic_key"] for item in boundaries]),
+        "figure_claims": _semantic_sort([item["statement"]["semantic_key"] for item in figure_claims]),
+        "reopen_conditions": _semantic_sort([item["semantic_key"] for item in reopen_conditions]),
     }
     brief = {
         "schema_version": HUMAN_DECISION_BRIEF_SCHEMA,
@@ -346,7 +423,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
             f"本次需要作者确认的科学基础与论断边界是什么？（{purpose}）",
             fact_refs=[scope_fact] if scope_fact else [],
             evidence_refs=[f"policy:checkpoint:{stage}"],
-            semantic_key={"stage": stage, "purpose": purpose},
+            semantic_key={"stage": stage},
             text_en=f"What scientific basis and claim boundaries are being confirmed for {stage}?",
         ),
         "facts": facts,

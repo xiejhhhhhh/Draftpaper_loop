@@ -23,6 +23,16 @@ _EXCLUDED_PREFIXES = (
     "results/historical/",
     "results/cache/",
 )
+_DISCOVERY_EXCLUDED_PARTS = frozenset({
+    ".cache",
+    ".pytest_cache",
+    "__pycache__",
+    "cache",
+    "caches",
+    "scratch",
+    "temp",
+    "tmp",
+})
 _STAGE_ROOTS = {
     "research_plan": ("research_plan", "journal_profile", "plugins"),
     "research_plan_feasibility": ("research_plan", "data", "methods"),
@@ -83,6 +93,18 @@ def _safe_relative(root: Path, value: Any) -> str | None:
     return relative if (root / relative).is_file() else None
 
 
+def _is_discovery_excluded(relative: str) -> bool:
+    """Keep volatile cache trees out of bounded fallback discovery.
+
+    A manifest, payload, or canonical path can still intentionally name an
+    exact file.  This guard applies only to recursive fallback discovery,
+    where cache contents have no ownership or scientific-identity guarantee.
+    """
+
+    path = Path(relative)
+    return any(part.lower() in _DISCOVERY_EXCLUDED_PARTS for part in path.parts[:-1])
+
+
 def _paths_from_value(root: Path, value: Any, *, key: str = "") -> set[str]:
     paths: set[str] = set()
     if isinstance(value, dict):
@@ -138,7 +160,7 @@ def _direct_stage_paths(root: Path, stage: str) -> set[str]:
             if not path.is_file() or path.suffix.lower() not in _DEFAULT_SUFFIXES:
                 continue
             relative = path.relative_to(root).as_posix()
-            if any(relative.startswith(prefix) for prefix in _EXCLUDED_PREFIXES):
+            if any(relative.startswith(prefix) for prefix in _EXCLUDED_PREFIXES) or _is_discovery_excluded(relative):
                 continue
             try:
                 if path.stat().st_size <= 32 * 1024 * 1024:

@@ -19,6 +19,21 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _tokens(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    tokens = []
+    for item in value:
+        if isinstance(item, dict):
+            item = item.get("series_id") or item.get("id") or item.get("label") or item.get("name")
+        text = _text(item)
+        if text:
+            tokens.append(text)
+    return sorted(set(tokens))
+
+
 def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> dict[str, Any]:
     figures = [
         item
@@ -31,11 +46,13 @@ def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> di
         if isinstance(item, dict) and _text(item.get("project_relative_path"))
     }
     metric = summary.get("core_metrics") if isinstance(summary.get("core_metrics"), dict) else {}
+    manuscript_claims = summary.get("manuscript_figure_claims") if isinstance(summary.get("manuscript_figure_claims"), dict) else {}
     rows: list[dict[str, Any]] = []
     for index, figure in enumerate(sorted(figures, key=lambda item: _text(item.get("project_relative_path")))):
         path = _text(figure.get("project_relative_path"))
         claim = brief_claims.get(path) or {}
         statement = claim.get("statement") if isinstance(claim.get("statement"), dict) else {}
+        manuscript_claim = manuscript_claims.get(path) if isinstance(manuscript_claims.get(path), dict) else {}
         rows.append(
             {
                 "map_id": f"figure-map-{index + 1}",
@@ -53,6 +70,12 @@ def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> di
                 "caption_cohort_id": figure.get("caption_cohort_id"),
                 "figure_split_id": figure.get("split_id"),
                 "figure_cohort_id": figure.get("cohort_id"),
+                "plotted_series_ids": _tokens(figure.get("series") or figure.get("series_ids")),
+                "caption_series_ids": _tokens(figure.get("caption_series_ids")),
+                "claim_series_ids": _tokens(figure.get("claim_series_ids") or manuscript_claim.get("series_ids")),
+                "figure_quantity_kind": _text(figure.get("quantity_kind")),
+                "caption_quantity_kind": _text(figure.get("caption_quantity_kind")),
+                "claim_quantity_kind": _text(figure.get("claim_quantity_kind") or manuscript_claim.get("quantity_kind")),
             }
         )
     payload = {
@@ -92,6 +115,35 @@ def validate_figure_claim_map(payload: dict[str, Any]) -> list[dict[str, Any]]:
                         "code": f"{prefix}_identity_mismatch",
                         "figure_id": figure_id,
                         "detail_zh": f"{figure_id} 的 {actual_key} 与当前证据身份不一致。",
+                    }
+                )
+        plotted = set(row.get("plotted_series_ids") or [])
+        caption = set(row.get("caption_series_ids") or [])
+        claim = set(row.get("claim_series_ids") or [])
+        if plotted and caption and not caption <= plotted:
+            issues.append(
+                {
+                    "code": "caption_series_not_plotted",
+                    "figure_id": figure_id,
+                    "detail_zh": f"{figure_id} 的图注引用了图面不存在的系列或类别。",
+                }
+            )
+        if plotted and claim and not claim <= plotted:
+            issues.append(
+                {
+                    "code": "manuscript_series_not_plotted",
+                    "figure_id": figure_id,
+                    "detail_zh": f"{figure_id} 的正文论断引用了图面不存在的系列或类别。",
+                }
+            )
+        figure_quantity = _text(row.get("figure_quantity_kind"))
+        for label, actual in (("caption", _text(row.get("caption_quantity_kind"))), ("claim", _text(row.get("claim_quantity_kind")))):
+            if figure_quantity and actual and figure_quantity != actual:
+                issues.append(
+                    {
+                        "code": f"{label}_quantity_kind_mismatch",
+                        "figure_id": figure_id,
+                        "detail_zh": f"{figure_id} 的{label}数值口径与图面不一致，不能混淆绝对计数与条件比例。",
                     }
                 )
     return issues

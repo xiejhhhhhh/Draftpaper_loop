@@ -637,7 +637,7 @@ COMMAND_SPECS.update({
         "state",
         "checkpoint_summary",
         "validate_checkpoint_readability",
-        (("project", "project"), ("checkpoint_package_id", "checkpoint_package_id")),
+        (("project", "project"), ("checkpoint_package_id", "checkpoint_package_id"), ("language", "language")),
     ),
     "show-confirmation-continuity": CommandSpec(
         "show-confirmation-continuity",
@@ -647,6 +647,24 @@ COMMAND_SPECS.update({
         "checkpoint_summary",
         "show_confirmation_continuity",
         (("project", "project"), ("checkpoint_type", "checkpoint_type")),
+    ),
+    "audit-checkpoint-v5-migration": CommandSpec(
+        "audit-checkpoint-v5-migration",
+        "state_kernel",
+        False,
+        "state",
+        "checkpoint_migration",
+        "audit_checkpoint_v5_migration",
+        (("project", "project"), ("checkpoint_hash", "checkpoint_hash")),
+    ),
+    "shadow-checkpoint-v5": CommandSpec(
+        "shadow-checkpoint-v5",
+        "state_kernel",
+        False,
+        "state",
+        "checkpoint_shadow",
+        "shadow_checkpoint_v5",
+        (("project", "project"), ("output_root", "output_root")),
     ),
     "rebuild-checkpoint-presentation": CommandSpec(
         "rebuild-checkpoint-presentation",

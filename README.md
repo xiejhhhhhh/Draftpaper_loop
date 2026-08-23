@@ -516,6 +516,7 @@ The chart is a repository-hosted snapshot generated from GitHub stargazer timest
 - `HumanDecisionBrief`, `scientific_decision_fingerprint_v1`, audit/presentation fingerprints, bounded `StageActivityBundle v2`, `FigureClaimMap`, readability checks, and manifest-first scope make the requested decision understandable while preserving traceability.
 - Confirmation requests now bind the scientific decision and Brief semantics. Rebuilt HTML, PDF, manifests, citation maps, and other derived presentation artifacts no longer cause repeated C3; unchanged science writes a continuity receipt and continues as a notification. Metric, uncertainty, cohort, split, sample-unit, method/run, figure-semantic, or claim-boundary changes remain fail-closed and require a new author decision.
 - Added `show-checkpoint-audit`, `compare-checkpoint-decision`, `explain-reconfirmation`, `validate-checkpoint-readability`, `show-confirmation-continuity`, and `rebuild-checkpoint-presentation`. The Agent payload leads with exact readable and audit paths plus semantic delta and confirmation meaning.
+- Added read-only `audit-checkpoint-v5-migration` and project-external `shadow-checkpoint-v5` checks. Legacy v1-v4 packages are never rewritten or silently promoted; an existing project is audited first and receives a new v5 C3 decision only when required.
 
 ### v0.40.0 (2026-08-20) -- Discipline-aware identity checks and on-demand full text
 

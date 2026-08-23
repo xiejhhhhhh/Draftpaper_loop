@@ -457,7 +457,78 @@ th {{ background:#eef2f7; white-space:nowrap; }}
 </main></body></html>\n'''
 
 
-def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any]) -> str:
+_DECISION_LABELS = {
+    "zh-CN": {
+        "audit": "打开完整技术审计",
+        "summary": "机器摘要",
+        "contract": "确认合同",
+        "readability": "可读性检查",
+        "changed": "相对上次确认的变化",
+        "confirming": "本次确认什么",
+        "context": "样本、验证与主结果",
+        "facts": "本次决定的关键事实",
+        "figures": "主图支持的结论",
+        "boundaries": "论断边界",
+        "exclusions": "本次不确认什么",
+        "reopen": "何时会重新要求科学确认",
+        "deliverables": "本阶段可阅读产物",
+        "meaning": "确认后的含义",
+        "command": "确认命令",
+        "evidence": "证据：",
+        "first": "这是首次科学确认。",
+        "no_figures": "本次没有主图作为独立科学决定项。",
+        "no_deliverables": "本阶段未登记额外可阅读产物。",
+        "no_command": "当前不需要新的作者确认命令；请查阅上方状态和连续性说明。",
+        "continuity": "本次科学决定与最近一次作者确认一致，系统将沿用原确认；技术审计已更新，不需要重复输入确认 hash。",
+        "changed_notice": "检测到科学决定变化。请先阅读下方变化说明，再决定是否确认、要求修订或拒绝。",
+        "blocked_notice": "当前存在阻断或过期证据；页面可阅读，但不能用于确认。",
+        "facts_note": "这些事实与下方陈述使用同一组 fact IDs；完整运行和审计细节见技术审计页。",
+        "title": "Draftpaper 科学确认",
+        "science": "科学决定：",
+    },
+    "en": {
+        "audit": "Open technical audit",
+        "summary": "Machine summary",
+        "contract": "Confirmation contract",
+        "readability": "Readability check",
+        "changed": "What changed since the prior confirmation",
+        "confirming": "What this decision confirms",
+        "context": "Sample, validation, and primary result",
+        "facts": "Key facts for this decision",
+        "figures": "Conclusions supported by the main figures",
+        "boundaries": "Claim boundaries",
+        "exclusions": "What this decision does not confirm",
+        "reopen": "When scientific confirmation is required again",
+        "deliverables": "Readable outputs from this stage",
+        "meaning": "What confirmation permits next",
+        "command": "Confirmation command",
+        "evidence": "Evidence: ",
+        "first": "This is the first scientific confirmation.",
+        "no_figures": "No main figure is an independent decision item in this checkpoint.",
+        "no_deliverables": "No additional readable deliverable is registered for this stage.",
+        "no_command": "No new author-confirmation command is required; review the status and continuity note above.",
+        "continuity": "This scientific decision matches the latest author confirmation. The system preserves that decision while updating the technical audit; no repeated hash entry is required.",
+        "changed_notice": "A scientific decision changed. Review the difference below before confirming, refining, or rejecting it.",
+        "blocked_notice": "Evidence is blocked or stale. This page remains readable but cannot be confirmed.",
+        "facts_note": "These facts use the same fact IDs as the statements below. The technical audit retains full run and provenance detail.",
+        "title": "Draftpaper scientific confirmation",
+        "science": "Scientific decision: ",
+    },
+}
+
+
+def _labels(locale: str) -> dict[str, str]:
+    return _DECISION_LABELS["en"] if locale == "en" else _DECISION_LABELS["zh-CN"]
+
+
+def _statement_text(statement: dict[str, Any], locale: str) -> str:
+    if locale == "en" and _text(statement.get("text_en")):
+        return _text(statement.get("text_en"))
+    return _text(statement.get("text_zh"))
+
+
+def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any], *, locale: str = "zh-CN") -> str:
+    labels = _labels(locale)
     links = []
     for raw in refs[:5]:
         ref = str(raw or "")
@@ -466,32 +537,68 @@ def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any]) -> str:
             href = _link(root, output_dir, relative)
             links.append(f'<a href="{href}">{_text(relative)}</a>' if href else _text(relative))
         elif ref.startswith("policy:"):
-            links.append("确认合同")
+            links.append(labels["contract"])
         else:
             links.append(_text(ref))
     return "、".join(links)
 
 
-def _brief_statements(root: Path, output_dir: Path, statements: list[Any]) -> str:
+def _brief_statements(root: Path, output_dir: Path, statements: list[Any], *, locale: str = "zh-CN") -> str:
+    labels = _labels(locale)
     rows = []
     for statement in statements:
         if not isinstance(statement, dict):
             continue
         refs = [*list(statement.get("evidence_refs") or []), *list(statement.get("claim_refs") or [])]
-        ref_html = _brief_ref_links(root, output_dir, refs)
+        ref_html = _brief_ref_links(root, output_dir, refs, locale=locale)
+        statement_id = escape(_text(statement.get("statement_id")))
+        fact_refs = escape(" ".join(_text(item) for item in statement.get("fact_refs") or []))
         rows.append(
-            '<li><span>'
-            + _text(statement.get("text_zh"))
+            f'<li data-statement-id="{statement_id}" data-fact-refs="{fact_refs}"><span>'
+            + _statement_text(statement, locale)
             + "</span>"
-            + (f'<small class="refs">证据：{ref_html}</small>' if ref_html else "")
+            + (f'<small class="refs">{labels["evidence"]}{ref_html}</small>' if ref_html else "")
             + "</li>"
         )
     return "<ul>" + "".join(rows) + "</ul>" if rows else '<p class="muted">未登记。</p>'
 
 
-def render_checkpoint_decision_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+def _brief_facts(root: Path, output_dir: Path, brief: dict[str, Any], *, locale: str) -> str:
+    labels = _labels(locale)
+    fact_ids = [
+        *list((brief.get("scientific_context") or {}).get("identity_fact_refs") or []),
+        *list((brief.get("scientific_context") or {}).get("metric_fact_refs") or []),
+        *list((brief.get("scientific_context") or {}).get("count_fact_refs") or []),
+    ]
+    facts = {str(item.get("fact_id") or ""): item for item in brief.get("facts") or [] if isinstance(item, dict)}
+    rows = []
+    for fact_id in dict.fromkeys(str(value) for value in fact_ids if str(value)):
+        fact = facts.get(fact_id)
+        if not fact:
+            continue
+        value = fact.get("value")
+        rendered = json.dumps(value, ensure_ascii=False, sort_keys=True) if isinstance(value, (dict, list)) else _text(value)
+        refs = _brief_ref_links(root, output_dir, list(fact.get("evidence_refs") or []), locale=locale)
+        rows.append(
+            f'<li data-fact-id="{escape(fact_id)}"><strong>{_text(fact.get("label_zh"))}</strong>：{rendered}'
+            + (f'<small class="refs">{labels["evidence"]}{refs}</small>' if refs else "")
+            + "</li>"
+        )
+    return "<ul>" + "".join(rows) + "</ul>" if rows else '<p class="muted">No structured identity fact is registered.</p>'
+
+
+def render_checkpoint_decision_html(
+    root: Path,
+    output_dir: Path,
+    summary: dict[str, Any],
+    request: dict[str, Any],
+    *,
+    locale: str = "zh-CN",
+) -> str:
     """Render the compact, evidence-bound page that the author actually reads."""
 
+    locale = "en" if locale == "en" else "zh-CN"
+    labels = _labels(locale)
     brief = summary.get("decision_brief") if isinstance(summary.get("decision_brief"), dict) else {}
     state = str(summary.get("review_state") or "confirmable")
     state_label = _STATE_LABELS.get(state, state)
@@ -501,15 +608,15 @@ def render_checkpoint_decision_html(root: Path, output_dir: Path, summary: dict[
     audit_href = _link(root, output_dir, "stage_audit.zh-CN.html")
     summary_href = _link(root, output_dir, str(summary.get("stage_summary_path") or ""))
     request_href = _link(root, output_dir, "confirmation_request.json")
-    readability_href = _link(root, output_dir, "checkpoint_readability_report.json")
+    readability_href = _link(root, output_dir, "checkpoint_readability_report.en.json" if locale == "en" else "checkpoint_readability_report.json")
     confirmation_command = request.get("confirmation_command") if (summary.get("confirmation_contract") or {}).get("confirmation_command_allowed") else None
     continuity_note = ""
     if continuity.get("eligible"):
-        continuity_note = '<p class="notice success">本次科学决定与最近一次作者确认一致，系统将沿用原确认；技术审计已更新，不需要重复输入确认 hash。</p>'
+        continuity_note = f'<p class="notice success">{labels["continuity"]}</p>'
     elif delta.get("classification") == "scientific_change":
-        continuity_note = '<p class="notice warning">检测到科学决定变化。请先阅读下方变化说明，再决定是否确认、要求修订或拒绝。</p>'
+        continuity_note = f'<p class="notice warning">{labels["changed_notice"]}</p>'
     elif state != "confirmable":
-        continuity_note = '<p class="notice warning">当前存在阻断或过期证据；页面可阅读，但不能用于确认。</p>'
+        continuity_note = f'<p class="notice warning">{labels["blocked_notice"]}</p>'
     figures = []
     for item in brief.get("figure_claims") or []:
         if not isinstance(item, dict):
@@ -518,14 +625,14 @@ def render_checkpoint_decision_html(root: Path, output_dir: Path, summary: dict[
         statement = item.get("statement") if isinstance(item.get("statement"), dict) else {}
         href = _link(root, output_dir, path)
         figures.append(
-            '<article class="figure">'
+            f'<article class="figure" data-statement-id="{escape(_text(statement.get("statement_id")))}" data-fact-refs="{escape(" ".join(_text(value) for value in statement.get("fact_refs") or []))}">'
             f'<h3>{_text(item.get("figure_id"))}</h3>'
             + (f'<a href="{href}"><img src="{href}" alt="{_text(item.get("figure_id"))}"></a>' if href and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".svg"} else "")
-            + f'<p>{_text(statement.get("text_zh"))}</p>'
-            + (f'<small class="refs">证据：{_brief_ref_links(root, output_dir, list(statement.get("evidence_refs") or []))}</small>' if statement.get("evidence_refs") else "")
+            + f'<p>{_statement_text(statement, locale)}</p>'
+            + (f'<small class="refs">{labels["evidence"]}{_brief_ref_links(root, output_dir, list(statement.get("evidence_refs") or []), locale=locale)}</small>' if statement.get("evidence_refs") else "")
             + "</article>"
         )
-    figure_html = "".join(figures) or '<p class="muted">本次没有主图作为独立科学决定项。</p>'
+    figure_html = "".join(figures) or f'<p class="muted">{labels["no_figures"]}</p>'
     changes = []
     for item in delta.get("changes") or []:
         if not isinstance(item, dict):
@@ -542,18 +649,18 @@ def render_checkpoint_decision_html(root: Path, output_dir: Path, summary: dict[
             f'<li><a href="{href}">{_text(item.get("title_zh") or path)}</a>'
             f'<small>{_text(item.get("purpose_zh"))}</small></li>'
         )
-    deliverable_html = "<ul>" + "".join(deliverables) + "</ul>" if deliverables else '<p class="muted">本阶段未登记额外可阅读产物。</p>'
+    deliverable_html = "<ul>" + "".join(deliverables) + "</ul>" if deliverables else f'<p class="muted">{labels["no_deliverables"]}</p>'
     confirmation_html = (
         f'<code>{_text(confirmation_command)}</code>'
         if confirmation_command
-        else '<p class="muted">当前不需要新的作者确认命令；请查阅上方状态和连续性说明。</p>'
+        else f'<p class="muted">{labels["no_command"]}</p>'
     )
     return f'''<!doctype html>
-<html lang="zh-CN">
+<html lang="{locale}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{_text(summary.get("checkpoint_title_zh") or "Draftpaper 科学确认")}</title>
+<title>{_text(summary.get("checkpoint_title_en") if locale == "en" else summary.get("checkpoint_title_zh")) or labels["title"]}</title>
 <style>
 :root {{ --ink:#172033; --muted:#526071; --line:#d4dce7; --paper:#fff; --bg:#f6f8fb; --blue:#155eab; --blue-bg:#edf6ff; --green:#137333; --green-bg:#ecfdf3; --amber:#9a5800; --amber-bg:#fff8e8; }}
 * {{ box-sizing:border-box; }} body {{ margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif; line-height:1.64; }}
@@ -569,26 +676,34 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 <body><main>
 <header class="hero">
 <span class="status">{_text(state_label)}</span>
-<h1>{_text(summary.get("checkpoint_title_zh") or "Draftpaper 科学确认")}</h1>
-<p class="lead">{_text(decision_question.get("text_zh") or summary.get("stage_purpose_zh"))}</p>
+<h1>{_text(summary.get("checkpoint_title_en") if locale == "en" else summary.get("checkpoint_title_zh")) or labels["title"]}</h1>
+<p class="lead" data-statement-id="{escape(_text(decision_question.get("statement_id")))}" data-fact-refs="{escape(" ".join(_text(value) for value in decision_question.get("fact_refs") or []))}">{_statement_text(decision_question, locale) or _text(summary.get("stage_purpose_zh"))}</p>
 {continuity_note}
-<div class="meta"><span>科学决定：<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span><a href="{audit_href}">打开完整技术审计</a><a href="{summary_href}">机器摘要</a><a href="{request_href}">确认合同</a><a href="{readability_href}">可读性检查</a></div>
+<div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span><a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
 </header>
-<section class="section"><h2>相对上次确认的变化</h2><p>{_text(delta.get("summary_zh") or "这是首次科学确认。")}</p>{change_html}</section>
-<section class="section"><h2>本次确认什么</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []))}</section>
-<section class="section"><h2>样本、验证与主结果</h2>{_brief_statements(root, output_dir, list(brief.get("key_findings") or []))}<p class="muted">详细数值、身份和运行证据可在技术审计页追溯。</p></section>
-<section class="section"><h2>主图支持的结论</h2><div class="figure-grid">{figure_html}</div></section>
-<section class="section"><h2>论断边界</h2>{_brief_statements(root, output_dir, list(brief.get("claim_boundaries") or []))}</section>
-<section class="section"><h2>本次不确认什么</h2>{_brief_statements(root, output_dir, list(brief.get("not_confirming") or []))}</section>
-<section class="section"><h2>何时会重新要求科学确认</h2>{_brief_statements(root, output_dir, list(brief.get("reopen_conditions") or []))}</section>
-<section class="section"><h2>本阶段可阅读产物</h2>{deliverable_html}</section>
-<section class="section"><h2>确认后的含义</h2>{_brief_statements(root, output_dir, list(brief.get("downstream_effects") or []))}<p><strong>确认命令</strong></p>{confirmation_html}</section>
+<section class="section"><h2>{labels["changed"]}</h2><p>{_text(delta.get("summary_zh") or labels["first"])}</p>{change_html}</section>
+<section class="section"><h2>{labels["confirming"]}</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []), locale=locale)}</section>
+<section class="section"><h2>{labels["facts"]}</h2>{_brief_facts(root, output_dir, brief, locale=locale)}<p class="muted">{labels["facts_note"]}</p></section>
+<section class="section"><h2>{labels["context"]}</h2>{_brief_statements(root, output_dir, list(brief.get("key_findings") or []), locale=locale)}</section>
+<section class="section"><h2>{labels["figures"]}</h2><div class="figure-grid">{figure_html}</div></section>
+<section class="section"><h2>{labels["boundaries"]}</h2>{_brief_statements(root, output_dir, list(brief.get("claim_boundaries") or []), locale=locale)}</section>
+<section class="section"><h2>{labels["exclusions"]}</h2>{_brief_statements(root, output_dir, list(brief.get("not_confirming") or []), locale=locale)}</section>
+<section class="section"><h2>{labels["reopen"]}</h2>{_brief_statements(root, output_dir, list(brief.get("reopen_conditions") or []), locale=locale)}</section>
+<section class="section"><h2>{labels["deliverables"]}</h2>{deliverable_html}</section>
+<section class="section"><h2>{labels["meaning"]}</h2>{_brief_statements(root, output_dir, list(brief.get("downstream_effects") or []), locale=locale)}<p><strong>{labels["command"]}</strong></p>{confirmation_html}</section>
 </main></body></html>\n'''
 
 
-def render_checkpoint_html(root: Path, output_dir: Path, summary: dict[str, Any], request: dict[str, Any]) -> str:
+def render_checkpoint_html(
+    root: Path,
+    output_dir: Path,
+    summary: dict[str, Any],
+    request: dict[str, Any],
+    *,
+    locale: str = "zh-CN",
+) -> str:
     """Render the decision view for v5 and retain the v3/v4 audit renderer."""
 
     if summary.get("schema_version") == "dpl.checkpoint_summary.v5":
-        return render_checkpoint_decision_html(root, output_dir, summary, request)
+        return render_checkpoint_decision_html(root, output_dir, summary, request, locale=locale)
     return render_checkpoint_audit_html(root, output_dir, summary, request)

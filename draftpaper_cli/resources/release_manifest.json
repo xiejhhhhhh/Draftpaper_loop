@@ -6,7 +6,7 @@
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 258,
+  "command_count": 260,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -110,6 +110,7 @@
     "missing_schema_files": [],
     "required_companions": [
       "stage_summary.zh-CN.html",
+      "stage_summary.en.html",
       "stage_audit.zh-CN.html",
       "stage_summary.json",
       "human_decision_brief_v1.json",
@@ -121,6 +122,7 @@
       "unresolved_issues.json",
       "agent_payload.json",
       "checkpoint_readability_report.json",
+      "checkpoint_readability_report.en.json",
       "figure_claim_map_v1.json"
     ],
     "agent_paths": [

@@ -10,6 +10,7 @@
 
 ```text
 stage_summary.zh-CN.html              # 面向作者的可读决定页
+stage_summary.en.html                 # 同一决定的英文渲染页
 stage_audit.zh-CN.html                # 完整技术审计页
 stage_summary.json                    # v5 成果包合同
 human_decision_brief_v1.json          # 作者看到的事实与决定陈述
@@ -79,12 +80,16 @@ C0 通知型阶段可以记录 `system_acknowledged`；C1/C2 仅在有效的 sco
 
 ```powershell
 draftpaper show-checkpoint-summary --project <project> --view decision
+draftpaper show-checkpoint-summary --project <project> --view decision --language en
 draftpaper show-checkpoint-audit --project <project> --checkpoint-package-id <id>
 draftpaper compare-checkpoint-decision --project <project> --against latest-confirmed
 draftpaper explain-reconfirmation --project <project> --checkpoint-package-id <id>
 draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id>
+draftpaper validate-checkpoint-readability --project <project> --checkpoint-package-id <id> --language en
 draftpaper show-confirmation-continuity --project <project> --checkpoint-type core_evidence
 draftpaper rebuild-checkpoint-presentation --project <project> --checkpoint-package-id <id>
+draftpaper audit-checkpoint-v5-migration --project <project> --checkpoint-hash <hash>
+draftpaper shadow-checkpoint-v5 --project <project> --output-root <项目目录外的输出目录>
 draftpaper resume --project <project> --checkpoint-hash <hash>
 ```
 
@@ -95,6 +100,16 @@ draftpaper resume --project <project> --checkpoint-hash <hash>
 `blocked`、`stale`、`preview_only`、身份缺失、legacy 或 conflict 的成果包都不能显示
 作者确认命令。`preview-checkpoint-summary` 仍只生成不可消费的派生包。匿名 fixture 可使用
 `test_auto_confirmation=true`，但该标记绝不能确认真实项目。
+
+## 旧包迁移与 shadow 核验
+
+`audit-checkpoint-v5-migration` 只读取 v1-v4 成果包并报告下一步。它绝不改写历史 summary、
+转移用户 receipt，也不会把旧包 hash 当作 v5 科学决定。v4 包最多可投影为比较预览；除非已
+存在经核验的等价 v5 决定，否则流程仍需要一次新的 v5 C3 作者确认。
+
+`shadow-checkpoint-v5` 用于现有项目的回归核验。`--output-root` 必须位于项目目录外。该命令
+会记录 passport、ledger、promoted snapshot、checkpoint 记录和稿件 PDF 的前后 hash，再将 JSON
+与 HTML 报告写在项目外。未变化状态核验失败会直接阻断，不能在 shadow 审计过程中修复项目证据。
 
 ## 运行时身份升级
 
