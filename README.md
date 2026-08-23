@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.42.0.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.42.1.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -513,6 +513,10 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.42.1 (2026-08-24) -- Python 3.10 compatibility patch
+
+- Restored the declared Python 3.10 support for literature-corpus confirmation by replacing a Python 3.11-only UTC constant with the compatible standard-library timezone value. The scientific-review and corpus-confirmation contracts are unchanged.
+
 ### v0.42.0 (2026-08-23) -- Unified readable review packets and JSON-first audit
 
 - Research-plan confirmation now creates a versioned bilingual `HumanReviewPacket` that presents questions, claim boundaries, data roles, methods, statistics, figure/table contracts, feasibility limits, and the semantic delta together; historical packets remain available while an active pointer selects the current one.

@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.42.0。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.42.1。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -504,6 +504,10 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.42.1（2026-08-24）-- Python 3.10 兼容性补丁
+
+- 将文献 corpus 确认路径中仅 Python 3.11 支持的 UTC 常量替换为兼容的标准库时区值，恢复声明的 Python 3.10 支持；科学审阅与 corpus 确认合同不变。
+
 ### v0.42.0（2026-08-23）-- 统一可读审阅包与 JSON-first 审计
 
 - 研究计划确认升级为版本化中英文 `HumanReviewPacket`：页面在同一处展示研究问题、claim 边界、数据角色、方法、统计、主图/表格合同、可行性限制和相对上次的语义变化；历史包保留，active pointer 只切换当前包。

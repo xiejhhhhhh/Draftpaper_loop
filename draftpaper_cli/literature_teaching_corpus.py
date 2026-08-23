@@ -17,7 +17,7 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -384,7 +384,7 @@ def build_literature_teaching_corpus(project: str | Path) -> dict[str, Any]:
             "missing_from_usage_plan": sorted(expected_keys - set(usage_by_key)),
             "extra_active_or_usage_work_count": len(excluded_works),
         },
-        "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
 
 
