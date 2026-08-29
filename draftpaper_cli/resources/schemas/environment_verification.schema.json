@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper-loop.local/schemas/environment_verification.v1.json",
+  "title": "Draftpaper-loop Environment Verification",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "target", "status", "environment", "latex"],
+  "properties": {
+    "schema_version": {"const": "dpl.environment_verification.v1"},
+    "generated_at": {"type": "string"},
+    "target": {"enum": ["control", "research", "publication", "agent"]},
+    "status": {"enum": ["passed", "attention", "failed"]},
+    "environment": {"type": "object"},
+    "latex": {"type": "object"},
+    "output": {"type": "string"},
+    "json": {"type": "string"},
+    "html_zh": {"type": "string"},
+    "html_en": {"type": "string"}
+  },
+  "additionalProperties": true
+}

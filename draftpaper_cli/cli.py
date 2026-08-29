@@ -1160,8 +1160,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Run a deterministic, read-only Draftpaper-loop environment and project diagnosis.")
     doctor.add_argument("--project", default=None)
+    doctor.add_argument("--target", choices=["control", "research", "publication", "agent"], default="control")
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON (the default CLI representation).")
     doctor.add_argument("--explain", action="store_true", help="Include artifact dependency and failure-route details.")
+    verify_environment = subparsers.add_parser(
+        "verify-environment",
+        help="Run explicit isolated environment and optional LaTeX compilation verification.",
+    )
+    verify_environment.add_argument("--target", choices=["control", "research", "publication", "agent"], default="control")
+    verify_environment.add_argument("--compile-latex", action="store_true")
+    verify_environment.add_argument("--output", required=True)
     evidence_audit = subparsers.add_parser(
         "audit-evidence-identity",
         help="Read-only audit of metric, count, run-bundle, and figure-trace identity with migration routing.",

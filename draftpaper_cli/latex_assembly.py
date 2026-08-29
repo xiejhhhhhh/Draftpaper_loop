@@ -1068,9 +1068,9 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
 
     engine = _find_latex_executable(["xelatex", "xelatex.exe", "pdflatex", "pdflatex.exe"])
     if not engine:
-        message = "Skipped PDF generation: no local LaTeX engine was found. Install MiKTeX or TeX Live and retry."
+        message = "PDF generation failed: no local LaTeX engine was found. Install MiKTeX or TeX Live and retry."
         manifest = {
-            "status": "skipped",
+            "status": "failed",
             "message": message,
             "engine": None,
             "bibtex": None,
@@ -1081,7 +1081,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
         log_file.write_text(message + "\n", encoding="utf-8")
         _write_pdf_manifest(state.path, manifest)
         return {
-            "status": "skipped",
+            "status": "failed",
             "project_path": str(state.path),
             "pdf": None,
             "compile_log": str(log_file),

@@ -73,6 +73,7 @@ REQUIRED_CLI_COMMANDS = (
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
     "rebuild-checkpoint-presentation",
+    "verify-environment",
 )
 
 
@@ -316,6 +317,17 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "no_new_debt": ruff_audit.get("no_new_debt", ruff_audit.get("status") in {"passed", "retired_zero_debt"}),
             "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json",
         },
+        "environment_contract": {
+            "core_schema": "dpl.core_environment_contract.v1",
+            "verification_schema": "dpl.environment_verification.v1",
+            "targets": ["control", "research", "publication", "agent"],
+            "publication_core": ["pypdf", "pymupdf", "xelatex", "pdflatex", "bibtex", "kpsewhich"],
+            "source_checkout_requires_system_git": True,
+            "windows_bootstrap": "tools/bootstrap_windows_environment.ps1",
+            "doctor_read_only": True,
+            "verification_isolated": True,
+            "verification_command": "python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>",
+        },
         "checkpoint_contract": {
             "status": checkpoint_contract_status,
             "summary_schema": checkpoint_schema_ids["summary"],
@@ -448,8 +460,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[1]))
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--check", action="store_true", help="Validate the packaged release manifest without writing it.")
     args = parser.parse_args(argv)
     repository = Path(args.root).resolve()
+    if args.check:
+        report = validate_release_manifest(repository)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["status"] == "passed" else 1
     payload = build_release_manifest(repository)
     if args.write:
         _release_manifest_path(repository).write_text(

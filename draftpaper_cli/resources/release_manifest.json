@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.42.1",
-  "workflow_skill_sha256": "9260b5a6383b777c5732f0b20fe5aa7d952f83a1f3f9780603465a94256974cd",
-  "workflow_contract_sha256": "29aa53e476ddfbe5964f88b3e213013851b746de4655635a1aed4ada7ebe9ece",
+  "package_version": "0.42.2",
+  "workflow_skill_sha256": "761063351ffc35814c7c8d4b91bac2774b875a0aadd98014938f604d75ee08df",
+  "workflow_contract_sha256": "1964da24b3ff8dea2de6b3e98cf2f7e0ebe58ec65d6ccb44e63ca81b8dcf2afc",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 270,
+  "command_count": 271,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -65,7 +65,8 @@
     "explain-reconfirmation",
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
-    "rebuild-checkpoint-presentation"
+    "rebuild-checkpoint-presentation",
+    "verify-environment"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "resource_schema_status": "passed",
@@ -93,6 +94,29 @@
     "ruff_legacy_debt_count": 0,
     "no_new_debt": true,
     "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json"
+  },
+  "environment_contract": {
+    "core_schema": "dpl.core_environment_contract.v1",
+    "verification_schema": "dpl.environment_verification.v1",
+    "targets": [
+      "control",
+      "research",
+      "publication",
+      "agent"
+    ],
+    "publication_core": [
+      "pypdf",
+      "pymupdf",
+      "xelatex",
+      "pdflatex",
+      "bibtex",
+      "kpsewhich"
+    ],
+    "source_checkout_requires_system_git": true,
+    "windows_bootstrap": "tools/bootstrap_windows_environment.ps1",
+    "doctor_read_only": true,
+    "verification_isolated": true,
+    "verification_command": "python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>"
   },
   "checkpoint_contract": {
     "status": "passed",

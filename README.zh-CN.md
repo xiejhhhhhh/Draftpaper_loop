@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.42.1。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.42.2。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。v0.42.2 增加机器可核验的 publication 环境合同和隔离的双引擎 LaTeX/BibTeX 验收路径，不再把 Python 安装档位误认为完整论文生产环境。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -46,6 +46,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 | 科学写作 | Paper Narrative Engine、章节证据包、Codex 自由写作、Scientific Editor | Results、Introduction、Data、Methods、Discussion |
 | 文献与引用 | 学科化多源检索、Zotero、本地 PDF/结构化导入、对称学科门禁、论文身份核验、按需全文、抓取后复核、评分保全、双语 HTML 和引用审计 | identity/fetch receipts、active snapshot、quarantine、`library.bib`、citation evidence、final audit |
 | 审稿与发布 | Results 后学科审查、两位独立盲评、作者补全事务、编译和 release hash | reviewer reports、completion packet、`main.pdf` |
+| 运行环境与发布 | 只读环境合同、原生 PDF 解析检查、系统 Git 识别，以及隔离的 XeLaTeX/pdfLaTeX/BibTeX 验收 | environment contract、验收回执、双语环境报告 |
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
@@ -84,6 +85,18 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 版本号用于解释能力来源；日常使用由当前研究问题和项目状态驱动，`status`、`doctor` 和 `run-pipeline` 会给出下一步。
 
 ## 快速开始
+
+### 0. 验收完整的论文生产环境
+
+Python extras 只安装 Draftpaper 的 Python 能力，不会安装 TeX 发行版、Visual C++ 运行库或系统 Git。Windows 请按[环境部署手册](docs/environment_deployment.zh-CN.md)采用 MiKTeX 25.12 私有安装路线，然后执行：
+
+```powershell
+.\tools\bootstrap_windows_environment.ps1 -Mode Check
+.\.venv\Scripts\python -m draftpaper_cli doctor --target publication --json
+.\.venv\Scripts\python -m draftpaper_cli verify-environment --target publication --compile-latex --output .tmp\environment-verification
+```
+
+验收命令只会把 JSON 回执、双语报告、PDF 和日志写入指定输出目录。不要在真实论文项目内运行；端到端验收还需要在独立的 Draftpaper 临时项目中编译一次。
 
 ### 1. 安装真实论文常用的绘图档位
 
@@ -411,6 +424,7 @@ CommandSpec、schema registry 和质量合同构成统一命令控制面，声�
 | 需要了解的内容 | 文档 |
 |---|---|
 | 命令、参数、输入输出和风险 | [CLI 命令参考](docs/cli_reference.md) |
+| 完整 Python、系统运行库和 LaTeX 论文生产部署 | [环境部署手册](docs/environment_deployment.zh-CN.md) |
 | minimal、plotting、fulltext、MCP | [安装档位说明](docs/install_profiles.zh-CN.md) |
 | 写入、联网和人工确认边界 | [命令风险矩阵](docs/command_risk_matrix.md) |
 | 项目 token 与费用 receipt | [Token 与费用报告](docs/token_cost_reporting.zh-CN.md) |
@@ -504,6 +518,11 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.42.2（2026-08-29）-- 完整论文生产环境部署
+- 增加只读核心环境合同和 `doctor --target control|research|publication|agent`，真实检查 Python 导入、原生加载失败、系统 Git，以及 MiKTeX/TeX 可执行文件来源。
+- 增加 `verify-environment --target publication --compile-latex`，在隔离目录中验收 pypdf 读取、XeLaTeX + BibTeX、pdfLaTeX + BibTeX、`kpsewhich plainnat.bst`、有效 PDF、最终引用解析和双语回执。
+- 增加 Windows `Check`/`InstallCore` 部署脚本，只处理 Visual C++ x64、Git for Windows 和私有 MiKTeX 25.12；MinerU、GPU、Node.js、Java、`gh` 和学科运行时仍是可选能力。
+- 增加中英文环境部署手册，并将核心论文生产环境纳入 release contract 和 schema 验收。
 ### v0.42.1（2026-08-24）-- Python 3.10 兼容性补丁
 
 - 将文献 corpus 确认路径中仅 Python 3.11 支持的 UTC 常量替换为兼容的标准库时区值，恢复声明的 Python 3.10 支持；科学审阅与 corpus 确认合同不变。

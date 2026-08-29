@@ -14,6 +14,8 @@
     "figure_contract_assessment": {"current": "dpl.figure_contract_assessment.v1", "accepted": []},
     "packaged_resource_schema_report": {"current": "dpl.packaged_resource_schema_report.v1", "accepted": []},
     "install_profile_report": {"current": "dpl.install_profile_report.v1", "accepted": []},
+    "core_environment_contract": {"current": "dpl.core_environment_contract.v1", "accepted": []},
+    "environment_verification": {"current": "dpl.environment_verification.v1", "accepted": []},
     "install_matrix_validation": {"current": "dpl.install_matrix_validation.v1", "accepted": []},
     "token_cost_report": {"current": "dpl.token_cost_report.v1", "accepted": []},
     "artifact_dependency_dag": {"current": "dpl.artifact_dependency_dag.v2", "accepted": ["dpl.artifact_dependency_dag.v1"]},

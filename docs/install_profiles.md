@@ -20,4 +20,6 @@ draftpaper doctor --json
 
 The Doctor report contains `environment.install_profiles`. Each profile reports required and missing import modules, capabilities, an exact recovery command and any runtime fallback. Missing optional profiles do not invalidate the minimal control plane. They must, however, be installed before a stage claims to execute the associated capability.
 
+Python profiles do not constitute the complete publication environment. A local final-paper build additionally requires a working TeX distribution with `xelatex`, `pdflatex`, `bibtex`, and `kpsewhich`; a source checkout also requires an independently discoverable system Git. On Windows, follow the [complete environment deployment guide](environment_deployment.md) for the MiKTeX 25.12 private-install route, Visual C++ x64 runtime, read-only diagnostics, and isolated compilation verification.
+
 Release CI validates the independent minimal, plotting, fulltext and MCP environments. `mineru-agent` is a no-op connector profile and does not add a local MinerU model. Wheel metadata is also checked with `tools/verify_install_matrix.py` so heavy plotting or GPU packages cannot drift back into the default dependency set. Self-hosted MinerU is an external user-managed endpoint, not an installation profile.

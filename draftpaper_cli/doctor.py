@@ -12,13 +12,13 @@ from pathlib import Path
 from typing import Any
 
 from .command_registry import command_spec
+from .environment_contract import inspect_core_environment
 from .install_profiles import inspect_install_profiles
 from .orchestrator import status_project
 from .passport import read_jsonl
 from .project_state import load_project
 from .project_system_of_record import inspect_project_system_of_record
 from .skill_sync import skill_doctor
-
 
 MANUSCRIPT_TOKEN_BUDGET = 73_343
 MANUSCRIPT_WRITING_STAGES = {"results", "introduction", "data", "methods", "discussion"}
@@ -183,21 +183,37 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
     }
 
 
-def _environment() -> dict[str, Any]:
+def _environment(*, target: str = "control") -> dict[str, Any]:
     runtime_source = _runtime_source_diagnostics()
     install_profiles = inspect_install_profiles()
+    core_environment = inspect_core_environment(
+        target=target,
+        source_kind=str(runtime_source.get("source_kind") or "installed_package"),
+        profile_report=install_profiles,
+    )
+
+    def core_path(capability_id: str) -> str | None:
+        for item in core_environment.get("components") or []:
+            if item.get("capability_id") == capability_id and item.get("status") == "available":
+                return str(item.get("path") or "") or None
+        return None
+
     return {
         "python": sys.version.split()[0],
         "runtime_source": runtime_source,
+        "core_environment": core_environment,
         "install_profiles": install_profiles,
         "executables": {
-            "latex": shutil.which("xelatex") or shutil.which("pdflatex"),
-            "bibtex": shutil.which("bibtex"),
-            "git": shutil.which("git"),
+            "latex": core_path("xelatex") or core_path("pdflatex"),
+            "bibtex": core_path("bibtex"),
+            "git": core_path("git") or shutil.which("git"),
             "gh": shutil.which("gh"),
         },
         "optional_modules": {
-            name: not any(name in item["missing_modules"] for item in install_profiles["profiles"].values())
+            name: not any(
+                name in item["missing_modules"] or name in item.get("failed_modules", [])
+                for item in install_profiles["profiles"].values()
+            )
             for name in ("bibtexparser", "matplotlib", "numpy", "pandas", "yaml")
         },
     }
@@ -229,7 +245,10 @@ def _runtime_source_diagnostics(
         distribution_version = importlib.metadata.version("draftpaper-cli")
     except importlib.metadata.PackageNotFoundError:
         distribution_version = None
-    mismatch = bool(cwd_checkout and imported_root != cwd_checkout)
+    mismatch = bool(
+        cwd_checkout
+        and (imported_root is None or not _same_checkout_path(imported_root, cwd_checkout))
+    )
     return {
         "imported_module": str(imported),
         "imported_checkout_root": str(imported_root) if imported_root else None,
@@ -240,10 +259,51 @@ def _runtime_source_diagnostics(
     }
 
 
-def doctor_project(project: str | Path | None = None, *, explain: bool = False) -> dict[str, Any]:
-    environment = _environment()
+def _same_checkout_path(left: Path, right: Path) -> bool:
+    """Treat junctions and symlinks to the same checkout as one runtime root."""
+
+    try:
+        if left.samefile(right):
+            return True
+        left_marker = left / "pyproject.toml"
+        right_marker = right / "pyproject.toml"
+        return left_marker.is_file() and right_marker.is_file() and left_marker.samefile(right_marker)
+    except (OSError, ValueError):
+        return left == right
+
+
+def doctor_project(project: str | Path | None = None, *, explain: bool = False, target: str = "control") -> dict[str, Any]:
+    environment = _environment(target=target)
     environment["workflow_skill"] = skill_doctor()
     findings: list[dict[str, Any]] = []
+    core_environment = environment["core_environment"]
+    if core_environment.get("status") == "failed":
+        missing = core_environment.get("missing_core") or []
+        names = ", ".join(
+            str(item.get("capability_id") or item.get("module") or "unknown")
+            for item in missing
+        )
+        findings.append(_finding(
+            "core_environment",
+            "error",
+            f"Core environment target {target!r} is incomplete: {names}.",
+            "The selected Draftpaper-loop workflow cannot be treated as a complete runnable environment.",
+            artifacts=[f"environment:{target}"],
+            next_command="draftpaper verify-environment --target publication --compile-latex",
+        ))
+    elif core_environment.get("status") == "attention":
+        optional = core_environment.get("optional_unavailable") or []
+        names = ", ".join(
+            str(item.get("capability_id") or item.get("module") or "unknown")
+            for item in optional
+        )
+        findings.append(_finding(
+            "optional_environment",
+            "warning",
+            f"Optional environment capabilities are unavailable: {names}.",
+            "Only the affected optional capability is unavailable; the selected core target remains usable.",
+            artifacts=[f"environment:{target}"],
+        ))
     runtime_source = environment["runtime_source"]
     if runtime_source.get("source_checkout_mismatch"):
         checkout = str(runtime_source.get("working_checkout_root") or "").strip()

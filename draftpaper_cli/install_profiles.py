@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 from collections.abc import Callable
 from typing import Any
-
 
 PROFILE_MODULES: dict[str, tuple[str, ...]] = {
     "minimal": ("yaml", "bibtexparser", "pypdf", "PIL"),
@@ -19,7 +18,7 @@ PROFILE_MODULES: dict[str, tuple[str, ...]] = {
         "lxml",
         "platformdirs",
         "pydantic",
-        "fitz",
+        "pymupdf",
         "dotenv",
         "rapidfuzz",
         "trafilatura",
@@ -39,30 +38,64 @@ PROFILE_CAPABILITIES: dict[str, tuple[str, ...]] = {
 }
 
 
-def _module_available(name: str) -> bool:
+def _module_probe(name: str, *, importer: Callable[[str], Any] = importlib.import_module) -> dict[str, Any]:
     try:
-        return importlib.util.find_spec(name) is not None
-    except (ImportError, ModuleNotFoundError, ValueError):
-        return False
+        importer(name)
+    except ModuleNotFoundError as exc:
+        return {
+            "status": "missing",
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+        }
+    except ImportError as exc:
+        return {
+            "status": "import_failed",
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+        }
+    except Exception as exc:  # noqa: BLE001 - profile probes must classify import failures.
+        return {
+            "status": "import_failed",
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+        }
+    return {"status": "available", "error_type": None, "error_message": None}
+
+
+def _module_available(name: str) -> bool:
+    return _module_probe(name)["status"] == "available"
 
 
 def inspect_install_profiles(
     *,
     module_available: Callable[[str], bool] | None = None,
+    importer: Callable[[str], Any] = importlib.import_module,
 ) -> dict[str, Any]:
     """Report which documented install profiles are usable in this interpreter."""
 
-    available = module_available or _module_available
+    def probe(name: str) -> dict[str, Any]:
+        if module_available is not None:
+            return {
+                "status": "available" if module_available(name) else "missing",
+                "error_type": None,
+                "error_message": None,
+            }
+        return _module_probe(name, importer=importer)
+
     profiles: dict[str, dict[str, Any]] = {}
     for profile, modules in PROFILE_MODULES.items():
-        missing = [name for name in modules if not available(name)]
+        module_statuses = {name: probe(name) for name in modules}
+        missing = [name for name, item in module_statuses.items() if item["status"] == "missing"]
+        failed = [name for name, item in module_statuses.items() if item["status"] == "import_failed"]
         extra = None if profile == "minimal" else profile
         install_target = "draftpaper-cli" if extra is None else f"draftpaper-cli[{extra}]"
         profiles[profile] = {
-            "status": "available" if not missing else "missing_dependencies",
+            "status": "import_failed" if failed else "missing_dependencies" if missing else "available",
             "extra": extra,
             "required_modules": list(modules),
             "missing_modules": missing,
+            "failed_modules": failed,
+            "module_statuses": module_statuses,
             "capabilities": list(PROFILE_CAPABILITIES[profile]),
             "install_command": f'python -m pip install "{install_target}"',
             "runtime_fallback": "vendored_paper_fetch" if profile == "fulltext" else None,
@@ -72,12 +105,16 @@ def inspect_install_profiles(
         for profile in ("plotting", "fulltext", "mcp")
         for module in PROFILE_MODULES[profile]
     ))
-    research_missing = [name for name in research_modules if not available(name)]
+    research_statuses = {name: probe(name) for name in research_modules}
+    research_missing = [name for name, item in research_statuses.items() if item["status"] == "missing"]
+    research_failed = [name for name, item in research_statuses.items() if item["status"] == "import_failed"]
     profiles["research"] = {
-        "status": "available" if not research_missing else "missing_dependencies",
+        "status": "import_failed" if research_failed else "missing_dependencies" if research_missing else "available",
         "extra": "plotting,fulltext,mcp",
         "required_modules": list(research_modules),
         "missing_modules": research_missing,
+        "failed_modules": research_failed,
+        "module_statuses": research_statuses,
         "capabilities": sorted({
             capability
             for profile in ("plotting", "fulltext", "mcp")
@@ -87,7 +124,10 @@ def inspect_install_profiles(
         "runtime_fallback": "vendored_paper_fetch",
         "composed_from": ["plotting", "fulltext", "mcp"],
     }
-    missing_optional = [name for name in ("plotting", "fulltext", "mcp") if profiles[name]["missing_modules"]]
+    missing_optional = [
+        name for name in ("plotting", "fulltext", "mcp")
+        if profiles[name]["missing_modules"] or profiles[name]["failed_modules"]
+    ]
     return {
         "schema_version": "dpl.install_profile_report.v1",
         "status": "attention" if missing_optional else "passed",

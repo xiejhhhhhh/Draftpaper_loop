@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.42.1
+version: 0.42.2
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -23,6 +23,27 @@ Use `continue` only when its reported preconditions pass. A runtime identity
 mismatch stops the workflow; after an accepted runtime update, use
 `session-preflight --accept-runtime-update`. If a transaction reports
 `rollback_incomplete`, stop and use `doctor` or `recover`.
+
+## Environment
+
+Python installation profiles do not include the complete paper-production
+toolchain. Before a publication run, use the read-only `doctor --target
+publication --json` check. On Windows, the repository's
+`tools/bootstrap_windows_environment.ps1 -Mode Check` reports the required
+Visual C++ x64 runtime, independent system Git, and private MiKTeX 25.12
+installation. After reviewing any remediation, run the explicit isolated
+verification command:
+
+```powershell
+python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>
+```
+
+This command is the authoritative smoke test for pypdf, XeLaTeX, pdfLaTeX,
+BibTeX, `kpsewhich`, resolved citations, and non-empty PDFs. It writes only to
+the requested output directory. Do not use it inside a real paper project;
+compile a separate temporary project through Draftpaper's formal LaTeX entry
+point when an end-to-end check is required. MinerU, GPU runtimes, Node.js,
+Java, and discipline-specific packages remain optional.
 
 ## Evidence and Literature
 

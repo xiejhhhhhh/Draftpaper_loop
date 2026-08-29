@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.42.1.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.42.2.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. v0.42.2 adds a machine-checked publication environment contract and an isolated two-engine LaTeX/BibTeX acceptance path, so a Python profile is no longer mistaken for a complete paper-production environment. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -46,6 +46,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 | Scientific writing | Paper Narrative Engine, section evidence packets, Codex free composition, Scientific Editor | Results, Introduction, Data, Methods, Discussion |
 | Literature and citations | Discipline-routed multi-source search, Zotero, local PDF/structured import, symmetric discipline gates, paper identity resolution, on-demand full text, post-fetch review, score preservation, bilingual HTML, and citation audit | identity/fetch receipts, active snapshot, quarantine, `library.bib`, citation evidence, final audit |
 | Review and release | Post-Results discipline review, two blind reviewers, author-completion transaction, compilation, and release hash | reviewer reports, completion packet, `main.pdf` |
+| Runtime and publication | Read-only environment contract, native PDF-parser checks, system Git detection, and isolated XeLaTeX/pdfLaTeX/BibTeX verification | environment contract, verification receipt, bilingual environment reports |
 
 <!-- capability:checkpoint_summary_and_runtime_handshake -->
 <!-- capability-meta: id=checkpoint_summary_and_runtime_handshake; status=implemented; since=0.35 -->
@@ -84,6 +85,18 @@ See [Discipline-aware literature discovery and identity](docs/discipline_aware_l
 Version numbers explain capability origin. Daily use follows the current research question and project state; `status`, `doctor`, and `run-pipeline` recommend the next action.
 
 ## Quick Start
+
+### 0. Verify the complete publication environment
+
+Python extras install Draftpaper's Python capabilities; they do not install a TeX distribution, Visual C++ runtime, or system Git. On Windows, use the standard MiKTeX 25.12 private-install route described in [Environment Deployment](docs/environment_deployment.md), then run:
+
+```powershell
+.\tools\bootstrap_windows_environment.ps1 -Mode Check
+.\.venv\Scripts\python -m draftpaper_cli doctor --target publication --json
+.\.venv\Scripts\python -m draftpaper_cli verify-environment --target publication --compile-latex --output .tmp\environment-verification
+```
+
+The verifier writes its JSON receipt, bilingual report, PDFs, and logs only to the requested output directory. Do not run it inside a real paper project; use a separate Draftpaper temporary-project compile for an end-to-end check.
 
 ### 1. Install the plotting profile used by real paper projects
 
@@ -419,6 +432,7 @@ CommandSpec, the schema registry, and quality contracts form one command control
 | Need | Document |
 |---|---|
 | Commands, parameters, inputs/outputs, and risk | [CLI Reference](docs/cli_reference.md) |
+| Complete Python, system-runtime, and LaTeX publication setup | [Environment Deployment](docs/environment_deployment.md) |
 | Minimal, plotting, fulltext, and MCP profiles | [Install Profiles](docs/install_profiles.md) |
 | Write, network, and confirmation boundaries | [Command Risk Matrix](docs/command_risk_matrix.md) |
 | Project token and cost receipts | [Token and Cost Reporting](docs/token_cost_reporting.md) |
@@ -513,6 +527,11 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.42.2 (2026-08-29) -- Complete publication environment deployment
+- Added a read-only core environment contract and `doctor --target control|research|publication|agent`, with real Python imports, native-loader failure classification, system-Git detection, and MiKTeX/TeX executable checks.
+- Added `verify-environment --target publication --compile-latex`, which validates pypdf reading, XeLaTeX + BibTeX, pdfLaTeX + BibTeX, `kpsewhich plainnat.bst`, valid PDFs, final citation resolution, and bilingual receipts in an isolated output directory.
+- Added the Windows `Check`/`InstallCore` bootstrap for Visual C++ x64, Git for Windows, and private MiKTeX 25.12; MinerU, GPU, Node.js, Java, `gh`, and discipline-specific runtimes remain optional.
+- Added bilingual environment deployment guidance and release-contract/schema coverage for the core paper-production environment.
 ### v0.42.1 (2026-08-24) -- Python 3.10 compatibility patch
 
 - Restored the declared Python 3.10 support for literature-corpus confirmation by replacing a Python 3.11-only UTC constant with the compatible standard-library timezone value. The scientific-review and corpus-confirmation contracts are unchanged.

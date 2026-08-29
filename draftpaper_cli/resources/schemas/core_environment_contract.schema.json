@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://draftpaper-loop.local/schemas/core_environment_contract.v1.json",
+  "title": "Draftpaper-loop Core Environment Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "target",
+    "status",
+    "platform",
+    "source_kind",
+    "components",
+    "missing_core",
+    "optional_unavailable"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.core_environment_contract.v1"},
+    "target": {"enum": ["control", "research", "publication", "agent"]},
+    "status": {"enum": ["passed", "attention", "failed"]},
+    "platform": {"type": "string"},
+    "source_kind": {"type": "string"},
+    "components": {"type": "array", "items": {"type": "object"}},
+    "missing_core": {"type": "array", "items": {"type": "object"}},
+    "optional_unavailable": {"type": "array", "items": {"type": "object"}},
+    "profile_report": {"type": "object"},
+    "environment_variables": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -445,7 +445,7 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertTrue(Path(payload["main_tex"]).exists())
             self.assertTrue(Path(payload["library_bib"]).exists())
 
-    def test_compile_latex_pdf_skips_cleanly_without_engine(self) -> None:
+    def test_compile_latex_pdf_fails_explicitly_without_engine(self) -> None:
         from draftpaper_cli.latex_assembly import assemble_latex, compile_latex_pdf
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -455,10 +455,10 @@ class LatexAssemblyTests(unittest.TestCase):
             with patch.dict(os.environ, {"PATH": "", "LOCALAPPDATA": str(Path(tmp) / "no-localappdata")}):
                 result = compile_latex_pdf(project_path)
 
-            self.assertEqual(result["status"], "skipped")
+            self.assertEqual(result["status"], "failed")
             self.assertIsNone(result["pdf"])
             manifest = json.loads((project_path / "latex" / "pdf_compile_manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["status"], "skipped")
+            self.assertEqual(manifest["status"], "failed")
             self.assertIn("no local LaTeX engine", manifest["message"])
 
     def test_compile_latex_pdf_uses_local_engine_and_writes_manifest(self) -> None:

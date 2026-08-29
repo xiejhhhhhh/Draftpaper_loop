@@ -1,0 +1,55 @@
+name: environment-smoke
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-publication:
+    name: Linux publication environment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install TeX toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex texlive-latex-extra texlive-bibtex-extra
+      - name: Install Draftpaper-loop research environment
+        run: python -m pip install -c requirements/ci-constraints.txt -e ".[dev,plotting,fulltext,mcp]"
+      - name: Run isolated publication verification
+        run: python -m draftpaper_cli verify-environment --target publication --compile-latex --output build/environment-verification
+
+  windows-publication:
+    name: Windows publication environment
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install Windows core toolchain
+        shell: pwsh
+        run: .\tools\bootstrap_windows_environment.ps1 -Mode InstallCore
+      - name: Configure MiKTeX on-demand packages
+        shell: pwsh
+        run: |
+          $miktexBin = Join-Path $env:LOCALAPPDATA "Programs\MiKTeX\miktex\bin\x64"
+          $gitBin = Join-Path $env:ProgramFiles "Git\cmd"
+          $env:PATH = "$miktexBin;$gitBin;$env:PATH"
+          if (Test-Path -LiteralPath $miktexBin) { $miktexBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append }
+          if (Test-Path -LiteralPath $gitBin) { $gitBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append }
+          initexmf --set-config-value=[MPM]AutoInstall=yes
+          initexmf --update-fndb
+      - name: Install Draftpaper-loop research environment
+        run: python -m pip install -c requirements/ci-constraints.txt -e ".[dev,plotting,fulltext,mcp]"
+      - name: Run isolated publication verification
+        run: python -m draftpaper_cli verify-environment --target publication --compile-latex --output build\environment-verification
