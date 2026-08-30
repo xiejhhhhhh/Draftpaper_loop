@@ -77,8 +77,10 @@ def test_verify_environment_refuses_compile_when_core_environment_is_missing(tmp
     assert not (tmp_path / "verification" / "artifacts").exists()
 
 
-def test_verify_environment_uses_injected_runner_for_both_engines(tmp_path: Path) -> None:
-    from draftpaper_cli.environment_verification import verify_environment
+def test_verify_environment_uses_injected_runner_for_both_engines(tmp_path: Path, monkeypatch) -> None:
+    from draftpaper_cli import environment_verification
+
+    verify_environment = environment_verification.verify_environment
 
     environment = _passed_environment()
     environment["target"] = "publication"
@@ -94,6 +96,27 @@ def test_verify_environment_uses_injected_runner_for_both_engines(tmp_path: Path
     )
 
     calls: list[list[str]] = []
+
+    def validate_pdf(pdf: Path) -> dict:
+        assert pdf.is_file()
+        parsers = {
+            name: {
+                "status": "passed",
+                "page_count": 1,
+                "error_type": None,
+                "error_message": None,
+            }
+            for name in ("pypdf", "pymupdf")
+        }
+        return {
+            "status": "passed",
+            "page_count": 1,
+            "parsers": parsers,
+            "error_type": None,
+            "error_message": None,
+        }
+
+    monkeypatch.setattr(environment_verification, "_validate_pdf", validate_pdf)
 
     def runner(command, **kwargs):
         calls.append([str(item) for item in command])

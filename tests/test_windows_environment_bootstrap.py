@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 SCRIPT = Path(__file__).parents[1] / "tools" / "bootstrap_windows_environment.ps1"
 
@@ -19,6 +22,7 @@ def test_windows_bootstrap_declares_only_core_system_packages() -> None:
     assert "CUDA" not in source
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="The bootstrap executable contract is Windows-only.")
 def test_windows_bootstrap_check_mode_is_read_only() -> None:
     completed = subprocess.run(
         [
