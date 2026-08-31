@@ -8,10 +8,10 @@
 
 | 项目 | 当前状态 | 处理原则 |
 |---|---|---|
-| 当前分支 | 本地 `main` 与 `origin/main` 共同指向 `53569a5` | 直接在本地 `main` 上形成后续增量提交，不再创建无必要的合并分支 |
+| 当前分支 | 本地 `main` 指向 `9c7e656`，`origin/main` 仍指向 `53569a5`，本地领先 2 个提交 | 直接将已验证的本地增量推送到 `main`，不再创建无必要的合并分支 |
 | v0.42.2 | 远端已有正式 tag，指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8` | tag、Release 和发布提交保持不可变，不允许 force-push 或移动 tag |
-| 本地框架改动 | 已重新应用到 `main` 基线，但仍在工作树中，尚未形成最终提交 | 先按功能边界拆分、测试和审查，再纳入新版本 |
-| 环境补漏改动 | 已写入工作树，包含依赖、profile、Doctor、验证器、bootstrap、文档和 CI 调整 | 以 clean install、wheel 和 fresh clone 验证为准，不以当前机器可导入为准 |
+| 本地框架改动 | 已在本地 `main` 提交为 `1204fe2`，包含证据、checkpoint、文献准入和连续性改动 | 继续以远端 CI、wheel 和 clean clone 验证为准 |
+| 环境补漏改动 | 已在 `1204fe2` 提交，包含依赖、profile、Doctor、验证器、bootstrap、文档和 CI 调整 | 继续以远端 CI、wheel 和 fresh clone 验证为准，不以当前机器可导入为准 |
 | v0.43.0 | 尚未完成最终发布闭环 | 完成所有门禁后再创建 tag、Release、wheel 和远端归档 |
 | 本机虚拟环境 | 仅用于发现缺口，不能作为交接物 | 不上传 `.venv`、`.uv-venv`、系统安装包、缓存或凭证 |
 
@@ -21,7 +21,7 @@
 
 - 日期：2026-08-31
 - 当前本地分支：`main`
-- 当前本地与 `origin/main` 共同指针：`53569a5`
+- 当前本地 `main`：`9c7e656`；`origin/main`：`53569a5`；本地领先 2 个提交
 - 远端已发布版本：`v0.42.2 - Complete publication environment deployment`
 - 远端 `v0.42.2` 标签解析到发布提交：`c0a3840d163f107cd5fecdf31cec4cada467e2d8`
 - 当前 `main` 的 `53569a5` 是发布提交之后的环境测试隔离修正，不属于对 `v0.42.2` 标签的改写
@@ -32,7 +32,7 @@
 ## 2. 核心结论
 
 1. GitHub v0.42.2 已经正式发布，必须保持远端 tag、Release 和发布提交 `c0a3840` 不可变，后续不能覆盖或强推该版本。当前 `main` 已在该发布提交之后，所有新增功能都必须通过新的提交和新版本发布。
-2. 本地未提交内容确实是 Draftpaper-loop 公共框架改动，不是某篇论文的项目特判，主要包括：
+2. 已整合并提交的本地内容确实是 Draftpaper-loop 公共框架改动，不是某篇论文的项目特判，主要包括：
    - 科学证据注册表补强；
    - checkpoint 科学语义归一化与可读页修正；
    - 图表多格式去重和 claim/evidence 绑定稳定化；
@@ -74,9 +74,9 @@
 
 当前 `origin/main` 在发布 tag 之后还有提交 `53569a5`，用于隔离不同 CI 平台的环境检查。它属于当前主线的后续修正，不能把它误写成 `v0.42.2` 标签内容。本地已经同步了 `v0.42.2` tag；正式发布前仍应执行 `git fetch --tags origin` 并核验 tag 指向，不能仅凭本地分支名称判断标签状态。
 
-### 3.2 已兼容回本地但尚未提交的框架改动
+### 3.2 已提交到本地 main 的框架改动
 
-当前工作区约有 1,700 行框架代码和测试改动；其中原始改动在 `stash@{0}` 保留了一份恢复快照，当前工作树已经重新应用到 `main`/`53569a5` 基线上。它们仍是未提交改动，不能在验证前直接作为设备交接版本。
+此前工作区约有 1,700 行框架代码和测试改动；它们已经基于 `main`/`53569a5` 完成验证并提交为 `1204fe2`。原始改动仍在 `stash@{0}` 保留一份恢复快照，在远端 push、CI 和 clean-clone 验收完成前不得删除。
 
 | 方向 | 主要文件 | 目标 |
 |---|---|---|
@@ -88,9 +88,9 @@
 | 文献 corpus 连续性 | `literature_teaching_corpus.py`、`literature_confirmation.py` | 派生索引重建不应作废科学上未变化的文献确认；成员、角色或 work identity 变化仍必须重确认 |
 | CLI 与写集 | `cli.py`、`command_registry.py` | 同时保留 v0.42.2 的 `verify-environment` 和本地的 `prepare-literature-admission`、`activate-literature-corpus` |
 
-### 3.3 已完成实现、尚待提交的环境补漏
+### 3.3 已提交、尚待远端验收的环境补漏
 
-以下改动已经写入本地工作树并通过当前设备的核心验收；在最终交接前仍必须完成分层暂存、提交、推送、CI 和 clean clone 验收：
+以下改动已经写入本地工作树、通过当前设备的核心验收并提交到本地 `main`；在最终交接前仍必须完成推送、CI 和 clean clone 验收：
 
 - `pyproject.toml`：已限制 Python 上界，并补充 full-text/browser 依赖；
 - `install_profiles.py`：已增加 full-text 真实依赖、browser 档位和 profile Python 范围；
@@ -99,7 +99,7 @@
 - `bootstrap_windows_environment.ps1`：已增加独立 Python 3.11 检查和安装入口；
 - `requirements/runtime-constraints.txt`、`config/environment.example`、双语环境文档、CI 和 wheel 验证工具：已加入工作树并完成一致性核对。
 
-因此当前可以说“本地实现和核心环境验收已完成，等待形成公开提交”，不能说“v0.43.0 已发布”或“新设备已经验收通过”。
+因此当前可以说“本地实现、核心环境验收和本地提交已完成”，不能说“v0.43.0 已发布”或“新设备已经验收通过”。
 
 ### 3.4 已完成的本机验证
 
@@ -328,9 +328,9 @@ git diff --stat v0.42.2..origin/main
 
 当前已完成：
 
-- 本地 `main` 与 `origin/main` 均指向 `53569a5`；
+- 本地 `main` 指向 `9c7e656`，`origin/main` 指向 `53569a5`，本地领先 2 个提交；
 - 已通过远端 refs 核验 `v0.42.2` 存在且指向发布提交 `c0a3840`；
-- 当前工作树中的本地框架改动已基于主线重新应用；
+- 本地框架和环境改动已提交为 `1204fe2` 与 `9c7e656`；
 - `stash@{0}` 保留整合前恢复快照；
 - 未跟踪的商业文档、项目资料、临时目录和 `uv.lock` 未被纳入 stash 或远端提交。
 
@@ -464,6 +464,8 @@ git diff --cached --check
 git diff --cached --name-status
 git diff --cached --stat
 ```
+
+本次实际采用两条可回滚提交完成同一边界：`1204fe2` 集中提交环境、框架实现、测试和生成合同；`9c7e656` 提交 README 与本交接方案。两条提交均基于 `53569a5`，未改写 `v0.42.2`，后续远端发布仍需以这两条提交及 clean-clone 验收结果为准。
 
 ### M6：版本与发布
 
