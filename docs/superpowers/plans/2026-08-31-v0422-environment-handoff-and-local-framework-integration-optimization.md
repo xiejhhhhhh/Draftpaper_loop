@@ -1,6 +1,6 @@
 # Draftpaper-loop v0.42.2 -> v0.43.0 环境交接与本地框架改动整合优化方案
 
-> 本文件是环境交接、框架改动整合、验证和发布的执行手册，不是已经完成发布的证明。除非后文的验收证据已经产生，否则“待完成”“待验证”状态不得在 README、Release note 或用户回复中写成“已完成”。
+> 本文件是环境交接、框架改动整合、验证和发布的执行手册，也是 2026-08-31 的状态记录。已完成项以提交、tag、Release、构建产物或验收记录为准；未闭合的 CI 项目仍必须如实保留，不能在 README、Release note 或用户回复中写成“已完成”。
 
 ## 0. 本版状态校正
 
@@ -8,12 +8,13 @@
 
 | 项目 | 当前状态 | 处理原则 |
 |---|---|---|
-| 当前分支 | 本地 `main` 与 `origin/main` 已同步（具体 SHA 以 `git rev-parse` 核验） | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
+| 当前分支 | 本地 `main` 与 `origin/main` 均为 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26` | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
 | v0.42.2 | 远端已有正式 tag，指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8` | tag、Release 和发布提交保持不可变，不允许 force-push 或移动 tag |
 | 本地框架改动 | 已在本地 `main` 提交为 `1204fe2`，包含证据、checkpoint、文献准入和连续性改动 | 继续以远端 CI、wheel 和 clean clone 验证为准 |
 | 环境补漏改动 | 已在 `1204fe2` 提交，包含依赖、profile、Doctor、验证器、bootstrap、文档和 CI 调整 | 继续以远端 CI、wheel 和 fresh clone 验证为准，不以当前机器可导入为准 |
-| v0.43.0 | 尚未完成最终发布闭环 | 完成所有门禁后再创建 tag、Release、wheel 和远端归档 |
+| v0.43.0 | 已创建不可变 tag、GitHub Release 和 wheel 附件，tag 指向 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26` | 保持 tag/Release 不变；后续修复使用新版本，不覆盖已发布内容 |
 | 本机虚拟环境 | 仅用于发现缺口，不能作为交接物 | 不上传 `.venv`、`.uv-venv`、系统安装包、缓存或凭证 |
+| 最新主线 CI | 运行 `33393665621` 在最后一次观察时仍未最终收敛；Ubuntu 3.10 已失败，其余已结束任务当时成功 | 按用户要求不继续监控；交接前由接手者重新打开该工作流并确认最终状态 |
 
 当前工作树中还存在论文项目、商业文档、临时目录和其他未跟踪文件。它们不属于本次 Draftpaper-loop 框架发布范围，必须通过显式 allowlist 暂存，禁止使用 `git add .`。
 
@@ -22,11 +23,13 @@
 - 日期：2026-08-31
 - 当前本地分支：`main`
 - 当前本地与 `origin/main` 已同步；具体 SHA 以 `git rev-parse HEAD` 和 `git rev-parse origin/main` 核验
-- 远端已发布版本：`v0.42.2 - Complete publication environment deployment`
+- 远端不可变基线版本：`v0.42.2 - Complete publication environment deployment`
+- 当前交接版本：`v0.43.0 - Draftpaper-loop v0.43.0`
 - 远端 `v0.42.2` 标签解析到发布提交：`c0a3840d163f107cd5fecdf31cec4cada467e2d8`
 - 当前 `main` 的 `53569a5` 是发布提交之后的环境测试隔离修正，不属于对 `v0.42.2` 标签的改写
-- GitHub Release：<https://github.com/xiejhhhhhh/Draftpaper_loop/releases/tag/v0.42.2>
-- 目标：在不覆盖 GitHub v0.42.2 既有内容、不丢失本地未提交框架改动的前提下，补齐可迁移部署环境，完成框架整合、验证、提交、推送和设备交接
+- 基线 GitHub Release：<https://github.com/xiejhhhhhh/Draftpaper_loop/releases/tag/v0.42.2>
+- 当前 GitHub Release：<https://github.com/xiejhhhhhh/Draftpaper_loop/releases/tag/v0.43.0>
+- 目标：在不覆盖 GitHub v0.42.2 既有内容的前提下，补齐可迁移部署环境，完成框架整合、验证、提交、推送，并形成可交接的 `v0.43.0`
 - 方案性质：仓库级框架与部署方案，不修改任何论文项目的 `project.json`、passport、ledger、证据快照、确认 receipt、论文正文或 PDF
 
 ## 2. 核心结论
@@ -38,8 +41,8 @@
    - 图表多格式去重和 claim/evidence 绑定稳定化；
    - 文献候选正式准入包、显式激活和教学 corpus 连续性；
    - 对应 CLI、命令注册表与测试。
-3. 本地框架改动与 v0.42.2 环境部署改动只有 `draftpaper_cli/cli.py` 和 `draftpaper_cli/command_registry.py` 两处文件级重叠，当前工作树已经在 `main` 基线上保留了环境验收命令和文献准入命令；但它们尚未提交，必须通过 command contract、写集和回归测试后才能宣称整合完成。
-4. v0.42.2 已覆盖 MiKTeX/TeX Live、XeLaTeX、pdfLaTeX、BibTeX、`kpsewhich`、系统 Git、Visual C++、环境 Doctor 和隔离编译验收，但仍未形成真正可交接的完整环境，至少还缺：
+3. 本地框架改动与 v0.42.2 环境部署改动的文件级重叠已经在 `1204fe2` 中完成整合，并由后续文档/状态提交补齐发布记录；不存在尚未提交的核心整合改动。完整链条为 `53569a5`、`1204fe2`、`9c7e656`、`86c6fe7`、`db8ce16`、`1acaf3f`。
+4. v0.42.2 已覆盖 MiKTeX/TeX Live、XeLaTeX、pdfLaTeX、BibTeX、`kpsewhich`、系统 Git、Visual C++、环境 Doctor 和隔离编译验收；v0.43.0 在此基础上补齐了可迁移交接所需的：
    - 新设备上的独立 Python 3.11 引导；
    - Python 支持范围与 full-text runtime 的一致性；
    - vendored paper-fetch 的 `imagesize` 和 PDF Markdown runtime；
@@ -54,7 +57,7 @@
    - CI 与 clean-clone 验收；
    - 中英文操作手册；
    - wheel、校验和与 Release。
-6. 由于本地还包含新增 CLI 与框架能力，最终整合版本建议为 `v0.43.0`。如果交接时间非常紧，只先发布环境补漏，则发布 `v0.42.3`，随后再将框架能力发布为 `v0.43.0`。
+6. 由于本地同时包含框架能力和环境补漏，最终整合版本已经确定为 `v0.43.0`。不再创建或回填 `v0.42.3`；后续修复应使用 `v0.43.1` 或更高版本。
 
 ## 3. 当前真实状态
 
@@ -72,7 +75,7 @@
 - Linux/Windows publication smoke workflow；
 - 中英文环境部署手册、schema、release manifest 和测试。
 
-当前 `origin/main` 在发布 tag 之后还有提交 `53569a5`，用于隔离不同 CI 平台的环境检查。它属于当前主线的后续修正，不能把它误写成 `v0.42.2` 标签内容。本地已经同步了 `v0.42.2` tag；正式发布前仍应执行 `git fetch --tags origin` 并核验 tag 指向，不能仅凭本地分支名称判断标签状态。
+`53569a5` 是 `v0.42.2` 发布 tag 之后用于隔离不同 CI 平台环境检查的主线修正，后续提交又加入了本次框架、环境和交接文档。它们属于当前主线，不能误写成 `v0.42.2` 标签内容。本地已经同步了两个 tag；后续仍应执行 `git fetch --tags origin` 并核验 tag 指向，不能仅凭本地分支名称判断标签状态。
 
 ### 3.2 已提交到本地 main 的框架改动
 
@@ -88,9 +91,9 @@
 | 文献 corpus 连续性 | `literature_teaching_corpus.py`、`literature_confirmation.py` | 派生索引重建不应作废科学上未变化的文献确认；成员、角色或 work identity 变化仍必须重确认 |
 | CLI 与写集 | `cli.py`、`command_registry.py` | 同时保留 v0.42.2 的 `verify-environment` 和本地的 `prepare-literature-admission`、`activate-literature-corpus` |
 
-### 3.3 已提交、尚待远端验收的环境补漏
+### 3.3 已提交并上传的环境补漏
 
-以下改动已经写入本地工作树、通过当前设备的核心验收并提交到本地 `main`；在最终交接前仍必须完成推送、CI 和 clean clone 验收：
+以下改动已经写入本地工作树、通过当前设备的核心验收，并随 `1204fe2` 及后续提交推送到远端 `main`；它们同时包含在 `v0.43.0` tag 对应的源码和 wheel 中：
 
 - `pyproject.toml`：已限制 Python 上界，并补充 full-text/browser 依赖；
 - `install_profiles.py`：已增加 full-text 真实依赖、browser 档位和 profile Python 范围；
@@ -99,7 +102,7 @@
 - `bootstrap_windows_environment.ps1`：已增加独立 Python 3.11 检查和安装入口；
 - `requirements/runtime-constraints.txt`、`config/environment.example`、双语环境文档、CI 和 wheel 验证工具：已加入工作树并完成一致性核对。
 
-因此当前可以说“本地实现、核心环境验收和本地提交已完成”，不能说“v0.43.0 已发布”或“新设备已经验收通过”。
+因此可以确认“框架实现、环境定义、源码推送和 `v0.43.0` 发布已完成”。这不等同于当前设备之外的真实工作站已经安装完成；新设备仍需按第 9 节执行安装和验收。最新主线 CI 的最终状态另见下文，不能用本机结果替代远端矩阵结果。
 
 ### 3.4 已完成的本机验证
 
@@ -114,6 +117,8 @@
 - publication 环境 smoke：通过，包含 XeLaTeX、pdfLaTeX、BibTeX、`kpsewhich`、pypdf/PyMuPDF 双解析器和非空 PDF；
 - 当前 publication Doctor 的 `attention` 仅表示 browser 可选 profile 尚未安装；不影响 core、research 或 publication 的已验证路径；
 - 环境编译报告保存在 `.tmp/environment-publication-final/`，wheel 保存在 `.tmp/release-dist-verified/`；这两个目录仅用于本机验收，禁止上传。
+- `v0.43.0` GitHub Release 已创建，包含 wheel、`SHA256SUMS.txt`、环境支持矩阵和 release manifest；wheel SHA-256 为 `D8C8ABFC482D181456572AED80AB2463A6CD9023D543BE230B10F3096A350DF7`。
+- 最新主线 `tests` 工作流为 `33393665621`；在停止观察时整体仍未最终收敛，Ubuntu 3.10 任务已失败，其他已结束任务当时成功。该状态不能写成“远端全量测试通过”；按用户要求，本方案不继续监控，交接前由接手者重新核验。
 
 ### 3.5 v0.42.2 与本地改动的整合方式
 
@@ -328,7 +333,7 @@ git diff --stat v0.42.2..origin/main
 
 当前已完成：
 
-- 本地 `main` 指向 `9c7e656`，`origin/main` 指向 `53569a5`，本地领先 2 个提交；
+- 本地 `main`、`origin/main` 和 `v0.43.0` 均指向 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26`；
 - 已通过远端 refs 核验 `v0.42.2` 存在且指向发布提交 `c0a3840`；
 - 本地框架和环境改动已形成可回滚提交链；其中实现提交为 `1204fe2`，完整链条以 `git log --oneline v0.42.2..HEAD` 核验；
 - `stash@{0}` 保留整合前恢复快照；
@@ -343,6 +348,8 @@ git diff --stat v0.42.2..origin/main
 
 ### M1：完成环境补漏
 
+状态：已完成源码、配置、文档、CI 和 release 资产；新设备安装仍需由接手者执行第 9 节。
+
 1. 完成当前五个半成品环境文件；
 2. 添加环境变量模板、runtime constraints 和 browser profile；
 3. 补齐环境 schema、Doctor、verification、Windows bootstrap；
@@ -352,6 +359,8 @@ git diff --stat v0.42.2..origin/main
 
 ### M2：完成本地框架改动
 
+状态：已完成并纳入 `1204fe2`，相关合同、Skill、生成文档和回归测试已同步到发布提交。
+
 1. 核对新增 literature admission schema 是否需要注册；
 2. 为新 CLI 增加 command contract、risk policy、Skill 和 CLI reference；
 3. 补足 evidence registry 新 extractor 的专门测试；
@@ -360,6 +369,8 @@ git diff --stat v0.42.2..origin/main
 6. 修复所有 lint、schema、write-set 和 release contract 问题。
 
 ### M3：生成文件与版本同步
+
+状态：已完成。以下工具用于重建生成文件；后续变更仍必须按同一顺序同步，不应只编辑某个副本。
 
 按仓库工具生成，不手工只改副本：
 
@@ -383,6 +394,8 @@ python -m draftpaper_cli.release_contract --root C:\Draftpaper_commercial --writ
 - README 中英文。
 
 ### M4：验证矩阵
+
+状态：本机和针对性 release 工作流已通过；最新主线全量 CI 在最后一次观察时尚未闭合，详见第 3.4 节。
 
 #### 静态和合同验证
 
@@ -465,16 +478,20 @@ git diff --cached --name-status
 git diff --cached --stat
 ```
 
-本次实际采用多条可回滚提交完成同一边界：`1204fe2` 集中提交环境、框架实现、测试和生成合同；后续提交分别补充 README、交接方案和验收状态。全部提交均基于 `53569a5`，未改写 `v0.42.2`；远端主线现已同步，仍需完成 tag/Release 和 clean-clone 验收。
+本次实际采用多条可回滚提交完成同一边界：`1204fe2` 集中提交环境、框架实现、测试和生成合同；后续提交分别补充 README、交接方案和验收状态。全部提交均基于 `53569a5`，未改写 `v0.42.2`；远端主线、目标 tag、Release、wheel 和目录外 clean clone 验收均已形成可复核记录。
 
-### 3.6 远端同步状态
+### M5.1：远端同步状态
 
-- `origin/main` 已与本地 `HEAD` 精确同步，包含环境定义、bootstrap、profile、运行时约束、框架代码、测试、CI、Skill、README 和交接方案；可用 `git rev-parse HEAD origin/main`复核；
+- `origin/main` 已与本地 `HEAD` 精确同步，包含环境定义、bootstrap、profile、运行时约束、框架代码、测试、CI、Skill、README 和交接方案；可用 `git rev-parse HEAD origin/main` 复核；
 - `v0.42.2` 仍指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8`，未被移动或覆盖；
-- `v0.43.0` 尚未创建；创建前必须重新核对工作树、构建产物和 release manifest；
-- 远端 CI、最终 tag/Release 和目录外 clean clone 是剩余交接门槛。
+- `v0.43.0` 已创建并指向 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26`；
+- GitHub Release 为 <https://github.com/xiejhhhhhh/Draftpaper_loop/releases/tag/v0.43.0>，包含 wheel、校验和、环境支持矩阵和 release manifest；
+- 目录外 clean clone `C:\Draftpaper_commercial_clean_clone_v0.43.0_20260831` 已完成 Windows bootstrap、源码安装、wheel 安装、publication Doctor 和编译 smoke；
+- 仍需接手者在交接前重新核验最新主线 CI，不能把未最终收敛的工作流当作全绿证据。
 
 ### M6：版本与发布
+
+状态：`v0.43.0` 已完成 tag、GitHub Release、wheel、SHA-256、环境矩阵和 release manifest 发布。
 
 由于 v0.42.2 已发布：
 
@@ -482,7 +499,7 @@ git diff --cached --stat
 - 不 force-push；
 - 不把本地新增功能塞进旧 tag；
 - 完整整合版本使用 `v0.43.0`；
-- 如果必须先交付环境补漏，可先发 `v0.42.3`，但 v0.43.0 仍需单独发布框架能力。
+- 不移动或覆盖已发布 tag；后续 CI 修复或环境修复使用 `v0.43.1` 或更高版本。
 
 Release 必须包含：
 
@@ -494,6 +511,8 @@ Release 必须包含：
 - clean-clone 验收结果；
 - 已知可选能力边界；
 - 从 v0.42.2 升级说明。
+
+本次 Release 已包含上述资产。Release notes 中的测试数字对应本机和发布前验收快照；它不替代最新主线 CI 的矩阵结论。若后续复核发现 CI 或兼容性问题，必须创建新的 `v0.43.1`（或更高版本），不得移动 `v0.43.0` tag。
 
 ## 9. 新设备标准恢复手册
 
@@ -572,40 +591,42 @@ py -3.11 -m venv .venv
 1. 在最终 push 前，`stash@{0}` 是本地框架改动的恢复副本，不得删除。
 2. 环境、文献准入和证据语义使用独立 commit，任何一层都可以单独 revert。
 3. v0.42.2 tag 永远保留为已验证环境基线。
-4. 如果框架测试失败，可先只发布环境补丁 v0.42.3，不强行捆绑 v0.43.0。
+4. 如果发布后发现框架或环境测试失败，修复后发布 `v0.43.1` 或更高版本；不得回填、移动或覆盖 `v0.42.2`/`v0.43.0`。
 5. 如果 clean clone 无法恢复，发布必须阻断；不能因为当前设备已有历史包就宣称环境完整。
 6. 只有以下条件都满足后，才删除保留 stash：
    - 本地 commits 可见；
    - 远端 main 可见；
    - Release/tag 可见；
-   - CI 全绿；
+   - 目标 CI 工作流最终为绿色，或已明确记录并接受剩余风险；
    - clean clone 验收通过；
    - stash 与已提交框架能力的差异已人工核对。
 
 ## 12. Definition of Done
 
-只有以下条件全部满足，设备交接和框架整合才算完成：
+以下是设备交接和框架整合的最终清单；方括号记录本方案截至 2026-08-31 的状态：
 
-1. 本地 `main` 以 GitHub v0.42.2 为祖先，没有覆盖或改写远端历史；
-2. v0.42.2 tag 和 Release 保持不可变；
-3. 本地全部框架级改动已分类、补测并以独立 commit 提交；
-4. `verify-environment`、`prepare-literature-admission` 和 `activate-literature-corpus` 同时存在且 command contract 通过；
-5. 文献准入、教学 corpus 确认与 checkpoint continuity 的边界测试全部通过；
-6. Windows 空白设备可以从 Check 开始安装独立 Python 3.11、VC++、Git 和 MiKTeX；
-7. `pyproject.toml`、Doctor、文档和 CI 对 Python 支持范围表达一致；
-8. fresh fulltext 安装能够导入 vendored paper-fetch CLI，不再依赖历史环境中偶然存在的 `imagesize`；
-9. PDF fallback 所需 PyMuPDF/pymupdf4llm 被安装和验证；
-10. browser runtime 是明确可选档位，不进入默认 core；
-11. MCP、Zotero、NASA ADS、GitHub、MinerU 等可选能力有不泄密的配置检查和恢复说明；
-12. runtime constraints、bootstrap、schema、CI、双语文档和配置模板全部已上传 GitHub；
-13. `.venv`、二进制、缓存、凭证、绝对路径和真实论文资料没有进入提交；
-14. minimal、plotting、fulltext、mcp、browser、publication 安装矩阵通过；
-15. 全量 pytest、Ruff、compileall、schema、command、risk、Skill、release 和 wheel 验证通过；
-16. Windows/Linux CI 通过，macOS control/research smoke 通过；
-17. 当前目录之外的 clean clone 能从文档独立恢复并生成有效测试 PDF；
-18. wheel 与目标 tag 一致，Release 提供 SHA-256 和环境支持矩阵；
-19. 远端 `main` 包含所有交接所需的可复现定义；
-20. 只有在上述远端证据可核验后，才交接设备并删除本地恢复 stash。
+1. [已满足] 本地 `main` 以 GitHub v0.42.2 为祖先，没有覆盖或改写远端历史；
+2. [已满足] v0.42.2 tag 和 Release 保持不可变；
+3. [已满足] 本地全部框架级改动已分类、补测并以提交链提交；
+4. [已满足] `verify-environment`、`prepare-literature-admission` 和 `activate-literature-corpus` 同时存在且 command contract 通过；
+5. [已满足] 文献准入、教学 corpus 确认与 checkpoint continuity 的边界测试通过；
+6. [已满足] Windows bootstrap 可以从 Check 开始安装/检查独立 Python 3.11、VC++、Git 和 MiKTeX；
+7. [已满足] `pyproject.toml`、Doctor、文档和 CI 对 Python 支持范围已统一；
+8. [已满足] fresh fulltext 安装能够导入 vendored paper-fetch CLI，不依赖历史环境中偶然存在的 `imagesize`；
+9. [已满足] PDF fallback 所需 PyMuPDF/pymupdf4llm 已安装并验证；
+10. [已满足] browser runtime 是明确可选档位，不进入默认 core；
+11. [已满足] MCP、Zotero、NASA ADS、GitHub、MinerU 等可选能力有不泄密的配置检查和恢复说明；
+12. [已满足] runtime constraints、bootstrap、schema、CI、双语文档和配置模板已上传 GitHub；
+13. [已满足] `.venv`、二进制、缓存、凭证、绝对路径和真实论文资料没有进入发布提交；
+14. [本机/定向已满足] minimal、plotting、fulltext、mcp、browser、publication 安装矩阵通过；
+15. [本机已满足，远端待复核] 本机全量 pytest、Ruff、compileall、schema、command、risk、Skill、release 和 wheel 验证通过；最新主线全量 CI 在停止观察时仍有 Ubuntu 3.10 失败；
+16. [定向已满足，远端待复核] Windows/Linux 环境 smoke 和 macOS control/research smoke 已通过；最新主线全量 tests 尚未形成最终全绿结论；
+17. [已满足] 当前目录之外的 clean clone 能从文档独立恢复并生成有效测试 PDF；
+18. [已满足] wheel 与 `v0.43.0` tag 一致，Release 提供 SHA-256 和环境支持矩阵；
+19. [已满足] 远端 `main` 包含所有交接所需的可复现定义；
+20. [待完成] 由接手者在交接前重新核验最新 CI 并人工核对 stash 后，再决定是否删除本地恢复 stash。
+
+因此，源码、部署定义、Release 和 clean-clone 交接材料已经完成并上传；严格意义上的“全部远端 CI 门禁闭合”仍需接手者对已知未收敛工作流作最后核验。本方案不替接手者伪造该结论。
 
 ## 13. 最终发布建议
 
