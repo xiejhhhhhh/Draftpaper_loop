@@ -8,7 +8,7 @@
 
 | 项目 | 当前状态 | 处理原则 |
 |---|---|---|
-| 当前分支 | 本地 `main` 与 `origin/main` 均为 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26` | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
+| 当前分支 | 本地 `main` 与 `origin/main` 均为当前状态提交 `8a22281` | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
 | v0.42.2 | 远端已有正式 tag，指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8` | tag、Release 和发布提交保持不可变，不允许 force-push 或移动 tag |
 | 本地框架改动 | 已在本地 `main` 提交为 `1204fe2`，包含证据、checkpoint、文献准入和连续性改动 | 继续以远端 CI、wheel 和 clean clone 验证为准 |
 | 环境补漏改动 | 已在 `1204fe2` 提交，包含依赖、profile、Doctor、验证器、bootstrap、文档和 CI 调整 | 继续以远端 CI、wheel 和 fresh clone 验证为准，不以当前机器可导入为准 |
@@ -41,7 +41,7 @@
    - 图表多格式去重和 claim/evidence 绑定稳定化；
    - 文献候选正式准入包、显式激活和教学 corpus 连续性；
    - 对应 CLI、命令注册表与测试。
-3. 本地框架改动与 v0.42.2 环境部署改动的文件级重叠已经在 `1204fe2` 中完成整合，并由后续文档/状态提交补齐发布记录；不存在尚未提交的核心整合改动。完整链条为 `53569a5`、`1204fe2`、`9c7e656`、`86c6fe7`、`db8ce16`、`1acaf3f`。
+3. 本地框架改动与 v0.42.2 环境部署改动的文件级重叠已经在 `1204fe2` 中完成整合，并由后续文档/状态提交补齐发布记录；不存在尚未提交的核心整合改动。功能与环境发布链条为 `53569a5`、`1204fe2`、`9c7e656`、`86c6fe7`、`db8ce16`、`1acaf3f`，当前状态记录另由 `8a22281` 更新。
 4. v0.42.2 已覆盖 MiKTeX/TeX Live、XeLaTeX、pdfLaTeX、BibTeX、`kpsewhich`、系统 Git、Visual C++、环境 Doctor 和隔离编译验收；v0.43.0 在此基础上补齐了可迁移交接所需的：
    - 新设备上的独立 Python 3.11 引导；
    - Python 支持范围与 full-text runtime 的一致性；
@@ -333,7 +333,7 @@ git diff --stat v0.42.2..origin/main
 
 当前已完成：
 
-- 本地 `main`、`origin/main` 和 `v0.43.0` 均指向 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26`；
+- 本地 `main` 和 `origin/main` 均指向当前状态提交 `8a22281`；`v0.43.0` 固定指向发布提交 `1acaf3f6fe9e54cb64c4558c4ca8936630bece26`；
 - 已通过远端 refs 核验 `v0.42.2` 存在且指向发布提交 `c0a3840`；
 - 本地框架和环境改动已形成可回滚提交链；其中实现提交为 `1204fe2`，完整链条以 `git log --oneline v0.42.2..HEAD` 核验；
 - `stash@{0}` 保留整合前恢复快照；
