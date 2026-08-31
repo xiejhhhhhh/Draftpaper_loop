@@ -74,7 +74,7 @@ def test_token_report_is_a_registered_read_only_cli_command(tmp_path: Path) -> N
 
 
 def test_doctor_exposes_combined_research_workstation_profile() -> None:
-    report = inspect_install_profiles(module_available=lambda _name: True)
+    report = inspect_install_profiles(module_available=lambda _name: True, python_version=(3, 11, 0))
     research = report["profiles"]["research"]
 
     assert research["status"] == "available"

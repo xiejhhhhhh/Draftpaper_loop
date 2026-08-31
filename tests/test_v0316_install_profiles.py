@@ -62,7 +62,10 @@ def test_doctor_reports_install_profiles_and_recovery_commands() -> None:
     assert profiles["minimal"]["status"] == "available"
     for profile in ("plotting", "fulltext", "mcp", "browser"):
         assert profiles[profile]["install_command"].endswith(f'[{profile}]"')
-        assert profiles[profile]["status"] in {"available", "missing_dependencies"}
+        if profile in {"fulltext", "browser"} and sys.version_info[:2] < (3, 11):
+            assert profiles[profile]["status"] == "unsupported_python"
+        else:
+            assert profiles[profile]["status"] in {"available", "missing_dependencies"}
 
 
 def test_install_profile_report_distinguishes_missing_modules() -> None:

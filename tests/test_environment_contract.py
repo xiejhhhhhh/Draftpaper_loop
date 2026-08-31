@@ -87,7 +87,7 @@ def test_profile_probe_reports_import_failed_separately() -> None:
             raise ImportError("DLL load failed")
         return object()
 
-    report = inspect_install_profiles(importer=importer)
+    report = inspect_install_profiles(importer=importer, python_version=(3, 11, 0))
 
     fulltext = report["profiles"]["fulltext"]
     assert fulltext["status"] == "import_failed"
