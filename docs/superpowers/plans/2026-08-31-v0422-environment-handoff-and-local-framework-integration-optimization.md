@@ -8,7 +8,7 @@
 
 | 项目 | 当前状态 | 处理原则 |
 |---|---|---|
-| 当前分支 | 本地 `main` 与 `origin/main` 均指向 `86c6fe7` | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
+| 当前分支 | 本地 `main` 与 `origin/main` 已同步（具体 SHA 以 `git rev-parse` 核验） | 远端主线已同步；后续只创建不可变 tag/Release，不再创建无必要的合并分支 |
 | v0.42.2 | 远端已有正式 tag，指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8` | tag、Release 和发布提交保持不可变，不允许 force-push 或移动 tag |
 | 本地框架改动 | 已在本地 `main` 提交为 `1204fe2`，包含证据、checkpoint、文献准入和连续性改动 | 继续以远端 CI、wheel 和 clean clone 验证为准 |
 | 环境补漏改动 | 已在 `1204fe2` 提交，包含依赖、profile、Doctor、验证器、bootstrap、文档和 CI 调整 | 继续以远端 CI、wheel 和 fresh clone 验证为准，不以当前机器可导入为准 |
@@ -21,7 +21,7 @@
 
 - 日期：2026-08-31
 - 当前本地分支：`main`
-- 当前本地与 `origin/main`：`86c6fe7`；远端主线已同步
+- 当前本地与 `origin/main` 已同步；具体 SHA 以 `git rev-parse HEAD` 和 `git rev-parse origin/main` 核验
 - 远端已发布版本：`v0.42.2 - Complete publication environment deployment`
 - 远端 `v0.42.2` 标签解析到发布提交：`c0a3840d163f107cd5fecdf31cec4cada467e2d8`
 - 当前 `main` 的 `53569a5` 是发布提交之后的环境测试隔离修正，不属于对 `v0.42.2` 标签的改写
@@ -330,7 +330,7 @@ git diff --stat v0.42.2..origin/main
 
 - 本地 `main` 指向 `9c7e656`，`origin/main` 指向 `53569a5`，本地领先 2 个提交；
 - 已通过远端 refs 核验 `v0.42.2` 存在且指向发布提交 `c0a3840`；
-- 本地框架和环境改动已提交为 `1204fe2`、`9c7e656` 与 `86c6fe7`；
+- 本地框架和环境改动已形成可回滚提交链；其中实现提交为 `1204fe2`，完整链条以 `git log --oneline v0.42.2..HEAD` 核验；
 - `stash@{0}` 保留整合前恢复快照；
 - 未跟踪的商业文档、项目资料、临时目录和 `uv.lock` 未被纳入 stash 或远端提交。
 
@@ -465,11 +465,11 @@ git diff --cached --name-status
 git diff --cached --stat
 ```
 
-本次实际采用三条可回滚提交完成同一边界：`1204fe2` 集中提交环境、框架实现、测试和生成合同；`9c7e656` 提交 README 与初版交接方案；`86c6fe7` 记录最终本机验收状态并完成方案同步。三条提交均基于 `53569a5`，未改写 `v0.42.2`；远端主线现已同步，仍需完成 tag/Release 和 clean-clone 验收。
+本次实际采用多条可回滚提交完成同一边界：`1204fe2` 集中提交环境、框架实现、测试和生成合同；后续提交分别补充 README、交接方案和验收状态。全部提交均基于 `53569a5`，未改写 `v0.42.2`；远端主线现已同步，仍需完成 tag/Release 和 clean-clone 验收。
 
 ### 3.6 远端同步状态
 
-- `origin/main` 已精确指向 `86c6fe7`，包含环境定义、bootstrap、profile、运行时约束、框架代码、测试、CI、Skill、README 和交接方案；
+- `origin/main` 已与本地 `HEAD` 精确同步，包含环境定义、bootstrap、profile、运行时约束、框架代码、测试、CI、Skill、README 和交接方案；可用 `git rev-parse HEAD origin/main`复核；
 - `v0.42.2` 仍指向 `c0a3840d163f107cd5fecdf31cec4cada467e2d8`，未被移动或覆盖；
 - `v0.43.0` 尚未创建；创建前必须重新核对工作树、构建产物和 release manifest；
 - 远端 CI、最终 tag/Release 和目录外 clean clone 是剩余交接门槛。
