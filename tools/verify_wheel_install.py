@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -30,8 +31,36 @@ EXPECTED_RELEASE_FIXTURE_IDS = tuple(SOURCE_RELEASE_MANIFEST["release_fixture_id
 RENDER_QA_REQUIREMENTS = ("rapidocr_onnxruntime>=1.2",)
 
 
+def _normalised_sha256(value: bytes) -> str:
+    """Hash text resources independent of CRLF/LF packaging differences."""
+
+    return hashlib.sha256(value.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest()
+
+
 def _resource_counts(root: Path) -> dict[str, int]:
     return {pattern: len(list(root.rglob(pattern))) for pattern in RESOURCE_PATTERNS}
+
+
+def _paper_fetch_import_smoke(source_root: Path, *, python: str | None = None) -> bool:
+    """Import the vendored CLI through the same top-level package path as the adapter."""
+
+    environment = dict(os.environ)
+    existing_path = environment.get("PYTHONPATH")
+    environment["PYTHONPATH"] = str(source_root) + (
+        os.pathsep + existing_path if existing_path else ""
+    )
+    try:
+        completed = subprocess.run(
+            [python or sys.executable, "-c", "from paper_fetch import cli; assert callable(cli.main)"],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
 
 
 def _source_registry_summary() -> dict[str, object]:
@@ -56,18 +85,20 @@ def _source_registry_summary() -> dict[str, object]:
     skill_text = skill.read_text(encoding="utf-8")
     skill_version = re.search(r"^version:\s*(\S+)", skill_text, flags=re.MULTILINE)
     contract_payload = json.loads(skill_contract.read_text(encoding="utf-8"))
+    vendored_source = REPOSITORY_ROOT / "draftpaper_cli" / "_vendor" / "paper_fetch_skill"
     return {
         "package_version": version_match.group(1) if version_match else None,
         "workflow_skill_version": skill_version.group(1) if skill_version else None,
-        "workflow_skill_sha256": hashlib.sha256(skill.read_bytes()).hexdigest(),
+        "workflow_skill_sha256": _normalised_sha256(skill.read_bytes()),
         "workflow_contract_version": contract_payload.get("skill_version"),
-        "workflow_contract_sha256": hashlib.sha256(skill_contract.read_bytes()).hexdigest(),
+        "workflow_contract_sha256": _normalised_sha256(skill_contract.read_bytes()),
         "cli_help_commands": list(EXPECTED_CLI_COMMANDS),
         "entry_count": len(manifests),
         "fixture_count": fixture_count,
         "resource_counts": _resource_counts(SOURCE_MODULE_ROOT),
         "capability_pack_count": len(list(SOURCE_CAPABILITY_PACK_ROOT.glob("*/manifest.json"))),
-        "vendored_paper_fetch_present": (REPOSITORY_ROOT / "draftpaper_cli" / "_vendor" / "paper_fetch_skill" / "paper_fetch").is_dir(),
+        "vendored_paper_fetch_present": (vendored_source / "paper_fetch").is_dir(),
+        "vendored_paper_fetch_imported": _paper_fetch_import_smoke(vendored_source),
         "third_party_provenance_status": "passed",
         "third_party_source_count": len(json.loads((REPOSITORY_ROOT / "third_party" / "registry.json").read_text(encoding="utf-8"))["sources"]),
         "release_manifest": SOURCE_RELEASE_MANIFEST,
@@ -111,7 +142,7 @@ def main() -> int:
         venv.EnvBuilder(with_pip=True).create(environment)
         python = environment / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
         subprocess.run(
-            [str(python), "-m", "pip", "install", str(wheel)],
+            [str(python), "-m", "pip", "install", f"{wheel}[fulltext]"],
             check=True,
         )
         subprocess.run(
@@ -120,6 +151,8 @@ def main() -> int:
         )
         probe = """
 import json
+import os
+import subprocess
 import sys
 from unittest.mock import patch
 from pathlib import Path
@@ -134,6 +167,19 @@ r = discover_template_registry()
 root = Path(r['root'])
 with patch('draftpaper_cli.paper_fetch_adapter.shutil.which', return_value=None):
     command, env, runtime_source = resolve_paper_fetch_command()
+paper_fetch_import = False
+if runtime_source == 'vendored' and command and env.get('PYTHONPATH'):
+    child_env = os.environ.copy()
+    existing_path = child_env.get('PYTHONPATH')
+    child_env['PYTHONPATH'] = env['PYTHONPATH'] + (os.pathsep + existing_path if existing_path else '')
+    child = subprocess.run(
+        [sys.executable, '-c', 'from paper_fetch import cli; assert callable(cli.main)'],
+        env=child_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    paper_fetch_import = child.returncode == 0
 provenance = validate_third_party_provenance()
 skill = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/SKILL.md')
 skill_contract = files('draftpaper_cli').joinpath('resources/draftpaper_workflow/contract.json')
@@ -147,9 +193,9 @@ skill_version = next((line.split(':', 1)[1].strip() for line in skill_text.split
 print(json.dumps({
     'package_version': version('draftpaper-cli'),
     'workflow_skill_version': skill_version,
-    'workflow_skill_sha256': sha256(skill_bytes).hexdigest(),
+    'workflow_skill_sha256': sha256(skill_bytes.replace(b'\\r\\n', b'\\n').replace(b'\\r', b'\\n')).hexdigest(),
     'workflow_contract_version': contract_payload.get('skill_version'),
-    'workflow_contract_sha256': sha256(contract_bytes).hexdigest(),
+    'workflow_contract_sha256': sha256(contract_bytes.replace(b'\\r\\n', b'\\n').replace(b'\\r', b'\\n')).hexdigest(),
     'entry_count': r['entry_count'],
     'fixture_count': sum(len(e.get('fixtures') or []) for e in r['entries']),
     'resource_counts': {p: len(list(root.rglob(p))) for p in ('*.json', '*.csv', '*.md')},
@@ -160,6 +206,7 @@ print(json.dumps({
         and '_vendor' in env.get('PYTHONPATH', '')
         and (Path(env['PYTHONPATH']) / 'paper_fetch' / 'cli.py').is_file()
     ),
+    'vendored_paper_fetch_imported': paper_fetch_import,
     'third_party_provenance_status': provenance['status'],
     'third_party_source_count': provenance['source_count'],
     'release_manifest': release_payload,

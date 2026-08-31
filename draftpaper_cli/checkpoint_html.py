@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import json
+import hashlib
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -541,6 +542,42 @@ def _semantic_delta_text(delta: dict[str, Any], locale: str) -> str:
     return _text(delta.get("summary_zh"))
 
 
+def _compact_delta_value(value: Any, *, locale: str) -> str:
+    """Render a reviewable change summary without expanding audit payloads.
+
+    Scientific-decision comparisons can legitimately contain whole lists of
+    facts or figure bindings.  Their complete before/after payload belongs in
+    the technical audit bundle; placing it verbatim on the human decision page
+    turns a concise confirmation into an unreadable wall of JSON.  Keep short
+    scalar values visible and replace larger structured values with their item
+    count plus a stable digest, which is sufficient to locate the exact delta
+    in the linked audit artifact.
+    """
+
+    if value in (None, ""):
+        return "无" if locale != "en" else "None"
+    if isinstance(value, str):
+        if len(value) <= 280:
+            return _text(value)
+        digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+        label = f"文本 {len(value)} 字符" if locale != "en" else f"text, {len(value)} characters"
+        return f"{label}（SHA-256: <code>{digest}</code>）"
+    try:
+        rendered = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError):
+        rendered = str(value)
+    if len(rendered) <= 280:
+        return _text(rendered)
+    digest = hashlib.sha256(rendered.encode("utf-8")).hexdigest()[:12]
+    if isinstance(value, dict):
+        label = f"结构化对象，{len(value)} 个字段" if locale != "en" else f"structured object, {len(value)} fields"
+    elif isinstance(value, (list, tuple, set)):
+        label = f"结构化列表，{len(value)} 项" if locale != "en" else f"structured list, {len(value)} items"
+    else:
+        label = f"结构化值，{len(rendered)} 字符" if locale != "en" else f"structured value, {len(rendered)} characters"
+    return f"{label}（SHA-256: <code>{digest}</code>）"
+
+
 def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any], *, locale: str = "zh-CN") -> str:
     """Render compact, copyable evidence locators for the decision page.
 
@@ -662,8 +699,17 @@ def render_checkpoint_decision_html(
     for item in delta.get("changes") or []:
         if not isinstance(item, dict):
             continue
-        changes.append(f'<li><code>{_text(item.get("field"))}</code>：{_text(item.get("before"))} → {_text(item.get("after"))}</li>')
-    change_html = "<ul>" + "".join(changes) + "</ul>" if changes else ""
+        before = _compact_delta_value(item.get("before"), locale=locale)
+        after = _compact_delta_value(item.get("after"), locale=locale)
+        changes.append(f'<li><code>{_text(item.get("field"))}</code>：{before} → {after}</li>')
+    change_note = (
+        '<p class="muted">结构化差异以摘要形式展示；完整逐项内容保留在技术审计包中。</p>'
+        if changes and locale != "en"
+        else '<p class="muted">Structured changes are summarized here; the technical audit retains the complete item-level delta.</p>'
+        if changes
+        else ""
+    )
+    change_html = ("<ul>" + "".join(changes) + "</ul>" + change_note) if changes else ""
     deliverables = []
     for item in brief.get("latest_user_visible_deliverables") or []:
         if not isinstance(item, dict):

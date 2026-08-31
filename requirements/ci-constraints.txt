@@ -1,7 +1,8 @@
-# Reproducible direct quality-tool versions for GitHub Actions.
+# Reproducible runtime and quality-tool constraints for GitHub Actions.
+-c runtime-constraints.txt
 build==1.5.0
 pip-audit==2.10.1
-pyright==1.1.411
+pyright==1.1.390
 pytest==8.3.4
 pytest-cov==7.1.0
 ruff==0.15.22

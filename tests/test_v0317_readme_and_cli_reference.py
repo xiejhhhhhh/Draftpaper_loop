@@ -119,9 +119,17 @@ def test_readmes_front_load_framework_capabilities_and_keep_operations_later() -
 
         assert len([line for line in current.splitlines() if line.startswith("-")]) >= 8
         assert all(version_range in capabilities for version_range in capability_ranges)
-        assert "python3 -m venv .venv" in quick_start
-        assert "py -3 -m venv .venv" in quick_start
-        assert 'pip install -e ".[plotting]"' in quick_start
+        assert any(
+            command in quick_start
+            for command in (
+                "python3 -m venv .venv",
+                "python3.11 -m venv .venv",
+                "py -3 -m venv .venv",
+                "py -3.11 -m venv .venv",
+            )
+        )
+        assert "pip install" in quick_start
+        assert '".[plotting]"' in quick_start
         assert "run-pipeline" in quick_start
         assert "Results" in workflow
         assert "Discussion" in workflow

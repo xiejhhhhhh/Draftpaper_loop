@@ -109,6 +109,14 @@ def test_reopen_core_evidence_can_archive_and_remove_promoted_snapshot_within_bo
     assert "results/promoted_evidence_snapshot.json" in spec.allowed_write_globs
 
 
+def test_reopen_research_plan_can_record_revision_cycle_state_within_boundary() -> None:
+    spec = COMMAND_SPECS["reopen-research-plan"]
+
+    assert ".draftpaper/**" in spec.allowed_write_globs
+    assert "research_plan/**" in spec.allowed_write_globs
+    assert "lineage/**" in spec.allowed_write_globs
+
+
 def test_path_confinement_rejects_parent_symlink_and_unc(tmp_path: Path) -> None:
     root = tmp_path / "project"
     root.mkdir()

@@ -78,8 +78,8 @@ def test_doctor_exposes_combined_research_workstation_profile() -> None:
     research = report["profiles"]["research"]
 
     assert research["status"] == "available"
-    assert set(research["composed_from"]) == {"plotting", "fulltext", "mcp"}
-    assert research["install_command"].endswith('[plotting,fulltext,mcp]"')
+    assert set(research["composed_from"]) == {"plotting", "fulltext"}
+    assert research["install_command"].endswith('[plotting,fulltext]"')
 
 
 def test_generated_risk_matrix_and_product_boundaries_are_current() -> None:

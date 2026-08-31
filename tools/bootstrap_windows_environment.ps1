@@ -8,6 +8,12 @@ $ErrorActionPreference = "Stop"
 
 $packages = @(
     [pscustomobject]@{
+        Id = "Python.Python.3.11"
+        Label = "Independent Python 3.11 runtime"
+        ProbeNames = @("python", "py")
+        InstallerOverride = "/quiet InstallAllUsers=0 PrependPath=1 Include_launcher=1 Include_test=0"
+    },
+    [pscustomobject]@{
         Id = "Microsoft.VCRedist.2015+.x64"
         Label = "Visual C++ x64 runtime"
         ProbeNames = @()
@@ -28,6 +34,12 @@ function Find-CommandPath {
     param([string[]]$Names)
 
     $knownPaths = @(
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python312\python.exe"),
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python311\python.exe"),
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python310\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python312\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python311\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python310\python.exe"),
         (Join-Path ${env:ProgramFiles} "Git\cmd\git.exe"),
         (Join-Path ${env:ProgramFiles} "Git\bin\git.exe"),
         (Join-Path ${env:LOCALAPPDATA} "Programs\Git\cmd\git.exe"),
@@ -67,8 +79,71 @@ function Test-VcRuntime {
     return $null
 }
 
+function Test-PythonRuntime {
+    $candidates = @(
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python312\python.exe"),
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python311\python.exe"),
+        (Join-Path ${env:LOCALAPPDATA} "Programs\Python\Python310\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python312\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python311\python.exe"),
+        (Join-Path ${env:ProgramFiles} "Python310\python.exe")
+    )
+    $uvPythonRoot = Join-Path ${env:APPDATA} "uv\python"
+    if (Test-Path -LiteralPath $uvPythonRoot) {
+        $candidates += Get-ChildItem -LiteralPath $uvPythonRoot -Directory -Filter "cpython-3.11-*" -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName "python.exe" }
+    }
+    $pythonCommand = Get-Command -Name "python" -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -ne $pythonCommand) {
+        $candidates += $pythonCommand.Source
+    }
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidate)) {
+            continue
+        }
+        if ($candidate -match "[\\/](?:\.cache[\\/]codex-runtimes|hermes-agent[\\/]venv|\.venv)[\\/]") {
+            continue
+        }
+        try {
+            $version = (& $candidate -c "import sys; print('.'.join(map(str, sys.version_info[:3])))" 2>$null | Select-Object -First 1)
+        }
+        catch {
+            continue
+        }
+        if ([string]$version -match "^3\.11(?:\.|$)") {
+            return [pscustomobject]@{
+                path = [string]$candidate
+                version = [string]$version
+            }
+        }
+    }
+    return $null
+}
+
 function Get-ComponentReport {
     param($Package)
+
+    if ($Package.Id -eq "Python.Python.3.11") {
+        $python = Test-PythonRuntime
+        if ($null -ne $python) {
+            return [pscustomobject]@{
+                id = $Package.Id
+                label = $Package.Label
+                status = "available"
+                path = $python.path
+                version = $python.version
+                scope = "user_or_machine"
+            }
+        }
+        return [pscustomobject]@{
+            id = $Package.Id
+            label = $Package.Label
+            status = "missing_or_unsupported"
+            path = $null
+            version = $null
+            scope = $null
+        }
+    }
 
     if ($Package.Id -eq "Microsoft.VCRedist.2015+.x64") {
         $vc = Test-VcRuntime
@@ -141,7 +216,17 @@ function Get-ComponentReport {
 function Install-Package {
     param($Package)
 
-    if ($Package.Id -eq "MiKTeX.MiKTeX") {
+    if ($Package.Id -eq "Python.Python.3.11") {
+        $uv = Get-Command -Name "uv" -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -ne $uv) {
+            & $uv.Source python install 3.11 *> $null
+            if ($LASTEXITCODE -eq 0) {
+                return
+            }
+        }
+    }
+
+    if ($Package.Id -in @("MiKTeX.MiKTeX", "Python.Python.3.11")) {
         $arguments = @(
             "install", "--id", $Package.Id, "--exact", "--scope", "user",
             "--source", "winget", "--silent",
@@ -156,6 +241,9 @@ function Install-Package {
             "--accept-package-agreements", "--accept-source-agreements",
             "--disable-interactivity"
         )
+    }
+    if ($Package.PSObject.Properties.Name -contains "InstallerOverride" -and $Package.InstallerOverride) {
+        $arguments += @("--override", $Package.InstallerOverride)
     }
     & winget @arguments *> $null
     if ($LASTEXITCODE -ne 0) {
@@ -190,7 +278,7 @@ $payload = [pscustomobject]@{
     components = $after
     actions = $actions
     next_step = if ($Mode -eq "Check") {
-        "Run InstallCore only after reviewing this report; then open a new shell and run Check again."
+        "Run InstallCore only after reviewing this report; then open a new shell, run Check again, and create the project virtual environment."
     }
     else {
         "Open a new shell, run Check, configure MiKTeX automatic package installation, and run Draftpaper verification."

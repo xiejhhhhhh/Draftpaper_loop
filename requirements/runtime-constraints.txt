@@ -1,0 +1,45 @@
+# Draftpaper-loop runtime compatibility bounds.
+#
+# This is a cross-platform constraints file, not a machine-specific lock
+# file. It keeps the supported major/minor combinations stable while allowing
+# Python and platform-specific wheels to resolve normally. CI and handoff
+# installations should apply it together with the selected extras.
+
+# Core control plane
+Pillow>=10,<13
+PyYAML>=6,<7
+bibtexparser>=1.4,<2
+pypdf>=4,<7
+
+# Plotting and scientific plugin runtime
+numpy>=1.24,<3
+pandas>=2,<4
+matplotlib>=3.8,<4
+SciencePlots>=2.1,<3
+scipy>=1.11,<2
+seaborn>=0.13,<1
+scikit-learn>=1.4,<2
+rapidocr_onnxruntime>=1.2,<2
+
+# Full-text and vendored paper-fetch runtime
+beautifulsoup4>=4.14,<5
+cachetools>=6,<8
+filelock>=3.20,<4
+filetype>=1.2,<2
+imagesize>=1.4,<3
+idutils>=1.5,<2
+lxml>=6,<7
+platformdirs>=4,<5
+pydantic>=2,<3
+PyMuPDF>=1.27,<2
+pymupdf4llm>=1.27,<2; python_version >= "3.11"
+python-dotenv>=1.2,<2
+rapidfuzz>=3,<4
+trafilatura>=2,<3
+typing-extensions>=4.12,<5
+urllib3>=2.2,<3
+
+# Agent/MCP and optional browser routes
+mcp>=1.10,<3
+cloakbrowser>=0.3.28,<0.4; python_version >= "3.11"
+playwright>=1.47,<2; python_version >= "3.11"

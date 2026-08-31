@@ -37,6 +37,31 @@ def _relative(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
+def _compact_semantic_delta(delta: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep Agent decision context small while retaining audit-readable detail.
+
+    The full semantic diff remains in ``semantic_diff.json``.  A diff entry can
+    contain an entire structured contract before/after value, which is useful
+    for audit but inappropriate for the bounded Agent payload.  The payload
+    needs the classification, summaries, and changed locations only.
+    """
+
+    changes = delta.get("changes")
+    compact_changes = [
+        {"path": str(item.get("path") or "$")}
+        for item in (changes if isinstance(changes, list) else [])
+        if isinstance(item, Mapping)
+    ]
+    return {
+        "classification": str(delta.get("classification") or "unknown"),
+        "summary_zh": str(delta.get("summary_zh") or ""),
+        "summary_en": str(delta.get("summary_en") or ""),
+        "change_count": len(compact_changes),
+        "changes": compact_changes[:40],
+        "changes_truncated": len(compact_changes) > 40,
+    }
+
+
 def _compat_html(target_relative: str) -> str:
     target = target_relative.replace("\\", "/")
     return f"""<!doctype html>
@@ -180,7 +205,7 @@ def write_research_plan_review_packet(
         "scientific_or_effect_fingerprint": f"{packet_relative_dir}/scientific_plan_fingerprint_v1.json",
         "audit_bundle_sha256": audit_hash,
         "presentation_sha256": presentation_hash,
-        "semantic_delta": dict(semantic_delta),
+        "semantic_delta": _compact_semantic_delta(semantic_delta),
         "unresolved_items": unresolved_items,
         "authority": {"actor_type": "user", "policy": "scientific_plan"},
         "expires_when": [
@@ -252,7 +277,7 @@ def write_research_plan_review_packet(
         "decision_actor_type": "user",
         "decision_authority_reason_zh": "研究问题、claim、数据、方法、统计和主图合同属于 C3 作者科学决定。",
         "summary_zh": str(brief.get("summary_zh") or ""),
-        "semantic_delta": dict(semantic_delta),
+        "semantic_delta": _compact_semantic_delta(semantic_delta),
         "unresolved_items": unresolved_items[:8],
         "confirmation_meaning_zh": "确认完整研究蓝图后，后续关键图表只能遵守其中的数据、方法、统计和图表合同。",
         "confirmation_meaning_en": "Confirmation freezes the research-plan data, method, statistical, and figure contracts for downstream key-figure work.",

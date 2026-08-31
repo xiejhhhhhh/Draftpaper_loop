@@ -12,7 +12,7 @@ from typing import Any
 
 
 HEAVY_PLOTTING_PACKAGES = {"matplotlib", "scienceplots", "numpy", "pandas", "seaborn", "rapidocr-onnxruntime"}
-PROFILE_NAMES = ("minimal", "plotting", "fulltext", "mcp")
+PROFILE_NAMES = ("minimal", "plotting", "fulltext", "mcp", "browser", "mineru-agent")
 
 
 def _normalized_name(requirement: str) -> str:
@@ -63,6 +63,10 @@ def inspect_wheel_install_profiles(wheel: str | Path) -> dict[str, Any]:
         issues.append("fulltext_profile_empty")
     if "mcp" not in profiles["mcp"]["packages"]:
         issues.append("mcp_profile_missing_mcp")
+    browser = set(profiles["browser"]["packages"])
+    missing_browser = sorted({"cloakbrowser", "playwright"} - browser)
+    if missing_browser:
+        issues.append(f"browser_profile_missing:{','.join(missing_browser)}")
     return {
         "schema_version": "dpl.install_matrix_validation.v1",
         "status": "passed" if not issues else "failed",

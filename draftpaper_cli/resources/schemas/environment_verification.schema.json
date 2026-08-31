@@ -10,6 +10,7 @@
     "target": {"enum": ["control", "research", "publication", "agent"]},
     "status": {"enum": ["passed", "attention", "failed"]},
     "environment": {"type": "object"},
+    "literature_runtime": {"type": "object"},
     "latex": {"type": "object"},
     "output": {"type": "string"},
     "json": {"type": "string"},

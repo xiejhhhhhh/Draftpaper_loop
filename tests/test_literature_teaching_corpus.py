@@ -8,6 +8,7 @@ from draftpaper_cli.literature_confirmation import (
     build_literature_confirmation_packet,
     confirm_literature_corpus,
 )
+from draftpaper_cli.literature_merge import rebuild_literature_index
 from draftpaper_cli.literature_teaching_corpus import (
     TEACHING_CORPUS_PATH,
     build_literature_teaching_corpus,
@@ -15,7 +16,8 @@ from draftpaper_cli.literature_teaching_corpus import (
     literature_confirmation_packet_hash,
     write_literature_teaching_corpus,
 )
-from draftpaper_cli.references import write_literature_html_summaries
+from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli.references import write_literature_html_summaries, write_reference_outputs
 
 
 def _write(path: Path, document: object) -> None:
@@ -283,6 +285,10 @@ def test_confirmed_receipt_is_invalidated_when_its_usage_plan_changes(tmp_path: 
 def test_hash_bound_literature_confirmation_writes_a_receipt(tmp_path: Path) -> None:
     project = _project(tmp_path)
     _write(project / "project.json", {"project_id": "fixture", "stages": {}})
+    references = project / "references"
+    active = json.loads((references / "active_literature_1.json").read_text(encoding="utf-8"))
+    active["items"] = [active["items"][0]]
+    _write(references / "active_literature_1.json", active)
     review = build_literature_confirmation_packet(project)
 
     result = confirm_literature_corpus(project, packet_hash=review["packet_hash"])
@@ -299,3 +305,135 @@ def test_hash_bound_literature_confirmation_writes_a_receipt(tmp_path: Path) -> 
     )
     assert receipt["confirmation_packet_hash"] == review["packet_hash"]
     assert build_literature_teaching_corpus(project)["corpus_status"] == "confirmed"
+
+
+def test_confirmation_allows_active_snapshot_to_be_a_curated_registry_subset(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    _write(project / "project.json", {"project_id": "fixture", "stages": {}})
+    references = project / "references"
+    active = json.loads((references / "active_literature_1.json").read_text(encoding="utf-8"))
+    active["items"] = [active["items"][0]]
+    _write(references / "active_literature_1.json", active)
+    review = build_literature_confirmation_packet(project)
+
+    result = confirm_literature_corpus(project, packet_hash=review["packet_hash"])
+
+    assert result["status"] == "confirmed"
+    assert result["accepted_work_count"] == 1
+    assert build_literature_teaching_corpus(project)["corpus_status"] == "confirmed"
+
+
+def test_rebuild_keeps_an_unchanged_confirmed_corpus_confirmed(tmp_path: Path) -> None:
+    """Derived index refreshes must not reopen a scientific corpus decision."""
+
+    project = create_project(
+        root=tmp_path / "projects",
+        idea="Stable literature projection",
+        field="science",
+    ).path
+    write_reference_outputs(
+        project,
+        [
+            {
+                "title": "Stable confirmed reference",
+                "authors": ["A. Author"],
+                "year": "2024",
+                "doi": "10.1000/stable-confirmed-reference",
+                "abstract": "A stable reference for a projection rebuild.",
+                "source": "openalex",
+            }
+        ],
+        query="stable confirmed literature",
+    )
+    references = project / "references"
+    items = json.loads((references / "literature_items.json").read_text(encoding="utf-8"))
+    citation_key = str(items[0]["bibtex_key"])
+    _write(references / "active_literature_1.json", {"items": items})
+    _write(
+        references / "reference_usage_plan.json",
+        {
+            "entries": [
+                {
+                    "citation_key": citation_key,
+                    "required": True,
+                    "citation_role": "dataset_provenance",
+                    "citation_intent": "defines the stable source boundary",
+                    "target_section": "data",
+                }
+            ]
+        },
+    )
+    review = build_literature_confirmation_packet(project)
+    confirm_literature_corpus(project, packet_hash=review["packet_hash"])
+    before = literature_confirmation_binding(project)
+
+    rebuilt = rebuild_literature_index(project)
+    after = literature_confirmation_binding(project)
+
+    assert rebuilt["status"] == "rebuilt"
+    assert before == after
+    assert build_literature_teaching_corpus(project)["corpus_status"] == "confirmed"
+
+
+def test_legacy_projection_only_binding_drift_reuses_the_reviewed_confirmation(tmp_path: Path) -> None:
+    """A v1 receipt survives the derived-hash migration only with same works/roles."""
+
+    project = create_project(
+        root=tmp_path / "projects",
+        idea="Legacy confirmation continuity",
+        field="science",
+    ).path
+    write_reference_outputs(
+        project,
+        [
+            {
+                "title": "Legacy confirmation reference",
+                "authors": ["A. Author"],
+                "year": "2024",
+                "doi": "10.1000/legacy-confirmation-reference",
+                "abstract": "A reference retained through a derived projection migration.",
+                "source": "openalex",
+            }
+        ],
+        query="legacy confirmation continuity",
+    )
+    references = project / "references"
+    items = json.loads((references / "literature_items.json").read_text(encoding="utf-8"))
+    citation_key = str(items[0]["bibtex_key"])
+    _write(references / "active_literature_1.json", {"items": items})
+    _write(
+        references / "reference_usage_plan.json",
+        {
+            "entries": [
+                {
+                    "citation_key": citation_key,
+                    "required": True,
+                    "citation_role": "dataset_provenance",
+                    "citation_intent": "defines the source boundary",
+                    "target_section": "data",
+                }
+            ]
+        },
+    )
+    build_literature_confirmation_packet(project)
+    review_path = references / "literature_confirmation_packet.json"
+    review = json.loads(review_path.read_text(encoding="utf-8"))
+    legacy_binding = dict(review["confirmation_binding"])
+    legacy_binding["reference_registry_sha256"] = "sha256:" + "0" * 64
+    review["confirmation_binding"] = legacy_binding
+    review["packet_hash"] = literature_confirmation_packet_hash(review)
+    _write(review_path, review)
+    _write(
+        references / "literature_confirmation_receipt.json",
+        {
+            "schema_version": "dpl.literature_confirmation_receipt.v1",
+            "status": "confirmed",
+            "confirmation_packet_hash": review["packet_hash"],
+            "confirmation_binding": legacy_binding,
+        },
+    )
+
+    corpus = build_literature_teaching_corpus(project)
+
+    assert corpus["corpus_status"] == "confirmed"
+    assert corpus["confirmation_source"] == "semantic_continuity_after_derived_rebuild"

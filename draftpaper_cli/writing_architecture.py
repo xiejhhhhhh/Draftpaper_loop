@@ -357,7 +357,7 @@ def _paragraphs(text: str) -> list[str]:
     # paragraphs. Keeping them in the editor input creates false short-
     # paragraph and job-alignment defects for otherwise complete Results text.
     prose = re.sub(
-        r"(?m)^\s*\\input\{(?:tables/|\.\./results/tables/)[^{}\n]+\}\s*$",
+        r"(?m)^\s*\\input\{(?:(?:tables/|\.\./results/tables/)?(?:table|tab)[^{}\n]*)\}\s*(?:%[^\n]*)?$",
         "",
         prose,
     )

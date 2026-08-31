@@ -245,9 +245,13 @@ def confirm_literature_corpus(project: str | Path, *, packet_hash: str) -> dict[
         raise LiteratureConfirmationError("The literature corpus changed after review; regenerate the packet and confirm the new hash.")
     if not current_binding.get("accepted_citation_keys"):
         raise LiteratureConfirmationError("The current literature packet contains no accepted canonical works to confirm.")
-    if current_binding.get("accepted_citation_keys") != current_binding.get("registry_citation_keys"):
+    active_keys = set(current_binding.get("active_citation_keys") or ())
+    registry_keys = set(current_binding.get("registry_citation_keys") or ())
+    usage_keys = set(current_binding.get("usage_plan_citation_keys") or ())
+    accepted_keys = set(current_binding.get("accepted_citation_keys") or ())
+    if accepted_keys != active_keys or not active_keys <= registry_keys or not active_keys <= usage_keys:
         raise LiteratureConfirmationError(
-            "The canonical registry, active literature snapshot and usage plan do not yet agree; resolve the missing bindings before confirmation."
+            "The active literature snapshot contains a work missing from the canonical registry or usage plan; resolve the missing bindings before confirmation."
         )
     receipt = {
         "schema_version": "dpl.literature_confirmation_receipt.v1",

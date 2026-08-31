@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 from typing import Any
 
 from .artifact_identity import canonical_json
@@ -34,6 +35,15 @@ def _tokens(value: Any) -> list[str]:
     return sorted(set(tokens))
 
 
+def _canonical_figure_path(path: str) -> str:
+    """Return the shared identity for PDF/PNG renderings of one figure."""
+
+    suffix = Path(path).suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".pdf"}:
+        return Path(path).with_suffix("").as_posix()
+    return path
+
+
 def scientific_figure_claim_subject(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Return the figure-to-claim facts that affect a scientific decision.
 
@@ -43,11 +53,13 @@ def scientific_figure_claim_subject(payload: dict[str, Any]) -> list[dict[str, A
     approving, so only those participate in the scientific fingerprint.
     """
 
+    # `claim_fact_refs` point to generated brief fact IDs.  They are valuable
+    # audit locators, but a regenerated brief can legitimately renumber them
+    # without changing a figure's scientific meaning or its manuscript claim.
     keys = (
         "figure_id",
         "figure_semantic_sha256",
         "claim_statement_id",
-        "claim_fact_refs",
         "expected_split_id",
         "expected_cohort_id",
         "caption_split_id",
@@ -80,12 +92,16 @@ def build_figure_claim_map(summary: dict[str, Any], brief: dict[str, Any]) -> di
         for item in brief.get("figure_claims") or []
         if isinstance(item, dict) and _text(item.get("project_relative_path"))
     }
+    brief_claims_by_canonical_path = {
+        _canonical_figure_path(path): item
+        for path, item in brief_claims.items()
+    }
     metric = summary.get("core_metrics") if isinstance(summary.get("core_metrics"), dict) else {}
     manuscript_claims = summary.get("manuscript_figure_claims") if isinstance(summary.get("manuscript_figure_claims"), dict) else {}
     rows: list[dict[str, Any]] = []
     for index, figure in enumerate(sorted(figures, key=lambda item: _text(item.get("project_relative_path")))):
         path = _text(figure.get("project_relative_path"))
-        claim = brief_claims.get(path) or {}
+        claim = brief_claims.get(path) or brief_claims_by_canonical_path.get(_canonical_figure_path(path)) or {}
         statement = claim.get("statement") if isinstance(claim.get("statement"), dict) else {}
         manuscript_claim = manuscript_claims.get(path) if isinstance(manuscript_claims.get(path), dict) else {}
         rows.append(

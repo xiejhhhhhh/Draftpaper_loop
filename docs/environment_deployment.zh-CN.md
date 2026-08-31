@@ -13,9 +13,11 @@
 
 `control` 和 `research` 不代表能够编译 PDF。开始最终论文运行前，应使用 `publication` 目标完成检查。
 
+浏览器抓取是可选增强档位，不是新的核心目标；需要时在已完成 `research` 安装的 Python 3.11/3.12 环境中额外安装 `browser`，并显式安装 Playwright 浏览器资产。
+
 ## Windows 标准路线
 
-推荐的默认组合是：当前用户私有安装 MiKTeX 25.12、系统 Git for Windows 和 Microsoft Visual C++ x64 运行库。不要求为 MiKTeX 使用管理员权限，也不会安装 MinerU、CUDA、Node.js、Java 或学科库。
+推荐的默认组合是：当前用户私有安装 MiKTeX 25.12、系统 Git for Windows 和 Microsoft Visual C++ x64 运行库。如果系统有 `uv`，引导脚本会优先使用可观察的 `uv python install 3.11` 路线安装 Python；否则回退到官方 winget 安装包。不要求为 MiKTeX 使用管理员权限，也不会安装 MinerU、CUDA、Node.js、Java 或学科库。
 
 ### 1. 创建 Python 环境
 
@@ -24,10 +26,12 @@
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e ".[plotting,fulltext,mcp]"
+.\.venv\Scripts\python -m pip install -c requirements\runtime-constraints.txt -e ".[plotting,fulltext]"
 ```
 
-支持 Python 3.10、3.11 和 3.12。`fulltext` 档位为增强本地 PDF 解析安装 PyMuPDF。MinerU 仍是可选的外部 endpoint 或 Agent connector，不属于核心安装。
+`control/minimal` 和 `plotting` 支持 Python 3.10、3.11、3.12；`fulltext`、`research`、`publication`、`agent` 和 `browser` 支持 Python 3.11、3.12，因为 vendored paper-fetch 与 PDF Markdown 运行时从 Python 3.11 起支持。`fulltext` 会安装 `imagesize`、PyMuPDF 和 `pymupdf4llm`，并由验收命令真实导入 vendored paper-fetch CLI。MinerU 仍是可选的外部 endpoint 或 Agent connector，不属于核心安装。
+
+交接或重新部署时应始终使用 `requirements/runtime-constraints.txt`；它提供跨平台的兼容范围，防止同一份源码在不同日期解析出不兼容的大版本组合。可选 provider 的变量名见 `config/environment.example`，真实凭证只能放在用户级环境变量或本机私有配置中。
 
 ### 2. 检查并安装系统前置环境
 
@@ -111,6 +115,7 @@ Ubuntu 或 Debian 可以通过系统包管理器安装 TeX，例如 `texlive-xet
 | `kpsewhich plainnat.bst` 为空 | 找不到参考文献资源 | 刷新文件名数据库并安装对应宏包 |
 | Git 来自 Codex runtime | 源码 checkout 未使用独立系统 Git | 安装 Git for Windows，检查 `where.exe git` |
 | 第一次编译要求安装宏包 | MiKTeX 正常按需补包 | 允许补包，或为离线运行预热宏包 |
+| vendored paper-fetch 导入失败 | `fulltext/research` 依赖不完整或 Python 版本不符合 | 使用 Python 3.11/3.12，按约束文件重新安装 `fulltext`，再运行 `verify-environment` |
 | MinerU 不可用 | 可选增强 PDF 路径未配置 | 继续使用 pypdf/PyMuPDF，或配置用户自建 MinerU endpoint |
 
 ## 不应提交的内容

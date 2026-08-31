@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .artifact_identity import canonical_json
+from .checkpoint_fingerprint import scientific_fingerprints_equivalent
 from .passport import project_root, read_jsonl, utc_now
 from .review_policy import DECISION_LEDGER
 from .state_kernel import atomic_write_json
@@ -113,14 +114,19 @@ def evaluate_confirmation_continuity(
             "previous_receipt": None,
             "reason_codes": [],
         }
-    if previous.get("scientific_decision_sha256") != current_hash:
+    previous_fingerprint = previous.get("scientific_decision_fingerprint")
+    semantically_equivalent = bool(
+        isinstance(previous_fingerprint, dict)
+        and scientific_fingerprints_equivalent(previous_fingerprint, scientific_fingerprint)
+    )
+    if previous.get("scientific_decision_sha256") != current_hash and not semantically_equivalent:
         return {
             "eligible": False,
             "classification": "scientific_change",
             "previous_receipt": previous,
             "reason_codes": ["scientific_fingerprint_changed"],
         }
-    if previous.get("human_brief_semantic_sha256") != brief_semantic_sha256:
+    if previous.get("human_brief_semantic_sha256") != brief_semantic_sha256 and not semantically_equivalent:
         return {
             "eligible": False,
             "classification": "blocked",

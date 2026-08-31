@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 from .artifact_identity import canonical_json
@@ -121,7 +122,24 @@ def _statement(
 def _figure_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
     rows = summary.get("stage_deliverables") or []
     figures = [item for item in rows if isinstance(item, dict) and str(item.get("deliverable_group") or "") == "figure"]
-    return sorted(figures, key=lambda item: _text(item.get("project_relative_path")))[:8]
+    # A publication figure is often registered twice: once as the rendered
+    # raster used by the review page and once as its PDF counterpart.  The
+    # human decision brief needs one claim per scientific figure, rather than
+    # consuming its bounded display budget on duplicated formats.
+    preference = {".png": 0, ".jpg": 1, ".jpeg": 1, ".pdf": 2}
+    canonical: dict[str, dict[str, Any]] = {}
+    for figure in sorted(figures, key=lambda item: _text(item.get("project_relative_path"))):
+        path = _text(figure.get("project_relative_path"))
+        suffix = Path(path).suffix.lower()
+        key = Path(path).with_suffix("").as_posix() if suffix in preference else path
+        existing = canonical.get(key)
+        if existing is None:
+            canonical[key] = figure
+            continue
+        existing_suffix = Path(_text(existing.get("project_relative_path"))).suffix.lower()
+        if preference.get(suffix, 9) < preference.get(existing_suffix, 9):
+            canonical[key] = figure
+    return [canonical[key] for key in sorted(canonical)]
 
 
 def _value_sentence(label: str, value: Any) -> str:
@@ -327,6 +345,13 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         if fact_id:
             figure_facts.append(fact_id)
             statement_text = f"{_text(value['figure_id']) or f'图 {index + 1}'}：{text or '已登记为本次确认范围内的图表证据。'}"
+            statement_text_en = _text(figure.get("interpretation_summary_en") or figure.get("caption_en"))
+            if not statement_text_en:
+                # The title identifies the scientific panel while the linked
+                # figure and caption carry its detailed interpretation.  This
+                # keeps an English decision page readable when a project has
+                # only one bilingual metadata field shared across renderings.
+                statement_text_en = f"{_text(value['figure_id']) or f'Figure {index + 1}'} (registered main-figure evidence)."
             figure_claims.append(
                 {
                     "figure_id": _text(value["figure_id"]) or f"figure-{index + 1}",
@@ -340,7 +365,7 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
                             "figure_id": _text(value["figure_id"]) or f"figure-{index + 1}",
                             "semantic_sha256": value["semantic_sha256"],
                         },
-                        text_en=_text(figure.get("interpretation_summary_en") or figure.get("caption_en")),
+                        text_en=statement_text_en,
                     ),
                 }
             )
@@ -448,7 +473,6 @@ def build_human_decision_brief(summary: dict[str, Any], *, locale: str = "zh-CN"
         "checkpoint_type": stage,
         "facts": _semantic_sort([
             {
-                "fact_id": item["fact_id"],
                 "fact_type": item["fact_type"],
                 "semantic_value": item["semantic_value"],
             }

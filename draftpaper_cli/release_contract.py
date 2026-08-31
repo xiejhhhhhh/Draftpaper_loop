@@ -74,6 +74,8 @@ REQUIRED_CLI_COMMANDS = (
     "show-confirmation-continuity",
     "rebuild-checkpoint-presentation",
     "verify-environment",
+    "prepare-literature-admission",
+    "activate-literature-corpus",
 )
 
 
@@ -289,9 +291,26 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
         and not missing_human_review_packet_schema_files
         else "failed"
     )
-    missing_commands = sorted(set(REQUIRED_CLI_COMMANDS) - set(COMMAND_SPECS))
+    required_commands: set[str] = {str(command) for command in REQUIRED_CLI_COMMANDS}
+    registered_commands: set[str] = {str(command) for command in COMMAND_SPECS}
+    missing_commands = sorted(required_commands - registered_commands)
     if missing_commands:
         raise ValueError("Required release commands are not registered in CommandSpec: " + ", ".join(missing_commands))
+    environment_required_files = [
+        "requirements/runtime-constraints.txt",
+        "requirements/ci-constraints.txt",
+        "config/environment.example",
+        "docs/environment_deployment.md",
+        "docs/environment_deployment.zh-CN.md",
+        "docs/install_profiles.md",
+        "docs/install_profiles.zh-CN.md",
+        "tools/bootstrap_windows_environment.ps1",
+        "draftpaper_cli/resources/schemas/core_environment_contract.schema.json",
+        "draftpaper_cli/resources/schemas/environment_verification.schema.json",
+    ]
+    missing_environment_files = [
+        relative for relative in environment_required_files if not (repository / relative).is_file()
+    ]
     return {
         "schema_version": "dpl.release_manifest.v1",
         "package_version": _version(repository),
@@ -318,12 +337,29 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json",
         },
         "environment_contract": {
+            "status": "passed" if not missing_environment_files else "failed",
             "core_schema": "dpl.core_environment_contract.v1",
             "verification_schema": "dpl.environment_verification.v1",
             "targets": ["control", "research", "publication", "agent"],
+            "profiles": ["minimal", "plotting", "fulltext", "mcp", "browser", "mineru-agent"],
+            "python_ranges": {
+                "control": ">=3.10,<3.13",
+                "plotting": ">=3.10,<3.13",
+                "fulltext": ">=3.11,<3.13",
+                "research": ">=3.11,<3.13",
+                "publication": ">=3.11,<3.13",
+                "agent": ">=3.11,<3.13",
+                "browser": ">=3.11,<3.13",
+            },
             "publication_core": ["pypdf", "pymupdf", "xelatex", "pdflatex", "bibtex", "kpsewhich"],
             "source_checkout_requires_system_git": True,
             "windows_bootstrap": "tools/bootstrap_windows_environment.ps1",
+            "runtime_constraints": "requirements/runtime-constraints.txt",
+            "environment_example": "config/environment.example",
+            "missing_required_files": missing_environment_files,
+            "vendored_paper_fetch_import_smoke": True,
+            "browser_is_optional": True,
+            "mineru_local_runtime_included": False,
             "doctor_read_only": True,
             "verification_isolated": True,
             "verification_command": "python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>",

@@ -470,7 +470,11 @@ def assess_scientific_figure_quality(project: str | Path) -> dict[str, Any]:
         figure_grammar = str(
             contract.get("plot_grammar") or item.get("plot_grammar") or item.get("figure_type") or ""
         ).lower()
-        is_workflow_diagram = figure_grammar in {"workflow_diagram", "workflow_schematic"}
+        is_workflow_diagram = figure_grammar in {
+            "workflow_diagram",
+            "workflow_schematic",
+            "workflow_and_provenance_flow",
+        }
         ocr_text, ocr_backend, ocr_mean_confidence = _ocr_png(path)
         ocr_raw_identifiers = sorted(set(INTERNAL_DISPLAY_LABEL_PATTERN.findall(ocr_text)))
         ocr_code_style_labels = sorted(set(CODE_STYLE_LABEL_PATTERN.findall(ocr_text)))

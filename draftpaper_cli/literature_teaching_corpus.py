@@ -23,7 +23,23 @@ from typing import Any
 
 TEACHING_CORPUS_SCHEMA = "dpl.literature_teaching_corpus.v1"
 TEACHING_CORPUS_PATH = "references/literature_teaching_corpus_manifest.json"
-_VOLATILE_DOCUMENT_KEYS = frozenset({"created_at", "generated_at", "rendered_at", "updated_at", "written_at"})
+# These values describe a derived projection rather than the scientific
+# literature set the user reviewed.  In particular, a reference-index rebuild
+# rewrites its snapshot marker and the hash of the generated ``library.bib``.
+# Treating either as an admission input would invalidate a still-identical
+# confirmed corpus every time its HTML/index projection is refreshed.
+_VOLATILE_DOCUMENT_KEYS = frozenset(
+    {
+        "created_at",
+        "generated_at",
+        "rendered_at",
+        "updated_at",
+        "written_at",
+        "snapshot_hash",
+        "_snapshot_hash",
+        "source_bibtex_sha256",
+    }
+)
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -154,6 +170,87 @@ def literature_confirmation_packet_hash(document: Mapping[str, Any]) -> str:
     return _canonical_hash({str(key): value for key, value in document.items() if str(key) != "packet_hash"})
 
 
+def _binding_without_derived_registry_projection(binding: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep the user-reviewed admission decision separate from index outputs."""
+
+    return {
+        key: binding.get(key)
+        for key in (
+            "schema_version",
+            "project_id",
+            "reference_usage_plan_sha256",
+            "active_literature_path",
+            "active_literature_sha256",
+            "registry_citation_keys",
+            "active_citation_keys",
+            "usage_plan_citation_keys",
+            "accepted_citation_keys",
+        )
+    }
+
+
+def _packet_work_identities(packet: Mapping[str, Any]) -> tuple[tuple[str, str], ...] | None:
+    """Read the canonical work identities that the user actually reviewed."""
+
+    candidates = packet.get("confirmed_corpus_candidates")
+    if not isinstance(candidates, list):
+        return None
+    identities = {
+        (
+            str(item.get("citation_key") or "").strip(),
+            str(item.get("canonical_work_id") or "").strip(),
+        )
+        for item in candidates
+        if isinstance(item, Mapping)
+        and str(item.get("citation_key") or "").strip()
+        and str(item.get("canonical_work_id") or "").strip()
+    }
+    return tuple(sorted(identities)) if identities else None
+
+
+def _current_work_identities(references: Path, binding: Mapping[str, Any]) -> tuple[tuple[str, str], ...]:
+    """Return current canonical identities for the confirmed citation keys."""
+
+    registry = _read_json(references / "reference_registry.json", {})
+    accepted = {
+        str(value).strip()
+        for value in binding.get("accepted_citation_keys") or ()
+        if str(value).strip()
+    }
+    identities = {
+        (
+            str(record.get("citation_key") or "").strip(),
+            str(record.get("canonical_work_id") or "").strip(),
+        )
+        for record in _items(registry, "records")
+        if str(record.get("citation_key") or "").strip() in accepted
+        and str(record.get("canonical_work_id") or "").strip()
+    }
+    return tuple(sorted(identities))
+
+
+def _is_equivalent_confirmation_after_derived_rebuild(
+    packet: Mapping[str, Any],
+    stored_binding: Mapping[str, Any],
+    current_binding: Mapping[str, Any],
+    references: Path,
+) -> bool:
+    """Recognize a prior decision when only an index projection was rebuilt.
+
+    Older receipts included the registry's derived snapshot/BibTeX hashes.  A
+    rebuild could therefore change that one digest even though the reviewed
+    accepted keys, active source, usage-plan roles, and canonical work IDs
+    stayed unchanged.  Continuity is intentionally narrow: any change to the
+    active source, usage plan, membership, or canonical identity still needs a
+    fresh human confirmation.
+    """
+
+    if _binding_without_derived_registry_projection(stored_binding) != _binding_without_derived_registry_projection(current_binding):
+        return False
+    reviewed = _packet_work_identities(packet)
+    return reviewed is not None and reviewed == _current_work_identities(references, current_binding)
+
+
 def _confirmation_receipt(
     references: Path,
     binding: Mapping[str, Any],
@@ -174,11 +271,12 @@ def _confirmation_receipt(
     packet = _read_json(packet_path, {})
     if not isinstance(receipt, Mapping) or not isinstance(packet, Mapping):
         return None, "confirmation_receipt_invalid"
+    stored_binding = receipt.get("confirmation_binding")
     if (
         str(receipt.get("schema_version") or "") != "dpl.literature_confirmation_receipt.v1"
         or str(receipt.get("status") or "").casefold() != "confirmed"
-        or receipt.get("confirmation_binding") != dict(binding)
-        or packet.get("confirmation_binding") != dict(binding)
+        or not isinstance(stored_binding, Mapping)
+        or packet.get("confirmation_binding") != stored_binding
     ):
         return None, "confirmation_receipt_stale_or_invalid"
     packet_hash = literature_confirmation_packet_hash(packet)
@@ -187,7 +285,16 @@ def _confirmation_receipt(
         or str(receipt.get("confirmation_packet_hash") or "") != packet_hash
     ):
         return None, "confirmation_receipt_stale_or_invalid"
-    return _sha256_path(receipt_path), "explicit_confirmation_receipt"
+    if stored_binding == dict(binding):
+        return _sha256_path(receipt_path), "explicit_confirmation_receipt"
+    if _is_equivalent_confirmation_after_derived_rebuild(
+        packet,
+        stored_binding,
+        binding,
+        references,
+    ):
+        return _sha256_path(receipt_path), "semantic_continuity_after_derived_rebuild"
+    return None, "confirmation_receipt_stale_or_invalid"
 
 
 def _literature_snapshot_hash(references: Path) -> str:
@@ -359,8 +466,13 @@ def build_literature_teaching_corpus(project: str | Path) -> dict[str, Any]:
     }
     corpus_hash = _canonical_hash(canonical)
     registry_ready = str(registry.get("status") or "").casefold() == "ready"
-    expected_keys = set(registry_by_key)
-    contracts_agree = registry_ready and set(shared_keys) == expected_keys
+    registry_keys = set(registry_by_key)
+    active_keys = set(active_by_key)
+    usage_keys = set(usage_by_key)
+    expected_keys = registry_keys
+    active_subset_contract = bool(shared_keys) and active_keys <= registry_keys and active_keys <= usage_keys
+    legacy_full_contract = set(shared_keys) == expected_keys
+    contracts_agree = registry_ready and (active_subset_contract or legacy_full_contract)
     status = "confirmed" if contracts_agree and receipt_hash is not None else "confirmation_pending" if contracts_agree else "incomplete"
     return {
         "schema_version": TEACHING_CORPUS_SCHEMA,

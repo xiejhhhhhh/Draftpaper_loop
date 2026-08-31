@@ -66,8 +66,21 @@ def _claim_strength(text: str) -> str:
 
 
 def _claim_from_blueprint_claim(item: dict[str, Any], index: int) -> dict[str, Any]:
-    planned = _compact(item.get("expected_finding") or item.get("claim_text") or item.get("research_question"))
+    figure_contract = item.get("figure_contract") if isinstance(item.get("figure_contract"), dict) else {}
+    expected_finding = _compact(item.get("expected_finding") or item.get("claim_text") or item.get("research_question"))
+    planned = expected_finding
     claim_id = str(item.get("claim_id") or stable_claim_id("research_plan", planned, sequence=index))
+    claim_boundary = _compact(
+        item.get("scientific_claim_boundary")
+        or item.get("claim_boundary")
+        or figure_contract.get("scientific_claim_boundary")
+        or "Use this claim only within the verified data, method, validation, and figure-evidence limits."
+    )
+    claim_boundary_zh = _compact(
+        item.get("scientific_claim_boundary_zh_cn")
+        or item.get("claim_boundary_zh_cn")
+        or figure_contract.get("scientific_claim_boundary_zh_cn")
+    )
     return {
         "claim_id": claim_id,
         "planned_claim": planned,
@@ -75,10 +88,16 @@ def _claim_from_blueprint_claim(item: dict[str, Any], index: int) -> dict[str, A
         "original_strength": _claim_strength(planned),
         "active_strength": _claim_strength(planned),
         "research_question": _compact(item.get("research_question")),
+        "research_question_zh_cn": _compact(item.get("research_question_zh_cn")),
+        "expected_finding": expected_finding,
+        "expected_finding_zh_cn": _compact(item.get("expected_finding_zh_cn")),
         "linked_figures": [],
         "linked_metrics": [],
         "required_evidence_roles": [],
-        "claim_boundary": "Use this claim only within the verified data, method, validation, and figure-evidence limits.",
+        "claim_boundary": claim_boundary,
+        "claim_boundary_zh_cn": claim_boundary_zh,
+        "scientific_claim_boundary": claim_boundary,
+        "scientific_claim_boundary_zh_cn": claim_boundary_zh,
         "status": "planned",
     }
 

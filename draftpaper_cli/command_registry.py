@@ -254,7 +254,18 @@ COMMAND_SPECS = {
             manual_only=True,
             allowed_write_globs=(".draftpaper/**", *_stage_write_globs("references")),
         ),
-        CommandSpec("reopen-research-plan", "capability_coordinator", True, "capabilities", "research_plan_confirmation", "reopen_research_plan", (("project", "project"), ("reason", "reason")), protected_action=True, manual_only=True),
+        CommandSpec(
+            "reopen-research-plan",
+            "capability_coordinator",
+            True,
+            "capabilities",
+            "research_plan_confirmation",
+            "reopen_research_plan",
+            (("project", "project"), ("reason", "reason")),
+            protected_action=True,
+            manual_only=True,
+            allowed_write_globs=(".draftpaper/**", *_stage_write_globs("capabilities")),
+        ),
         CommandSpec("validate-research-plan-review", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "validate_research_plan_review", (("project", "project"),)),
         CommandSpec("compare-research-plan-decision", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "compare_research_plan_decision", (("project", "project"), ("against", "against"))),
         CommandSpec("explain-research-plan-reconfirmation", "capability_coordinator", False, "capabilities", "research_plan_confirmation", "explain_research_plan_reconfirmation", (("project", "project"),)),
@@ -383,6 +394,17 @@ COMMAND_SPECS = {
         CommandSpec("collect-literature", "reference_coordinator", True, "references", "literature_sources", "collect_literature_sources", (("project", "project"),)),
         CommandSpec("reconcile-literature", "reference_coordinator", True, "references", "literature_sources", "reconcile_literature_sources", (("project", "project"),)),
         CommandSpec("review-literature-coverage", "reference_coordinator", True, "references", "literature_coverage", "review_literature_coverage", (("project", "project"),)),
+        CommandSpec("prepare-literature-admission", "reference_coordinator", True, "references", "literature_admission", "build_literature_admission_packet", (("project", "project"),), allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES)),
+        CommandSpec(
+            "activate-literature-corpus",
+            "reference_coordinator",
+            True,
+            "references",
+            "literature_admission",
+            "activate_literature_corpus",
+            (("project", "project"), ("packet_hash", "packet_hash"), ("decision_file", "decision_file")),
+            allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
+        ),
         CommandSpec("record-remote-parser-consent", "reference_coordinator", True, "references", "remote_parser_consent", "record_consent", (("project", "project"), ("decision", "decision"), ("service", "service"), ("document_classes", "document_classes"))),
         CommandSpec("benchmark-literature-quality", "release_coordinator", True, "quality_checks", "literature_benchmark", "run_literature_quality_benchmark", (("output", "output"),)),
         CommandSpec("benchmark-document-parsers", "release_coordinator", True, "quality_checks", "literature_benchmark", "run_document_parser_benchmark", (("output", "output"),)),
@@ -452,7 +474,7 @@ assess-method-feasibility assess-paper-quality-parity assess-plugin-sufficiency 
 assess-research-plan-feasibility assess-result-support assess-result-validity assess-review-rules audit-citations
 audit-project-capabilities bootstrap-discipline-foundation build-argument-matrices build-code-provenance
 build-data-context build-method-context build-panel-contracts build-paper-narrative build-reference-registry
- add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage confirm-literature-corpus record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
+ add-literature-source list-literature-sources collect-literature reconcile-literature review-literature-coverage prepare-literature-admission activate-literature-corpus confirm-literature-corpus record-remote-parser-consent parse-literature-document benchmark-literature-quality benchmark-document-parsers
 audit-literature-integrity sync-literature-sources apply-literature-sync repair-literature-identities migrate-literature-index rollback-literature-migration rebuild-literature-index quarantine-orphan-literature rollback-orphan-literature parse-literature-source-documents
 build-results-synthesis build-section-lifecycles capture-discipline-learning checkpoint classify-code-ownership
 classify-data-access classify-plugin-reusability classify-skill-source collect-method-plan compile-latex-pdf
@@ -910,7 +932,12 @@ COMMAND_SPECS.update({
         "literature_merge",
         "rebuild_literature_index",
         (("project", "project"),),
-        allowed_write_globs=("references/literature_summaries/**", *_COMMON_MANAGED_WRITES),
+        # A rebuild refreshes the entire derived literature projection bundle:
+        # registry, bibliography contract, snapshot, teaching corpus manifest,
+        # summary index, and per-paper detail pages.  Limiting this command to
+        # the HTML summaries makes the write-set guard roll back a valid,
+        # atomic rebuild after it has updated its other reference projections.
+        allowed_write_globs=("references/**", *_COMMON_MANAGED_WRITES),
     ),
     "quarantine-orphan-literature": CommandSpec(
         "quarantine-orphan-literature",

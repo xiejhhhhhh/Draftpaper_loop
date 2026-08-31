@@ -36,6 +36,17 @@ def _target_relative(relative: Path) -> Path:
     return Path(first, *rest)
 
 
+def _files_match(source: Path, target: Path) -> bool:
+    """Compare text payloads independent of platform newline conventions."""
+
+    if source.suffix.lower() in {".md", ".json", ".yml", ".yaml", ".txt"}:
+        try:
+            return source.read_text(encoding="utf-8").splitlines() == target.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeError):
+            return False
+    return filecmp.cmp(source, target, shallow=False)
+
+
 def _targets() -> list[tuple[Path, Path]]:
     pairs: list[tuple[Path, Path]] = []
     for source in sorted(PAYLOAD_ROOT.rglob("*")):
@@ -56,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     stale = []
     for source, target in pairs:
         if args.check:
-            if not target.is_file() or not filecmp.cmp(source, target, shallow=False):
+            if not target.is_file() or not _files_match(source, target):
                 stale.append(target)
             continue
         target.parent.mkdir(parents=True, exist_ok=True)

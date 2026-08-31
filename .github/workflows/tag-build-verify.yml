@@ -22,13 +22,16 @@ jobs:
           python-version: "3.12"
           cache: "pip"
       - name: Install release verification tools
-        run: python -m pip install -c requirements/ci-constraints.txt -e .[dev,plotting]
+        run: python -m pip install -c requirements/ci-constraints.txt -e ".[dev,plotting,fulltext]"
       - name: Run test suite
         run: >-
           python -m pytest
           tests/test_v026_final_confirmation.py
           tests/test_v0307_final_release_binding.py
           tests/test_v0330_release_completion.py
+          tests/test_literature_admission.py
+          tests/test_environment_contract.py
+          tests/test_environment_verification.py
           tests/test_v034_literature_quality.py
           tests/test_multisource_literature.py
           tests/test_v0350_literature_release.py

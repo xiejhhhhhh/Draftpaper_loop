@@ -508,7 +508,11 @@ def _previous_repair_layers(root: Path, stage: str) -> list[str]:
                 layers.append(str(item["repair_layer"]))
         if layers:
             break
-    return layers
+    # A single producer defect can surface on several paired artifacts (for
+    # example, PDF and PNG renderings of one figure).  The loop guard tracks
+    # repair *classes* across attempts, not the number of artifacts emitted by
+    # one attempt, so collapse duplicate layers before handing them to it.
+    return sorted(set(layers))
 
 
 def _publish_checkpoint_index(root: Path, report: dict[str, Any]) -> None:

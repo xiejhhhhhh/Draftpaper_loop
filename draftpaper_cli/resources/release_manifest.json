@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
-  "package_version": "0.42.2",
-  "workflow_skill_sha256": "761063351ffc35814c7c8d4b91bac2774b875a0aadd98014938f604d75ee08df",
-  "workflow_contract_sha256": "1964da24b3ff8dea2de6b3e98cf2f7e0ebe58ec65d6ccb44e63ca81b8dcf2afc",
+  "package_version": "0.43.0",
+  "workflow_skill_sha256": "aad98fc2c722a3ae4621b81aec27e423e5ebe28cff5d6a1445a07445d844477f",
+  "workflow_contract_sha256": "53567063629559baf67e74de15a662d00466b8752917dee122302fb11aaa40bf",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 271,
+  "command_count": 273,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -66,7 +66,9 @@
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
     "rebuild-checkpoint-presentation",
-    "verify-environment"
+    "verify-environment",
+    "prepare-literature-admission",
+    "activate-literature-corpus"
   ],
   "schema_registry_version": "dpl.schema_registry.v1",
   "resource_schema_status": "passed",
@@ -96,6 +98,7 @@
     "ruff_baseline_path": "docs/quality/ruff_baseline_v0.35.0.json"
   },
   "environment_contract": {
+    "status": "passed",
     "core_schema": "dpl.core_environment_contract.v1",
     "verification_schema": "dpl.environment_verification.v1",
     "targets": [
@@ -104,6 +107,23 @@
       "publication",
       "agent"
     ],
+    "profiles": [
+      "minimal",
+      "plotting",
+      "fulltext",
+      "mcp",
+      "browser",
+      "mineru-agent"
+    ],
+    "python_ranges": {
+      "control": ">=3.10,<3.13",
+      "plotting": ">=3.10,<3.13",
+      "fulltext": ">=3.11,<3.13",
+      "research": ">=3.11,<3.13",
+      "publication": ">=3.11,<3.13",
+      "agent": ">=3.11,<3.13",
+      "browser": ">=3.11,<3.13"
+    },
     "publication_core": [
       "pypdf",
       "pymupdf",
@@ -114,6 +134,12 @@
     ],
     "source_checkout_requires_system_git": true,
     "windows_bootstrap": "tools/bootstrap_windows_environment.ps1",
+    "runtime_constraints": "requirements/runtime-constraints.txt",
+    "environment_example": "config/environment.example",
+    "missing_required_files": [],
+    "vendored_paper_fetch_import_smoke": true,
+    "browser_is_optional": true,
+    "mineru_local_runtime_included": false,
     "doctor_read_only": true,
     "verification_isolated": true,
     "verification_command": "python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>"
@@ -243,7 +269,7 @@
       "NOTICE"
     ],
     "github_actions_pinned": true,
-    "ci_constraints_sha256": "8ff2258050c6963b5902290254020d2940fd5d86cf0eaa54285da3f888f8c454",
+    "ci_constraints_sha256": "2aea54239be725a223f6eadb10d8fb924305bb1be1418ae9b17e83417980ce76",
     "sbom_format": "CycloneDX JSON",
     "dependency_audit_scope": "project_dependency_graph",
     "ci_platforms": [

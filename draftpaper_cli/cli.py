@@ -536,6 +536,22 @@ def build_parser() -> argparse.ArgumentParser:
     parse_source_documents.add_argument("--timeout-seconds", type=int, default=600)
     coverage = subparsers.add_parser("review-literature-coverage", help="Review literature coverage by scientific role and source type.")
     coverage.add_argument("--project", required=True)
+    admission_packet = subparsers.add_parser(
+        "prepare-literature-admission",
+        help="Prepare a hash-bound candidate admission packet without activating literature.",
+    )
+    admission_packet.add_argument("--project", required=True)
+    activate_corpus = subparsers.add_parser(
+        "activate-literature-corpus",
+        help="Activate an explicit hash-bound literature admission decision manifest.",
+    )
+    activate_corpus.add_argument("--project", required=True)
+    activate_corpus.add_argument("--packet-hash", required=True)
+    activate_corpus.add_argument(
+        "--decision-file",
+        required=True,
+        help="JSON decision manifest produced after inspecting the admission packet.",
+    )
     confirm_literature = subparsers.add_parser(
         "confirm-literature-corpus",
         help="Human-confirm the exact literature corpus hash used by teaching and project-role guidance.",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from draftpaper_cli.cli import build_parser
+from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.literature_integrity import audit_literature_integrity
 from draftpaper_cli.literature_merge import rebuild_literature_index, repair_literature_identities
 from draftpaper_cli.literature_repository import load_literature_registry, write_literature_registry
@@ -21,6 +22,22 @@ def test_literature_commands_have_parser_contracts() -> None:
         "rebuild-literature-index",
         "quarantine-orphan-literature",
     } <= set(choices)
+
+
+def test_rebuild_literature_index_declares_the_full_reference_projection_boundary() -> None:
+    """The CLI transaction must permit every derived reference projection.
+
+    ``rebuild_literature_index`` updates more than the HTML detail directory:
+    it also rewrites the registry, bibliography contract, snapshots, manifest,
+    and teaching-corpus projection under ``references/``.  The broad boundary
+    remains project-confined by ``WriteSetGuard`` while preventing a valid
+    rebuild from being rolled back as a partial transaction.
+    """
+
+    spec = COMMAND_SPECS["rebuild-literature-index"]
+
+    assert "references/**" in spec.allowed_write_globs
+    assert "references/literature_summaries/**" not in spec.allowed_write_globs
 
 
 def test_registry_and_identity_repair_are_repeatable(tmp_path) -> None:

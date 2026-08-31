@@ -1,0 +1,23 @@
+# Draftpaper-loop optional integrations.
+# Copy only the variable names you need into user-level environment settings.
+# Never commit this file with real values, tokens, cookies, or private paths.
+
+# Zotero library access
+ZOTERO_LIBRARY_ID=
+ZOTERO_LIBRARY_TYPE=user
+ZOTERO_API_KEY=
+
+# Literature metadata providers
+NASA_ADS_API_TOKEN=
+SEMANTIC_SCHOLAR_API_KEY=
+CROSSREF_MAILTO=
+OPENALEX_MAILTO=
+
+# GitHub metadata and release operations
+GITHUB_TOKEN=
+GH_TOKEN=
+
+# Optional MinerU routes. The core wheel does not install a local model.
+DRAFTPAPER_MINERU_ENDPOINT=
+MINERU_AGENT_ENDPOINT=
+MINERU_EXECUTABLE=

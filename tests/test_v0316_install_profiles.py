@@ -58,9 +58,9 @@ def test_doctor_reports_install_profiles_and_recovery_commands() -> None:
     report = doctor_project()
     profiles = report["environment"]["install_profiles"]["profiles"]
 
-    assert set(profiles) >= {"minimal", "plotting", "fulltext", "mcp"}
+    assert set(profiles) >= {"minimal", "plotting", "fulltext", "mcp", "browser", "mineru-agent"}
     assert profiles["minimal"]["status"] == "available"
-    for profile in ("plotting", "fulltext", "mcp"):
+    for profile in ("plotting", "fulltext", "mcp", "browser"):
         assert profiles[profile]["install_command"].endswith(f'[{profile}]"')
         assert profiles[profile]["status"] in {"available", "missing_dependencies"}
 
@@ -76,6 +76,7 @@ def test_install_profile_report_distinguishes_missing_modules() -> None:
     assert report["profiles"]["plotting"]["status"] == "missing_dependencies"
     assert "matplotlib" in report["profiles"]["plotting"]["missing_modules"]
     assert report["profiles"]["fulltext"]["runtime_fallback"] == "vendored_paper_fetch"
+    assert report["profiles"]["research"]["composed_from"] == ["plotting", "fulltext"]
     assert schema_family("dpl.install_profile_report.v1") == "install_profile_report"
     assert schema_family("dpl.install_matrix_validation.v1") == "install_matrix_validation"
 
@@ -84,7 +85,7 @@ def test_ci_installs_plotting_profile_explicitly() -> None:
     workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
     assert '-e .[dev,plotting]' in workflow
     assert "install-profile-smoke:" in workflow
-    assert "profile: [minimal, plotting, fulltext, mcp]" in workflow
+    assert "profile: [minimal, plotting, fulltext, mcp, browser]" in workflow
 
 
 def test_wheel_metadata_install_matrix_separates_core_and_extras(tmp_path: Path) -> None:
@@ -104,6 +105,8 @@ Requires-Dist: seaborn>=0.13; extra == \"plotting\"
 Requires-Dist: rapidocr_onnxruntime>=1.2; extra == \"plotting\"
 Requires-Dist: beautifulsoup4; extra == \"fulltext\"
 Requires-Dist: mcp>=1.10; extra == \"mcp\"
+Requires-Dist: cloakbrowser>=0.3.28; extra == \"browser\"
+Requires-Dist: playwright>=1.47; extra == \"browser\"
 """
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr("draftpaper_cli-0.0.dist-info/METADATA", metadata)

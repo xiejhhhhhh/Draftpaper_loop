@@ -104,6 +104,22 @@ def _inputs(root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
     )
 
 
+def _presentation_contracts(root: Path) -> dict[str, Any]:
+    """Load raw structured contracts for a bilingual human-review packet.
+
+    The decision fingerprint retains its normalized, localization-insensitive
+    form.  This separate projection restores user-facing localized strings
+    without changing the scientific identity being confirmed.
+    """
+
+    contracts: dict[str, Any] = {}
+    for relative in STRUCTURED_PLAN_ARTIFACTS:
+        payload = _read(root / relative)
+        if payload:
+            contracts[Path(relative).stem] = payload
+    return contracts
+
+
 def _limitations(
     support: Mapping[str, Any],
     coverage: Mapping[str, Any],
@@ -367,6 +383,7 @@ def review_research_plan(project: str | Path) -> dict[str, Any]:
         limitations=validation["limitations"],
         pre_execution_decision=str(validation["support"].get("decision") or ""),
         review_rule_decision=str(validation["coverage"].get("decision") or ""),
+        presentation_contracts=_presentation_contracts(root),
     )
     issues = validate_research_plan_decision_brief(brief)
     if issues:

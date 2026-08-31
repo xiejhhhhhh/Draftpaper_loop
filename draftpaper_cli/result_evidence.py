@@ -437,6 +437,18 @@ def _anchor_verified_metric_tables(
         # contain "metric".
         if relative.startswith("results/tables/reviewer_revision/"):
             continue
+        # Active temporal-v2 audit tables are already represented by the
+        # compact, fully identified evidence table bound to the run.  Their
+        # row-level audit schemas intentionally do not repeat the complete
+        # MetricEvidence identity and must not be promoted as legacy anchors.
+        if relative.startswith(
+            (
+                "results/tables/temporal_confirmation_v2_active_",
+                "results/tables/spectral_shortcut_controls_v2_active_",
+                "results/tables/stratified_matching_v2_active_",
+            )
+        ):
+            continue
         if relative in already_bound or "metric" not in path.stem.lower():
             continue
         candidate = _aggregate(_metric_rows_from_csv(path, relative, run_id))

@@ -566,6 +566,12 @@ def verify_methods(
         "returncode": completed.returncode,
         "run_id": run_id,
         "scientific_run_id": run_id,
+        "analysis_spec_id": str(
+            structured_output.get("analysis_spec_id")
+            or method_code_manifest.get("analysis_spec_id")
+            or previous_run.get("analysis_spec_id")
+            or ""
+        ).strip(),
         "execution_receipt_id": execution_receipt_id,
         "input_data": resolved_input_data,
         "output_files": declared_outputs,

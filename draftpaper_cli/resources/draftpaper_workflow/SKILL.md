@@ -1,6 +1,6 @@
 ---
 name: draftpaper-workflow
-version: 0.42.2
+version: 0.43.0
 description: Use when Claude Code, Codex, or another supported coding agent operates Draftpaper-loop projects through the authoritative CLI workflow and evidence gates.
 ---
 
@@ -45,6 +45,16 @@ compile a separate temporary project through Draftpaper's formal LaTeX entry
 point when an end-to-end check is required. MinerU, GPU runtimes, Node.js,
 Java, and discipline-specific packages remain optional.
 
+Use `requirements/runtime-constraints.txt` together with the selected extra on
+a handoff or clean-clone installation. `minimal` and `plotting` support Python
+3.10-3.12; `fulltext`, `research`, `publication`, `agent`, and `browser` use
+Python 3.11-3.12 because the vendored paper-fetch/PDF-Markdown runtime starts
+at Python 3.11. `research` is plotting plus fulltext; MCP is added only for
+the `agent` target. The browser extra is opt-in and does not install browser
+assets automatically. `config/environment.example` lists optional provider
+variables by name only; Doctor reports configuration state without exposing
+secret values.
+
 ## Evidence and Literature
 
 Treat a fixture, candidate, plan-only plugin, or mock as a contract check, not
@@ -72,6 +82,15 @@ After `review-literature-coverage`, show the hash-bound
 <hash>` only after human review. Its receipt binds the canonical registry, active
 literature snapshot, and project usage plan; any change to those inputs requires
 a fresh packet and confirmation before Learn may publish deep literature cards.
+
+After a literature search, run `prepare-literature-admission` and inspect its
+hash-bound candidate packet. Every candidate must be explicitly accepted,
+excluded, or deferred; a gate-rejected candidate requires a recorded reason and
+an explicit override before activation. Run `activate-literature-corpus` only
+with that packet hash and decision manifest, then perform the normal coverage
+review and corpus confirmation. The vendored paper-fetch adapter is used for
+identity resolution and evidence-on-demand; it is not a substitute for
+discipline-aware discovery and it does not justify fetching every candidate.
 
 ## Human Review
 

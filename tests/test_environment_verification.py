@@ -145,6 +145,7 @@ def test_verify_environment_uses_injected_runner_for_both_engines(tmp_path: Path
         output=tmp_path / "verification",
         environment_report=environment,
         runner=runner,
+        literature_probe=lambda: {"status": "passed", "mode": "injected_unit_test"},
     )
 
     assert report["status"] == "passed"

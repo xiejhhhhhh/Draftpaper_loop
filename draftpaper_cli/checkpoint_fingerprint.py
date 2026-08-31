@@ -29,6 +29,76 @@ def _stable(value: Any, *, volatile_keys: frozenset[str] = _VOLATILE_KEYS) -> An
     return value
 
 
+def _normalize_scientific_payload(payload: Any) -> Any:
+    """Remove audit locators that must not manufacture a scientific delta.
+
+    Checkpoint packages deliberately retain fact IDs, evidence-snapshot IDs,
+    and claim-to-fact links for auditability.  Those identifiers can be
+    regenerated when the same scientific record is re-indexed.  They should
+    not force an author to reapprove an otherwise unchanged question, method,
+    cohort, metric, figure meaning, or claim boundary.
+    """
+
+    normalized = _stable(payload)
+    if not isinstance(normalized, Mapping):
+        return normalized
+    normalized = dict(normalized)
+
+    identity = normalized.get("scientific_identity")
+    if isinstance(identity, Mapping):
+        identity = dict(identity)
+        # Snapshot identity remains in the immutable audit/baseline records.
+        # It is a versioned container, not a scientific estimand by itself.
+        identity.pop("evidence_snapshot_id", None)
+        normalized["scientific_identity"] = identity
+
+    decision_brief = normalized.get("decision_brief")
+    if isinstance(decision_brief, Mapping):
+        decision_brief = dict(decision_brief)
+        subject = decision_brief.get("semantic_subject")
+        if isinstance(subject, Mapping):
+            subject = dict(subject)
+            facts = subject.get("facts")
+            if isinstance(facts, list):
+                subject["facts"] = sorted(
+                    [
+                        {
+                            "fact_type": item.get("fact_type"),
+                            "semantic_value": item.get("semantic_value"),
+                        }
+                        if isinstance(item, Mapping)
+                        else item
+                        for item in facts
+                    ],
+                    key=canonical_json,
+                )
+            decision_brief["semantic_subject"] = subject
+        normalized["decision_brief"] = decision_brief
+
+    figure_claim_map = normalized.get("figure_claim_map")
+    if isinstance(figure_claim_map, list):
+        normalized["figure_claim_map"] = sorted(
+            [
+                {str(key): value for key, value in item.items() if str(key) != "claim_fact_refs"}
+                if isinstance(item, Mapping)
+                else item
+                for item in figure_claim_map
+            ],
+            key=canonical_json,
+        )
+    return normalized
+
+
+def scientific_fingerprints_equivalent(previous: Mapping[str, Any], current: Mapping[str, Any]) -> bool:
+    """Compare scientific content while tolerating regenerated audit locators."""
+
+    previous_payload = previous.get("canonical_payload") if isinstance(previous, Mapping) else None
+    current_payload = current.get("canonical_payload") if isinstance(current, Mapping) else None
+    if not isinstance(previous_payload, Mapping) or not isinstance(current_payload, Mapping):
+        return False
+    return _normalize_scientific_payload(previous_payload) == _normalize_scientific_payload(current_payload)
+
+
 def _identity(summary: dict[str, Any]) -> dict[str, Any]:
     identity = summary.get("identity") if isinstance(summary.get("identity"), dict) else {}
     metrics = summary.get("core_metrics") if isinstance(summary.get("core_metrics"), dict) else {}
@@ -80,7 +150,7 @@ def build_scientific_decision_fingerprint(
         "decision_brief": brief_semantic_payload(brief),
         "figure_claim_map": scientific_figure_claim_subject(figure_claim_map or {}),
     }
-    payload = _stable(payload)
+    payload = _normalize_scientific_payload(payload)
     scientific_identity = payload["scientific_identity"]
     semantic_facts = ((brief.get("semantic_subject") or {}).get("facts") or [])
     has_scientific_fact = any(
@@ -180,7 +250,7 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
             "summary_zh": "缺少可比较的科学决定指纹，不能自动沿用先前确认。",
             "summary_en": "A comparable scientific-decision fingerprint is missing, so the prior confirmation cannot be reused automatically.",
         }
-    if previous_hash == current_hash:
+    if previous_hash == current_hash or scientific_fingerprints_equivalent(previous, current):
         return {
             "classification": "no_scientific_change",
             "requires_reconfirmation": False,
@@ -188,8 +258,8 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
             "summary_zh": "与最近一次有效确认相比，数据、方法、验证身份、主图语义和论断边界均未发生科学变化；本次仅更新技术审计或呈现内容。",
             "summary_en": "Compared with the latest valid confirmation, the data, method, validation identity, main-figure semantics, and claim boundary are unchanged; only technical-audit or presentation material changed.",
         }
-    before = previous.get("canonical_payload") if isinstance(previous.get("canonical_payload"), dict) else {}
-    after = current.get("canonical_payload") if isinstance(current.get("canonical_payload"), dict) else {}
+    before = _normalize_scientific_payload(previous.get("canonical_payload") if isinstance(previous.get("canonical_payload"), dict) else {})
+    after = _normalize_scientific_payload(current.get("canonical_payload") if isinstance(current.get("canonical_payload"), dict) else {})
     changes = _diff(before, after)
     names = "、".join(str(item.get("field")) for item in changes[:5]) or "科学决定内容"
     return {
@@ -210,4 +280,5 @@ __all__ = [
     "build_scientific_decision_fingerprint",
     "compare_scientific_decisions",
     "fingerprint_has_method_analysis_identity",
+    "scientific_fingerprints_equivalent",
 ]

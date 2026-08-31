@@ -20,6 +20,18 @@ BUNDLE_DIR = "results/run_evidence_bundles"
 ACTIVE_POINTER = "results/active_run_evidence_bundle.json"
 LATEST_BUNDLE = "results/run_evidence_bundle.json"
 
+# These files are derived *from* a run-evidence bundle or from result evidence.
+# Including them in the bundle's declared run outputs creates a self-reference:
+# result_manifest embeds resolved evidence, resolved evidence embeds the bundle,
+# and the bundle would then hash the manifest again.  They remain auditable as
+# downstream artifacts, but are not primitive execution outputs.
+_DERIVED_SELF_REFERENTIAL_OUTPUTS = frozenset({
+    "results/result_manifest.yaml",
+    "results/resolved_result_evidence.json",
+    "results/run_evidence_bundle.json",
+    "results/active_run_evidence_bundle.json",
+})
+
 
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
@@ -101,7 +113,12 @@ def build_run_evidence_bundle(
     transaction_id = _transaction_id(run_manifest, run_id=run_id)
     outputs = run_manifest.get("output_files") or run_manifest.get("declared_outputs") or run_manifest.get("tables_generated") or []
     inputs = run_manifest.get("input_artifacts") or run_manifest.get("input_files") or []
-    output_artifacts = _artifact_list(root, outputs, role="output")
+    output_paths = [
+        path
+        for path in _paths(outputs)
+        if path.replace("\\", "/").lstrip("./") not in _DERIVED_SELF_REFERENTIAL_OUTPUTS
+    ]
+    output_artifacts = _artifact_list(root, output_paths, role="output")
     input_artifacts = _artifact_list(root, inputs, role="input")
     missing_outputs = [item for item in output_artifacts if item.get("status") != "present"]
     metric_status = str((metric_identity or {}).get("status") or "not_registered")

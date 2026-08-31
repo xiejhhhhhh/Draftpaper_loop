@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -178,6 +180,68 @@ def _validate_pdf(path: Path) -> dict[str, Any]:
     }
 
 
+def _probe_vendored_paper_fetch_runtime() -> dict[str, Any]:
+    """Probe the vendored CLI with the same import path used by the adapter.
+
+    The upstream package uses absolute ``paper_fetch`` imports.  Running an
+    isolated child process with the vendored source on ``PYTHONPATH`` therefore
+    tests the actual fallback command and avoids leaking a temporary top-level
+    module into the verifier process.
+    """
+
+    package_root = Path(__file__).resolve().parent / "_vendor" / "paper_fetch_skill"
+    source_root = package_root if (package_root / "paper_fetch" / "cli.py").is_file() else None
+    if source_root is None:
+        source_root = Path(__file__).resolve().parents[1] / "third_party" / "paper-fetch-skill" / "src"
+    if not (source_root / "paper_fetch" / "cli.py").is_file():
+        return {
+            "status": "failed",
+            "module": "paper_fetch.cli",
+            "error_type": "VendoredRuntimeMissing",
+            "error_message": "The vendored paper-fetch CLI source is not present.",
+        }
+
+    environment = os.environ.copy()
+    existing_path = environment.get("PYTHONPATH")
+    environment["PYTHONPATH"] = str(source_root) + (
+        os.pathsep + existing_path if existing_path else ""
+    )
+    command = [
+        sys.executable,
+        "-c",
+        "from paper_fetch import cli; raise SystemExit(0 if callable(cli.main) else 2)",
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=60,
+            check=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - the verifier must classify runtime failures.
+        return {
+            "status": "failed",
+            "module": "paper_fetch.cli",
+            "source": str(source_root),
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+        }
+    return {
+        "status": "passed" if completed.returncode == 0 else "failed",
+        "module": "paper_fetch.cli",
+        "source": str(source_root),
+        "returncode": completed.returncode,
+        "stdout": completed.stdout[-1000:],
+        "stderr": completed.stderr[-2000:],
+        "error_type": None if completed.returncode == 0 else "PaperFetchImportFailed",
+        "error_message": None if completed.returncode == 0 else "The vendored paper-fetch CLI could not be imported in its adapter environment.",
+    }
+
+
 def _compile_engine(
     *,
     engine_name: str,
@@ -263,7 +327,7 @@ def _render_html(payload: dict[str, Any], *, language: str) -> str:
 <p>{intro}</p>
 <h2>{table_title}</h2>
 <table><thead><tr><th>Capability</th><th>Status</th><th>Observed</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
-<pre>{html.escape(json.dumps(payload.get("latex") or {{}}, ensure_ascii=False, indent=2))}</pre>
+    <pre>{html.escape(json.dumps({"literature_runtime": payload.get("literature_runtime") or {}, "latex": payload.get("latex") or {}}, ensure_ascii=False, indent=2))}</pre>
 </html>
 """
 
@@ -275,6 +339,7 @@ def verify_environment(
     output: str | Path,
     environment_report: dict[str, Any] | None = None,
     runner: Callable[..., Any] = subprocess.run,
+    literature_probe: Callable[[], dict[str, Any]] = _probe_vendored_paper_fetch_runtime,
 ) -> dict[str, Any]:
     """Verify one target and optionally compile both local LaTeX engine fixtures."""
 
@@ -290,8 +355,20 @@ def verify_environment(
         "target": target,
         "status": environment.get("status", "failed"),
         "environment": environment,
+        "literature_runtime": {"status": "not_required"},
         "latex": {"status": "not_requested"},
     }
+
+    if target in {"research", "publication", "agent"}:
+        if environment.get("status") == "failed" or environment.get("missing_core"):
+            payload["literature_runtime"] = {
+                "status": "blocked_missing_core",
+                "reason": "The research/full-text environment is incomplete.",
+            }
+        else:
+            payload["literature_runtime"] = literature_probe()
+            if payload["literature_runtime"].get("status") != "passed":
+                payload["status"] = "failed"
 
     if compile_latex:
         if environment.get("status") == "failed" or environment.get("missing_core"):
@@ -342,7 +419,11 @@ def verify_environment(
                     "engines": engines,
                     "kpsewhich": kpsewhich_report,
                 }
-                payload["status"] = "passed" if payload["latex"]["status"] == "passed" and environment.get("status") == "passed" else "failed"
+                payload["status"] = "passed" if (
+                    payload["latex"]["status"] == "passed"
+                    and environment.get("status") == "passed"
+                    and payload["literature_runtime"].get("status") == "passed"
+                ) else "failed"
 
     _write_json(output_path / "environment_verification.json", payload)
     (output_path / "environment_verification.zh-CN.html").write_text(_render_html(payload, language="zh-CN"), encoding="utf-8")

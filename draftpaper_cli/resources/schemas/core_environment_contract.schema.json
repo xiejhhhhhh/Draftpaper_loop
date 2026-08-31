@@ -22,6 +22,8 @@
     "components": {"type": "array", "items": {"type": "object"}},
     "missing_core": {"type": "array", "items": {"type": "object"}},
     "optional_unavailable": {"type": "array", "items": {"type": "object"}},
+    "optional_system_enhancements": {"type": "array", "items": {"type": "object"}},
+    "optional_integrations": {"type": "object"},
     "profile_report": {"type": "object"},
     "environment_variables": {"type": "object"}
   },

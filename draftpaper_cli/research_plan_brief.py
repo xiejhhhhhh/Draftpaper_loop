@@ -178,12 +178,20 @@ def build_research_plan_decision_brief(
     limitations: Iterable[str],
     pre_execution_decision: str,
     review_rule_decision: str,
+    presentation_contracts: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a compact, complete decision brief from canonical contracts."""
+    """Return a compact, complete decision brief from semantic and display contracts.
+
+    The scientific fingerprint intentionally removes localized presentation
+    fields so translation-only edits do not create a new scientific decision.
+    The author-facing packet must nevertheless render those fields when the
+    raw structured contracts are available.
+    """
 
     subject = fingerprint.get("scientific_plan_subject") or {}
-    contracts = subject.get("contracts") if isinstance(subject, Mapping) else {}
-    contracts = contracts if isinstance(contracts, Mapping) else {}
+    semantic_contracts = subject.get("contracts") if isinstance(subject, Mapping) else {}
+    semantic_contracts = semantic_contracts if isinstance(semantic_contracts, Mapping) else {}
+    contracts = presentation_contracts if isinstance(presentation_contracts, Mapping) else semantic_contracts
     blueprint = contracts.get("research_blueprint") or {}
     objective = blueprint.get("research_objective") if isinstance(blueprint, Mapping) else {}
     objective = objective if isinstance(objective, Mapping) else {}

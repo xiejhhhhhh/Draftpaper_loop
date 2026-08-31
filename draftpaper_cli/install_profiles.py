@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 from collections.abc import Callable
 from typing import Any
 
@@ -14,28 +15,63 @@ PROFILE_MODULES: dict[str, tuple[str, ...]] = {
         "cachetools",
         "filelock",
         "filetype",
+        "imagesize",
         "idutils",
         "lxml",
         "platformdirs",
         "pydantic",
         "pymupdf",
+        "pymupdf4llm",
         "dotenv",
         "rapidfuzz",
         "trafilatura",
+        "typing_extensions",
         "urllib3",
     ),
+    "browser": ("cloakbrowser", "playwright.sync_api"),
     "mineru-agent": (),
     "mcp": ("mcp", "pydantic"),
 }
 
 
 PROFILE_CAPABILITIES: dict[str, tuple[str, ...]] = {
-    "minimal": ("workflow_control", "bibliography", "pdf_inspection", "vendored_paper_fetch"),
+    "minimal": ("workflow_control", "bibliography", "pdf_inspection", "paper_identity_resolution"),
     "plotting": ("publication_figures", "scientific_plugin_runtime", "statistical_plotting"),
-    "fulltext": ("enhanced_pdf_parsing", "web_article_extraction", "metadata_normalization"),
+    "fulltext": (
+        "enhanced_pdf_parsing",
+        "pdf_markdown_fallback",
+        "vendored_paper_fetch_cli",
+        "web_article_extraction",
+        "metadata_normalization",
+    ),
+    "browser": ("publisher_browser_fallback", "playwright_document_fetch"),
     "mineru-agent": ("official_mineru_agent_connector", "conditional_remote_document_parse"),
     "mcp": ("local_stdio_mcp",),
 }
+
+
+PROFILE_PYTHON_RANGES: dict[str, tuple[tuple[int, int], tuple[int, int]]] = {
+    "minimal": ((3, 10), (3, 13)),
+    "plotting": ((3, 10), (3, 13)),
+    # The vendored paper-fetch 2.x runtime is supported upstream on 3.11+.
+    "fulltext": ((3, 11), (3, 13)),
+    "browser": ((3, 11), (3, 13)),
+    "mineru-agent": ((3, 10), (3, 13)),
+    "mcp": ((3, 10), (3, 13)),
+    "research": ((3, 11), (3, 13)),
+}
+
+
+def _python_report(profile: str, version: tuple[int, int, int]) -> dict[str, Any]:
+    minimum, maximum = PROFILE_PYTHON_RANGES[profile]
+    current = version[:2]
+    supported = minimum <= current < maximum
+    return {
+        "status": "supported" if supported else "unsupported",
+        "current": ".".join(str(item) for item in version),
+        "minimum": f"{minimum[0]}.{minimum[1]}",
+        "maximum_exclusive": f"{maximum[0]}.{maximum[1]}",
+    }
 
 
 def _module_probe(name: str, *, importer: Callable[[str], Any] = importlib.import_module) -> dict[str, Any]:
@@ -70,8 +106,15 @@ def inspect_install_profiles(
     *,
     module_available: Callable[[str], bool] | None = None,
     importer: Callable[[str], Any] = importlib.import_module,
+    python_version: tuple[int, int, int] | None = None,
 ) -> dict[str, Any]:
     """Report which documented install profiles are usable in this interpreter."""
+
+    runtime_version = python_version or (
+        sys.version_info[0],
+        sys.version_info[1],
+        sys.version_info[2],
+    )
 
     def probe(name: str) -> dict[str, Any]:
         if module_available is not None:
@@ -84,14 +127,24 @@ def inspect_install_profiles(
 
     profiles: dict[str, dict[str, Any]] = {}
     for profile, modules in PROFILE_MODULES.items():
+        python = _python_report(profile, runtime_version)
         module_statuses = {name: probe(name) for name in modules}
         missing = [name for name, item in module_statuses.items() if item["status"] == "missing"]
         failed = [name for name, item in module_statuses.items() if item["status"] == "import_failed"]
         extra = None if profile == "minimal" else profile
         install_target = "draftpaper-cli" if extra is None else f"draftpaper-cli[{extra}]"
         profiles[profile] = {
-            "status": "import_failed" if failed else "missing_dependencies" if missing else "available",
+            "status": (
+                "unsupported_python"
+                if python["status"] != "supported"
+                else "import_failed"
+                if failed
+                else "missing_dependencies"
+                if missing
+                else "available"
+            ),
             "extra": extra,
+            "python": python,
             "required_modules": list(modules),
             "missing_modules": missing,
             "failed_modules": failed,
@@ -102,31 +155,41 @@ def inspect_install_profiles(
         }
     research_modules = tuple(dict.fromkeys(
         module
-        for profile in ("plotting", "fulltext", "mcp")
+        for profile in ("plotting", "fulltext")
         for module in PROFILE_MODULES[profile]
     ))
     research_statuses = {name: probe(name) for name in research_modules}
     research_missing = [name for name, item in research_statuses.items() if item["status"] == "missing"]
     research_failed = [name for name, item in research_statuses.items() if item["status"] == "import_failed"]
+    research_python = _python_report("research", runtime_version)
     profiles["research"] = {
-        "status": "import_failed" if research_failed else "missing_dependencies" if research_missing else "available",
-        "extra": "plotting,fulltext,mcp",
+        "status": (
+            "unsupported_python"
+            if research_python["status"] != "supported"
+            else "import_failed"
+            if research_failed
+            else "missing_dependencies"
+            if research_missing
+            else "available"
+        ),
+        "extra": "plotting,fulltext",
+        "python": research_python,
         "required_modules": list(research_modules),
         "missing_modules": research_missing,
         "failed_modules": research_failed,
         "module_statuses": research_statuses,
         "capabilities": sorted({
             capability
-            for profile in ("plotting", "fulltext", "mcp")
+            for profile in ("plotting", "fulltext")
             for capability in PROFILE_CAPABILITIES[profile]
         }),
-        "install_command": 'python -m pip install "draftpaper-cli[plotting,fulltext,mcp]"',
+        "install_command": 'python -m pip install "draftpaper-cli[plotting,fulltext]"',
         "runtime_fallback": "vendored_paper_fetch",
-        "composed_from": ["plotting", "fulltext", "mcp"],
+        "composed_from": ["plotting", "fulltext"],
     }
     missing_optional = [
-        name for name in ("plotting", "fulltext", "mcp")
-        if profiles[name]["missing_modules"] or profiles[name]["failed_modules"]
+        name for name in ("plotting", "fulltext", "browser", "mcp")
+        if profiles[name]["status"] != "available"
     ]
     return {
         "schema_version": "dpl.install_profile_report.v1",

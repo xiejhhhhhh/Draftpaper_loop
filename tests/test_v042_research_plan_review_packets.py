@@ -78,6 +78,31 @@ def prepare_formal_blueprint(project_path: Path) -> None:
     mark_research_plan_confirmation_required(project_path)
 
 
+def test_agent_semantic_delta_is_compact_when_contract_values_are_large() -> None:
+    from draftpaper_cli.human_review_packet import _compact_semantic_delta
+
+    compact = _compact_semantic_delta(
+        {
+            "classification": "scientific_change",
+            "summary_zh": "研究合同发生变化。",
+            "summary_en": "The scientific contract changed.",
+            "changes": [
+                {
+                    "path": "contracts.figure_storyboard.figures",
+                    "before": "x" * 100_000,
+                    "after": "y" * 100_000,
+                }
+            ],
+        }
+    )
+
+    rendered = json.dumps(compact, ensure_ascii=False)
+    assert len(rendered.encode("utf-8")) < 12 * 1024
+    assert compact["changes"] == [{"path": "contracts.figure_storyboard.figures"}]
+    assert "before" not in rendered
+    assert "after" not in rendered
+
+
 class ResearchPlanReviewPacketV042Tests(unittest.TestCase):
     def _project(self, root: Path):
         project = create_project(root=root, idea="Grouped classifier", field="machine learning")

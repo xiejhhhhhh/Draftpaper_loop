@@ -219,11 +219,20 @@ def _anonymize_review_tex(tex: str) -> str:
     )
     tex = re.sub(r"\\shortauthors\{[^{}]*\}", r"\\shortauthors{Anonymous}", tex)
     title = re.search(r"\\title\{[^{}]*\}", tex)
-    author_block = (
-        "\n\\author{Anonymous Manuscript}"
-        "\n\\affiliation{Withheld for anonymous review}"
-        "\n\\email{withheld@anonymous.invalid}"
-    )
+    if re.search(r"\\documentclass(?:\[[^\]]*\])?\{elsarticle\}", tex):
+        # elsarticle uses \address rather than the generic \affiliation/\email
+        # commands.  Keep the review build anonymous without introducing an
+        # undefined control sequence in an otherwise valid submission template.
+        author_block = (
+            "\n\\author{Anonymous Manuscript}"
+            "\n\\address{Withheld for anonymous review}"
+        )
+    else:
+        author_block = (
+            "\n\\author{Anonymous Manuscript}"
+            "\n\\affiliation{Withheld for anonymous review}"
+            "\n\\email{withheld@anonymous.invalid}"
+        )
     if title:
         tex = tex[:title.end()] + author_block + tex[title.end():]
     tex = re.sub(
@@ -260,6 +269,9 @@ def _anonymize_review_tex(tex: str) -> str:
     tex = re.sub(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "withheld@anonymous.invalid", tex)
     tex = re.sub(r"(?m)^% Commercial use requires prior written authorization:.*\n?", "", tex)
     tex = tex.replace(r"\graphicspath{{../}}", r"\graphicspath{{../../../}}")
+    # The anonymous build keeps its review-facing table sources locally rather
+    # than relying on the manuscript's original relative include path.
+    tex = tex.replace(r"\def\input@path{{../results/tables/}}", r"\def\input@path{{results/tables/}}")
     return tex
 
 
@@ -289,6 +301,17 @@ def _compile_anonymous_review_pdf(root: Path, identities: list[str]) -> tuple[Pa
         section_text = section_text.replace("../writing/", "../../../writing/")
         target.write_text(section_text, encoding="utf-8")
         copied_sources.append(target)
+    source_tables = root / "results" / "tables"
+    if source_tables.is_dir():
+        target_tables = build_dir / "results" / "tables"
+        target_tables.mkdir(parents=True, exist_ok=True)
+        for source in source_tables.glob("*.tex"):
+            target = target_tables / source.name
+            target.write_text(
+                _sanitize_anonymous_text(source.read_text(encoding="utf-8-sig", errors="replace"), identities),
+                encoding="utf-8",
+            )
+            copied_sources.append(target)
     shutil.copyfile(source_dir / "library.bib", build_dir / "library.bib")
 
     engine = _find_latex_executable(["xelatex", "xelatex.exe", "pdflatex", "pdflatex.exe"])

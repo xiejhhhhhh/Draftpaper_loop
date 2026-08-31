@@ -13,9 +13,11 @@ This guide defines the complete local environment for producing and compiling a 
 
 The control and research targets do not claim that a PDF can be compiled. Use the `publication` target before starting a final manuscript run.
 
+Browser fetching is an optional enhancement rather than a new core target. If it is needed, install the `browser` extra in an existing Python 3.11/3.12 research environment and install Playwright browser assets explicitly.
+
 ## Windows standard route
 
-The supported default route is a current-user MiKTeX 25.12 installation, system Git for Windows, and the Microsoft Visual C++ x64 runtime. It does not require administrator rights for MiKTeX and does not install MinerU, CUDA, Node.js, Java, or academic-library dependencies.
+The supported default route is a current-user MiKTeX 25.12 installation, system Git for Windows, and the Microsoft Visual C++ x64 runtime. If `uv` is available, the bootstrap script uses the observable `uv python install 3.11` route for Python; otherwise it falls back to the official winget package. It does not require administrator rights for MiKTeX and does not install MinerU, CUDA, Node.js, Java, or academic-library dependencies.
 
 ### 1. Create the Python environment
 
@@ -24,10 +26,12 @@ From a source checkout:
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e ".[plotting,fulltext,mcp]"
+.\.venv\Scripts\python -m pip install -c requirements\runtime-constraints.txt -e ".[plotting,fulltext]"
 ```
 
-Python 3.10, 3.11, and 3.12 are supported. The `fulltext` extra installs the PyMuPDF route for enhanced local PDF extraction. MinerU remains an optional external endpoint or Agent connector; it is not part of the core installation.
+Python 3.10, 3.11, and 3.12 are supported by `control/minimal` and `plotting`; `fulltext`, `research`, `publication`, `agent`, and `browser` support Python 3.11 and 3.12 because the vendored paper-fetch and PDF-Markdown runtimes start at Python 3.11. The `fulltext` extra installs `imagesize`, PyMuPDF, and `pymupdf4llm`, and the verifier really imports the vendored paper-fetch CLI. MinerU remains an optional external endpoint or Agent connector; it is not part of the core installation.
+
+Always apply `requirements/runtime-constraints.txt` for handoff or clean-clone installs. It defines cross-platform compatibility bounds so the same checkout does not resolve incompatible major versions on different dates. Optional provider variable names are listed in `config/environment.example`; real credentials belong only in user-level environment variables or private local configuration.
 
 ### 2. Check and install system prerequisites
 
@@ -111,6 +115,7 @@ The `publication` contract uses an independently discoverable system Git for a s
 | `kpsewhich plainnat.bst` empty | The bibliography resource is not discoverable | Refresh the file-name database and install the bibliography package |
 | Git is from a Codex runtime | The source checkout is not using an independent system Git | Install Git for Windows and check `where.exe git` |
 | first compile asks for packages | MiKTeX is using its normal on-demand behavior | Allow the package install, or pre-warm packages for offline work |
+| vendored paper-fetch import fails | The `fulltext/research` dependency set or Python version is incomplete | Use Python 3.11/3.12, reinstall `fulltext` with the constraints file, and rerun `verify-environment` |
 | MinerU unavailable | Optional enhanced PDF route is not configured | Continue with pypdf/PyMuPDF or configure a user-managed MinerU endpoint |
 
 ## What is not committed

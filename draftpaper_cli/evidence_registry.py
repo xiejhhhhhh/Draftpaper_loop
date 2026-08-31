@@ -609,6 +609,404 @@ def _records_from_figure_bound_tables(project_path: Path) -> list[dict[str, Any]
     return records
 
 
+def _csv_rows(path: Path) -> list[dict[str, str]]:
+    """Read a small structured CSV evidence artifact without promoting it yet."""
+
+    if not path.is_file():
+        return []
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            return [
+                {str(key): str(value or "") for key, value in row.items()}
+                for row in csv.DictReader(handle)
+                if isinstance(row, dict)
+            ]
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return []
+
+
+def _metric_context(
+    project_path: Path,
+    *,
+    cohort_id: str,
+    sample_unit: str,
+    variant: str = "",
+    metric: str = "",
+) -> dict[str, str] | None:
+    """Recover a declared scientific scope from the metric producer.
+
+    A CountEvidence record owns its value and denominator identity.  This
+    lookup supplies only the already-declared run, cohort-view, estimand,
+    analysis-spec, model, and split fields needed by manuscript validation.
+    """
+
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    current_run = str(run_manifest.get("run_id") or "").strip()
+    rows = _csv_rows(project_path / "results" / "tables" / "metric_evidence.csv")
+    if current_run:
+        rows = [row for row in rows if str(row.get("run_id") or "").strip() == current_run]
+    if variant:
+        rows = [
+            row for row in rows
+            if str(row.get("variant") or "").strip().upper() == variant.upper()
+            or str(row.get("model_id") or "").strip().upper() == variant.upper()
+        ]
+    elif metric:
+        rows = [
+            row for row in rows
+            if str(row.get("metric") or "").strip().lower() == metric.lower()
+            and str(row.get("cohort_id") or "").strip() == cohort_id
+            and str(row.get("sample_unit") or "").strip() == sample_unit
+        ]
+    else:
+        exact = [
+            row for row in rows
+            if str(row.get("cohort_id") or "").strip() == cohort_id
+            and str(row.get("sample_unit") or "").strip() == sample_unit
+        ]
+        rows = exact or [
+            row for row in rows
+            if str(row.get("cohort_id") or "").strip() == cohort_id
+        ]
+    for row in rows:
+        context = {
+            "cohort_view_id": str(row.get("cohort_view_id") or "").strip(),
+            "estimand_id": str(row.get("estimand_id") or "").strip(),
+            "analysis_spec_id": str(row.get("analysis_spec_id") or "").strip(),
+            "run_id": str(row.get("run_id") or current_run or "").strip(),
+            "split_id": str(row.get("split_id") or row.get("split") or "").strip(),
+            "model_id": str(row.get("model_id") or row.get("model") or "").strip(),
+        }
+        if all(context.values()):
+            context["split"] = context["split_id"]
+            return context
+    return None
+
+
+def _records_from_count_identity_report(path: Path, project_path: Path) -> list[dict[str, Any]]:
+    """Promote typed CountEvidence records to quantitative manuscript evidence.
+
+    The producer may cite the same count through both formal-data and result
+    manifests.  De-duplicating on ``count_record_id`` preserves the scientific
+    identity while avoiding duplicate manuscript bindings.
+    """
+
+    payload = _read_json(path)
+    relative = path.relative_to(project_path).as_posix()
+    source_hash = _sha256(path)
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(payload.get("records") or [], start=1):
+        if not isinstance(raw, dict):
+            continue
+        count_record_id = str(raw.get("count_record_id") or "").strip()
+        if not count_record_id or count_record_id in seen:
+            continue
+        seen.add(count_record_id)
+        value = _numeric(raw.get("value"))
+        cohort_id = str(raw.get("cohort_id") or "").strip()
+        sample_unit = str(raw.get("sample_unit") or "").strip()
+        definition = str(raw.get("count_definition_id") or "count").strip()
+        variant = ""
+        match = re.match(r"^(B[0-4])_", definition, flags=re.I)
+        if match:
+            variant = match.group(1).upper()
+        context = _metric_context(
+            project_path,
+            cohort_id=cohort_id,
+            sample_unit=sample_unit,
+            variant=variant,
+            metric="f1" if "controlled_anomaly" in definition.lower() else "",
+        )
+        if value is None or not context:
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "_", definition.lower()).strip("_") or "count"
+        record = _normalize_record(
+            {
+                "evidence_id": f"count:{count_record_id}",
+                "entity_role": f"result_metric_{slug}",
+                "value": value,
+                "unit": "count",
+                "cohort_id": cohort_id,
+                "cohort_view_id": context["cohort_view_id"],
+                "estimand_id": context["estimand_id"],
+                "analysis_spec_id": context["analysis_spec_id"],
+                "sample_unit": sample_unit,
+                "run_id": context["run_id"],
+                "split": context["split"],
+                "split_id": context["split_id"],
+                "model_id": context["model_id"],
+                "metric_dimension": "count",
+                "aggregation": str(raw.get("count_mode") or "reported_count").strip(),
+                "analysis_variant": "typed_count_identity",
+                "evidence_role": str(raw.get("evidence_role") or "primary").strip() or "primary",
+                "confidence": "verified_run_output",
+                "target_sections": ["results", "data", "discussion"],
+                "allowed_interpretation": (
+                    f"Verified CountEvidence for {definition}; preserve its cohort, "
+                    "sample-unit, filter-contract, and count-mode identity."
+                ),
+            },
+            source_artifact=relative,
+            source_hash=source_hash,
+        )
+        if record:
+            record["count_record_id"] = count_record_id
+            record["count_definition_id"] = definition
+            record["count_mode"] = str(raw.get("count_mode") or "").strip()
+            record["filter_contract_id"] = str(raw.get("filter_contract_id") or "").strip()
+            record["source_count_record_row"] = index
+            _finalize_binding(record)
+            if record["binding_complete"]:
+                records.append(record)
+    return records
+
+
+def _records_from_controlled_anomaly_outputs(project_path: Path) -> list[dict[str, Any]]:
+    """Register unique-ID and false-alert totals for the controlled check."""
+
+    context = _metric_context(
+        project_path,
+        cohort_id="cohort:anomaly_injection_2023",
+        sample_unit="anomaly_instance",
+        metric="f1",
+    )
+    if not context:
+        return []
+    records: list[dict[str, Any]] = []
+
+    def append_record(
+        *,
+        role: str,
+        value: float,
+        sample_unit: str,
+        aggregation: str,
+        source: Path,
+        sequence: int,
+    ) -> None:
+        record = _normalize_record(
+            {
+                "evidence_id": stable_evidence_id(
+                    "controlled_anomaly_output",
+                    title=f"{context['run_id']}|{role}|{value}|{_sha256(source)}",
+                    sequence=sequence,
+                ),
+                "entity_role": role,
+                "value": value,
+                "unit": "count",
+                "cohort_id": "cohort:anomaly_injection_2023",
+                "cohort_view_id": context["cohort_view_id"],
+                "estimand_id": context["estimand_id"],
+                "analysis_spec_id": context["analysis_spec_id"],
+                "sample_unit": sample_unit,
+                "run_id": context["run_id"],
+                "split": context["split"],
+                "split_id": context["split_id"],
+                "model_id": context["model_id"],
+                "metric_dimension": "count",
+                "aggregation": aggregation,
+                "analysis_variant": "controlled_anomaly_injection",
+                "evidence_role": "primary",
+                "confidence": "verified_run_output",
+                "target_sections": ["results", "data", "discussion"],
+                "allowed_interpretation": "Controlled implementation recovery only; not external crop-classification validation.",
+            },
+            source_artifact=source.relative_to(project_path).as_posix(),
+            source_hash=_sha256(source),
+        )
+        if record:
+            _finalize_binding(record)
+            if record["binding_complete"]:
+                records.append(record)
+
+    truth_path = project_path / "results" / "aaew" / "anomaly_injection_truth.csv"
+    truth_rows = [
+        row for row in _csv_rows(truth_path)
+        if str(row.get("run_id") or "").strip() == context["run_id"]
+    ]
+    unique_ids = {str(row.get("sample_id") or "").strip() for row in truth_rows if str(row.get("sample_id") or "").strip()}
+    if unique_ids:
+        append_record(
+            role="result_metric_unique_sample_ids",
+            value=float(len(unique_ids)),
+            sample_unit="sample_id",
+            aggregation="distinct_sample_id",
+            source=truth_path,
+            sequence=1,
+        )
+
+    metrics_path = project_path / "results" / "aaew" / "anomaly_validation_metrics.csv"
+    metric_rows = [
+        row for row in _csv_rows(metrics_path)
+        if str(row.get("run_id") or "").strip() == context["run_id"]
+    ]
+    if metric_rows:
+        false_alerts = sum(_numeric(row.get("false_positive")) or 0.0 for row in metric_rows)
+        append_record(
+            role="result_metric_false_alerts",
+            value=float(false_alerts),
+            sample_unit="anomaly_instance",
+            aggregation="sum_over_anomaly_types",
+            source=metrics_path,
+            sequence=2,
+        )
+    return records
+
+
+def _records_from_threshold_asset_sensitivity(project_path: Path) -> list[dict[str, Any]]:
+    """Register the compact threshold/asset ledger as structured evidence."""
+
+    path = project_path / "results" / "aaew" / "threshold_asset_sensitivity.csv"
+    rows = _csv_rows(path)
+    run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
+    run_id = str(run_manifest.get("run_id") or "").strip()
+    rows = [row for row in rows if str(row.get("run_id") or "").strip() == run_id]
+    analysis = _read_json(project_path / "methods" / "executable_analysis_spec.json")
+    spec = next(
+        (item for item in analysis.get("analysis_specs") or []
+        if isinstance(item, dict) and "method_task_6" in str(item.get("analysis_spec_id") or "")),
+        None,
+    )
+    if not rows or not spec or not run_id:
+        return []
+    estimand_id = str(spec.get("estimand_id") or "").strip()
+    analysis_spec_id = str(spec.get("analysis_spec_id") or "").strip()
+    if not estimand_id or not analysis_spec_id:
+        return []
+    source_hash = _sha256(path)
+    relative = path.relative_to(project_path).as_posix()
+    records: list[dict[str, Any]] = []
+
+    def append_record(
+        *,
+        role: str,
+        value: float,
+        cohort_id: str,
+        cohort_view_id: str,
+        sample_unit: str,
+        aggregation: str,
+        model_id: str,
+        sequence: int,
+    ) -> None:
+        is_count = role in {
+            "result_metric_retained_records",
+            "result_metric_reporting_units",
+            "result_metric_threshold_asset_scenario_count",
+        }
+        record = _normalize_record(
+            {
+                "evidence_id": stable_evidence_id(
+                    "threshold_asset_sensitivity",
+                    title=f"{role}|{value}|{model_id}|{aggregation}|{source_hash}",
+                    sequence=sequence,
+                ),
+                "entity_role": role,
+                "value": value,
+                "unit": "count" if is_count else "score",
+                "cohort_id": cohort_id,
+                "cohort_view_id": cohort_view_id,
+                "estimand_id": estimand_id,
+                "analysis_spec_id": analysis_spec_id,
+                "sample_unit": sample_unit,
+                "run_id": run_id,
+                "split": "not_applicable",
+                "split_id": "not_applicable",
+                "model_id": model_id,
+                "metric_dimension": "count" if is_count else "score",
+                "aggregation": aggregation,
+                "analysis_variant": "threshold_asset_sensitivity",
+                "evidence_role": "secondary",
+                "confidence": "verified_run_output",
+                "target_sections": ["results", "discussion"],
+                "allowed_interpretation": "Conditional threshold-and-asset sensitivity ledger; not a cross-unit validation result.",
+            },
+            source_artifact=relative,
+            source_hash=source_hash,
+        )
+        if record:
+            _finalize_binding(record)
+            if record["binding_complete"]:
+                records.append(record)
+
+    thresholds = sorted({_numeric(row.get("climate_threshold")) for row in rows if _numeric(row.get("climate_threshold")) is not None})
+    for index, threshold in enumerate(thresholds, start=1):
+        append_record(
+            role="result_metric_threshold",
+            value=float(threshold),
+            cohort_id="cohort:registered_2023_samples",
+            cohort_view_id="cohort_view:registered_sample_records",
+            sample_unit="sample_record",
+            aggregation="declared_threshold_value",
+            model_id="threshold and asset ledger",
+            sequence=index,
+        )
+    append_record(
+        role="result_metric_threshold_asset_scenario_count",
+        value=float(len(rows)),
+        cohort_id="cohort:registered_2023_samples",
+        cohort_view_id="cohort_view:registered_sample_records",
+        sample_unit="threshold_asset_scenario",
+        aggregation="row_count",
+        model_id="threshold and asset ledger",
+        sequence=100,
+    )
+
+    labels = {
+        "registry_only": "Registry only",
+        "complete_aaew": "Complete AAEW",
+        "role_and_year_audit": "Role-and-year audit",
+    }
+    groups: dict[tuple[float, float, float, float, float], list[dict[str, str]]] = {}
+    for row in rows:
+        key = tuple(
+            _numeric(row.get(column))
+            for column in ("retained_n", "n_u", "mean_proxy", "mean_class", "unit_count")
+        )
+        if any(value is None for value in key):
+            continue
+        groups.setdefault(key, []).append(row)  # type: ignore[arg-type]
+    for group_index, (key, group_rows) in enumerate(sorted(groups.items()), start=1):
+        retained_n, _n_u, mean_proxy, _mean_class, unit_count = key
+        modes = [
+            labels[mode] for mode in ("registry_only", "complete_aaew", "role_and_year_audit")
+            if any(str(row.get("asset_mode") or "").strip() == mode for row in group_rows)
+        ]
+        model_id = " and ".join(modes) or "threshold and asset ledger"
+        thresholds = sorted({_numeric(row.get("climate_threshold")) for row in group_rows if _numeric(row.get("climate_threshold")) is not None})
+        aggregation = "thresholds:" + ",".join(str(int(value)) for value in thresholds)
+        append_record(
+            role="result_metric_retained_records",
+            value=float(retained_n),
+            cohort_id="cohort:registered_2023_samples",
+            cohort_view_id="cohort_view:registered_sample_records",
+            sample_unit="sample_record",
+            aggregation=aggregation,
+            model_id=model_id,
+            sequence=200 + group_index,
+        )
+        append_record(
+            role="result_metric_reporting_units",
+            value=float(unit_count),
+            cohort_id="cohort:reporting_units",
+            cohort_view_id="cohort_view:reporting_units",
+            sample_unit="reporting_unit",
+            aggregation=aggregation,
+            model_id=model_id,
+            sequence=300 + group_index,
+        )
+        append_record(
+            role="result_metric_mean_proxy",
+            value=float(mean_proxy),
+            cohort_id="cohort:reporting_units",
+            cohort_view_id="cohort_view:reporting_units",
+            sample_unit="reporting_unit",
+            aggregation=aggregation,
+            model_id=model_id,
+            sequence=400 + group_index,
+        )
+    return records
+
+
 def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     """Build a domain-neutral registry from explicitly structured evidence only."""
     state = load_project(project)
@@ -625,6 +1023,11 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     if result_manifest.exists():
         records.extend(_records_from_result_manifest(result_manifest, state.path))
     records.extend(_records_from_figure_bound_tables(state.path))
+    count_identity_path = state.path / "results" / "count_identity_report.json"
+    if count_identity_path.exists():
+        records.extend(_records_from_count_identity_report(count_identity_path, state.path))
+    records.extend(_records_from_controlled_anomaly_outputs(state.path))
+    records.extend(_records_from_threshold_asset_sensitivity(state.path))
     resolved = _read_json(state.path / "results" / "resolved_result_evidence.json")
     primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
     typed_metric_report = _read_json(state.path / "results" / "metric_identity_report.json")
