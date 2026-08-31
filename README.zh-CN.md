@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.42.2。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。v0.42.2 增加机器可核验的 publication 环境合同和隔离的双引擎 LaTeX/BibTeX 验收路径，不再把 Python 安装档位误认为完整论文生产环境。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.43.0。** 人工确认不再要求用户阅读 hash 或技术审计包：研究计划会在一轮修订完成后生成版本化的中英文 `HumanReviewPacket`，一次展示具体问题、claim、数据角色、方法、统计、图表、限制及与上次的语义变化；未完成待办时不会提前请求确认。核心 checkpoint 使用 v6：`stage_summary.zh-CN.html` / 英文页是作者先看的可读决定页，完整审计保留为 `stage_audit.json`，仅在需要排障时按需渲染 HTML。科学、审计和呈现身份分离，普通措辞、HTML、时间戳或审计变化不会重复触发 C3；数据、cohort、split、方法、统计、主图语义或论断边界变化仍严格重新确认。Agent 默认只携带决定摘要和必要证据路径，需要时才按 `evidence ref` 读取单项证据。v0.43.0 增加显式文献准入与 corpus 激活门禁、真实 vendored paper-fetch 导入检查、可复现运行时约束，以及独立的可选浏览器档位。同时明确 Python 能力档位与完整系统论文生产工具链的区别，使新设备可以只依赖仓库恢复，而不依赖某一台设备中偶然存在的环境。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -105,9 +105,9 @@ PowerShell：
 ```powershell
 git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
 cd Draftpaper_loop
-py -3 -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e ".[plotting]"
+.\.venv\Scripts\python -m pip install -c requirements\runtime-constraints.txt -e ".[plotting]"
 .\.venv\Scripts\draftpaper doctor --json
 ```
 
@@ -116,10 +116,10 @@ bash/macOS/Linux：
 ```bash
 git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
 cd Draftpaper_loop
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-python -m pip install -e ".[plotting]"
+python -m pip install -c requirements/runtime-constraints.txt -e ".[plotting]"
 draftpaper doctor --json
 ```
 
@@ -518,6 +518,14 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.43.0（2026-08-31）-- 环境交接与框架完整性发布
+
+- 增加显式的 `prepare-literature-admission` 和 `activate-literature-corpus` 门禁。候选文献必须在 hash-bound packet 下明确接受、排除或延期；被门禁拒绝的文献必须记录原因并显式 override 后才能激活。
+- 加固共享证据与 checkpoint 层：扩展科学证据注册、语义指纹连续性、图表-claim 绑定、可读审阅产物，以及派生文献索引重建后的 corpus 连续确认。
+- 增加运行时兼容约束、无秘密值的 `config/environment.example`、独立可选的 browser 档位，并让 wheel 安装后的 vendored paper-fetch CLI 通过真实隔离导入验收。
+- 明确 `research` 由 plotting + fulltext 构成，MCP 只作为 Agent 的显式附加能力；`minimal`/`plotting` 支持 Python 3.10-3.12，fulltext/research/publication/agent/browser 支持 Python 3.11-3.12。
+- 增加 clean clone 设备交接指引，并把完整论文生产工具链与 Python 包分开：Windows bootstrap 覆盖 Python 3.11、系统 Git、Visual C++ x64 和私有 MiKTeX；MinerU、CUDA、浏览器资产、凭证和真实项目数据仍保持可选或本地化。
+
 ### v0.42.2（2026-08-29）-- 完整论文生产环境部署
 - 增加只读核心环境合同和 `doctor --target control|research|publication|agent`，真实检查 Python 导入、原生加载失败、系统 Git，以及 MiKTeX/TeX 可执行文件来源。
 - 增加 `verify-environment --target publication --compile-latex`，在隔离目录中验收 pypdf 读取、XeLaTeX + BibTeX、pdfLaTeX + BibTeX、`kpsewhich plainnat.bst`、有效 PDF、最终引用解析和双语回执。

@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.42.2.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. v0.42.2 adds a machine-checked publication environment contract and an isolated two-engine LaTeX/BibTeX acceptance path, so a Python profile is no longer mistaken for a complete paper-production environment. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.43.0.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. v0.43.0 adds explicit literature admission and corpus activation gates, a real vendored paper-fetch import check, reproducible runtime constraints, and a cleanly separated optional browser profile. The release also documents the difference between Python capability profiles and the complete system publication toolchain, so a new device can be restored from the repository instead of relying on one workstation's accidental environment. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -105,9 +105,9 @@ PowerShell:
 ```powershell
 git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
 cd Draftpaper_loop
-py -3 -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\python -m pip install -U pip
-.\.venv\Scripts\python -m pip install -e ".[plotting]"
+.\.venv\Scripts\python -m pip install -c requirements\runtime-constraints.txt -e ".[plotting]"
 .\.venv\Scripts\draftpaper doctor --json
 ```
 
@@ -116,10 +116,10 @@ bash/macOS/Linux:
 ```bash
 git clone https://github.com/xiejhhhhhh/Draftpaper_loop.git
 cd Draftpaper_loop
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-python -m pip install -e ".[plotting]"
+python -m pip install -c requirements/runtime-constraints.txt -e ".[plotting]"
 draftpaper doctor --json
 ```
 
@@ -527,6 +527,14 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.43.0 (2026-08-31) -- Environment handoff and framework integrity release
+
+- Added explicit `prepare-literature-admission` and `activate-literature-corpus` gates. Candidate literature must be accepted, excluded, or deferred under a hash-bound packet, and gate-rejected items require an explicit recorded override before activation.
+- Stabilized the shared evidence/checkpoint layer with expanded scientific evidence registration, semantic fingerprint continuity, figure-claim binding, readable review artifacts, and literature-corpus continuity across derived-index rebuilds.
+- Added runtime compatibility bounds, a secret-free `config/environment.example`, a browser-only optional profile, and a real isolated import smoke for the wheel-installed vendored paper-fetch CLI.
+- Clarified that `research` is plotting plus full-text, while MCP is an explicit Agent add-on; `minimal`/`plotting` support Python 3.10-3.12 and full-text/research/publication/agent/browser routes support Python 3.11-3.12.
+- Added clean-clone handoff guidance and kept the complete publication toolchain separate from Python packages: Windows bootstrap covers Python 3.11, system Git, Visual C++ x64, and private MiKTeX, while MinerU, CUDA, browser assets, credentials, and real project data remain opt-in or local.
+
 ### v0.42.2 (2026-08-29) -- Complete publication environment deployment
 - Added a read-only core environment contract and `doctor --target control|research|publication|agent`, with real Python imports, native-loader failure classification, system-Git detection, and MiKTeX/TeX executable checks.
 - Added `verify-environment --target publication --compile-latex`, which validates pypdf reading, XeLaTeX + BibTeX, pdfLaTeX + BibTeX, `kpsewhich plainnat.bst`, valid PDFs, final citation resolution, and bilingual receipts in an isolated output directory.
