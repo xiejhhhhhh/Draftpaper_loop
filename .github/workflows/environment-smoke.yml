@@ -39,7 +39,7 @@ jobs:
       - name: Install Windows core toolchain
         shell: pwsh
         run: .\tools\bootstrap_windows_environment.ps1 -Mode InstallCore
-      - name: Configure MiKTeX on-demand packages
+      - name: Pre-warm MiKTeX publication packages
         shell: pwsh
         run: |
           $miktexBin = Join-Path $env:LOCALAPPDATA "Programs\MiKTeX\miktex\bin\x64"
@@ -48,7 +48,16 @@ jobs:
           if (Test-Path -LiteralPath $miktexBin) { $miktexBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append }
           if (Test-Path -LiteralPath $gitBin) { $gitBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append }
           initexmf --set-config-value=[MPM]AutoInstall=yes
+          miktex packages update-package-database
+          if ($LASTEXITCODE -ne 0) { throw "MiKTeX package database update failed." }
+          $probePackages = @("natbib", "hyperref", "xurl", "booktabs", "amsmath", "fontspec", "graphics")
+          foreach ($package in $probePackages) {
+            miktex packages require $package
+            if ($LASTEXITCODE -ne 0) { throw "MiKTeX package install failed: $package" }
+          }
           initexmf --update-fndb
+          $plainnat = kpsewhich plainnat.bst
+          if ([string]::IsNullOrWhiteSpace($plainnat)) { throw "MiKTeX could not resolve plainnat.bst after package pre-warming." }
       - name: Install Draftpaper-loop research environment
         run: python -m pip install -c requirements/ci-constraints.txt -e ".[dev,plotting,fulltext]"
       - name: Run isolated publication verification
