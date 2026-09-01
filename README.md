@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.43.0.** Authors no longer have to decide from hashes or a technical-audit dump. Once a research-plan revision is complete, Draftpaper-loop creates a versioned bilingual `HumanReviewPacket` that shows the concrete questions, claims, data roles, methods, statistics, figures, limitations, and semantic delta together; pending work never triggers an early confirmation request. Core checkpoints use v6: `stage_summary.zh-CN.html` and its English counterpart are the author-facing decision pages, while the complete audit is retained as `stage_audit.json` and rendered to HTML only on demand. Scientific, audit, and presentation identities are separate, so wording, HTML, timestamps, or audit-only changes do not repeat C3; changes to data, cohort, split, methods, statistics, figure semantics, or claim boundaries still require it. Agents carry a small decision brief first and inspect an individual evidence reference only when needed. v0.43.0 adds explicit literature admission and corpus activation gates, a real vendored paper-fetch import check, reproducible runtime constraints, and a cleanly separated optional browser profile. The release also documents the difference between Python capability profiles and the complete system publication toolchain, so a new device can be restored from the repository instead of relying on one workstation's accidental environment. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.43.1.** Research-plan review now validates explicit table contracts, rejects duplicate table IDs, carries the table storyboard into the readable bilingual decision packet, and keeps the Agent payload bounded while preserving the complete immutable audit. Feasibility checks distinguish source inputs from derived outputs, produce more useful recovery actions, and avoid false unsupervised-validation requirements for supervised partitions. EP/WXT, AGN/XRB, spectrum data roles, filename markers, and specialized Chinese terminology now belong to the astronomy/time-domain discipline module; default and unrelated discipline profiles no longer inherit those semantics, while composite astronomy and machine-learning profiles merge them deterministically. The v0.43.0 environment, literature-admission, checkpoint-v6, and publication-toolchain contracts remain intact. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -527,6 +527,14 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.43.1 (2026-09-02) -- Research-contract and astronomy-semantics patch
+
+- Added explicit research-plan table contracts with unique IDs, an eight-table upper bound, and propagation into the figure/table storyboard and bilingual `HumanReviewPacket`.
+- Kept the Agent decision payload bounded while preserving complete immutable review artifacts, and improved feasibility recovery, title fallback, duplicate inventory suppression, and Windows reparse-point-safe traversal.
+- Distinguished derived outputs from missing source data and stopped supervised `partition` declarations from triggering unsupervised-validation requirements.
+- Moved EP/WXT, AGN/XRB, current/history/spectral filename markers, spectrum processing roles, and specialized Chinese translations into the astronomy/time-domain module.
+- Added deterministic extension merging for composite discipline profiles and regression coverage proving that astronomy semantics activate for astronomy profiles without leaking into default or unrelated disciplines.
+
 ### v0.43.0 (2026-08-31) -- Environment handoff and framework integrity release
 
 - Added explicit `prepare-literature-admission` and `activate-literature-corpus` gates. Candidate literature must be accepted, excluded, or deferred under a hash-bound packet, and gate-rejected items require an explicit recorded override before activation.
