@@ -5,6 +5,13 @@
 from __future__ import annotations
 
 from ..base import DataConnectorSpec, DisciplineModule, DisciplineModuleSpec, MethodTemplateSpec
+from .semantics import (
+    DATA_ROLE_ALIASES,
+    FILENAME_ROLE_MARKERS,
+    INLINE_TERMINOLOGY_ZH_CN,
+    PROTECTED_TERMINOLOGY_TOKENS,
+    TERMINOLOGY_ZH_CN,
+)
 
 
 class AstronomyModule(DisciplineModule):
@@ -74,6 +81,11 @@ class AstronomyModule(DisciplineModule):
             "Treat remote mission APIs and server manifests as data connectors, not mandatory package dependencies.",
             "Require explicit class labels before supervised source-classification claims.",
         ],
+        data_role_aliases=DATA_ROLE_ALIASES,
+        filename_role_markers=FILENAME_ROLE_MARKERS,
+        terminology_zh_cn=TERMINOLOGY_ZH_CN,
+        inline_terminology_zh_cn=INLINE_TERMINOLOGY_ZH_CN,
+        protected_terminology_tokens=PROTECTED_TERMINOLOGY_TOKENS,
         data_connectors=[
             DataConnectorSpec(
                 connector_id="einstein_probe_photon_api",

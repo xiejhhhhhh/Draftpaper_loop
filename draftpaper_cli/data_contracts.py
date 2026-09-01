@@ -183,15 +183,42 @@ def read_json(path: Path, default: Any) -> Any:
         return default
 
 
-def normalize_role(value: Any) -> str:
+def _discipline_extensions(acquisition_plan: dict[str, Any] | None) -> tuple[dict[str, str], dict[str, str]]:
+    if not isinstance(acquisition_plan, dict) or not acquisition_plan:
+        return {}, {}
+    nested = acquisition_plan.get("discipline_profile")
+    profile = nested if isinstance(nested, dict) else acquisition_plan
+    if not any(
+        profile.get(key)
+        for key in ("discipline_modules", "primary_discipline", "secondary_disciplines", "discipline", "engine")
+    ):
+        return {}, {}
+    from .discipline_modules import get_discipline_module
+
+    spec = get_discipline_module(profile).spec
+    aliases = {
+        re.sub(r"[^a-z0-9]+", "_", str(key).lower()).strip("_"): str(role)
+        for key, role in spec.data_role_aliases.items()
+        if str(key).strip() and str(role).strip()
+    }
+    markers = {
+        str(marker).lower(): str(role)
+        for marker, role in spec.filename_role_markers.items()
+        if str(marker).strip() and str(role).strip()
+    }
+    return aliases, markers
+
+
+def normalize_role(value: Any, *, role_aliases: dict[str, str] | None = None) -> str:
     text = re.sub(r"[^a-z0-9]+", "_", str(value or "").lower()).strip("_")
     if not text:
         return ""
     if text in {"targetid", "sourceid", "objectid", "paired_object_id"}:
         return "identifier_or_metadata"
-    if text in ROLE_ALIASES:
-        return ROLE_ALIASES[text]
-    for key, role in ROLE_ALIASES.items():
+    aliases = {**ROLE_ALIASES, **(role_aliases or {})}
+    if text in aliases:
+        return aliases[text]
+    for key, role in aliases.items():
         if len(key) >= 4 and re.search(rf"(?:^|_){re.escape(key)}(?:_|$)", text):
             return role
     if any(token in text for token in ["source_catalog", "ra_dec", "skycoord"]):
@@ -219,7 +246,7 @@ def normalize_role(value: Any) -> str:
     return text
 
 
-def normalize_roles(values: Any) -> list[str]:
+def normalize_roles(values: Any, *, role_aliases: dict[str, str] | None = None) -> list[str]:
     roles: list[str] = []
     if isinstance(values, str):
         candidates = re.split(r"[,;/|]+", values)
@@ -228,7 +255,7 @@ def normalize_roles(values: Any) -> list[str]:
     else:
         candidates = []
     for value in candidates:
-        role = normalize_role(value)
+        role = normalize_role(value, role_aliases=role_aliases)
         if role and role not in roles:
             roles.append(role)
     return roles
@@ -236,6 +263,7 @@ def normalize_roles(values: Any) -> list[str]:
 
 def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, Any] | None = None) -> list[str]:
     roles: list[str] = []
+    role_aliases, filename_role_markers = _discipline_extensions(acquisition_plan)
 
     def add(role: str) -> None:
         if role and role not in roles:
@@ -258,12 +286,13 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
             continue
         logical_name = str(item.get("path") or "").replace("\\", "/").rsplit("/", 1)[-1]
         logical_stem = Path(logical_name).stem.lower()
-        for marker, role in {
+        generic_filename_role_markers = {
             "model_input_contract": "model_input_contract",
             "model_input_build_report": "model_input_build_report",
             "feature_masks": "features",
             "event_level_samples": "event_level_samples",
-        }.items():
+        }
+        for marker, role in {**generic_filename_role_markers, **filename_role_markers}.items():
             if marker in logical_stem:
                 add(role)
         if item.get("kind") == "processed":
@@ -279,7 +308,7 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
             if re.fullmatch(r"emb_\d+", str(column).lower()):
                 add("features")
                 continue
-            add(normalize_role(column))
+            add(normalize_role(column, role_aliases=role_aliases))
     column_blob = " ".join(re.sub(r"[^a-z0-9]+", "_", column.lower()) for column in all_columns)
     column_set = {re.sub(r"[^a-z0-9]+", "_", column.lower()).strip("_") for column in all_columns}
     if any(column in column_set for column in {"current_n_tokens", "current_tokens", "current_lc_tokens"}):
@@ -367,7 +396,10 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
         for task in acquisition_plan.get("tasks") or []:
             if not isinstance(task, dict):
                 continue
-            for role in normalize_roles(task.get("data_roles") or task.get("required_roles") or task.get("outputs") or []):
+            for role in normalize_roles(
+                task.get("data_roles") or task.get("required_roles") or task.get("outputs") or [],
+                role_aliases=role_aliases,
+            ):
                 add(role)
             if task.get("status") in {"ready", "planned", "requires_user_confirmation"}:
                 add("planned_data_acquisition")

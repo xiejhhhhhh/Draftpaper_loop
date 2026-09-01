@@ -23,13 +23,20 @@ def _text(value: Any, *, limit: int = 1000) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
-def _localized_text(value: Any, *, locale: str, limit: int = 1000) -> str:
+def _localized_text(
+    value: Any,
+    *,
+    locale: str,
+    limit: int = 1000,
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> str:
     text = _text(value, limit=limit)
     if locale != "zh-CN" or not text:
         return text
     from .research_plan import _cn_term
 
-    return _text(_cn_term(text), limit=limit)
+    profile = dict(discipline_profile) if isinstance(discipline_profile, Mapping) else None
+    return _text(_cn_term(text, profile), limit=limit)
 
 
 def _rows(value: Any) -> list[dict[str, Any]]:
@@ -38,7 +45,13 @@ def _rows(value: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _pick(row: Mapping[str, Any], key: str, *, locale: str) -> str:
+def _pick(
+    row: Mapping[str, Any],
+    key: str,
+    *,
+    locale: str,
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> str:
     variants = (
         (f"{key}_zh_cn", f"{key}_zh", key, f"{key}_en")
         if locale == "zh-CN"
@@ -47,22 +60,44 @@ def _pick(row: Mapping[str, Any], key: str, *, locale: str) -> str:
     for variant in variants:
         value = row.get(variant)
         if value not in (None, "", [], {}):
-            return _localized_text(value, locale=locale)
+            return _localized_text(
+                value,
+                locale=locale,
+                discipline_profile=discipline_profile,
+            )
     return ""
 
 
-def _join(value: Any, *, locale: str = "zh-CN") -> str:
+def _join(
+    value: Any,
+    *,
+    locale: str = "zh-CN",
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> str:
     if isinstance(value, (list, tuple, set)):
         values = [
-            _localized_text(item, locale=locale, limit=160)
+            _localized_text(
+                item,
+                locale=locale,
+                limit=160,
+                discipline_profile=discipline_profile,
+            )
             for item in value
             if _text(item, limit=160)
         ]
         return ("、" if locale == "zh-CN" else ", ").join(values)
-    return _localized_text(value, locale=locale, limit=500)
+    return _localized_text(
+        value,
+        locale=locale,
+        limit=500,
+        discipline_profile=discipline_profile,
+    )
 
 
-def _claim_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _claim_rows(
+    contracts: Mapping[str, Any],
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     blueprint = contracts.get("research_blueprint") or {}
     claim_contract = contracts.get("claim_contract") or {}
     rows = _rows(claim_contract.get("claims")) or _rows(blueprint.get("research_claims"))
@@ -74,20 +109,43 @@ def _claim_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
                 "display_label_zh": f"研究问题{index}",
                 "display_label_en": f"Research question {index}",
                 "research_question": _pick(row, "research_question", locale="en"),
-                "research_question_zh": _pick(row, "research_question", locale="zh-CN"),
+                "research_question_zh": _pick(
+                    row,
+                    "research_question",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "expected_finding": _pick(row, "expected_finding", locale="en"),
-                "expected_finding_zh": _pick(row, "expected_finding", locale="zh-CN"),
+                "expected_finding_zh": _pick(
+                    row,
+                    "expected_finding",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "boundary": _pick(row, "scientific_claim_boundary", locale="en")
                 or _pick(row, "claim_boundary", locale="en"),
-                "boundary_zh": _pick(row, "scientific_claim_boundary", locale="zh-CN")
-                or _pick(row, "claim_boundary", locale="zh-CN"),
+                "boundary_zh": _pick(
+                    row,
+                    "scientific_claim_boundary",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                )
+                or _pick(
+                    row,
+                    "claim_boundary",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "evidence_refs": ["research_plan/claim_contract.json"],
             }
         )
     return result
 
 
-def _figure_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _figure_rows(
+    contracts: Mapping[str, Any],
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     storyboard = contracts.get("figure_storyboard") or {}
     blueprint = contracts.get("research_blueprint") or {}
     rows = _rows(storyboard.get("figures"))
@@ -102,13 +160,39 @@ def _figure_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
                 "display_label_zh": f"图{index}",
                 "display_label_en": f"Figure {index}",
                 "title": _pick(row, "proposed_title", locale="en") or _pick(row, "title", locale="en"),
-                "title_zh": _pick(row, "proposed_title", locale="zh-CN") or _pick(row, "title", locale="zh-CN"),
+                "title_zh": _pick(
+                    row,
+                    "proposed_title",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                )
+                or _pick(
+                    row,
+                    "title",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "question": _pick(row, "research_question", locale="en"),
-                "question_zh": _pick(row, "research_question", locale="zh-CN"),
+                "question_zh": _pick(
+                    row,
+                    "research_question",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "expected": _pick(row, "expected_finding", locale="en"),
-                "expected_zh": _pick(row, "expected_finding", locale="zh-CN"),
+                "expected_zh": _pick(
+                    row,
+                    "expected_finding",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "boundary": _pick(row, "scientific_claim_boundary", locale="en"),
-                "boundary_zh": _pick(row, "scientific_claim_boundary", locale="zh-CN"),
+                "boundary_zh": _pick(
+                    row,
+                    "scientific_claim_boundary",
+                    locale="zh-CN",
+                    discipline_profile=discipline_profile,
+                ),
                 "required_data": list(row.get("required_data") or row.get("required_data_roles") or []),
                 "required_method": list(row.get("required_method") or row.get("required_methods") or []),
                 "panels": _rows(row.get("panels")),
@@ -118,7 +202,10 @@ def _figure_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
-def _table_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _table_rows(
+    contracts: Mapping[str, Any],
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     storyboard = contracts.get("figure_storyboard") or {}
     rows = _rows(storyboard.get("tables"))
     return [
@@ -127,16 +214,31 @@ def _table_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
             "display_label_zh": f"表{index}",
             "display_label_en": f"Table {index}",
             "title": _pick(row, "proposed_title", locale="en") or _pick(row, "title", locale="en"),
-            "title_zh": _pick(row, "proposed_title", locale="zh-CN") or _pick(row, "title", locale="zh-CN"),
+            "title_zh": _pick(
+                row,
+                "proposed_title",
+                locale="zh-CN",
+                discipline_profile=discipline_profile,
+            )
+            or _pick(row, "title", locale="zh-CN", discipline_profile=discipline_profile),
             "purpose": _pick(row, "expected_content", locale="en") or _pick(row, "purpose", locale="en"),
-            "purpose_zh": _pick(row, "expected_content", locale="zh-CN") or _pick(row, "purpose", locale="zh-CN"),
+            "purpose_zh": _pick(
+                row,
+                "expected_content",
+                locale="zh-CN",
+                discipline_profile=discipline_profile,
+            )
+            or _pick(row, "purpose", locale="zh-CN", discipline_profile=discipline_profile),
             "evidence_refs": ["research_plan/figure_storyboard.json"],
         }
         for index, row in enumerate(rows, start=1)
     ]
 
 
-def _method_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _method_rows(
+    contracts: Mapping[str, Any],
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     method_plan = contracts.get("method_plan") or {}
     rows = _rows(method_plan.get("method_tasks"))
     return [
@@ -145,11 +247,27 @@ def _method_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
             "display_label_zh": f"任务{index}",
             "display_label_en": f"Task {index}",
             "method": _pick(row, "method_family", locale="en") or _pick(row, "method", locale="en"),
-            "method_zh": _pick(row, "method_family", locale="zh-CN") or _pick(row, "method", locale="zh-CN"),
+            "method_zh": _pick(
+                row,
+                "method_family",
+                locale="zh-CN",
+                discipline_profile=discipline_profile,
+            )
+            or _pick(row, "method", locale="zh-CN", discipline_profile=discipline_profile),
             "validation": _pick(row, "validation_metric", locale="en")
             or _pick(row, "validation_design", locale="en"),
-            "validation_zh": _pick(row, "validation_metric", locale="zh-CN")
-            or _pick(row, "validation_design", locale="zh-CN"),
+            "validation_zh": _pick(
+                row,
+                "validation_metric",
+                locale="zh-CN",
+                discipline_profile=discipline_profile,
+            )
+            or _pick(
+                row,
+                "validation_design",
+                locale="zh-CN",
+                discipline_profile=discipline_profile,
+            ),
             "required_data": list(row.get("required_data") or row.get("required_data_roles") or []),
             "evidence_refs": ["research_plan/method_plan.json"],
         }
@@ -167,9 +285,13 @@ def _data_roles(figures: Iterable[Mapping[str, Any]], methods: Iterable[Mapping[
     return sorted(values)
 
 
-def _statistics_summary(contracts: Mapping[str, Any]) -> dict[str, Any]:
+def _statistics_summary(
+    contracts: Mapping[str, Any],
+    discipline_profile: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     contract = contracts.get("statistical_validation_contract") or {}
     values: list[str] = []
+    values_zh: list[str] = []
     for key in (
         "validation_design",
         "validation_designs",
@@ -184,9 +306,16 @@ def _statistics_summary(contracts: Mapping[str, Any]) -> dict[str, Any]:
         rendered = _join(value, locale="en")
         if rendered:
             values.append(rendered)
+        rendered_zh = _join(
+            value,
+            locale="zh-CN",
+            discipline_profile=discipline_profile,
+        )
+        if rendered_zh:
+            values_zh.append(rendered_zh)
     return {
         "summary": "; ".join(dict.fromkeys(values)) or "Structured statistical validation contract",
-        "summary_zh": "；".join(dict.fromkeys(values)) or "已登记的统计验证合同",
+        "summary_zh": "；".join(dict.fromkeys(values_zh)) or "已登记的统计验证合同",
         "evidence_refs": ["research_plan/statistical_validation_contract.json"],
     }
 
@@ -214,23 +343,32 @@ def build_research_plan_decision_brief(
     semantic_contracts = semantic_contracts if isinstance(semantic_contracts, Mapping) else {}
     contracts = presentation_contracts if isinstance(presentation_contracts, Mapping) else semantic_contracts
     blueprint = contracts.get("research_blueprint") or {}
+    raw_discipline_profile = blueprint.get("discipline_profile") if isinstance(blueprint, Mapping) else {}
+    discipline_profile = (
+        raw_discipline_profile if isinstance(raw_discipline_profile, Mapping) else {}
+    )
     objective = blueprint.get("research_objective") if isinstance(blueprint, Mapping) else {}
     objective = objective if isinstance(objective, Mapping) else {}
-    claims = _claim_rows(contracts)
-    figures = _figure_rows(contracts)
-    tables = _table_rows(contracts)
-    methods = _method_rows(contracts)
+    claims = _claim_rows(contracts, discipline_profile)
+    figures = _figure_rows(contracts, discipline_profile)
+    tables = _table_rows(contracts, discipline_profile)
+    methods = _method_rows(contracts, discipline_profile)
     title = (
         _text(objective.get("working_title"))
         or _text(project_metadata.get("title"))
         or _text(project_metadata.get("idea"))
         or "Research plan"
     )
-    title_zh = _localized_text(objective.get("working_title_zh_cn") or title, locale="zh-CN")
+    title_zh = _localized_text(
+        objective.get("working_title_zh_cn") or title,
+        locale="zh-CN",
+        discipline_profile=discipline_profile,
+    )
     objective_en = _text(objective.get("scientific_objective")) or _text(project_metadata.get("idea"))
     objective_zh = _localized_text(
         objective.get("scientific_objective_zh_cn") or objective_en,
         locale="zh-CN",
+        discipline_profile=discipline_profile,
     )
     data_scope_en_source = objective.get("data_scope") or []
     data_scope_zh_source = objective.get("data_scope_zh_cn") or data_scope_en_source
@@ -244,7 +382,12 @@ def build_research_plan_decision_brief(
         if _text(item, limit=1200)
     ]
     data_scope_zh = [
-        _localized_text(item, locale="zh-CN", limit=1200)
+        _localized_text(
+            item,
+            locale="zh-CN",
+            limit=1200,
+            discipline_profile=discipline_profile,
+        )
         for item in data_scope_zh_source
         if _text(item, limit=1200)
     ]
@@ -319,6 +462,7 @@ def build_research_plan_decision_brief(
         "summary_en": "This page summarizes the complete scientific plan. After confirmation, agents may repair implementation but may not change data roles, methods, statistics, or figure semantics.",
         "objective_zh": objective_zh,
         "objective_en": objective_en,
+        "discipline_profile": dict(discipline_profile),
         "data_scope_zh": data_scope_zh,
         "data_scope_en": data_scope_en,
         "research_questions": claims,
@@ -327,7 +471,7 @@ def build_research_plan_decision_brief(
         "tables": tables,
         "data_roles": _data_roles(figures, methods),
         "methods": methods,
-        "statistics": _statistics_summary(contracts),
+        "statistics": _statistics_summary(contracts, discipline_profile),
         "limitations": limitations_list,
         "pre_execution_decision": pre_execution_decision,
         "review_rule_decision": review_rule_decision,
@@ -411,6 +555,10 @@ def render_research_plan_decision_html(
     project_root = Path(root)
     packet_dir = Path(output_dir)
     zh = locale == "zh-CN"
+    raw_discipline_profile = brief.get("discipline_profile")
+    discipline_profile = (
+        raw_discipline_profile if isinstance(raw_discipline_profile, Mapping) else {}
+    )
     title = _text(brief.get("title_zh" if zh else "title")) or "Research plan"
     summary = _text(brief.get("summary_zh" if zh else "summary_en"))
     question = _text(brief.get("decision_question_zh" if zh else "decision_question_en"))
@@ -485,7 +633,7 @@ def render_research_plan_decision_html(
             f"<p><strong>{headings['question_col']}:</strong> {_cell(row.get('question_zh' if zh else 'question'))}</p>"
             f"<p><strong>{headings['expected']}:</strong> {_cell(row.get('expected_zh' if zh else 'expected'))}</p>"
             f"<p class=\"boundary\"><strong>{headings['boundary']}:</strong> {_cell(row.get('boundary_zh' if zh else 'boundary'))}</p>"
-            f"<p class=\"muted\"><strong>{headings['data']}:</strong> {_cell(_join(row.get('required_data'), locale=locale))}</p>"
+            f"<p class=\"muted\"><strong>{headings['data']}:</strong> {_cell(_join(row.get('required_data'), locale=locale, discipline_profile=discipline_profile))}</p>"
             "</article>"
         )
     table_rows = []
@@ -504,7 +652,7 @@ def render_research_plan_decision_html(
             f"<td>{_cell(row.get('display_label_zh' if zh else 'display_label_en') or f'任务{index}' if zh else f'Task {index}')}</td>"
             f"<td>{_cell(row.get('method_zh' if zh else 'method'))}</td>"
             f"<td>{_cell(row.get('validation_zh' if zh else 'validation'))}</td>"
-            f"<td>{_cell(_join(row.get('required_data'), locale=locale))}</td>"
+            f"<td>{_cell(_join(row.get('required_data'), locale=locale, discipline_profile=discipline_profile))}</td>"
             "</tr>"
         )
     limitation_items = [
@@ -587,7 +735,7 @@ def render_research_plan_decision_html(
   </section>
   <section>
     <h2>{headings['methods']}</h2>
-    <p><strong>{headings['data']}:</strong> {escape(_join(brief.get('data_roles'), locale=locale)) or headings['none']}</p>
+    <p><strong>{headings['data']}:</strong> {escape(_join(brief.get('data_roles'), locale=locale, discipline_profile=discipline_profile)) or headings['none']}</p>
     <p><strong>{headings['validation']}:</strong> {escape(_text((brief.get('statistics') or {}).get('summary_zh' if zh else 'summary')))}</p>
     <table><thead><tr><th>{'任务' if zh else 'Task'}</th><th>{headings['method']}</th><th>{headings['validation']}</th><th>{headings['data']}</th></tr></thead><tbody>{''.join(method_rows)}</tbody></table>
   </section>

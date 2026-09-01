@@ -16,3 +16,4 @@ def test_wheel_release_contract_matches_source_checkout() -> None:
     assert summary["workflow_contract_version"] == EXPECTED_PACKAGE_VERSION
     assert summary["entry_count"] == EXPECTED_ENTRY_COUNT
     assert summary["fixture_count"] == EXPECTED_FIXTURE_COUNT
+    assert summary["astronomy_semantics_present"] is True

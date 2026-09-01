@@ -769,6 +769,16 @@ _CN_INLINE_PHRASES = {
 }
 
 
+_CN_PROTECTED_TOKENS = [
+    "Time2Vec",
+    "Brier",
+    "ECE",
+    "PR-AUC",
+    "ROC-AUC",
+    "Transformer",
+]
+
+
 _CN_SENTENCES = {
     "Quantify the source, image-available, image-valid, and analysis cohorts together with every exclusion step.": "量化源样本、图像可用样本、图像有效样本和最终分析样本，并标出每一步排除的对象与原因。",
     "Compare image missingness rates and recorded reasons across the declared sample groups and relevant covariates.": "比较各预定样本组的图像缺失率和已记录原因，并检查缺失是否随相关协变量系统变化。",
@@ -827,31 +837,40 @@ _CN_SENTENCES = {
 }
 
 
-def _cn_term(value: Any) -> str:
+def _discipline_translation_extensions(
+    discipline_profile: dict[str, Any] | None,
+) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    if not isinstance(discipline_profile, dict) or not discipline_profile:
+        return {}, {}, []
+    spec = get_discipline_module(discipline_profile).spec
+    return (
+        dict(spec.terminology_zh_cn),
+        dict(spec.inline_terminology_zh_cn),
+        list(spec.protected_terminology_tokens),
+    )
+
+
+def _cn_term(value: Any, discipline_profile: dict[str, Any] | None = None) -> str:
     text = str(value or "").strip()
-    for old, new in _CN_PHRASES.items():
+    discipline_phrases, discipline_inline, discipline_tokens = _discipline_translation_extensions(
+        discipline_profile
+    )
+    phrases = {**_CN_PHRASES, **discipline_phrases}
+    inline_phrases = {**_CN_INLINE_PHRASES, **discipline_inline}
+    for old, new in phrases.items():
         if text.casefold() == old.casefold():
             return new
     protected: dict[str, str] = {}
-    for index, token in enumerate(
-        [
-            "Time2Vec",
-            "Brier",
-            "ECE",
-            "PR-AUC",
-            "ROC-AUC",
-            "Transformer",
-        ]
-    ):
+    for index, token in enumerate([*_CN_PROTECTED_TOKENS, *discipline_tokens]):
         placeholder = f"\ufff0{index}\ufff1"
         if re.search(re.escape(token), text, flags=re.IGNORECASE):
             text = re.sub(re.escape(token), placeholder, text, flags=re.IGNORECASE)
             protected[placeholder] = token
-    for old, new in sorted(_CN_PHRASES.items(), key=lambda item: len(item[0]), reverse=True):
+    for old, new in sorted(phrases.items(), key=lambda item: len(item[0]), reverse=True):
         text = re.sub(re.escape(old), new, text, flags=re.IGNORECASE)
     for placeholder, token in protected.items():
         text = text.replace(placeholder, token)
-    for old, new in sorted(_CN_INLINE_PHRASES.items(), key=lambda item: len(item[0]), reverse=True):
+    for old, new in sorted(inline_phrases.items(), key=lambda item: len(item[0]), reverse=True):
         text = re.sub(re.escape(old), new, text, flags=re.IGNORECASE)
     if not re.search(r"[\\/:]", text) and not re.search(r"[\u4e00-\u9fff]", text):
         text = text.replace("_", " ")
@@ -863,50 +882,62 @@ def _cn_term(value: Any) -> str:
     return text
 
 
-def _cn_sentence(value: Any) -> str:
+def _cn_sentence(value: Any, discipline_profile: dict[str, Any] | None = None) -> str:
     source = str(value or "").strip()
     if source in _CN_SENTENCES:
         return _CN_SENTENCES[source]
     if source.startswith("What data coverage and label support are available for "):
         subject = source.removeprefix("What data coverage and label support are available for ").rstrip("?")
-        return f"围绕“{_cn_term(subject)}”，现有数据能够提供怎样的覆盖范围、标签依据和模态完整性？"
+        return f"围绕“{_cn_term(subject, discipline_profile)}”，现有数据能够提供怎样的覆盖范围、标签依据和模态完整性？"
     if source.startswith("What empirical data support the proposed study: "):
         subject = source.removeprefix("What empirical data support the proposed study: ").rstrip("?")
-        return f"围绕“{_cn_term(subject)}”，哪些经验数据能够直接支撑这项研究？"
+        return f"围绕“{_cn_term(subject, discipline_profile)}”，哪些经验数据能够直接支撑这项研究？"
     if source.startswith("What spatial, temporal, and variable coverage supports "):
         subject = source.removeprefix("What spatial, temporal, and variable coverage supports ").rstrip("?")
-        return f"围绕“{_cn_term(subject)}”，现有数据能够提供怎样的空间、时间和变量覆盖？"
+        return f"围绕“{_cn_term(subject, discipline_profile)}”，现有数据能够提供怎样的空间、时间和变量覆盖？"
     if source.startswith("Show the evidence produced by ") and source.endswith(" for the contracted research question."):
         method = source.removeprefix("Show the evidence produced by ").removesuffix(" for the contracted research question.")
-        return f"展示由{_cn_term(method)}产生的证据，并说明该证据如何回答已确认的研究问题。"
+        return f"展示由{_cn_term(method, discipline_profile)}产生的证据，并说明该证据如何回答已确认的研究问题。"
     if source.startswith("Present the contracted ") and source.endswith(" evidence."):
         role = source.removeprefix("Present the contracted ").removesuffix(" evidence.")
-        return f"展示研究合同中规定的{_cn_term(role)}证据。"
-    translated = _cn_term(source)
+        return f"展示研究合同中规定的{_cn_term(role, discipline_profile)}证据。"
+    translated = _cn_term(source, discipline_profile)
     translated = translated.replace("?", "？")
     if translated and translated[-1] not in "。！？":
         translated += "。"
     return translated
 
 
-def _cn_join(values: list[Any]) -> str:
-    return "、".join(_cn_term(value) for value in values if str(value or "").strip())
+def _cn_join(values: list[Any], discipline_profile: dict[str, Any] | None = None) -> str:
+    return "、".join(
+        _cn_term(value, discipline_profile) for value in values if str(value or "").strip()
+    )
 
 
-def _cn_list_sentence(value: Any) -> str:
-    text = _cn_sentence(value).strip().rstrip("。；，")
+def _cn_list_sentence(value: Any, discipline_profile: dict[str, Any] | None = None) -> str:
+    text = _cn_sentence(value, discipline_profile).strip().rstrip("。；，")
     return f"{text}。" if text else ""
 
 
-def _localized_cn(value: dict[str, Any], field: str) -> str:
+def _localized_cn(
+    value: dict[str, Any],
+    field: str,
+    discipline_profile: dict[str, Any] | None = None,
+) -> str:
     localized = str(value.get(f"{field}_zh_cn") or "").strip()
-    return _cn_term(localized) if localized else _cn_sentence(value.get(field))
+    return (
+        _cn_term(localized, discipline_profile)
+        if localized
+        else _cn_sentence(value.get(field), discipline_profile)
+    )
 
 
 def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, Any]) -> str:
+    raw_profile = blueprint.get("discipline_profile")
+    discipline_profile = raw_profile if isinstance(raw_profile, dict) else None
     synthesis = blueprint.get("literature_synthesis") or {}
-    method_terms = _cn_join(synthesis.get("key_methods") or [])
-    data_terms = _cn_join(synthesis.get("key_data_modalities") or [])
+    method_terms = _cn_join(synthesis.get("key_methods") or [], discipline_profile)
+    data_terms = _cn_join(synthesis.get("key_data_modalities") or [], discipline_profile)
     if method_terms or data_terms:
         synthesis_summary = (
             f"当前文献主要为本研究提供了两类支撑：方法侧集中在{method_terms or '相关模型与验证流程'}，"
@@ -924,16 +955,21 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         synthesis_summary += " 当前研究主张已与以下文献证据建立初步绑定：" + "、".join(f"`{key}`" for key in evidence_keys[:12]) + "。"
     objective = blueprint.get("research_objective") or project_meta.get("research_objective") or {}
     working_title_cn = str(objective.get("working_title_zh_cn") or "").strip()
-    title_text = working_title_cn or _cn_term(
-        objective.get("working_title") or project_meta.get("title") or project_meta.get("idea")
+    title_text = _cn_term(
+        working_title_cn
+        or objective.get("working_title")
+        or project_meta.get("title")
+        or project_meta.get("idea"),
+        discipline_profile,
     ).rstrip("。！？")
     scientific_objective_cn = str(objective.get("scientific_objective_zh_cn") or "").strip()
     if not scientific_objective_cn:
         scientific_objective_cn = _cn_sentence(
-            objective.get("scientific_objective") or project_meta.get("idea")
+            objective.get("scientific_objective") or project_meta.get("idea"),
+            discipline_profile,
         )
     else:
-        scientific_objective_cn = _cn_term(scientific_objective_cn)
+        scientific_objective_cn = _cn_term(scientific_objective_cn, discipline_profile)
     lines = [
         "# 文献驱动研究方案",
         "",
@@ -943,7 +979,7 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         "",
         f"核心科学目标是：{scientific_objective_cn.rstrip('。！？')}。",
         "",
-        f"研究领域可概括为：{_cn_term(project_meta.get('field'))}。",
+        f"研究领域可概括为：{_cn_term(project_meta.get('field'), discipline_profile)}。",
         "",
         f"目标期刊为：{project_meta.get('target_journal') or '尚未指定'}。",
         "",
@@ -951,16 +987,18 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     if objective:
         method_hypothesis = str(objective.get("methodological_hypothesis_zh_cn") or "").strip()
         if not method_hypothesis:
-            method_hypothesis = _cn_sentence(objective.get("methodological_hypothesis"))
+            method_hypothesis = _cn_sentence(
+                objective.get("methodological_hypothesis"), discipline_profile
+            )
         else:
-            method_hypothesis = _cn_term(method_hypothesis)
+            method_hypothesis = _cn_term(method_hypothesis, discipline_profile)
         data_scope = objective.get("data_scope_zh_cn") or objective.get("data_scope") or []
         secondary = objective.get("secondary_analyses_zh_cn") or objective.get("secondary_analyses") or []
         boundary = str(objective.get("claim_boundary_zh_cn") or "").strip()
         if not boundary:
-            boundary = _cn_sentence(objective.get("claim_boundary"))
+            boundary = _cn_sentence(objective.get("claim_boundary"), discipline_profile)
         else:
-            boundary = _cn_term(boundary)
+            boundary = _cn_term(boundary, discipline_profile)
         lines.extend([
             "## 研究目标合同",
             "",
@@ -968,10 +1006,18 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
             f"- 方法假设：{method_hypothesis}",
         ])
         lines.append("- 数据范围：")
-        lines.extend(f"  - {_cn_list_sentence(item)}" for item in data_scope if str(item or "").strip())
+        lines.extend(
+            f"  - {_cn_list_sentence(item, discipline_profile)}"
+            for item in data_scope
+            if str(item or "").strip()
+        )
         lines.append("- 次级分析：")
         if secondary:
-            lines.extend(f"  - {_cn_list_sentence(item)}" for item in secondary if str(item or "").strip())
+            lines.extend(
+                f"  - {_cn_list_sentence(item, discipline_profile)}"
+                for item in secondary
+                if str(item or "").strip()
+            )
         else:
             lines.append("  - 无。")
         lines.extend([
@@ -1012,8 +1058,16 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     feasibility = data_context.get("feasibility") or {}
     if feasibility:
         level = str(feasibility.get("supported_claim_level") or "尚未确定")
-        level_cn = "仅支持探索性或先导性结论" if "exploratory" in level.lower() or "pilot" in level.lower() else _cn_term(level)
-        decision = "有条件通过" if feasibility.get("decision") == "conditional_pass" else _cn_term(feasibility.get("decision"))
+        level_cn = (
+            "仅支持探索性或先导性结论"
+            if "exploratory" in level.lower() or "pilot" in level.lower()
+            else _cn_term(level, discipline_profile)
+        )
+        decision = (
+            "有条件通过"
+            if feasibility.get("decision") == "conditional_pass"
+            else _cn_term(feasibility.get("decision"), discipline_profile)
+        )
         lines.extend([
             f"数据可行性结论为“{decision}”，当前证据边界为“{level_cn}”。这意味着研究可以继续设计，但不能在获得更强验证前写成确认性结论。",
             "",
@@ -1021,8 +1075,8 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     coverage = data_context.get("role_coverage") or {}
     if coverage:
         lines.extend([
-            f"图表合同要求的数据角色包括：{_cn_join(coverage.get('required_roles') or [])}。",
-            f"当前未覆盖的数据角色：{_cn_join(coverage.get('missing_roles') or []) or '无'}。",
+            f"图表合同要求的数据角色包括：{_cn_join(coverage.get('required_roles') or [], discipline_profile)}。",
+            f"当前未覆盖的数据角色：{_cn_join(coverage.get('missing_roles') or [], discipline_profile) or '无'}。",
             "",
         ])
     lines.extend([
@@ -1036,8 +1090,8 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     }
     for index, claim in enumerate(claims, start=1):
         lines.extend([
-            f"- 研究问题{index}：{_localized_cn(claim, 'research_question')}",
-            f"  预期发现：{_localized_cn(claim, 'expected_finding')}",
+            f"- 研究问题{index}：{_localized_cn(claim, 'research_question', discipline_profile)}",
+            f"  预期发现：{_localized_cn(claim, 'expected_finding', discipline_profile)}",
             "",
         ])
     if objective:
@@ -1055,29 +1109,30 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     lines.extend(["## 数据与方法约束", "", constraint_text, "", "## 图表故事板", ""])
     for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("figures") or [], start=1):
         figure_title = _cn_term(
-            str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title")
+            str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title"),
+            discipline_profile,
         )
         claim_label = claim_labels.get(str(item.get("claim_id") or ""), "对应研究问题")
         lines.extend([
             f"- 图{index}：{figure_title}",
             f"  对应研究问题：{claim_label}",
-            f"  研究问题：{_localized_cn(item, 'research_question')}",
-            f"  预期发现：{_localized_cn(item, 'expected_finding')}",
-            f"  数据需求：{_cn_join(item.get('required_data') or [])}",
-            f"  方法需求：{_cn_join(item.get('required_method') or [])}",
-            f"  验证指标：{_cn_term(item.get('validation_metric'))}",
+            f"  研究问题：{_localized_cn(item, 'research_question', discipline_profile)}",
+            f"  预期发现：{_localized_cn(item, 'expected_finding', discipline_profile)}",
+            f"  数据需求：{_cn_join(item.get('required_data') or [], discipline_profile)}",
+            f"  方法需求：{_cn_join(item.get('required_method') or [], discipline_profile)}",
+            f"  验证指标：{_cn_term(item.get('validation_metric'), discipline_profile)}",
         ])
         for panel in item.get("panels") or item.get("panel_contract") or []:
             lines.append(
-                f"  子图（{panel.get('label')}）：{_localized_cn(panel, 'expected_content')}"
+                f"  子图（{panel.get('label')}）：{_localized_cn(panel, 'expected_content', discipline_profile)}"
             )
         lines.append("")
     lines.extend(["## 核心表格", ""])
     for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("tables") or [], start=1):
         lines.extend([
-            f"- 表{index}：{_localized_cn(item, 'proposed_title')}",
-            f"  数据需求：{_cn_join(item.get('required_data') or [])}",
-            f"  方法需求：{_cn_join(item.get('required_method') or [])}",
+            f"- 表{index}：{_localized_cn(item, 'proposed_title', discipline_profile)}",
+            f"  数据需求：{_cn_join(item.get('required_data') or [], discipline_profile)}",
+            f"  方法需求：{_cn_join(item.get('required_method') or [], discipline_profile)}",
             "",
         ])
     lines.extend(["## 方法计划", ""])
@@ -1085,17 +1140,21 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     figure_labels = {
         str(item.get("figure_id")): (
             index,
-            _cn_term(str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title")),
+            _cn_term(
+                str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title"),
+                discipline_profile,
+            ),
         )
         for index, item in enumerate(figures, start=1)
     }
     for index, task in enumerate((blueprint.get("method_plan") or {}).get("method_tasks") or [], start=1):
         figure_index, figure_title = figure_labels.get(
-            str(task.get("figure_id")), (index, _cn_term(task.get("expected_output")))
+            str(task.get("figure_id")),
+            (index, _cn_term(task.get("expected_output"), discipline_profile)),
         )
         lines.extend([
-            f"- 任务{index}：服务于图{figure_index}“{figure_title}”，核心方法为{_cn_term(task.get('method_family'))}。",
-            f"  需要输入的数据包括：{_cn_join(task.get('required_data') or [])}；验证指标为：{_cn_term(task.get('validation_metric'))}。",
+            f"- 任务{index}：服务于图{figure_index}“{figure_title}”，核心方法为{_cn_term(task.get('method_family'), discipline_profile)}。",
+            f"  需要输入的数据包括：{_cn_join(task.get('required_data') or [], discipline_profile)}；验证指标为：{_cn_term(task.get('validation_metric'), discipline_profile)}。",
         ])
     lines.extend([
         "",

@@ -86,6 +86,7 @@ def _source_registry_summary() -> dict[str, object]:
     skill_version = re.search(r"^version:\s*(\S+)", skill_text, flags=re.MULTILINE)
     contract_payload = json.loads(skill_contract.read_text(encoding="utf-8"))
     vendored_source = REPOSITORY_ROOT / "draftpaper_cli" / "_vendor" / "paper_fetch_skill"
+    astronomy_semantics = SOURCE_MODULE_ROOT / "astronomy" / "semantics.py"
     return {
         "package_version": version_match.group(1) if version_match else None,
         "workflow_skill_version": skill_version.group(1) if skill_version else None,
@@ -99,6 +100,7 @@ def _source_registry_summary() -> dict[str, object]:
         "capability_pack_count": len(list(SOURCE_CAPABILITY_PACK_ROOT.glob("*/manifest.json"))),
         "vendored_paper_fetch_present": (vendored_source / "paper_fetch").is_dir(),
         "vendored_paper_fetch_imported": _paper_fetch_import_smoke(vendored_source),
+        "astronomy_semantics_present": astronomy_semantics.is_file(),
         "third_party_provenance_status": "passed",
         "third_party_source_count": len(json.loads((REPOSITORY_ROOT / "third_party" / "registry.json").read_text(encoding="utf-8"))["sources"]),
         "release_manifest": SOURCE_RELEASE_MANIFEST,
@@ -160,6 +162,7 @@ from hashlib import sha256
 from importlib.metadata import version
 from importlib.resources import files
 from draftpaper_cli.capability_packs import discover_capability_packs
+from draftpaper_cli.discipline_modules.astronomy.semantics import DATA_ROLE_ALIASES, TERMINOLOGY_ZH_CN
 from draftpaper_cli.paper_fetch_adapter import resolve_paper_fetch_command
 from draftpaper_cli.template_registry import discover_template_registry
 from draftpaper_cli.third_party_provenance import validate_third_party_provenance
@@ -207,6 +210,10 @@ print(json.dumps({
         and (Path(env['PYTHONPATH']) / 'paper_fetch' / 'cli.py').is_file()
     ),
     'vendored_paper_fetch_imported': paper_fetch_import,
+    'astronomy_semantics_present': (
+        DATA_ROLE_ALIASES.get('section25_formal_event_manifest') == 'formal_event_manifest'
+        and TERMINOLOGY_ZH_CN.get('physical_spectrum_branch') == '物理能谱分支'
+    ),
     'third_party_provenance_status': provenance['status'],
     'third_party_source_count': provenance['source_count'],
     'release_manifest': release_payload,

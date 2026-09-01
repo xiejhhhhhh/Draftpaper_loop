@@ -53,6 +53,13 @@ class CompositeDisciplineModule(DisciplineModule):
             formula_families=_merge_lists(module.spec.formula_families for module in ordered),
             reviewer_risks=_merge_lists(module.spec.reviewer_risks for module in ordered),
             code_generation_constraints=_merge_lists(module.spec.code_generation_constraints for module in ordered),
+            data_role_aliases=_merge_mappings(module.spec.data_role_aliases for module in ordered),
+            filename_role_markers=_merge_mappings(module.spec.filename_role_markers for module in ordered),
+            terminology_zh_cn=_merge_mappings(module.spec.terminology_zh_cn for module in ordered),
+            inline_terminology_zh_cn=_merge_mappings(module.spec.inline_terminology_zh_cn for module in ordered),
+            protected_terminology_tokens=_merge_lists(
+                module.spec.protected_terminology_tokens for module in ordered
+            ),
             data_connectors=_merge_dicts_by_id((module.spec.connector_dicts() for module in ordered), "connector_id"),
             method_templates=_merge_dicts_by_id((module.spec.method_template_dicts() for module in ordered), "template_id"),
             review_rule_groups=_merge_dicts_by_id((module.spec.review_rule_dicts() for module in ordered), "rule_group_id"),
@@ -78,6 +85,13 @@ def _merge_lists(groups: object) -> list[str]:
             value = str(item)
             if value not in merged:
                 merged.append(value)
+    return merged
+
+
+def _merge_mappings(groups: object) -> dict[str, str]:
+    merged: dict[str, str] = {}
+    for group in groups:
+        merged.update({str(key): str(value) for key, value in group.items()})
     return merged
 
 

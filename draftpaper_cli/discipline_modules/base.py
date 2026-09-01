@@ -314,6 +314,11 @@ class DisciplineModuleSpec:
     formula_families: list[str] = field(default_factory=list)
     reviewer_risks: list[str] = field(default_factory=list)
     code_generation_constraints: list[str] = field(default_factory=list)
+    data_role_aliases: dict[str, str] = field(default_factory=dict)
+    filename_role_markers: dict[str, str] = field(default_factory=dict)
+    terminology_zh_cn: dict[str, str] = field(default_factory=dict)
+    inline_terminology_zh_cn: dict[str, str] = field(default_factory=dict)
+    protected_terminology_tokens: list[str] = field(default_factory=list)
     data_connectors: list[dict[str, Any] | DataConnectorSpec] = field(default_factory=list)
     method_templates: list[dict[str, Any] | MethodTemplateSpec] = field(default_factory=list)
     review_rule_groups: list[dict[str, Any] | ReviewRuleSpec] = field(default_factory=list)
@@ -383,6 +388,11 @@ class DisciplineModuleSpec:
             "formula_families": list(self.formula_families),
             "reviewer_risks": list(self.reviewer_risks),
             "code_generation_constraints": list(self.code_generation_constraints),
+            "data_role_aliases": dict(self.data_role_aliases),
+            "filename_role_markers": dict(self.filename_role_markers),
+            "terminology_zh_cn": dict(self.terminology_zh_cn),
+            "inline_terminology_zh_cn": dict(self.inline_terminology_zh_cn),
+            "protected_terminology_tokens": list(self.protected_terminology_tokens),
             "data_connectors": self.connector_dicts(),
             "method_templates": self.method_template_dicts(),
             "review_rule_groups": self.review_rule_dicts(),
