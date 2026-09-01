@@ -66,11 +66,22 @@ def _stamp(path: Path) -> FileStamp:
 
 def snapshot_tree(root: Path) -> dict[str, FileStamp]:
     rows: dict[str, FileStamp] = {}
-    for path in root.rglob("*"):
-        if not path.is_file() or _is_reparse(path):
-            continue
-        relative = path.relative_to(root).as_posix()
-        rows[relative] = _stamp(path)
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as iterator:
+            entries = sorted(iterator, key=lambda entry: entry.name.casefold())
+        for entry in entries:
+            path = Path(entry.path)
+            if _is_reparse(path):
+                continue
+            if entry.is_dir(follow_symlinks=False):
+                pending.append(path)
+                continue
+            if not entry.is_file(follow_symlinks=False):
+                continue
+            relative = path.relative_to(root).as_posix()
+            rows[relative] = _stamp(path)
     return rows
 
 

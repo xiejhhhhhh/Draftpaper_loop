@@ -88,6 +88,8 @@ ROLE_ALIASES = {
     "current_tokens": "current_observation_tokens",
     "current_token_count": "current_observation_tokens",
     "n_current_tokens": "current_observation_tokens",
+    "model_input_contract": "model_input_contract",
+    "model_input_build_report": "model_input_build_report",
     "ra": "spatial_or_sky_coordinates",
     "dec": "spatial_or_sky_coordinates",
     "lat": "spatial_or_sky_coordinates",
@@ -254,6 +256,16 @@ def available_data_roles(inventory: dict[str, Any], acquisition_plan: dict[str, 
     for item in files or []:
         if not isinstance(item, dict):
             continue
+        logical_name = str(item.get("path") or "").replace("\\", "/").rsplit("/", 1)[-1]
+        logical_stem = Path(logical_name).stem.lower()
+        for marker, role in {
+            "model_input_contract": "model_input_contract",
+            "model_input_build_report": "model_input_build_report",
+            "feature_masks": "features",
+            "event_level_samples": "event_level_samples",
+        }.items():
+            if marker in logical_stem:
+                add(role)
         if item.get("kind") == "processed":
             add("processed_dataset")
         suffix = str(item.get("suffix") or "").lower()

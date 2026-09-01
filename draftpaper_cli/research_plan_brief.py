@@ -23,6 +23,15 @@ def _text(value: Any, *, limit: int = 1000) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
+def _localized_text(value: Any, *, locale: str, limit: int = 1000) -> str:
+    text = _text(value, limit=limit)
+    if locale != "zh-CN" or not text:
+        return text
+    from .research_plan import _cn_term
+
+    return _text(_cn_term(text), limit=limit)
+
+
 def _rows(value: Any) -> list[dict[str, Any]]:
     if isinstance(value, list):
         return [dict(item) for item in value if isinstance(item, Mapping)]
@@ -38,15 +47,19 @@ def _pick(row: Mapping[str, Any], key: str, *, locale: str) -> str:
     for variant in variants:
         value = row.get(variant)
         if value not in (None, "", [], {}):
-            return _text(value)
+            return _localized_text(value, locale=locale)
     return ""
 
 
 def _join(value: Any, *, locale: str = "zh-CN") -> str:
     if isinstance(value, (list, tuple, set)):
-        values = [_text(item, limit=160) for item in value if _text(item, limit=160)]
+        values = [
+            _localized_text(item, locale=locale, limit=160)
+            for item in value
+            if _text(item, limit=160)
+        ]
         return ("、" if locale == "zh-CN" else ", ").join(values)
-    return _text(value, limit=500)
+    return _localized_text(value, locale=locale, limit=500)
 
 
 def _claim_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -58,6 +71,8 @@ def _claim_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
         result.append(
             {
                 "claim_id": _text(row.get("claim_id") or row.get("id") or f"claim-{index}"),
+                "display_label_zh": f"研究问题{index}",
+                "display_label_en": f"Research question {index}",
                 "research_question": _pick(row, "research_question", locale="en"),
                 "research_question_zh": _pick(row, "research_question", locale="zh-CN"),
                 "expected_finding": _pick(row, "expected_finding", locale="en"),
@@ -84,6 +99,8 @@ def _figure_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
         result.append(
             {
                 "figure_id": _text(row.get("figure_id") or row.get("id") or f"figure-{index}"),
+                "display_label_zh": f"图{index}",
+                "display_label_en": f"Figure {index}",
                 "title": _pick(row, "proposed_title", locale="en") or _pick(row, "title", locale="en"),
                 "title_zh": _pick(row, "proposed_title", locale="zh-CN") or _pick(row, "title", locale="zh-CN"),
                 "question": _pick(row, "research_question", locale="en"),
@@ -107,6 +124,8 @@ def _table_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [
         {
             "table_id": _text(row.get("table_id") or row.get("id") or f"table-{index}"),
+            "display_label_zh": f"表{index}",
+            "display_label_en": f"Table {index}",
             "title": _pick(row, "proposed_title", locale="en") or _pick(row, "title", locale="en"),
             "title_zh": _pick(row, "proposed_title", locale="zh-CN") or _pick(row, "title", locale="zh-CN"),
             "purpose": _pick(row, "expected_content", locale="en") or _pick(row, "purpose", locale="en"),
@@ -123,6 +142,8 @@ def _method_rows(contracts: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [
         {
             "task_id": _text(row.get("task_id") or row.get("id") or f"method-{index}"),
+            "display_label_zh": f"任务{index}",
+            "display_label_en": f"Task {index}",
             "method": _pick(row, "method_family", locale="en") or _pick(row, "method", locale="en"),
             "method_zh": _pick(row, "method_family", locale="zh-CN") or _pick(row, "method", locale="zh-CN"),
             "validation": _pick(row, "validation_metric", locale="en")
@@ -205,9 +226,28 @@ def build_research_plan_decision_brief(
         or _text(project_metadata.get("idea"))
         or "Research plan"
     )
-    title_zh = _text(objective.get("working_title_zh_cn")) or title
+    title_zh = _localized_text(objective.get("working_title_zh_cn") or title, locale="zh-CN")
     objective_en = _text(objective.get("scientific_objective")) or _text(project_metadata.get("idea"))
-    objective_zh = _text(objective.get("scientific_objective_zh_cn")) or objective_en
+    objective_zh = _localized_text(
+        objective.get("scientific_objective_zh_cn") or objective_en,
+        locale="zh-CN",
+    )
+    data_scope_en_source = objective.get("data_scope") or []
+    data_scope_zh_source = objective.get("data_scope_zh_cn") or data_scope_en_source
+    if not isinstance(data_scope_en_source, (list, tuple)):
+        data_scope_en_source = [data_scope_en_source]
+    if not isinstance(data_scope_zh_source, (list, tuple)):
+        data_scope_zh_source = [data_scope_zh_source]
+    data_scope_en = [
+        _localized_text(item, locale="en", limit=1200)
+        for item in data_scope_en_source
+        if _text(item, limit=1200)
+    ]
+    data_scope_zh = [
+        _localized_text(item, locale="zh-CN", limit=1200)
+        for item in data_scope_zh_source
+        if _text(item, limit=1200)
+    ]
     limitations_list = sorted({str(item).strip() for item in limitations if str(item).strip()})
     facts: list[dict[str, Any]] = [
         {
@@ -243,7 +283,7 @@ def build_research_plan_decision_brief(
             {
                 "fact_id": f"claim:{row['claim_id']}",
                 "fact_type": "claim",
-                "label_zh": row["claim_id"],
+                "label_zh": row["display_label_zh"],
                 "label_en": row["claim_id"],
                 "value_zh": row["research_question_zh"],
                 "value_en": row["research_question"],
@@ -255,7 +295,7 @@ def build_research_plan_decision_brief(
             {
                 "fact_id": f"figure:{row['figure_id']}",
                 "fact_type": "figure",
-                "label_zh": row["title_zh"] or row["figure_id"],
+                "label_zh": row["title_zh"] or row["display_label_zh"],
                 "label_en": row["title"] or row["figure_id"],
                 "value_zh": row["expected_zh"],
                 "value_en": row["expected"],
@@ -279,6 +319,8 @@ def build_research_plan_decision_brief(
         "summary_en": "This page summarizes the complete scientific plan. After confirmation, agents may repair implementation but may not change data roles, methods, statistics, or figure semantics.",
         "objective_zh": objective_zh,
         "objective_en": objective_en,
+        "data_scope_zh": data_scope_zh,
+        "data_scope_en": data_scope_en,
         "research_questions": claims,
         "claims": claims,
         "figures": figures,
@@ -291,7 +333,7 @@ def build_research_plan_decision_brief(
         "review_rule_decision": review_rule_decision,
         "semantic_delta": dict(semantic_delta),
         "facts": facts,
-        "reopen_conditions_zh": "研究问题、claim 边界、数据角色、cohort、样本单位、方法、统计设计、主图或 panel 语义变化时必须重新确认。",
+        "reopen_conditions_zh": "研究问题、结论边界、数据角色、样本队列、样本单位、方法、统计设计、主图或子图语义发生变化时，必须重新确认。",
         "reopen_conditions_en": "Changes to the research question, claim boundary, data role, cohort, sample unit, method, statistics, or main-figure/panel semantics require a new confirmation.",
         "not_confirming_zh": "本次不确认 HTML 样式、翻译措辞、JSON 排序、绝对路径、审计清单或其它派生产物。",
         "not_confirming_en": "This decision does not approve HTML styling, translation wording, JSON ordering, absolute paths, audit inventories, or other derived artifacts.",
@@ -341,6 +383,22 @@ def _cell(value: Any) -> str:
     return escape(_text(value, limit=800)).replace("\n", "<br>")
 
 
+def _decision_text(value: Any, *, locale: str) -> str:
+    text = _text(value)
+    if locale != "zh-CN":
+        return text
+    return {
+        "pass": "通过",
+        "passed": "通过",
+        "conditional": "有条件通过",
+        "blocked": "阻塞",
+        "ready_for_confirmation": "已完成执行前支持审计，可以进入人工确认",
+        "automatic_rescue_required": "已准备项目本地实现任务（无数据或统计阻塞）",
+        "project_implementation_required": "需要按已确认计划完成项目本地实现",
+        "advisory_and_rescue_required": "存在建议项，需在执行阶段核验",
+    }.get(text.lower(), text)
+
+
 def render_research_plan_decision_html(
     root: str | Path,
     output_dir: str | Path,
@@ -357,12 +415,14 @@ def render_research_plan_decision_html(
     summary = _text(brief.get("summary_zh" if zh else "summary_en"))
     question = _text(brief.get("decision_question_zh" if zh else "decision_question_en"))
     objective = _text(brief.get("objective_zh" if zh else "objective_en"))
+    data_scope = brief.get("data_scope_zh" if zh else "data_scope_en") or []
     changed = (brief.get("semantic_delta") or {}).get("classification") != "no_scientific_change"
     delta = _text((brief.get("semantic_delta") or {}).get("summary_zh" if zh else "summary_en"))
     headings = (
         {
             "decision": "本次确认",
             "objective": "研究目标与问题",
+            "data_scope": "冻结数据与评估分母",
             "claims": "可主张结论与边界",
             "figures": "主图与表格合同",
             "methods": "数据、方法与统计设计",
@@ -378,12 +438,15 @@ def render_research_plan_decision_html(
             "data": "数据角色",
             "method": "方法任务",
             "validation": "验证/统计",
+            "pre_execution": "执行前可行性",
+            "review_rules": "统计审查覆盖",
             "none": "无",
         }
         if zh
         else {
             "decision": "Decision",
             "objective": "Research objective and questions",
+            "data_scope": "Frozen data and evaluation denominators",
             "claims": "Claims and boundaries",
             "figures": "Figure and table contracts",
             "methods": "Data, methods, and statistics",
@@ -399,24 +462,26 @@ def render_research_plan_decision_html(
             "data": "Data roles",
             "method": "Method task",
             "validation": "Validation/statistics",
+            "pre_execution": "Pre-execution",
+            "review_rules": "Review rules",
             "none": "None",
         }
     )
     claim_rows = []
-    for row in brief.get("claims") or []:
+    for index, row in enumerate(brief.get("claims") or [], start=1):
         claim_rows.append(
             "<tr>"
-            f"<td><code>{_cell(row.get('claim_id'))}</code></td>"
+            f"<td>{_cell(row.get('display_label_zh' if zh else 'display_label_en') or f'研究问题{index}' if zh else f'Research question {index}')}</td>"
             f"<td>{_cell(row.get('research_question_zh' if zh else 'research_question'))}</td>"
             f"<td>{_cell(row.get('expected_finding_zh' if zh else 'expected_finding'))}</td>"
             f"<td>{_cell(row.get('boundary_zh' if zh else 'boundary'))}</td>"
             "</tr>"
         )
     figure_rows = []
-    for row in brief.get("figures") or []:
+    for index, row in enumerate(brief.get("figures") or [], start=1):
         figure_rows.append(
             "<article class=\"contract\">"
-            f"<h3>{_cell(row.get('figure_id'))}: {_cell(row.get('title_zh' if zh else 'title'))}</h3>"
+            f"<h3>{_cell(row.get('display_label_zh' if zh else 'display_label_en') or f'图{index}' if zh else f'Figure {index}')}：{_cell(row.get('title_zh' if zh else 'title'))}</h3>"
             f"<p><strong>{headings['question_col']}:</strong> {_cell(row.get('question_zh' if zh else 'question'))}</p>"
             f"<p><strong>{headings['expected']}:</strong> {_cell(row.get('expected_zh' if zh else 'expected'))}</p>"
             f"<p class=\"boundary\"><strong>{headings['boundary']}:</strong> {_cell(row.get('boundary_zh' if zh else 'boundary'))}</p>"
@@ -424,19 +489,19 @@ def render_research_plan_decision_html(
             "</article>"
         )
     table_rows = []
-    for row in brief.get("tables") or []:
+    for index, row in enumerate(brief.get("tables") or [], start=1):
         table_rows.append(
             "<tr>"
-            f"<td><code>{_cell(row.get('table_id'))}</code></td>"
+            f"<td>{_cell(row.get('display_label_zh' if zh else 'display_label_en') or f'表{index}' if zh else f'Table {index}')}</td>"
             f"<td>{_cell(row.get('title_zh' if zh else 'title'))}</td>"
             f"<td>{_cell(row.get('purpose_zh' if zh else 'purpose'))}</td>"
             "</tr>"
         )
     method_rows = []
-    for row in brief.get("methods") or []:
+    for index, row in enumerate(brief.get("methods") or [], start=1):
         method_rows.append(
             "<tr>"
-            f"<td><code>{_cell(row.get('task_id'))}</code></td>"
+            f"<td>{_cell(row.get('display_label_zh' if zh else 'display_label_en') or f'任务{index}' if zh else f'Task {index}')}</td>"
             f"<td>{_cell(row.get('method_zh' if zh else 'method'))}</td>"
             f"<td>{_cell(row.get('validation_zh' if zh else 'validation'))}</td>"
             f"<td>{_cell(_join(row.get('required_data'), locale=locale))}</td>"
@@ -445,6 +510,7 @@ def render_research_plan_decision_html(
     limitation_items = [
         f"<li>{_cell(item)}</li>" for item in brief.get("limitations") or []
     ] or [f"<li>{headings['none']}</li>"]
+    data_scope_items = [f"<li>{_cell(item)}</li>" for item in data_scope]
     source_links = [
         _link(project_root, packet_dir, "research_plan/research_plan.zh-CN.md", "中文完整研究方案" if zh else "Chinese research plan"),
         _link(project_root, packet_dir, "research_plan/research_plan.md", "英文完整研究方案" if zh else "English research plan"),
@@ -507,6 +573,8 @@ def render_research_plan_decision_html(
   <section>
     <h2>{headings['objective']}</h2>
     <p>{escape(objective)}</p>
+    <h3>{headings['data_scope']}</h3>
+    <ul>{''.join(data_scope_items) or f'<li>{headings["none"]}</li>'}</ul>
   </section>
   <section>
     <h2>{headings['claims']}</h2>
@@ -521,11 +589,11 @@ def render_research_plan_decision_html(
     <h2>{headings['methods']}</h2>
     <p><strong>{headings['data']}:</strong> {escape(_join(brief.get('data_roles'), locale=locale)) or headings['none']}</p>
     <p><strong>{headings['validation']}:</strong> {escape(_text((brief.get('statistics') or {}).get('summary_zh' if zh else 'summary')))}</p>
-    <table><thead><tr><th>ID</th><th>{headings['method']}</th><th>{headings['validation']}</th><th>{headings['data']}</th></tr></thead><tbody>{''.join(method_rows)}</tbody></table>
+    <table><thead><tr><th>{'任务' if zh else 'Task'}</th><th>{headings['method']}</th><th>{headings['validation']}</th><th>{headings['data']}</th></tr></thead><tbody>{''.join(method_rows)}</tbody></table>
   </section>
   <section>
     <h2>{headings['limitations']}</h2>
-    <p><strong>Pre-execution:</strong> {escape(_text(brief.get('pre_execution_decision')))} · <strong>Review rules:</strong> {escape(_text(brief.get('review_rule_decision')))}</p>
+    <p><strong>{headings['pre_execution']}:</strong> {escape(_decision_text(brief.get('pre_execution_decision'), locale=locale))} · <strong>{headings['review_rules']}:</strong> {escape(_decision_text(brief.get('review_rule_decision'), locale=locale))}</p>
     <ul>{''.join(limitation_items)}</ul>
   </section>
   <section>

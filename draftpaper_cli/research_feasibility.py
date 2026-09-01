@@ -75,10 +75,13 @@ def _method_roles_from_plan(method_plan: dict[str, Any]) -> list[str]:
     for task in method_plan.get("method_tasks") or [] if isinstance(method_plan, dict) else []:
         if not isinstance(task, dict):
             continue
-        for key in ["method_family", "validation", "required_method", "method_role"]:
+        for key in ["method_family", "method_components", "validation", "required_method", "method_role"]:
             value = task.get(key)
-            if value and str(value) not in roles:
-                roles.append(str(value))
+            values = value if isinstance(value, list) else [value]
+            for role in values:
+                role_text = str(role or "").strip()
+                if role_text and role_text not in roles:
+                    roles.append(role_text)
     return roles
 
 
@@ -170,7 +173,9 @@ def assess_research_plan_feasibility(project: str | Path) -> dict[str, Any]:
     next_action = (
         "inventory-data" if decision == "conditional" and acquisition_ready and not inventory_ready
         else "prepare-data-acquisition" if blocking_figures and not acquisition_exhausted
-        else "prepare-data-acquisition" if decision != "blocked"
+        else "review-research-plan" if decision == "pass"
+        else "assess-method-feasibility" if conditional_figures
+        else "prepare-data-acquisition" if decision == "conditional"
         else "revise-research-plan"
     )
     scope_decision = {
@@ -281,14 +286,21 @@ def _render_revision_suggestions_md(suggestions: dict[str, Any]) -> str:
 
 
 def _figure_assessments(storyboard: dict[str, Any], available_roles: list[str], method_roles: list[str]) -> list[dict[str, Any]]:
+    from .research_capabilities import is_derived_method_output_role
+
     assessments: list[dict[str, Any]] = []
     for index, item in enumerate(storyboard.get("figures") or [], start=1):
         if not isinstance(item, dict):
             continue
         figure_id = str(item.get("figure_id") or item.get("id") or f"figure_{index}")
-        required_data = []
-        required_data.extend(item.get("required_data") or [])
-        required_data.extend(item.get("required_data_roles") or [])
+        required_data_candidates = []
+        required_data_candidates.extend(item.get("required_data") or [])
+        required_data_candidates.extend(item.get("required_data_roles") or [])
+        required_data = [
+            role
+            for role in required_data_candidates
+            if not is_derived_method_output_role(role)
+        ]
         required_method = [str(value) for value in (item.get("required_method") or item.get("required_method_roles") or [])]
         data_coverage = assess_role_coverage(required_data, available_roles)
         missing_methods = [role for role in required_method if role and role not in method_roles]
@@ -303,7 +315,7 @@ def _figure_assessments(storyboard: dict[str, Any], available_roles: list[str], 
             repair_route = "plan-figures"
         assessments.append({
             "figure_id": figure_id,
-            "title": item.get("title"),
+            "title": item.get("title") or item.get("proposed_title"),
             "scientific_question": item.get("scientific_question") or item.get("research_question"),
             "expected_finding": item.get("expected_finding"),
             "required_data_roles": data_coverage["required_roles"],

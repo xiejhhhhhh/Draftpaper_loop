@@ -36,6 +36,8 @@ def prepare_formal_blueprint(project_path: Path) -> None:
         "research_objective": {
             "working_title": "Grouped classifier",
             "scientific_objective": "Evaluate generalization on held-out groups.",
+            "data_scope": ["One fixed object-level cohort and one held-out denominator."],
+            "data_scope_zh_cn": ["一个固定对象级样本队列和一个留出评估分母。"],
         },
         "research_claims": [
             {
@@ -103,6 +105,73 @@ def test_agent_semantic_delta_is_compact_when_contract_values_are_large() -> Non
     assert "after" not in rendered
 
 
+def test_research_plan_agent_payload_is_bounded_without_truncating_immutable_audit(tmp_path) -> None:
+    from draftpaper_cli.human_review_packet import write_research_plan_review_packet
+
+    long_text = "完整科学证据" * 2_000
+    brief = {
+        "brief_semantic_sha256": "d" * 64,
+        "decision_question_zh": long_text,
+        "summary_zh": long_text,
+        "objective_zh": long_text,
+        "facts": [
+            {
+                "fact_id": f"fact-{index}",
+                "fact_type": "figure",
+                "label_zh": long_text,
+                "value_zh": long_text,
+                "evidence_refs": [f"evidence/{index}/{long_text}"],
+            }
+            for index in range(10)
+        ],
+    }
+    unresolved = [
+        {"code": f"issue-{index}", "summary_zh": long_text, "blocking": index == 0}
+        for index in range(9)
+    ]
+    semantic_delta = {
+        "classification": "scientific_change",
+        "summary_zh": long_text,
+        "summary_en": "changed " * 4_000,
+        "changes": [{"path": f"contracts.figures[{index}]", "before": long_text, "after": long_text} for index in range(80)],
+    }
+
+    result = write_research_plan_review_packet(
+        tmp_path,
+        brief=brief,
+        scientific_fingerprint={"scientific_plan_sha256": "a" * 64},
+        audit_fingerprint={"audit_bundle_sha256": "b" * 64, "audit_subject": {"artifact_records": []}},
+        presentation_fingerprint={"presentation_sha256": "c" * 64},
+        semantic_delta=semantic_delta,
+        review_state="confirmable",
+        review_requirement="required",
+        decision_status="pending",
+        unresolved_items=unresolved,
+        revision_cycle_id=None,
+        render_zh="<!doctype html><html lang='zh-CN'></html>",
+        render_en="<!doctype html><html lang='en'></html>",
+    )
+
+    packet_dir = Path(result["packet_dir"])
+    agent = json.loads((packet_dir / "agent_payload.json").read_text(encoding="utf-8"))
+    immutable_brief = json.loads((packet_dir / "human_decision_brief_v1.json").read_text(encoding="utf-8"))
+    immutable_issues = json.loads((packet_dir / "unresolved_issues.json").read_text(encoding="utf-8"))
+    assert len(json.dumps(agent, ensure_ascii=False).encode("utf-8")) <= 12 * 1024
+    assert len(agent["latest_user_visible_deliverables"]) == 6
+    assert len(agent["unresolved_items"]) == 4
+    assert len(immutable_brief["facts"]) == 10
+    assert immutable_brief["facts"][0]["value_zh"] == long_text
+    assert immutable_issues["items"] == unresolved
+
+
+def test_research_plan_presentation_fingerprint_uses_renderer_v3() -> None:
+    from draftpaper_cli.research_plan_fingerprint import build_plan_presentation_fingerprint
+
+    fingerprint = build_plan_presentation_fingerprint({"brief_semantic_sha256": "a" * 64})
+
+    assert fingerprint["presentation_subject"]["renderer_contract"] == "research_plan_decision_html.v3"
+
+
 class ResearchPlanReviewPacketV042Tests(unittest.TestCase):
     def _project(self, root: Path):
         project = create_project(root=root, idea="Grouped classifier", field="machine learning")
@@ -122,9 +191,15 @@ class ResearchPlanReviewPacketV042Tests(unittest.TestCase):
             packet_dir = zh.parent
             self.assertTrue(zh.is_file())
             self.assertTrue(en.is_file())
-            self.assertIn("研究目标与问题", zh.read_text(encoding="utf-8"))
+            zh_text = zh.read_text(encoding="utf-8")
+            self.assertIn("研究目标与问题", zh_text)
+            self.assertIn("冻结数据与评估分母", zh_text)
+            self.assertIn("一个固定对象级样本队列和一个留出评估分母", zh_text)
+            self.assertIn("研究问题1", zh_text)
+            self.assertIn("图1", zh_text)
+            self.assertIn("任务1", zh_text)
             self.assertIn("Claims and boundaries", en.read_text(encoding="utf-8"))
-            self.assertIn('href="stage_audit.json"', zh.read_text(encoding="utf-8"))
+            self.assertIn('href="stage_audit.json"', zh_text)
             self.assertTrue((packet_dir / "human_decision_brief_v1.json").is_file())
             self.assertTrue((packet_dir / "scientific_plan_fingerprint_v1.json").is_file())
             self.assertTrue((packet_dir / "stage_audit.json").is_file())

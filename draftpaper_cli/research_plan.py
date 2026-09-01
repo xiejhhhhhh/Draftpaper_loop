@@ -400,10 +400,14 @@ def _load_research_data_context(project_path: Path) -> dict[str, Any]:
             }
         )
         tables = []
+        seen_table_names: set[str] = set()
         for item in inventory.get("files") or []:
             if not isinstance(item, dict) or item.get("row_count") is None:
                 continue
             logical_name = str(item.get("path") or "").replace("\\", "/").rsplit("/", 1)[-1]
+            if logical_name in seen_table_names:
+                continue
+            seen_table_names.add(logical_name)
             tables.append(
                 {
                     "logical_name": logical_name,
@@ -445,6 +449,60 @@ def _load_research_data_context(project_path: Path) -> dict[str, Any]:
 
 
 _CN_PHRASES = {
+    "brier_ece_selective_risk_coverage_and_source_balanced_metric_delta": "Brier 评分、期望校准误差、选择性风险、覆盖率及源平衡指标差值",
+    "paired_source_balanced_metric_delta_with_multi_seed_and_source_cluster_ci": "含多随机种子及源聚类置信区间的配对源平衡指标差值",
+    "class_specific_and_macro_performance_with_source_cluster_ci": "含源聚类置信区间的类别级与宏平均性能",
+    "class_specific_error_support_confidence_and_source_consistency": "类别级错误样本支持度、置信度及源内一致性",
+    "event_source_class_time_and_modality_denominator_consistency": "事件、源、类别、时间及模态分母一致性",
+    "formal_event_source_and_temporal_denominator_consistency": "正式事件、源及时间分母一致性",
+    "implementation_trace_and_information_boundary_audit": "实现链路与信息边界审计",
+    "calibration_error_selective_risk_and_coverage": "概率校准误差、选择性风险及覆盖率",
+    "model_input_contract": "模型输入合同",
+    "model_input_build_report": "模型输入构建报告",
+    "label_input_isolation_contract": "标签与模型输入隔离合同",
+    "source_label_provenance": "源类别标签来源",
+    "source_partition_manifest": "源分区清单",
+    "temporal_split_manifest": "时间划分清单",
+    "source_grouped_development_split": "按源分组的开发集划分",
+    "event_predictions": "事件级预测",
+    "calibrated_event_predictions": "经校准的事件级预测",
+    "misclassified_events": "误分类事件",
+    "event_modalities": "事件级可用模态",
+    "feature_masks": "特征掩码",
+    "modality_masks": "模态掩码",
+    "feature_whitelist": "模型特征白名单",
+    "observation_condition_strata": "观测条件分层",
+    "exposure_seconds": "曝光时间",
+    "ablation_metrics": "消融实验指标",
+    "calibration_registry": "校准参数登记表",
+    "threshold_registry": "判别阈值登记表",
+    "frozen_threshold_registry": "冻结判别阈值登记表",
+    "risk_coverage_summary": "风险与覆盖率汇总",
+    "formal_manifest_reconciliation": "正式清单一致性核验",
+    "existing_workflow_asset_semantic_audit": "现有工作流图语义审计",
+    "source_identity_leakage_audit": "同源信息泄漏审计",
+    "temporal_boundary_audit": "时间边界审计",
+    "label_provenance_audit": "标签来源审计",
+    "label_input_isolation_audit": "标签与模型输入隔离审计",
+    "modality_missingness_analysis": "模态缺失机制分析",
+    "model_input_lineage_audit": "模型输入谱系审计",
+    "masked_multimodal_fusion": "掩码感知多模态融合",
+    "class_specific_selective_prediction": "类别特异的选择性预测",
+    "class_specific_threshold_selection": "类别特异阈值选择",
+    "source_grouped_cross_validation": "按源分组交叉验证",
+    "multi_seed_model_comparison": "多随机种子模型比较",
+    "source_cluster_bootstrap": "以源为聚类单位的自助重采样",
+    "identical_cohort_model_comparison": "同一队列上的模型比较",
+    "matched_seed_ablation": "匹配随机种子的消融实验",
+    "matched_split_multi_seed_ablation": "同一划分下的多随机种子消融实验",
+    "no_pe_fixed_pe_time2vec_comparison": "无位置编码、固定正弦位置编码与 Time2Vec 的比较",
+    "observation_condition_matching": "观测条件匹配",
+    "risk_coverage_analysis": "风险与覆盖率分析",
+    "predefined_case_selection": "预定义案例选择",
+    "stratified_error_analysis": "分层错误分析",
+    "source_consistency_analysis": "源内预测一致性分析",
+    "observation_shift_analysis": "观测域偏移分析",
+    "class_specific_precision_recall_f1_pr_auc_macro_f1_with_source_cluster_ci": "含源聚类置信区间的类别级精确率、召回率、F1、PR-AUC及宏平均F1",
     "claims must be limited to the provided processed data, remote-source description, or supplied result artifacts": "研究结论仅限于现有处理数据、远程数据源说明或已提供的结果产物所能支持的范围",
     "area_adjusted_user_and_producer_accuracy_with_95_percent_confidence_intervals": "面积校正的用户精度、生产者精度及95%置信区间",
     "spatial_holdout_auc_tss_brier_score_and_morans_i_of_residuals": "空间留出AUC、TSS、Brier评分及残差Moran's I",
@@ -645,6 +703,13 @@ _CN_PHRASES = {
     "source catalog": "源目录",
     "group-aware validation": "分组感知验证",
     "transparent baselines": "透明基线模型",
+    "no pe fixed pe Time2Vec comparison": "无位置编码、固定正弦位置编码与 Time2Vec 比较",
+    "Brier ECE selective risk coverage and source balanced metric delta": "Brier 评分、ECE、选择性风险、覆盖率及源平衡指标差值",
+    "transparent_baselines": "透明基线模型",
+    "risk-coverage": "风险—覆盖率",
+    "reliability": "可靠性曲线",
+    "bootstrap": "Bootstrap 重采样",
+    "seed": "随机种子",
     "image representation": "图像表示",
     "representation analysis": "表示分析",
     "anomaly candidate discovery": "异常候选发现",
@@ -674,6 +739,33 @@ _CN_PHRASES = {
     "ablation": "消融实验",
     "long-term": "长期",
     "irregular": "不规则采样",
+}
+
+
+_CN_INLINE_PHRASES = {
+    "fixed sinusoidal PE": "固定正弦位置编码",
+    "sinusoidal PE": "正弦位置编码",
+    "固定 sinusoidal 位置编码": "固定正弦位置编码",
+    "no PE": "无位置编码",
+    "Brier score": "Brier 评分",
+    "risk-coverage": "风险—覆盖率",
+    "precision-recall": "精确率—召回率",
+    "selective risk": "选择性风险",
+    "defer rate": "拒判率",
+    "macro-F1": "宏平均 F1",
+    "reliability": "可靠性曲线",
+    "coverage": "覆盖率",
+    "precision": "精确率",
+    "recall": "召回率",
+    "source_id": "源标识",
+    "multi seed": "多随机种子",
+    "多 seed": "多随机种子",
+    "seed": "随机种子",
+    "mask": "掩码",
+    "Bootstrap 重采样 产物": "Bootstrap 重采样产物",
+    "匹配 随机种子": "匹配随机种子",
+    "模型 和完整": "模型和完整",
+    "和 风险—覆盖率": "和风险—覆盖率",
 }
 
 
@@ -737,11 +829,37 @@ _CN_SENTENCES = {
 
 def _cn_term(value: Any) -> str:
     text = str(value or "").strip()
+    for old, new in _CN_PHRASES.items():
+        if text.casefold() == old.casefold():
+            return new
+    protected: dict[str, str] = {}
+    for index, token in enumerate(
+        [
+            "Time2Vec",
+            "Brier",
+            "ECE",
+            "PR-AUC",
+            "ROC-AUC",
+            "Transformer",
+        ]
+    ):
+        placeholder = f"\ufff0{index}\ufff1"
+        if re.search(re.escape(token), text, flags=re.IGNORECASE):
+            text = re.sub(re.escape(token), placeholder, text, flags=re.IGNORECASE)
+            protected[placeholder] = token
     for old, new in sorted(_CN_PHRASES.items(), key=lambda item: len(item[0]), reverse=True):
+        text = re.sub(re.escape(old), new, text, flags=re.IGNORECASE)
+    for placeholder, token in protected.items():
+        text = text.replace(placeholder, token)
+    for old, new in sorted(_CN_INLINE_PHRASES.items(), key=lambda item: len(item[0]), reverse=True):
         text = re.sub(re.escape(old), new, text, flags=re.IGNORECASE)
     if not re.search(r"[\\/:]", text) and not re.search(r"[\u4e00-\u9fff]", text):
         text = text.replace("_", " ")
     text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+([，。；：！？、])", r"\1", text)
+    text = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", text)
+    text = text.replace("边界后新出现源源子集", "边界后新出现源子集")
+    text = text.replace("Bootstrap 重采样重采样", "Bootstrap 重采样")
     return text
 
 
@@ -775,9 +893,14 @@ def _cn_join(values: list[Any]) -> str:
     return "、".join(_cn_term(value) for value in values if str(value or "").strip())
 
 
+def _cn_list_sentence(value: Any) -> str:
+    text = _cn_sentence(value).strip().rstrip("。；，")
+    return f"{text}。" if text else ""
+
+
 def _localized_cn(value: dict[str, Any], field: str) -> str:
     localized = str(value.get(f"{field}_zh_cn") or "").strip()
-    return localized or _cn_sentence(value.get(field))
+    return _cn_term(localized) if localized else _cn_sentence(value.get(field))
 
 
 def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, Any]) -> str:
@@ -809,6 +932,8 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         scientific_objective_cn = _cn_sentence(
             objective.get("scientific_objective") or project_meta.get("idea")
         )
+    else:
+        scientific_objective_cn = _cn_term(scientific_objective_cn)
     lines = [
         "# 文献驱动研究方案",
         "",
@@ -827,21 +952,36 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         method_hypothesis = str(objective.get("methodological_hypothesis_zh_cn") or "").strip()
         if not method_hypothesis:
             method_hypothesis = _cn_sentence(objective.get("methodological_hypothesis"))
+        else:
+            method_hypothesis = _cn_term(method_hypothesis)
         data_scope = objective.get("data_scope_zh_cn") or objective.get("data_scope") or []
         secondary = objective.get("secondary_analyses_zh_cn") or objective.get("secondary_analyses") or []
         boundary = str(objective.get("claim_boundary_zh_cn") or "").strip()
         if not boundary:
             boundary = _cn_sentence(objective.get("claim_boundary"))
+        else:
+            boundary = _cn_term(boundary)
         lines.extend([
             "## 研究目标合同",
             "",
             f"- 科学目标：{scientific_objective_cn}",
             f"- 方法假设：{method_hypothesis}",
-            f"- 数据范围：{_cn_join(data_scope)}。",
-            f"- 次级分析：{_cn_join(secondary) or '无'}。",
+        ])
+        lines.append("- 数据范围：")
+        lines.extend(f"  - {_cn_list_sentence(item)}" for item in data_scope if str(item or "").strip())
+        lines.append("- 次级分析：")
+        if secondary:
+            lines.extend(f"  - {_cn_list_sentence(item)}" for item in secondary if str(item or "").strip())
+        else:
+            lines.append("  - 无。")
+        lines.extend([
             f"- 结论边界：{boundary}",
             "",
-            "本研究以科学问题和可验证证据为主线。机器学习、聚类、分类器和空间分析只在能够回答上述科学问题时作为分析工具使用，不能替代科学目标本身。",
+            (
+                "本研究以科学问题和可验证证据为主线。机器学习、聚类、分类器和空间分析只在能够回答上述科学问题时"
+                "作为分析工具使用，不能替代科学目标本身。序列建模与概率校准同样属于服务科学问题的分析工具，"
+                "不构成独立科学目标。"
+            ),
             "",
         ])
     lines.extend([
@@ -889,9 +1029,14 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         "## 研究问题与预期发现",
         "",
     ])
-    for claim in blueprint.get("research_claims") or []:
+    claims = blueprint.get("research_claims") or []
+    claim_labels = {
+        str(claim.get("claim_id") or ""): f"研究问题{index}"
+        for index, claim in enumerate(claims, start=1)
+    }
+    for index, claim in enumerate(claims, start=1):
         lines.extend([
-            f"- {claim.get('claim_id')}：{_localized_cn(claim, 'research_question')}",
+            f"- 研究问题{index}：{_localized_cn(claim, 'research_question')}",
             f"  预期发现：{_localized_cn(claim, 'expected_finding')}",
             "",
         ])
@@ -909,10 +1054,13 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
         )
     lines.extend(["## 数据与方法约束", "", constraint_text, "", "## 图表故事板", ""])
     for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("figures") or [], start=1):
-        figure_title = str(item.get("proposed_title_zh_cn") or "").strip() or _cn_term(item.get("proposed_title"))
+        figure_title = _cn_term(
+            str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title")
+        )
+        claim_label = claim_labels.get(str(item.get("claim_id") or ""), "对应研究问题")
         lines.extend([
             f"- 图{index}：{figure_title}",
-            f"  对应主张：`{item.get('claim_id')}`",
+            f"  对应研究问题：{claim_label}",
             f"  研究问题：{_localized_cn(item, 'research_question')}",
             f"  预期发现：{_localized_cn(item, 'expected_finding')}",
             f"  数据需求：{_cn_join(item.get('required_data') or [])}",
@@ -927,15 +1075,26 @@ def _render_research_plan_cn(project_meta: dict[str, Any], blueprint: dict[str, 
     lines.extend(["## 核心表格", ""])
     for index, item in enumerate((blueprint.get("figure_storyboard") or {}).get("tables") or [], start=1):
         lines.extend([
-            f"- 表{index}：{_cn_term(item.get('proposed_title'))}",
+            f"- 表{index}：{_localized_cn(item, 'proposed_title')}",
             f"  数据需求：{_cn_join(item.get('required_data') or [])}",
             f"  方法需求：{_cn_join(item.get('required_method') or [])}",
             "",
         ])
     lines.extend(["## 方法计划", ""])
+    figures = (blueprint.get("figure_storyboard") or {}).get("figures") or []
+    figure_labels = {
+        str(item.get("figure_id")): (
+            index,
+            _cn_term(str(item.get("proposed_title_zh_cn") or "").strip() or item.get("proposed_title")),
+        )
+        for index, item in enumerate(figures, start=1)
+    }
     for index, task in enumerate((blueprint.get("method_plan") or {}).get("method_tasks") or [], start=1):
+        figure_index, figure_title = figure_labels.get(
+            str(task.get("figure_id")), (index, _cn_term(task.get("expected_output")))
+        )
         lines.extend([
-            f"- 任务{index}：该任务服务于 `{task.get('figure_id')}`，核心方法为{_cn_term(task.get('method_family'))}。",
+            f"- 任务{index}：服务于图{figure_index}“{figure_title}”，核心方法为{_cn_term(task.get('method_family'))}。",
             f"  需要输入的数据包括：{_cn_join(task.get('required_data') or [])}；验证指标为：{_cn_term(task.get('validation_metric'))}。",
         ])
     lines.extend([
@@ -963,6 +1122,20 @@ def _assert_cn_plan_quality(text: str) -> None:
         raise ResearchPlanQualityError("research_plan.zh-CN.md still contains untranslated English structural labels.")
     if ".?" in text or "。?" in text:
         raise ResearchPlanQualityError("research_plan.zh-CN.md contains malformed mixed-language punctuation.")
+    forbidden_fragments = [
+        "时间信息-domain",
+        "时间信息2Vec",
+        "transparent_基线模型s",
+        "光谱-opportunity",
+        "消融实验s",
+        "分类 and ",
+    ]
+    found = [fragment for fragment in forbidden_fragments if fragment in text]
+    if found:
+        raise ResearchPlanQualityError(
+            "research_plan.zh-CN.md contains mechanical mixed-language replacements: "
+            + ", ".join(found)
+        )
     for line in text.splitlines():
         clean = re.sub(r"https?://\S+|`[^`]+`", "", line)
         for segment in re.split(r"[\u4e00-\u9fff，。；：、（）“”]+", clean):

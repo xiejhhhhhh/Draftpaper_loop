@@ -8,7 +8,7 @@ import pytest
 from draftpaper_cli.command_registry import COMMAND_SPECS
 from draftpaper_cli.execution_policy import command_allowed_via_mcp, redact_sensitive
 from draftpaper_cli.skill_sync import canonical_skill_hash, install_skill, skill_doctor
-from draftpaper_cli.write_set_guard import BoundaryViolation, WriteSetGuard, resolve_confined_path
+from draftpaper_cli.write_set_guard import BoundaryViolation, WriteSetGuard, resolve_confined_path, snapshot_tree
 
 
 def test_packaged_skill_install_and_hash_doctor(tmp_path: Path) -> None:
@@ -132,6 +132,24 @@ def test_path_confinement_rejects_parent_symlink_and_unc(tmp_path: Path) -> None
         return
     with pytest.raises(BoundaryViolation):
         resolve_confined_path(root, "linked/out.txt")
+
+
+def test_snapshot_tree_never_descends_into_directory_symlink(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    (root / "inside.txt").write_text("inside", encoding="utf-8")
+    (outside / "secret.txt").write_text("outside", encoding="utf-8")
+    link = root / "linked"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("Directory symlinks are not available on this Windows host.")
+
+    rows = snapshot_tree(root)
+
+    assert set(rows) == {"inside.txt"}
 
 
 def test_write_set_guard_preserves_dirty_baseline_and_detects_new_out_of_scope_write(tmp_path: Path) -> None:

@@ -70,6 +70,13 @@ DERIVED_METHOD_OUTPUT_ROLES = {
     "measured_class_interval",
     "measured_interval_uncertainty",
     "passband_mapping",
+    "ablation_metrics",
+    "calibration_registry",
+    "threshold_registry",
+    "frozen_threshold_registry",
+    "risk_coverage_summary",
+    "source_cluster_bootstrap",
+    "misclassified_events",
 }
 
 

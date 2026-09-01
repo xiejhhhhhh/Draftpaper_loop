@@ -289,7 +289,7 @@ def build_plan_audit_fingerprint(
 def build_plan_presentation_fingerprint(brief: Mapping[str, Any]) -> dict[str, Any]:
     subject = {
         "brief_semantic_sha256": str(brief.get("brief_semantic_sha256") or ""),
-        "renderer_contract": "research_plan_decision_html.v1",
+        "renderer_contract": "research_plan_decision_html.v3",
         "locales": ["zh-CN", "en"],
     }
     return {

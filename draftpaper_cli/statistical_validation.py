@@ -172,13 +172,18 @@ def _task_families(text: str, profile: dict[str, Any]) -> list[str]:
         if value not in families:
             families.append(value)
 
-    unsupervised_partition = any(
-        term in text
-        for term in ("unsupervised", "clustering", "cluster number", "partition", "consensus clustering")
-    )
     supervised_classification = bool(re.search(r"\bsupervised\b", text)) or any(
         term in text
         for term in ("held-out prediction", "classifier", "f1", "auc", "confusion matrix")
+    )
+    explicit_unsupervised = any(
+        term in text
+        for term in ("unsupervised", "clustering", "cluster number", "consensus clustering")
+    )
+    unsupervised_partition = explicit_unsupervised or (
+        "partition" in text
+        and not supervised_classification
+        and any(term in text for term in ("cluster", "concordance", "label alignment"))
     )
     if unsupervised_partition:
         add("unsupervised_partition_validation")
@@ -408,7 +413,10 @@ def statistical_plan_summary(project: str | Path, *, language: str = "en") -> st
             "simulation_convergence": "检查数值收敛、边界条件、量纲一致性和数值不确定性。",
         }
         lines = ["## 统计验证计划", "", "关键图表执行前需要固定以下统计验证范围：", ""]
-        lines.extend(f"- `{family}`：{descriptions.get(family, '按正确的样本单位、样本队列、数据划分和不确定性证据进行验证。')}" for family in families)
+        lines.extend(
+            f"- {descriptions.get(family, '按正确的样本单位、样本队列、数据划分和不确定性证据进行验证。')}"
+            for family in families
+        )
         lines.extend(["", "任何硬阈值都必须来自用户或期刊要求、有引用的领域规范，或已经验证且证据匹配的学科插件；系统不得使用跨项目通用的 F1、R2 或 p 值门槛。", ""])
         return "\n".join(lines)
     lines = ["## Statistical Validation Plan", "", "The key-figure execution is bound to these task-aware validation families:", ""]

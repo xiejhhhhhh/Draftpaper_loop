@@ -54,6 +54,38 @@ class ResearchFeasibilityTests(unittest.TestCase):
             self.assertEqual(result["decision"], "conditional")
             self.assertEqual(result["recommended_next_action"], "inventory-data")
 
+    def test_derived_outputs_do_not_block_and_method_components_satisfy_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Validated classifier", field="machine learning")
+            _write_json(project.path / "research_plan" / "figure_storyboard.json", {"figures": [{
+                "figure_id": "fig_validation",
+                "proposed_title": "Validation summary",
+                "research_question": "Does the classifier generalize?",
+                "required_data": ["scientific_sample", "ablation_metrics"],
+                "required_method": ["group_aware_validation"],
+            }]})
+            _write_json(project.path / "research_plan" / "method_plan.json", {"method_tasks": [{
+                "method_family": "classifier_training",
+                "method_components": ["group_aware_validation"],
+            }]})
+            _write_json(project.path / "data" / "data_inventory.json", {"files": [{
+                "path": "data/processed/sample.csv",
+                "suffix": ".csv",
+                "columns": ["scientific_sample"],
+            }]})
+            _write_json(project.path / "data" / "data_acquisition_plan.json", {"status": "planned"})
+
+            result = assess_research_plan_feasibility(project.path)
+
+            self.assertEqual(result["decision"], "pass")
+            self.assertEqual(result["recommended_next_action"], "review-research-plan")
+            report = json.loads(
+                Path(result["research_plan_feasibility_report"]).read_text(encoding="utf-8")
+            )
+            assessment = report["figure_assessments"][0]
+            self.assertNotIn("ablation_metrics", assessment["required_data_roles"])
+            self.assertEqual(assessment["missing_method_roles"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

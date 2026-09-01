@@ -45,6 +45,17 @@ class StatisticsAndFiguresV026Tests(unittest.TestCase):
         self.assertIn("classification_validation", families)
         self.assertNotIn("partition_concordance", families)
 
+    def test_supervised_data_partition_does_not_trigger_unsupervised_validation(self) -> None:
+        from draftpaper_cli.statistical_validation import _task_families
+
+        families = _task_families(
+            "supervised classifier with a source partition, held-out prediction, F1, and AUC",
+            {"primary_discipline": "machine_learning"},
+        )
+
+        self.assertIn("classification_validation", families)
+        self.assertNotIn("unsupervised_partition_validation", families)
+
     def test_task_aware_statistical_contracts_cover_cross_discipline_cases(self) -> None:
         from draftpaper_cli.statistical_validation import build_statistical_validation_contract
 

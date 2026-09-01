@@ -8,7 +8,12 @@ from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import load_project
 from draftpaper_cli.research_blueprint import build_research_blueprint
 from draftpaper_cli.research_objective import ResearchObjectiveError, revise_research_objective
-from draftpaper_cli.research_plan import _assert_cn_plan_quality, _cn_term, _render_research_plan_cn
+from draftpaper_cli.research_plan import (
+    _assert_cn_plan_quality,
+    _cn_term,
+    _load_research_data_context,
+    _render_research_plan_cn,
+)
 from draftpaper_cli.research_plan_confirmation import _refresh_cn_plan_projection
 
 
@@ -45,6 +50,19 @@ def _objective() -> dict:
         "scientific_objective": "Quantify an astrophysical relationship while treating machine learning as a measurement tool.",
         "scientific_objective_zh_cn": "量化天体物理关系，并将机器学习仅作为测量工具。",
         "primary_scientific_questions": questions,
+        "table_contracts": [
+            {
+                "table_id": f"table_{index}",
+                "proposed_title": f"Scientific summary {index}",
+                "proposed_title_zh_cn": f"科学汇总表{index}",
+                "required_data": ["scientific_sample"],
+                "required_method": ["controlled_summary"],
+                "expected_content": f"Report bounded result family {index}.",
+                "expected_content_zh_cn": f"报告第{index}组有边界的结果。",
+                "validation_metric": "estimate_with_uncertainty",
+            }
+            for index in range(1, 4)
+        ],
         "methodological_hypothesis": "The representation can provide a useful measurement after confounder control.",
         "methodological_hypothesis_zh_cn": "控制混杂因素后，图像表示可以提供有用测量。",
         "data_scope": ["One explicitly defined survey cohort."],
@@ -100,6 +118,11 @@ def test_objective_contract_drives_claims_storyboard_and_chinese_plan(tmp_path) 
     assert blueprint["research_claims"][0]["research_question"].startswith("What scientific relationship")
     assert blueprint["figure_storyboard"]["figures"][0]["proposed_title"] == "Scientific relationship 1"
     assert blueprint["figure_storyboard"]["figures"][0]["required_method"] == ["controlled_association"]
+    assert [item["table_id"] for item in blueprint["figure_storyboard"]["tables"]] == [
+        "table_1",
+        "table_2",
+        "table_3",
+    ]
     rendered = _render_research_plan_cn(metadata, blueprint)
     _assert_cn_plan_quality(rendered)
     assert "量化天体物理关系" in rendered
@@ -144,6 +167,55 @@ def test_research_objective_requires_three_questions(tmp_path) -> None:
     objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(ResearchObjectiveError, match="3 to 8"):
         revise_research_objective(project, objective_file=objective_file)
+
+
+def test_research_objective_rejects_duplicate_table_ids(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Old objective", field="astronomy").path
+    payload = _objective()
+    payload["table_contracts"][1]["table_id"] = payload["table_contracts"][0]["table_id"]
+    objective_file = tmp_path / "objective.json"
+    objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ResearchObjectiveError, match="Duplicate table_id"):
+        revise_research_objective(project, objective_file=objective_file)
+
+
+def test_research_objective_limits_table_contracts_to_eight(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Old objective", field="astronomy").path
+    payload = _objective()
+    payload["table_contracts"] = [
+        {
+            "table_id": f"table_{index}",
+            "proposed_title": f"Scientific summary {index}",
+            "required_data": ["scientific_sample"],
+            "required_method": ["controlled_summary"],
+        }
+        for index in range(1, 10)
+    ]
+    objective_file = tmp_path / "objective.json"
+    objective_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ResearchObjectiveError, match="at most 8 tables"):
+        revise_research_objective(project, objective_file=objective_file)
+
+
+def test_research_data_context_suppresses_duplicate_inventory_rows(tmp_path) -> None:
+    project = create_project(root=tmp_path, idea="Duplicate inventory", field="machine learning").path
+    inventory = {
+        "file_count": 2,
+        "total_rows": 20,
+        "files": [
+            {"path": "data/processed/features.csv", "row_count": 10, "column_count": 3},
+            {"path": "data/processed/features.csv", "row_count": 10, "column_count": 3},
+        ],
+    }
+    (project / "data" / "data_inventory.json").write_text(
+        json.dumps(inventory), encoding="utf-8"
+    )
+
+    context = _load_research_data_context(project)
+
+    assert [item["logical_name"] for item in context["table_summaries"]] == ["features.csv"]
 
 
 def test_science_objective_figure_roles_have_chinese_labels() -> None:

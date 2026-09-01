@@ -95,6 +95,41 @@ def _normalize_figure_contract(value: Any, *, claim_id: str) -> dict[str, Any]:
     }
 
 
+
+def _normalize_table_contract(value: Any, *, index: int) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ResearchObjectiveError(f"table_contracts[{index - 1}] must be an object.")
+    table_id = _clean_text(value.get("table_id") or f"table_{index}", "table_contract.table_id")
+    if not re.fullmatch(r"[a-z][a-z0-9_]{2,63}", table_id):
+        raise ResearchObjectiveError(f"Invalid table_id: {table_id}")
+    return {
+        "table_id": table_id,
+        "proposed_title": _clean_text(value.get("proposed_title"), "table_contract.proposed_title"),
+        "proposed_title_zh_cn": _clean_text(
+            value.get("proposed_title_zh_cn"), "table_contract.proposed_title_zh_cn", required=False
+        ),
+        "required_data": _clean_list(value.get("required_data"), "table_contract.required_data"),
+        "required_method": _clean_list(value.get("required_method"), "table_contract.required_method"),
+        "expected_content": _clean_text(
+            value.get("expected_content"), "table_contract.expected_content", required=False
+        ),
+        "expected_content_zh_cn": _clean_text(
+            value.get("expected_content_zh_cn"), "table_contract.expected_content_zh_cn", required=False
+        ),
+        "validation_metric": _clean_text(
+            value.get("validation_metric"), "table_contract.validation_metric", required=False
+        ),
+        "scientific_claim_boundary": _clean_text(
+            value.get("scientific_claim_boundary"), "table_contract.scientific_claim_boundary", required=False
+        ),
+        "scientific_claim_boundary_zh_cn": _clean_text(
+            value.get("scientific_claim_boundary_zh_cn"),
+            "table_contract.scientific_claim_boundary_zh_cn",
+            required=False,
+        ),
+    }
+
+
 def normalize_research_objective(payload: Any) -> dict[str, Any]:
     """Validate and normalize a discipline-independent science-first objective contract."""
     if not isinstance(payload, dict):
@@ -125,6 +160,16 @@ def normalize_research_objective(payload: Any) -> dict[str, Any]:
             ),
             "figure_contract": _normalize_figure_contract(question.get("figure_contract"), claim_id=claim_id),
         })
+    table_contracts = payload.get("table_contracts") or []
+    if not isinstance(table_contracts, list) or len(table_contracts) > 8:
+        raise ResearchObjectiveError("table_contracts must be a list containing at most 8 tables.")
+    normalized_tables = [
+        _normalize_table_contract(value, index=index)
+        for index, value in enumerate(table_contracts, start=1)
+    ]
+    table_ids = [item["table_id"] for item in normalized_tables]
+    if len(table_ids) != len(set(table_ids)):
+        raise ResearchObjectiveError("Duplicate table_id in table_contracts.")
     return {
         "schema_version": "dpl.research_objective.v1",
         "status": "human_revised",
@@ -138,6 +183,7 @@ def normalize_research_objective(payload: Any) -> dict[str, Any]:
             payload.get("scientific_objective_zh_cn"), "scientific_objective_zh_cn", required=False
         ),
         "primary_scientific_questions": normalized_questions,
+        "table_contracts": normalized_tables,
         "methodological_hypothesis": _clean_text(
             payload.get("methodological_hypothesis"), "methodological_hypothesis"
         ),

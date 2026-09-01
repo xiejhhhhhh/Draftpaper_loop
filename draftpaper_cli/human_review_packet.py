@@ -62,6 +62,51 @@ def _compact_semantic_delta(delta: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _bounded_agent_text(value: Any, *, byte_limit: int) -> str:
+    """Bound copied prose without changing the full human-review packet."""
+
+    text = str(value or "").strip()
+    encoded = text.encode("utf-8")
+    if len(encoded) <= byte_limit:
+        return text
+    suffix = "..."
+    prefix = encoded[: max(0, byte_limit - len(suffix))].decode("utf-8", errors="ignore").rstrip()
+    return prefix + suffix
+
+
+def _compact_agent_fact(value: Any) -> dict[str, Any]:
+    row = value if isinstance(value, Mapping) else {}
+    refs = row.get("evidence_refs")
+    return {
+        "fact_id": _bounded_agent_text(row.get("fact_id"), byte_limit=64),
+        "fact_type": _bounded_agent_text(row.get("fact_type"), byte_limit=48),
+        "label_zh": _bounded_agent_text(row.get("label_zh"), byte_limit=96),
+        "value_zh": _bounded_agent_text(row.get("value_zh"), byte_limit=220),
+        "evidence_refs": [
+            _bounded_agent_text(item, byte_limit=120)
+            for item in (refs if isinstance(refs, list) else [])[:1]
+        ],
+    }
+
+
+def _compact_agent_issue(value: Any) -> dict[str, Any]:
+    row = value if isinstance(value, Mapping) else {}
+    return {
+        "code": _bounded_agent_text(row.get("code"), byte_limit=64),
+        "summary_zh": _bounded_agent_text(row.get("summary_zh"), byte_limit=180),
+        "blocking": bool(row.get("blocking")),
+    }
+
+
+def _compact_agent_semantic_delta(delta: Mapping[str, Any]) -> dict[str, Any]:
+    compact = _compact_semantic_delta(delta)
+    compact["summary_zh"] = _bounded_agent_text(compact.get("summary_zh"), byte_limit=240)
+    compact["summary_en"] = _bounded_agent_text(compact.get("summary_en"), byte_limit=240)
+    compact["changes"] = compact.get("changes", [])[:12]
+    compact["changes_truncated"] = bool(compact.get("changes_truncated")) or compact.get("change_count", 0) > 12
+    return compact
+
+
 def _compat_html(target_relative: str) -> str:
     target = target_relative.replace("\\", "/")
     return f"""<!doctype html>
@@ -205,7 +250,7 @@ def write_research_plan_review_packet(
         "scientific_or_effect_fingerprint": f"{packet_relative_dir}/scientific_plan_fingerprint_v1.json",
         "audit_bundle_sha256": audit_hash,
         "presentation_sha256": presentation_hash,
-        "semantic_delta": _compact_semantic_delta(semantic_delta),
+        "semantic_delta": _compact_agent_semantic_delta(semantic_delta),
         "unresolved_items": unresolved_items,
         "authority": {"actor_type": "user", "policy": "scientific_plan"},
         "expires_when": [
@@ -268,23 +313,23 @@ def write_research_plan_review_packet(
             "project_relative_path": packet["paths"]["stage_audit_json"],
             "absolute_path": str((output_dir / "stage_audit.json").resolve()),
         },
-        "stage_completion_summary_zh": str(brief.get("summary_zh") or ""),
-        "decision_question_zh": str(brief.get("decision_question_zh") or ""),
-        "decision_summary_zh": str(brief.get("summary_zh") or ""),
-        "semantic_delta_summary_zh": str(semantic_delta.get("summary_zh") or ""),
-        "semantic_delta_summary_en": str(semantic_delta.get("summary_en") or ""),
-        "review_points_zh": [str(brief.get("objective_zh") or "")][:1],
+        "stage_completion_summary_zh": _bounded_agent_text(brief.get("summary_zh"), byte_limit=220),
+        "decision_question_zh": _bounded_agent_text(brief.get("decision_question_zh"), byte_limit=240),
+        "decision_summary_zh": _bounded_agent_text(brief.get("summary_zh"), byte_limit=220),
+        "semantic_delta_summary_zh": _bounded_agent_text(semantic_delta.get("summary_zh"), byte_limit=240),
+        "semantic_delta_summary_en": _bounded_agent_text(semantic_delta.get("summary_en"), byte_limit=240),
+        "review_points_zh": [_bounded_agent_text(brief.get("objective_zh"), byte_limit=320)],
         "decision_actor_type": "user",
         "decision_authority_reason_zh": "研究问题、claim、数据、方法、统计和主图合同属于 C3 作者科学决定。",
-        "summary_zh": str(brief.get("summary_zh") or ""),
-        "semantic_delta": _compact_semantic_delta(semantic_delta),
-        "unresolved_items": unresolved_items[:8],
+        "summary_zh": _bounded_agent_text(brief.get("summary_zh"), byte_limit=220),
+        "semantic_delta": _compact_agent_semantic_delta(semantic_delta),
+        "unresolved_items": [_compact_agent_issue(item) for item in unresolved_items[:4]],
         "confirmation_meaning_zh": "确认完整研究蓝图后，后续关键图表只能遵守其中的数据、方法、统计和图表合同。",
         "confirmation_meaning_en": "Confirmation freezes the research-plan data, method, statistical, and figure contracts for downstream key-figure work.",
         "scientific_decision_sha256": science_hash,
         "human_brief_semantic_sha256": brief_hash,
         "continuity_status": semantic_delta.get("classification"),
-        "latest_user_visible_deliverables": list(brief.get("facts") or [])[:8],
+        "latest_user_visible_deliverables": [_compact_agent_fact(item) for item in list(brief.get("facts") or [])[:6]],
         "confirmation_command": request["confirmation_command"] if request["allowed"] else None,
         "context_budget_bytes": 12 * 1024,
     }

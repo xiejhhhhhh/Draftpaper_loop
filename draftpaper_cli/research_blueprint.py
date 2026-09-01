@@ -404,7 +404,26 @@ def _storyboard_figures(
     return figures
 
 
-def _storyboard_tables(literature_keys: list[str]) -> list[dict[str, Any]]:
+def _storyboard_tables(objective: dict[str, Any], literature_keys: list[str]) -> list[dict[str, Any]]:
+    explicit = objective.get("table_contracts") if isinstance(objective, dict) else None
+    if isinstance(explicit, list) and explicit:
+        return [
+            {
+                "table_id": str(item.get("table_id") or f"table_{index}"),
+                "proposed_title": str(item.get("proposed_title") or f"Scientific table {index}"),
+                "proposed_title_zh_cn": item.get("proposed_title_zh_cn"),
+                "required_data": list(item.get("required_data") or []),
+                "required_method": list(item.get("required_method") or []),
+                "expected_content": item.get("expected_content"),
+                "expected_content_zh_cn": item.get("expected_content_zh_cn"),
+                "validation_metric": item.get("validation_metric"),
+                "scientific_claim_boundary": item.get("scientific_claim_boundary"),
+                "scientific_claim_boundary_zh_cn": item.get("scientific_claim_boundary_zh_cn"),
+                "supporting_literature_keys": literature_keys[:3],
+            }
+            for index, item in enumerate(explicit, start=1)
+            if isinstance(item, dict)
+        ]
     return [
         {
             "table_id": "table_1_dataset_method_validation_summary",
@@ -478,7 +497,7 @@ def build_research_blueprint(
         )
         for index, item in enumerate(figures, start=1)
     ]
-    tables = _storyboard_tables(keys)
+    tables = _storyboard_tables(project_meta.get("research_objective") or {}, keys)
     quality = _quality_gate(figures)
     if quality["status"] != "passed":
         raise ResearchBlueprintQualityError(
