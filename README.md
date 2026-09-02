@@ -33,7 +33,7 @@ Draftpaper-loop organizes paper production as an evidence-first research loop. I
 - Audit citation support, bibliography format, discipline statistics, Results semantics, and reproducibility before two independent blind reviewers inspect the manuscript.
 - Complete authors, affiliations, ORCID, funding, acknowledgments, data/code links, references, and precise paragraph revisions in one packet before releasing a hash-bound `main.pdf`.
 
-**Current release: v0.43.1.** Research-plan review now validates explicit table contracts, rejects duplicate table IDs, carries the table storyboard into the readable bilingual decision packet, and keeps the Agent payload bounded while preserving the complete immutable audit. Feasibility checks distinguish source inputs from derived outputs, produce more useful recovery actions, and avoid false unsupervised-validation requirements for supervised partitions. EP/WXT, AGN/XRB, spectrum data roles, filename markers, and specialized Chinese terminology now belong to the astronomy/time-domain discipline module; default and unrelated discipline profiles no longer inherit those semantics, while composite astronomy and machine-learning profiles merge them deterministically. The v0.43.0 environment, literature-admission, checkpoint-v6, and publication-toolchain contracts remain intact. See [Recent Updates](#recent-updates) for the full history.
+**Current release: v0.43.2.** This patch carries forward the v0.43.1 research-contract fixes and astronomy/time-domain semantic isolation, and corrects the Windows publication-environment workflow used to verify a clean installation. GitHub Actions now refreshes the MiKTeX package database, idempotently requires the publication packages, verifies `plainnat.bst` with `kpsewhich`, and completes the isolated XeLaTeX/pdfLaTeX/BibTeX check on both Windows and Linux. Scientific workflow behavior and the v0.43.0 environment, literature-admission, checkpoint-v6, and publication contracts are unchanged. See [Recent Updates](#recent-updates) for the full history.
 
 ## Core Research Capabilities
 
@@ -527,6 +527,12 @@ Donation supports maintenance only and does not grant commercial use rights.
 The chart is a repository-hosted snapshot generated from GitHub stargazer timestamps on 2026-08-04 UTC. Open [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) for the interactive view.
 
 ## Recent Updates
+### v0.43.2 (2026-09-02) -- Windows publication-environment verification patch
+
+- Updated the Windows environment-smoke workflow to refresh the MiKTeX package database and install required publication packages with the current idempotent MiKTeX commands.
+- Added an explicit `kpsewhich plainnat.bst` gate before isolated publication verification, preventing a fresh runner from reaching LaTeX compilation with an incomplete bibliography toolchain.
+- Added workflow regression coverage and verified the corrected workflow on clean Windows and Linux GitHub runners. The research contracts and astronomy/time-domain plugin semantics released in v0.43.1 are unchanged.
+
 ### v0.43.1 (2026-09-02) -- Research-contract and astronomy-semantics patch
 
 - Added explicit research-plan table contracts with unique IDs, an eight-table upper bound, and propagation into the figure/table storyboard and bilingual `HumanReviewPacket`.

@@ -33,7 +33,7 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 - 在正文完成后核查引用支撑、参考文献格式、学科统计标准、结果表述和复现材料，再交给两位独立盲评者。
 - 一次补齐作者、单位、ORCID、基金、致谢、数据/代码链接、新文献和定点段落修订，预览候选 PDF 后发布同一 hash 绑定的 `main.pdf`。
 
-**当前版本：v0.43.1。** 研究计划审阅现在会验证显式表格合同、拒绝重复表格 ID、把表格故事板带入中英文可读决定包，并在保留完整不可变审计的同时限制 Agent 载荷。可行性检查会区分源输入与派生输出，给出更明确的恢复动作，并避免把监督学习的 `partition` 错判为无监督验证要求。EP/WXT、AGN/XRB、光谱数据角色、文件名标记和专用中文术语现已归入天文学/时域学科模块；默认及其它学科不会继承这些语义，天文学与机器学习复合 profile 则会确定性合并它们。v0.43.0 的环境、文献准入、checkpoint v6 和完整论文生产工具链合同保持不变。完整版本记录见[最近更新](#最近更新)。
+**当前版本：v0.43.2。** 本补丁完整保留 v0.43.1 的研究合同修复和天文学/时域语义隔离，并修正用于验证全新安装的 Windows 论文发布环境工作流。GitHub Actions 现在会刷新 MiKTeX 包数据库、以幂等方式安装论文编译包、通过 `kpsewhich` 验证 `plainnat.bst`，并在 Windows 与 Linux 上完成隔离的 XeLaTeX/pdfLaTeX/BibTeX 验收。科研流程行为以及 v0.43.0 的环境、文献准入、checkpoint v6 和发布合同均未改变。完整版本记录见[最近更新](#最近更新)。
 
 ## 核心科研能力
 
@@ -518,6 +518,12 @@ Draftpaper-loop 使用 DPL schema family 表示本地优先论文 loop 状态，
 该图表是基于 GitHub 星标时间戳生成的仓库内快照，数据截至 2026-08-04 UTC。点击图表可打开 [Star History](https://www.star-history.com/?repos=xiejhhhhhh%2FDraftpaper_loop&type=date&legend=top-left) 查看交互版本。
 
 ## 最近更新
+### v0.43.2（2026-09-02）-- Windows 论文发布环境验证补丁
+
+- 更新 Windows environment-smoke 工作流：先刷新 MiKTeX 包数据库，再使用当前幂等命令安装论文发布所需的 LaTeX 包。
+- 在隔离发布验收前显式执行 `kpsewhich plainnat.bst` 门禁，避免全新 runner 在参考文献工具链不完整时进入 LaTeX 编译。
+- 增加工作流回归测试，并在全新 Windows 和 Linux GitHub runner 上验证修复后的完整流程；v0.43.1 的研究合同与天文学/时域插件语义保持不变。
+
 ### v0.43.1（2026-09-02）-- 研究合同与天文学语义修复版
 
 - 增加显式研究计划表格合同：表格 ID 必须唯一、主表最多八个，并同步进入图表故事板和中英文 `HumanReviewPacket`。
