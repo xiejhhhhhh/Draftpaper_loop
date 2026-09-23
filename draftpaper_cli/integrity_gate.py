@@ -667,5 +667,5 @@ def run_integrity_gate(project: str | Path) -> dict[str, Any]:
         "error_count": error_count,
         "warning_count": warning_count,
         "report": REPORT_JSON,
-    })
+    }, refresh_passport=False)
     return report

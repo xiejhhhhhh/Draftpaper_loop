@@ -428,9 +428,14 @@ def required_roles_from_storyboard(storyboard: dict[str, Any]) -> list[str]:
     return required
 
 
-def assess_role_coverage(required_roles: list[str], available_roles: list[str]) -> dict[str, Any]:
-    normalized_required = normalize_roles(required_roles)
-    normalized_available = normalize_roles(available_roles)
+def assess_role_coverage(
+    required_roles: list[str],
+    available_roles: list[str],
+    *,
+    role_aliases: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    normalized_required = normalize_roles(required_roles, role_aliases=role_aliases)
+    normalized_available = normalize_roles(available_roles, role_aliases=role_aliases)
     available = set(normalized_available)
     missing = []
     role_evidence: dict[str, list[str]] = {}
@@ -464,7 +469,10 @@ def write_data_contract_reports(project_path: str | Path, *, required_roles: lis
     acquisition = read_json(root / "data" / "data_acquisition_plan.json", {})
     storyboard = read_json(root / "research_plan" / "figure_storyboard.json", {})
     roles = required_roles or required_roles_from_storyboard(storyboard)
-    coverage = assess_role_coverage(roles, available_data_roles(inventory, acquisition))
+    role_aliases, _ = _discipline_extensions(acquisition)
+    coverage = assess_role_coverage(
+        roles, available_data_roles(inventory, acquisition), role_aliases=role_aliases
+    )
     payload = {
         "status": "written",
         "generated_at": utc_now(),

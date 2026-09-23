@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,8 @@ from .loop_contract import stable_evidence_id
 
 
 EVIDENCE_REGISTRY_JSON = "writing/scientific_evidence_registry.json"
+EVIDENCE_BINDING_RECEIPT_SCHEMA = "dpl.evidence_binding_receipt.v1"
+EVIDENCE_BINDING_RECEIPT_DIR = "results/evidence_binding_receipts"
 REQUIRED_BINDING_FIELDS = (
     "evidence_id", "estimand_id", "cohort_view_id", "analysis_spec_id", "run_id",
     "sample_unit", "split_id", "model_id", "metric_dimension", "aggregation",
@@ -241,6 +244,83 @@ def _records_from_payload(path: Path, project_path: Path) -> list[dict[str, Any]
         _finalize_binding(item)
         normalized.append(item)
     return normalized
+
+
+def _records_from_binding_receipts(
+    project_path: Path,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Rebuild output bindings from immutable receipts, never from filenames alone."""
+    receipt_root = project_path / EVIDENCE_BINDING_RECEIPT_DIR
+    if not receipt_root.is_dir():
+        return [], {"receipt_count": 0, "stale_count": 0, "invalid_count": 0}
+
+    records: list[dict[str, Any]] = []
+    receipt_count = 0
+    stale_count = 0
+    invalid_count = 0
+    project_resolved = project_path.resolve()
+    for receipt_path in sorted(receipt_root.glob("*.json")):
+        payload = _read_json(receipt_path)
+        if payload.get("schema_version") != EVIDENCE_BINDING_RECEIPT_SCHEMA:
+            continue
+        receipt_count += 1
+        receipt_digest = str(payload.get("receipt_sha256") or "").strip()
+        receipt_body = {key: value for key, value in payload.items() if key != "receipt_sha256"}
+        receipt_valid = bool(receipt_digest) and hashlib.sha256(
+            json.dumps(receipt_body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest() == receipt_digest
+        if not receipt_valid:
+            invalid_count += 1
+
+        for index, raw in enumerate(payload.get("bindings") or [], start=1):
+            if not isinstance(raw, dict):
+                continue
+            relative = str(raw.get("source_artifact") or "").replace("\\", "/").strip()
+            expected_hash = str(raw.get("source_hash") or "").strip()
+            status = "verified"
+            current_hash = ""
+            try:
+                source_path = (project_path / relative).resolve()
+                source_path.relative_to(project_resolved)
+                if not relative or not source_path.is_file():
+                    raise OSError("source_artifact_missing")
+                current_hash = _sha256(source_path)
+                if current_hash != expected_hash:
+                    status = "stale"
+            except (OSError, ValueError):
+                status = "stale"
+            if not receipt_valid:
+                status = "invalid_receipt"
+            if status != "verified":
+                stale_count += 1
+
+            item = _normalize_record(raw, source_artifact=relative, source_hash=expected_hash)
+            if item is None:
+                continue
+            if not item["evidence_id"]:
+                item["evidence_id"] = stable_evidence_id(
+                    "output_binding_receipt",
+                    title=f"{payload.get('receipt_id')}|{relative}|{index}",
+                    sequence=index,
+                )
+            item["binding_source"] = "output_binding_receipt"
+            item["binding_receipt_id"] = str(payload.get("receipt_id") or receipt_path.stem)
+            item["binding_status"] = status
+            item["binding_source_current_hash"] = current_hash or None
+            _finalize_binding(item)
+            if status != "verified":
+                item["binding_complete"] = False
+                item["missing_binding_fields"] = [
+                    *list(item.get("missing_binding_fields") or []),
+                    f"binding_{status}",
+                ]
+            records.append(item)
+
+    return records, {
+        "receipt_count": receipt_count,
+        "stale_count": stale_count,
+        "invalid_count": invalid_count,
+    }
 
 
 def _flatten_numeric_metrics(value: Any, prefix: str = "") -> list[tuple[str, float]]:
@@ -642,6 +722,25 @@ def _metric_context(
 
     run_manifest = _read_json(project_path / "methods" / "run_manifest.yaml")
     current_run = str(run_manifest.get("run_id") or "").strip()
+    # Counts of derived reporting units use their declared aggregation view,
+    # not the sample-record split of an ablation score with the same label.
+    if sample_unit == "reporting_unit" and variant:
+        metadata = _read_json(project_path / "results" / "figure_metadata.json")
+        analysis = _read_json(project_path / "methods" / "executable_analysis_spec.json")
+        views = {
+            str(figure.get("cohort_view_id") or "")
+            for figure in metadata.get("figures") or []
+            if isinstance(figure, dict) and figure.get("cohort_id") == cohort_id
+            and figure.get("sample_unit") == sample_unit
+        }
+        specs = [spec for spec in analysis.get("analysis_specs") or [] if isinstance(spec, dict)
+                 and spec.get("cohort_view_id") in views and spec.get("sample_unit") == sample_unit]
+        if len(specs) == 1:
+            spec = specs[0]
+            context = {key: str(spec.get(key) or "").strip() for key in ("cohort_view_id", "estimand_id", "analysis_spec_id", "split_id")}
+            context.update({"run_id": current_run, "model_id": variant})
+            if all(context.values()):
+                return {**context, "split": context["split_id"]}
     rows = _csv_rows(project_path / "results" / "tables" / "metric_evidence.csv")
     if current_run:
         rows = [row for row in rows if str(row.get("run_id") or "").strip() == current_run]
@@ -709,6 +808,8 @@ def _records_from_count_identity_report(path: Path, project_path: Path) -> list[
         definition = str(raw.get("count_definition_id") or "count").strip()
         variant = ""
         match = re.match(r"^(B[0-4])_", definition, flags=re.I)
+        if not match:
+            match = re.search(r"(?:^|:)(B[0-4])_", str(raw.get("filter_contract_id") or ""), flags=re.I)
         if match:
             variant = match.group(1).upper()
         context = _metric_context(
@@ -1007,6 +1108,199 @@ def _records_from_threshold_asset_sensitivity(project_path: Path) -> list[dict[s
     return records
 
 
+def _confirmed_support_bindings(project_path: Path) -> dict[str, str]:
+    """Recover support inputs from a consumed, immutable confirmation package."""
+    from .checkpoint_summary import _hash_payload
+    from .passport import read_jsonl
+    from .review_policy import decision_receipt_for_checkpoint
+
+    core = _read_json(project_path / "core_evidence/core_evidence_report.json")
+    support_path = project_path / "results/result_support_checkpoint.json"
+    if core.get("human_confirmation_status") != "approved" or not support_path.is_file():
+        return {}
+    events = read_jsonl(project_path / "checkpoint_ledger.jsonl")
+    resumes = {event.get("consumes_hash"): event for event in events if event.get("kind") == "resume"}
+    for checkpoint in reversed(events):
+        if (checkpoint.get("kind") != "checkpoint" or checkpoint.get("stage") != "core_evidence"
+                or checkpoint.get("confirmation_subject_id") != core.get("human_confirmation_subject_id")):
+            continue
+        resumed = resumes.get(checkpoint.get("hash")) or {}
+        receipt = decision_receipt_for_checkpoint(project_path, str(checkpoint.get("hash") or ""))
+        if (not receipt or receipt.get("receipt_id") != resumed.get("decision_receipt_id")
+                or receipt.get("decision_status") not in {"user_confirmed", "system_acknowledged"}):
+            continue
+        if receipt.get("decision_status") == "system_acknowledged" and not resumed.get("preserved_user_decision_receipt_id"):
+            continue
+        summary_path = (project_path / str(checkpoint.get("stage_summary_json") or "")).resolve()
+        try:
+            summary_path.relative_to(project_path.resolve())
+        except ValueError:
+            continue
+        summary = _read_json(summary_path)
+        summary_hash = summary.get("stage_summary_sha256")
+        manifest = summary.get("artifact_manifest") or {}
+        if (not summary_hash or summary_hash != checkpoint.get("stage_summary_sha256")
+                or summary_hash != _hash_payload({k: v for k, v in summary.items() if k != "stage_summary_sha256"})
+                or summary.get("artifact_manifest_sha256") != _hash_payload(manifest)):
+            continue
+        bound = next((item for item in manifest.get("artifacts") or []
+                      if item.get("project_relative_path") == "results/result_support_checkpoint.json"), {})
+        if not bound.get("after_byte_sha256") or bound["after_byte_sha256"] != _sha256(support_path):
+            continue
+        support = _read_json(support_path)
+        if support.get("decision") in {"pass", "passed"}:
+            return dict(support.get("input_bindings") or {})
+    return {}
+
+
+def _verified_result_csv(project_path: Path, relative: str, support_bindings=None) -> tuple[list[dict[str, str]], str, str]:
+    """Read only a successful-run output or an author-approved support input."""
+    path = (project_path / relative).resolve()
+    try:
+        path.relative_to(project_path.resolve())
+    except ValueError:
+        return [], "", ""
+    run = _read_json(project_path / "methods/run_manifest.yaml")
+    run_id = str(run.get("run_id") or "")
+    if run.get("status") != "success" or not run_id or not path.is_file():
+        return [], "", ""
+    expected = str((run.get("output_artifact_hashes") or {}).get(relative) or "")
+    if not expected:
+        bindings = _confirmed_support_bindings(project_path) if support_bindings is None else support_bindings
+        expected = str(bindings.get(relative) or "")
+    actual = _sha256(path)
+    if not expected or actual != expected:
+        return [], "", ""
+    rows = _csv_rows(path)
+    if len(rows) > 50000 or any(row.get("run_id") and row["run_id"] != run_id for row in rows):
+        return [], "", ""
+    return rows, actual, run_id
+
+
+def _records_from_bound_analysis_outputs(project_path: Path) -> list[dict[str, Any]]:
+    """Expose already verified interval, audit, and reporting-unit values.
+
+    These are secondary manuscript bindings, not new empirical results. Every
+    scalar carries its CSV row/column and the frozen producer/support hash.
+    """
+    analysis = _read_json(project_path / "methods/executable_analysis_spec.json")
+    specs = [s for s in analysis.get("analysis_specs") or [] if isinstance(s, dict)]
+    records: list[dict[str, Any]] = []
+    seen: set[tuple] = set()
+    support_bindings = _confirmed_support_bindings(project_path)
+
+    def spec_for(task: int) -> dict[str, Any]:
+        selected = [s for s in specs if f"method_task_{task}:" in str(s.get("analysis_spec_id") or "")]
+        return selected[0] if len(selected) == 1 else {}
+
+    def emit(relative, digest, run_id, row_number, column, value, *, spec, cohort, sample_unit,
+             model, metric=None, unit="score", aggregation="reported_scalar", aliases=(), target_sections=("results", "data", "discussion")):
+        number = _numeric(value)
+        if (number is None or not math.isfinite(number) or not spec
+                or not _identity_value(cohort) or not _identity_value(sample_unit) or not _identity_value(model)
+                or not all(_identity_value(spec.get(key)) for key in ("cohort_view_id", "estimand_id", "analysis_spec_id"))):
+            return
+        metric = metric or column.lower()
+        key = (relative, metric, cohort, sample_unit, model, aggregation, number)
+        if key in seen:
+            return
+        seen.add(key)
+        record = _normalize_record({
+            "evidence_id": stable_evidence_id("verified_output_cell", title=f"{relative}|{row_number}|{column}|{digest}|{model}|{aggregation}", sequence=len(records) + 1),
+            "entity_role": f"result_metric_{metric}", "value": number, "unit": unit,
+            "cohort_id": cohort, "sample_unit": sample_unit,
+            "cohort_view_id": spec.get("cohort_view_id"), "estimand_id": spec.get("estimand_id"),
+            "analysis_spec_id": spec.get("analysis_spec_id"), "run_id": run_id,
+            "split": spec.get("split_id") or "not_applicable", "split_id": spec.get("split_id") or "not_applicable",
+            "model_id": model, "metric_dimension": unit, "aggregation": aggregation,
+            "analysis_variant": "verified_output_cell", "evidence_role": "secondary",
+            "confidence": "verified_run_output", "target_sections": list(target_sections),
+            "allowed_interpretation": "Preserve the declared cohort, estimator, observation unit and row-specific aggregation; these records add no independent validation.",
+        }, source_artifact=relative, source_hash=digest)
+        if record and record["binding_complete"]:
+            record.update({"source_row_index": row_number, "source_column": column, "model_aliases": list(aliases)})
+            records.append(record)
+
+    relative = "results/tables/metric_evidence.csv"
+    rows, digest, run_id = _verified_result_csv(project_path, relative, support_bindings)
+    levels: dict[tuple, list[tuple[int, dict[str, str]]]] = {}
+    for index, row in enumerate(rows, 1):
+        spec = {key: row.get(key) for key in ("cohort_view_id", "estimand_id", "analysis_spec_id", "split_id")}
+        context = dict(spec=spec, cohort=row.get("cohort_id"), sample_unit=row.get("sample_unit"), model=row.get("model_id"))
+        low, high = _numeric(row.get("interval_low")), _numeric(row.get("interval_high"))
+        if low is not None and high is not None and low > high:
+            continue
+        for column in ("interval_low", "interval_high"):
+            emit(relative, digest, run_id, index, column, row.get(column), metric=f"{row.get('metric')}_{column}",
+                 aggregation=f"{row.get('aggregation_id')}:{column}", **context)
+        level = _numeric(row.get("interval_level"))
+        if level is not None and 0 < level < 1:
+            key = tuple(row.get(k) for k in ("cohort_id", "sample_unit", "analysis_spec_id", "uncertainty_definition_id"))
+            levels.setdefault(key, []).append((index, row))
+    for group in levels.values():
+        if len({row["interval_level"] for _, row in group}) != 1:
+            continue
+        index, row = group[0]
+        spec = {key: row.get(key) for key in ("cohort_view_id", "estimand_id", "analysis_spec_id", "split_id")}
+        emit(relative, digest, run_id, index, "interval_level", row["interval_level"], spec=spec,
+             cohort=row["cohort_id"], sample_unit=row["sample_unit"], model="not_applicable",
+             metric="confidence_interval_level", unit="fraction", aggregation="shared_declared_interval_level")
+
+    relative = "results/aaew/audit_metrics.csv"
+    rows, digest, run_id = _verified_result_csv(project_path, relative, support_bindings)
+    count_columns = {"retained_n", "newly_flagged_n", "cumulative_record_exclusion_n", "unique_support_count",
+                     "reporting_unit_count", "active_duplicate_support_aggregation_count", "full_cohort_duplicate_reference_count"}
+    for index, row in enumerate(rows, 1):
+        for column in (*sorted(count_columns), "HHI", "Neff", "registered_positive_class_share", "reporting_unit_HHI", "reporting_unit_Neff", "retained_fraction"):
+            emit(relative, digest, run_id, index, column, row.get(column), spec=spec_for(4),
+                 cohort="cohort:registered_2023_samples", sample_unit="sample_record", model=row.get("variant"),
+                 unit="count" if column in count_columns else "score", aggregation=f"audit_state:{row.get('variant')}:{column}")
+
+    relative = "results/aaew/buffer_sensitivity.csv"
+    rows, digest, run_id = _verified_result_csv(project_path, relative, support_bindings)
+    for index, row in enumerate(rows, 1):
+        distance = row.get("buffer_m")
+        context = dict(spec=spec_for(3), cohort="cohort:reference_polygons_complete_0_30_60_90m", sample_unit="reference_polygon")
+        model = f"inward_buffer_{distance}m"
+        emit(relative, digest, run_id, index, "mean_fraction_of_original", row.get("mean_fraction_of_original"),
+             model=model, metric=f"{row.get('category')}_fraction_of_original", unit="fraction",
+             aggregation="category_area_over_total_original_area", **context)
+        emit(relative, digest, run_id, index, "area_retention", row.get("area_retention"), model=model,
+             metric="area_weighted_retention", unit="fraction", aggregation="classified_area_over_total_original_area", **context)
+        emit(relative, digest, run_id, index, "buffer_m", distance, model="not_applicable", metric="inward_buffer_distance",
+             unit="metres", aggregation=f"declared_buffer:{distance}", **context)
+    if rows and len({row.get("classification_scale_m") for row in rows}) == 1:
+        emit(relative, digest, run_id, 1, "classification_scale_m", rows[0].get("classification_scale_m"),
+             spec=spec_for(3), cohort="cohort:reference_polygons_complete_0_30_60_90m", sample_unit="reference_polygon",
+             model="not_applicable", metric="native_resolution", unit="metres", aggregation="declared_native_resolution")
+
+    for relative in ("results/aaew/reporting_unit_proxy_values.csv", "results/aaew/bootstrap_intervals.csv"):
+        rows, digest, run_id = _verified_result_csv(project_path, relative, support_bindings)
+        for index, row in enumerate(rows, 1):
+            unit_id = row.get("reporting_unit")
+            if not unit_id:
+                continue
+            for column in ("Q_u", "P_u", "n_u", "bootstrap_low", "bootstrap_high", "reporting_unit_resolution_deg"):
+                emit(relative, digest, run_id, index, column, row.get(column), spec=spec_for(6),
+                     cohort=row.get("cohort_id") or "cohort:complete_aaew_records", sample_unit="reporting_unit", model="B4",
+                     unit="count" if column == "n_u" else "degrees" if column.endswith("_deg") else "score",
+                     aggregation=f"reporting_unit:{unit_id}:{column}", target_sections=("results", "discussion"))
+    relative = "results/aaew/anomaly_injection_truth.csv"
+    rows, digest, run_id = _verified_result_csv(project_path, relative, support_bindings)
+    grouped_ids: dict[str, set[str]] = {}
+    for row in rows:
+        if row.get("anomaly_type") and row.get("sample_id"):
+            grouped_ids.setdefault(row["anomaly_type"], set()).add(row["sample_id"])
+    sizes = {len(ids) for ids in grouped_ids.values()}
+    anomaly_context = _metric_context(project_path, cohort_id="cohort:anomaly_injection_2023", sample_unit="anomaly_instance", metric="f1")
+    if grouped_ids and len(sizes) == 1 and anomaly_context:
+        emit(relative, digest, run_id, 1, "sample_id", next(iter(sizes)), spec=anomaly_context,
+             cohort="cohort:anomaly_injection_2023", sample_unit="anomaly_instance", model=anomaly_context["model_id"],
+             metric="injected_instances_per_scenario", unit="count",
+             aggregation="constant_distinct_ids_by_anomaly_type:" + ",".join(sorted(grouped_ids)))
+    return records
+
+
 def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
     """Build a domain-neutral registry from explicitly structured evidence only."""
     state = load_project(project)
@@ -1028,6 +1322,9 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         records.extend(_records_from_count_identity_report(count_identity_path, state.path))
     records.extend(_records_from_controlled_anomaly_outputs(state.path))
     records.extend(_records_from_threshold_asset_sensitivity(state.path))
+    records.extend(_records_from_bound_analysis_outputs(state.path))
+    binding_receipt_records, binding_receipt_summary = _records_from_binding_receipts(state.path)
+    records.extend(binding_receipt_records)
     resolved = _read_json(state.path / "results" / "resolved_result_evidence.json")
     primary = resolved.get("primary_metric") if isinstance(resolved.get("primary_metric"), dict) else {}
     typed_metric_report = _read_json(state.path / "results" / "metric_identity_report.json")
@@ -1070,6 +1367,10 @@ def build_scientific_evidence_registry(project: str | Path) -> dict[str, Any]:
         "blocking_conflict_count": len(conflicts),
         "incomplete_binding_count": len(incomplete),
         "incomplete_binding_evidence_ids": [record.get("evidence_id") for record in incomplete],
+        "binding_receipt_count": binding_receipt_summary["receipt_count"],
+        "binding_receipt_stale_count": binding_receipt_summary["stale_count"],
+        "binding_receipt_invalid_count": binding_receipt_summary["invalid_count"],
+        "binding_receipt_policy": "Applied receipts are the recoverable source for legacy output identity; a changed or invalid source remains visible but cannot be promoted.",
         "conflicts": conflicts,
         "typed_evidence": {
             "metric_identity_report": typed_metric_report,

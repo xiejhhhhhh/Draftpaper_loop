@@ -27,7 +27,8 @@
     "reviewer_visibility_scope": {"enum": ["author_decision", "internal_audit", "reviewer_visible", "release_public"]},
     "confirmation_continuity": {"type": "object"},
     "figure_claim_map_sha256": {"type": "string"},
-    "scientific_figure_claim_sha256": {"type": "string"}
+    "scientific_figure_claim_sha256": {"type": "string"},
+    "revision_candidate_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
   },
   "additionalProperties": true
 }

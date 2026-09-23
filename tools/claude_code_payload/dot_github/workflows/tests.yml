@@ -94,6 +94,7 @@ jobs:
           python -m draftpaper_cli.cli validate-third-party-provenance
           python -c "from draftpaper_cli.schema_registry import schema_registry_report; assert schema_registry_report()['status'] == 'passed'"
           python -c "from draftpaper_cli.release_contract import validate_release_manifest; assert validate_release_manifest()['status'] == 'passed'"
+          python tools/verify_evidence_governance.py --output build/evidence_governance_self_test.json
       - name: Run frozen literature and parser quality benchmarks
         shell: bash
         run: |

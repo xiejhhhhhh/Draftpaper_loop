@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.revision_cycle.v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "revision_cycle_id",
+    "project_id",
+    "parent_baseline_id",
+    "reason",
+    "requested_changes",
+    "allowed_change_classes",
+    "protected_facts",
+    "expected_artifacts",
+    "expected_decision_items",
+    "pending_tasks",
+    "scope",
+    "revision_generation",
+    "review_status",
+    "started_by",
+    "started_at",
+    "status",
+    "mode",
+    "automatic_upstream",
+    "reconciliation_status",
+    "draft_generation",
+    "candidate_generation",
+    "candidate_baseline_id",
+    "closed_by_decision_receipt",
+    "revision_cycle_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.revision_cycle.v2"},
+    "revision_cycle_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": ["string", "null"]},
+    "parent_baseline_id": {"type": ["string", "null"]},
+    "reason": {"type": "string", "minLength": 1},
+    "requested_changes": {"$ref": "#/$defs/stringArray"},
+    "allowed_change_classes": {"$ref": "#/$defs/stringArray"},
+    "protected_facts": {"$ref": "#/$defs/stringArray"},
+    "expected_artifacts": {"$ref": "#/$defs/stringArray"},
+    "expected_decision_items": {"$ref": "#/$defs/stringArray"},
+    "pending_tasks": {
+      "type": "array",
+      "items": {"type": "object", "additionalProperties": true}
+    },
+    "scope": {"type": "string", "minLength": 1},
+    "revision_generation": {"type": "integer", "minimum": 1},
+    "review_status": {"enum": ["drafting", "validating", "ready_for_review", "awaiting_decision"]},
+    "started_by": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "minLength": 1},
+    "status": {"enum": ["open", "closed", "superseded", "rejected"]},
+    "mode": {"enum": ["live", "author_edit"]},
+    "automatic_upstream": {"type": "boolean"},
+    "reconciliation_status": {
+      "enum": ["reconciled", "pending", "reviewing", "repair_required", "awaiting_decision"]
+    },
+    "draft_generation": {"type": "integer", "minimum": 1},
+    "candidate_generation": {"type": "integer", "minimum": 1},
+    "candidate_baseline_id": {"type": ["string", "null"]},
+    "closed_by_decision_receipt": {"type": ["string", "null"]},
+    "closed_candidate_generation": {"type": ["integer", "null"], "minimum": 1},
+    "candidate_packet_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "updated_at": {"type": "string", "minLength": 1},
+    "mode_changed_at": {"type": "string", "minLength": 1},
+    "closed_at": {"type": "string", "minLength": 1},
+    "commit_receipt_path": {"type": "string", "minLength": 1},
+    "migration_status": {"const": "legacy_unverified"},
+    "migration_source_schema_version": {"const": "dpl.revision_cycle.v1"},
+    "migration_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "migration_missing_fields": {"$ref": "#/$defs/stringArray"},
+    "migration_defaulted_fields": {"$ref": "#/$defs/stringArray"},
+    "legacy_mode_hint": {"type": ["string", "null"], "enum": ["live", "author_edit", null]},
+    "legacy_source_record": {"type": "object", "additionalProperties": true},
+    "revision_cycle_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"required": ["migration_status"]},
+      "then": {
+        "required": [
+          "migration_source_schema_version",
+          "migration_source_sha256",
+          "migration_missing_fields",
+          "migration_defaulted_fields",
+          "legacy_source_record"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "stringArray": {"type": "array", "items": {"type": "string"}}
+  }
+}

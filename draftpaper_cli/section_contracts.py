@@ -72,13 +72,18 @@ def _scope_mentioned(sentence: str, value: str) -> bool:
     if normalized_value in {
         "all", "source", "sources", "main", "primary", "not applicable",
         "run summary", "current run", "declared partition", "model evaluation",
-        "figure evidence",
+        "figure evidence", "record", "records", "row", "rows",
     }:
         return False
     if not normalized_value or normalized_value in {"main", "not applicable", "run summary"}:
         return normalized_value == "main" and bool(re.search(r"\bmain\b", normalized_sentence))
     if normalized_value in normalized_sentence:
         return True
+    if ":" in value and value.split(":", 1)[0].lower() in {"cohort", "split", "model"}:
+        label = _normalized_words(value.split(":", 1)[1])
+        if (len(label) >= 4 and label not in {"main", "all", "primary", "not applicable"}
+                and re.search(rf"\b{re.escape(label)}\b", normalized_sentence)):
+            return True
     if len(normalized_value.split()) == 1 and len(normalized_value) >= 4:
         return bool(re.search(rf"\b{re.escape(normalized_value)}s?\b", normalized_sentence))
     return False
@@ -184,6 +189,7 @@ def _numeric_claims_with_context(text: str) -> list[dict[str, Any]]:
                 "end": match.end(),
                 "local_start": match.start() - max(local_offset, 0),
                 "figure_refs": figure_refs,
+                "following_text": sentence[match.end():match.end() + 90],
             })
     return claims
 
@@ -281,6 +287,8 @@ def _model_matches_sentence(record: dict[str, Any], sentence: str) -> bool:
     if not model or model in {"not applicable", "run summary", "primary model"}:
         return False
     if model in normalized:
+        return True
+    if any(_normalized_words(alias) in normalized for alias in record.get("model_aliases") or [] if _normalized_words(alias)):
         return True
     aliases = {
         "ablation no augmentation": ("without augmentation", "no augmentation"),
@@ -413,6 +421,51 @@ def _resolve_numeric_claim(
         if figure_candidates:
             candidates = figure_candidates
     local_context = str(claim.get("local_context") or claim["sentence"])
+    suffix = str(claim.get("following_text") or str(claim.get("sentence") or "")[int(claim.get("end") or 0):][:90])
+    expected_unit = ""
+    if claim.get("percent"):
+        expected_unit = "fraction"
+    elif re.match(r"\s*[-~ ]?\s*degrees?\b", suffix, re.I):
+        expected_unit = "degrees"
+    elif re.match(r"\s*~?\s*(?:m|metres?|meters?)\b", suffix, re.I):
+        expected_unit = "metres"
+    elif re.match(r"\s+(?:(?:sample|registered|retained|paired|reference|spatial|centroid|injected|labelled|labeled|anomaly|unique|distinct|one-degree|valid|occupied)\s+){0,3}(?:records?|instances?|polygons?|cells?|profiles?|blocks?|entries)\b", suffix, re.I):
+        expected_unit = "count"
+    unit_families = {
+        "count": {"count", "counts", "number"},
+        "metres": {"m", "metre", "metres", "meter", "meters"},
+        "degrees": {"degree", "degrees"},
+        "fraction": {"fraction", "proportion", "percent", "score", "probability", "dimensionless"},
+    }
+    if expected_unit:
+        unit_candidates = [record for record in candidates if _normalized_words(record.get("metric_dimension") or record.get("unit")) in unit_families[expected_unit]]
+        if not unit_candidates:
+            return {"status": "metric_dimension_mismatch", "value": claim["value"], "sentence": claim["sentence"], "expected_metric": expected_unit,
+                    "candidate_dimensions": sorted({_binding_value(record, "metric_dimension") for record in candidates})}
+        candidates = unit_candidates
+    nominal_interval = re.match(
+        r"\s*\\?%\s*(?:(?:spatial[- ]block|paired|bootstrap|percentile|bias[- ]corrected|confidence|credible|prediction)\s+)*intervals?\b|\s*\\?%\s*confidence\b",
+        suffix, re.I,
+    )
+    if claim.get("percent") and nominal_interval:
+        confidence_levels = [record for record in candidates if _record_metric(record) == "confidence_interval_level"]
+        if confidence_levels:
+            candidates = confidence_levels
+    # Explicit scientific identity outranks presentation-role and primary
+    # defaults. Otherwise a generic figure statistic can discard a valid
+    # typed count before its observation unit is examined.
+    scope_signals: dict[str, set[str]] = {}
+    for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id"):
+        known = {_binding_value(record, field) for record in records}
+        mentioned = {value for value in known if value and _scope_mentioned(local_context, value)}
+        if mentioned:
+            scope_signals[field] = mentioned
+            candidates = [record for record in candidates if _binding_value(record, field) in mentioned]
+            if not candidates:
+                return {
+                    "status": "scope_mismatch", "value": claim["value"], "sentence": claim["sentence"],
+                    "scope_signals": {key: sorted(values) for key, values in scope_signals.items()},
+                }
     analysis_context = [record for record in candidates if _analysis_variant_matches_sentence(record, local_context)]
     if analysis_context:
         candidates = analysis_context
@@ -463,6 +516,11 @@ def _resolve_numeric_claim(
         if role_matches:
             candidates = role_matches
 
+    # Preserve an explicitly matched quantity before applying provenance
+    # defaults: a nearby score is not an availability fraction or a count.
+    canonical = [record for record in candidates if record.get("confidence") == "verified_run_output"]
+    if canonical:
+        candidates = canonical
     if not model_context and not explicit_variant_context:
         primary_candidates = [
             record for record in candidates
@@ -504,7 +562,6 @@ def _resolve_numeric_claim(
     if non_summary_candidates and len(non_summary_candidates) < len(candidates):
         candidates = non_summary_candidates
 
-    scope_signals: dict[str, set[str]] = {}
     for field in ("run_id", "cohort_id", "sample_unit", "split", "model_id"):
         known_all = {_binding_value(record, field) for record in records}
         mentioned = {value for value in known_all if value and _scope_mentioned(local_context, value)}

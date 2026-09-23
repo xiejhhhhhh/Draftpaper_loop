@@ -776,11 +776,14 @@ class ResultSupportCheckpointTests(unittest.TestCase):
                 (project.path / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8")
             )
 
-            self.assertEqual(result["decision"], "route_decision_required")
+            self.assertEqual(result["decision"], "technical_repair_required")
+            self.assertFalse(result["requires_user_decision"])
+            self.assertEqual(report["route_options"], [])
             assessment = next(
                 item for item in report["claim_assessments"]
                 if item["failure_type"] == "unbound_required_evidence_task"
             )
+            self.assertEqual(assessment["assessment_kind"], "technical")
             self.assertEqual(assessment["claim_id"], "unbound_required_evidence_task:performance_metric")
             self.assertIn("Required evidence role performance_metric", assessment["planned_claim"])
 
@@ -832,9 +835,11 @@ class ResultSupportCheckpointTests(unittest.TestCase):
             )
 
             assessment = next(item for item in report["claim_assessments"] if item["claim_id"] == "improvement")
-            self.assertEqual(result["decision"], "route_decision_required")
+            self.assertEqual(result["decision"], "technical_repair_required")
+            self.assertFalse(result["requires_user_decision"])
             self.assertEqual(report["metrics"], {})
             self.assertEqual(assessment["failure_type"], "missing_compatible_comparison_evidence")
+            self.assertEqual(assessment["assessment_kind"], "technical")
             self.assertTrue(any(
                 item["failure_type"] == "selected_run_id_missing"
                 for item in report["claim_assessments"]
@@ -863,11 +868,13 @@ class ResultSupportCheckpointTests(unittest.TestCase):
                     (project.path / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8")
                 )
 
-                self.assertEqual(result["decision"], "route_decision_required")
+                self.assertEqual(result["decision"], "technical_repair_required")
+                self.assertFalse(result["requires_user_decision"])
                 self.assertTrue(any(
                     item["failure_type"] == "selected_run_id_missing"
                     for item in report["claim_assessments"]
                 ))
+                assert report["route_options"] == []
 
     def test_comparative_metrics_with_empty_scientific_context_do_not_form_a_pair(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1067,7 +1074,9 @@ def test_result_support_blocks_non_strict_metric_identity(tmp_path) -> None:
 
     result = assess_result_support(project)
     report = json.loads((project / "results" / "result_support_checkpoint.json").read_text(encoding="utf-8"))
-    assert result["decision"] == "route_decision_required"
+    assert result["decision"] == "technical_repair_required"
+    assert result["requires_user_decision"] is False
+    assert report["route_options"] == []
     assert any(item["failure_type"] == "metric_identity_gate" for item in report["claim_assessments"])
 
 

@@ -1195,10 +1195,17 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
     support_level = str(report.get("support_level") or "未登记")
     selected_route = str(report.get("selected_route") or "")
     claims = [item for item in report.get("claim_assessments") or [] if isinstance(item, dict)]
+    scientific_claims = [
+        item for item in claims
+        if str(item.get("assessment_kind") or "scientific") == "scientific"
+    ]
     failed_claims = [item for item in report.get("failed_claims") or [] if isinstance(item, dict)]
+    technical_blockers = [item for item in report.get("technical_blockers") or [] if isinstance(item, dict)]
+    workflow_blockers = [item for item in report.get("workflow_blockers") or [] if isinstance(item, dict)]
     routes = [item for item in report.get("route_options") or [] if isinstance(item, dict)]
     route_pending = bool(routes) and not selected_route and bool(
-        report.get("requires_user_decision") or decision == "route_decision_required"
+        report.get("requires_user_decision")
+        and report.get("scientific_route_required", decision == "route_decision_required")
     )
     rescue = _read_json(root, "review/result_rescue_plan.json") or {}
     rescue_commands = [str(item) for item in rescue.get("recommended_next_commands") or [] if item]
@@ -1226,10 +1233,17 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
             "source_paths": ["results/result_support_checkpoint.json"],
         },
         {
-            "summary_zh": f"结构化论断评估共登记 {len(claims)} 条，其中 {len(failed_claims)} 条未完全获得当前证据支持。",
+            "summary_zh": f"结构化科研论断共登记 {len(scientific_claims)} 条，其中 {len(failed_claims)} 条未完全获得当前证据支持；技术诊断单独登记 {len(technical_blockers)} 条。",
             "source_paths": ["results/result_support_checkpoint.json"],
         },
     ]
+    if technical_blockers:
+        key_findings.append(
+            {
+                "summary_zh": "当前首先需要修复证据登记、运行身份或绑定关系；这些技术阻断不会自动触发收窄研究论断或补做科研实验。",
+                "source_paths": ["results/result_support_checkpoint.json"],
+            }
+        )
     if metric_fragments:
         key_findings.append(
             {
@@ -1256,6 +1270,14 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
             }
         )
     unresolved: list[dict[str, Any]] = []
+    if technical_blockers:
+        unresolved.append(
+            {
+                "summary_zh": "存在尚未修复的技术证据绑定阻断。请先检查运行身份、指标身份、证据包或角色绑定，修复后重新评估。",
+                "blocking": True,
+                "source": "results/result_support_checkpoint.json",
+            }
+        )
     if route_pending:
         unresolved.append(
             {
@@ -1273,6 +1295,17 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
             }
         )
     consistency_checks = [
+        {
+            "name_zh": "技术证据绑定",
+            "status": "fail" if technical_blockers else "pass",
+            "detail_zh": (
+                f"当前有 {len(technical_blockers)} 条技术阻断；不得将其改写为科研论断不足。"
+                if technical_blockers
+                else "未发现需要先行修复的技术证据绑定阻断。"
+            ),
+            "evidence": "results/result_support_checkpoint.json",
+            "blocking": bool(technical_blockers),
+        },
         {
             "name_zh": "结果支撑路线选择",
             "status": "fail" if route_pending else "pass",
@@ -1305,10 +1338,12 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
     ]
     narrative = (
         f"本阶段围绕结果支撑与论断路线选择，读取当前结果有效性报告和结果支撑报告，"
-        f"审查了 {len(claims)} 条结构化论断及其指标证据；当前判定为 {decision}，"
+        f"审查了 {len(scientific_claims)} 条结构化科研论断及其指标证据，并单独登记了 {len(technical_blockers)} 条技术阻断；当前判定为 {decision}，"
         f"形成了 {len(routes)} 条可执行路线和对应的影响范围。"
     )
-    if route_pending:
+    if technical_blockers and not route_pending:
+        narrative += "当前优先修复证据绑定或登记问题，不要求用户先降低论断或重做实验。"
+    elif route_pending:
         narrative += "在用户选择路线前，本阶段不能冻结为可消费的科学证据，也不能继续下游稿件写作。"
     elif selected_route:
         narrative += "用户路线已经冻结为当前选项，但必须完成该路线的上游任务后才能继续下游稿件写作。"
@@ -1351,6 +1386,8 @@ def _result_support_digest(root: Path) -> dict[str, Any]:
         },
         "promoted_evidence_snapshot_id": str(report.get("evidence_snapshot_id") or "") or None,
         "requires_user_decision": bool(report.get("requires_user_decision")),
+        "technical_blocker_count": len(technical_blockers),
+        "workflow_blocker_count": len(workflow_blockers),
     }
 
 
@@ -1472,14 +1509,44 @@ def build_stage_digest(
             }
         )
     if drift.get("status") == "drift_detected":
-        changed = drift.get("changed_artifacts") or []
+        changed = [
+            item
+            for item in (drift.get("changed_artifacts") or [])
+            if item.get("drift_kind") != "byte_only_drift"
+        ]
+        changed.extend(drift.get("missing_artifacts") or [])
+        changed.extend(drift.get("added_artifacts") or [])
+        changed_paths = ", ".join(
+            str(item.get("path") or "")
+            for item in changed[:8]
+            if str(item.get("path") or "")
+        )
+        if len(changed) > 8:
+            changed_paths += f" 等 {len(changed)} 项"
         consistency.append(
             {
                 "name_zh": "上游 artifact 漂移",
                 "status": "fail",
-                "detail_zh": f"检测到 {len(changed)} 个 artifact hash 变化，当前 checkpoint 不能用于确认。",
+                "detail_zh": (
+                    f"检测到 {len(changed)} 个 artifact hash 变化，当前 checkpoint 不能用于确认。"
+                    + (f" 变化路径：{changed_paths}。" if changed_paths else "")
+                ),
                 "evidence": "project_passport.yaml",
                 "blocking": True,
+            }
+        )
+    elif drift.get("status") == "byte_only_drift":
+        byte_only_count = int(drift.get("byte_only_count") or 0)
+        consistency.append(
+            {
+                "name_zh": "上游 artifact 漂移",
+                "status": "pass",
+                "detail_zh": (
+                    f"检测到 {byte_only_count} 个仅字节级变化的内部或可重生成 artifact；"
+                    "语义身份未变化，不阻断本次 checkpoint。"
+                ),
+                "evidence": "project_passport.yaml",
+                "blocking": False,
             }
         )
     else:

@@ -24,6 +24,49 @@ python -m draftpaper_cli.cli import-version-assets --project <repo>\projects\my_
 python -m draftpaper_cli.cli validate-project-version --project <repo>\projects\my_project_v1
 ```
 
+## Evidence Recovery and Deferred Revision
+
+For an existing output file that lacks identity metadata, prepare and apply a
+hash-bound receipt instead of editing the output or assigning a new run ID:
+
+```powershell
+python -m draftpaper_cli.cli prepare-evidence-rebind --project <repo>\projects\my_project --binding-file <bindings.json>
+python -m draftpaper_cli.cli apply-evidence-rebind --project <repo>\projects\my_project --packet-path <packet> --packet-hash <hash>
+python -m draftpaper_cli.cli inspect-evidence-bindings --project <repo>\projects\my_project
+```
+
+The packet must identify the source hash, run, analysis specification, cohort,
+split, model, metric aggregation, and row or column locator. Application
+writes an immutable receipt and rebuilds the registry. A changed source stays
+stale and cannot be promoted; mixed-run files require partition-level rows.
+
+For repeated author edits without automatic upstream reopening, use
+`begin-revision-cycle --mode author_edit`, then generate an isolated preview
+with `assemble-latex --purpose preview`. Finish with
+`prepare-revision-reconciliation` and apply its hash-matched packet. Preview
+PDFs remain unreconciled and are never release eligible.
+
+If reconciliation reports scientific-semantic changes, first complete the
+required evidence work and prepare a fresh candidate. Generate the relevant C3
+checkpoint after that candidate is frozen; its bilingual decision page shows
+the exact candidate packet SHA-256. Confirm that exact checkpoint as the user,
+then re-apply the packet with `--decision-receipt-id <receipt_id>`. Final
+promotion requires all three exact identities:
+
+```powershell
+python -m draftpaper_cli.cli commit-revision-candidate `
+  --project <repo>\projects\my_project `
+  --candidate-id <candidate_packet_sha256> `
+  --expected-baseline-id <parent_baseline_id> `
+  --decision-receipt-id <user_receipt_id>
+```
+
+The receipt must be an immutable v2 user-confirmation receipt for the same
+project, C3 decision, baseline, cycle, and candidate. A receipt from an older
+checkpoint, an editable pointer alone, or a hand-written JSON fixture cannot
+promote a candidate. Scientific changes remain blocked until their exact
+candidate has been user-confirmed and applied.
+
 `status` and `run-pipeline` are the orchestrator layer. They inspect `project.json`, stage manifests, `project_passport.yaml`, and append-only ledgers to report the next safe action. If `status` returns `pipeline_state=drift_detected`, run `sync-artifact-stale` before any downstream stage. If integrity or final quality reports failed at the final gate, the next action walks through `diagnose-gate-failures`, `review-draft`, `assess-publication-readiness`, `recommend-statistical-revision`, `prepare-analysis-revision`, and `generate-revision-plan` as each artifact appears. `detect-artifact-drift` is read-only; `sync-artifact-stale` maps hash drift to downstream stale stages, writes an integrity ledger event, and refreshes the passport baseline. `checkpoint` records an explicit human confirmation boundary in `checkpoint_ledger.jsonl`; `resume` consumes it by appending a resume event, never by deleting or rewriting the checkpoint.
 
 ## Literature and Plan

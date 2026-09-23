@@ -292,6 +292,12 @@ def _render_baseline_refs(summary: dict[str, Any], output_dir: Path) -> str:
     decision = summary.get("decision_status") or "pending"
     actor = summary.get("decision_actor_type") or "none"
     rows = "".join(f"<tr><th>{_text(key)}</th><td><code>{_text(value or '未登记')}</code></td></tr>" for key, value in refs.items())
+    candidate_hash = str(summary.get("revision_candidate_sha256") or "")
+    candidate_html = (
+        f'<p><strong>本次修订候选包 SHA-256：</strong><code>{_text(candidate_hash)}</code></p>'
+        if candidate_hash
+        else ""
+    )
     receipt_path = output_dir / "review_decision_receipt.json"
     receipt_html = ""
     if receipt_path.is_file():
@@ -308,6 +314,7 @@ def _render_baseline_refs(summary: dict[str, Any], output_dir: Path) -> str:
     return (
         '<section class="section"><h2>审查主体、自动继续与纵向基线</h2>'
         f'<p><strong>审查要求：</strong>{_text(requirement)}　<strong>决策状态：</strong>{_text(decision)}　<strong>决策主体：</strong>{_text(actor)}</p>'
+        + candidate_html
         + receipt_html
         + (f'<table><tbody>{rows}</tbody></table>' if rows else '<p class="muted">当前尚未绑定科学基线；这是首轮或旧项目迁移状态。</p>')
         + '</section>'
@@ -679,6 +686,13 @@ def render_checkpoint_decision_html(
         continuity_note = f'<p class="notice warning">{labels["changed_notice"]}</p>'
     elif state != "confirmable":
         continuity_note = f'<p class="notice warning">{labels["blocked_notice"]}</p>'
+    candidate_hash = str(summary.get("revision_candidate_sha256") or "")
+    candidate_meta = (
+        f'<span>{"Revision candidate packet SHA-256" if locale == "en" else "本次修订候选包 SHA-256"}'
+        f'<code>{_text(candidate_hash)}</code></span>'
+        if candidate_hash
+        else ""
+    )
     figures = []
     for item in brief.get("figure_claims") or []:
         if not isinstance(item, dict):
@@ -750,7 +764,7 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 <h1>{_text(summary.get("checkpoint_title_en") if locale == "en" else summary.get("checkpoint_title_zh")) or labels["title"]}</h1>
 <p class="lead" data-statement-id="{escape(_text(decision_question.get("statement_id")))}" data-fact-refs="{escape(" ".join(_text(value) for value in decision_question.get("fact_refs") or []))}">{_statement_text(decision_question, locale) or _text(summary.get("stage_purpose_zh"))}</p>
 {continuity_note}
-<div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span><a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
+<div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span>{candidate_meta}<a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
 </header>
 <section class="section"><h2>{labels["changed"]}</h2><p>{_semantic_delta_text(delta, locale) or labels["first"]}</p>{change_html}</section>
 <section class="section"><h2>{labels["confirming"]}</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []), locale=locale)}</section>

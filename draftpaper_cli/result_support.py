@@ -540,6 +540,7 @@ def _assess_claim(
 
     return {
         **claim,
+        "assessment_kind": "scientific",
         "support_status": support_status,
         "failure_type": failure_type,
         "diagnosis": issue,
@@ -547,16 +548,50 @@ def _assess_claim(
     }
 
 
-def _decision(claim_assessments: list[dict[str, Any]], validity: dict[str, Any]) -> tuple[str, str, bool]:
+def _decision(
+    claim_assessments: list[dict[str, Any]],
+    validity: dict[str, Any],
+    *,
+    technical_blockers: list[dict[str, Any]] | None = None,
+) -> tuple[str, str, bool]:
     validity_decision = str(validity.get("decision") or "").lower()
     if validity_decision == "revise_required":
         return "route_decision_required", "failed", True
-    statuses = {str(item.get("support_status") or "") for item in claim_assessments}
+    scientific_assessments = [
+        item for item in claim_assessments
+        if str(item.get("assessment_kind") or "scientific") != "technical"
+    ]
+    statuses = {str(item.get("support_status") or "") for item in scientific_assessments}
     if "not_supported" in statuses:
         return "route_decision_required", "failed", True
     if "partially_supported" in statuses:
         return "route_decision_required", "partial", True
+    if technical_blockers:
+        return "technical_repair_required", "blocked", False
     return "pass", "supported", False
+
+
+def _technical_assessment(
+    *,
+    claim_id: str,
+    planned_claim: str,
+    source: Any,
+    failure_type: str,
+    diagnosis: Any,
+    route_task: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "claim_id": claim_id,
+        "planned_claim": planned_claim,
+        "source": source,
+        "assessment_kind": "technical",
+        "support_status": "technical_blocked",
+        "failure_type": failure_type,
+        "diagnosis": diagnosis,
+    }
+    if route_task is not None:
+        item["route_task"] = route_task
+    return item
 
 
 def result_support_checkpoint_sha256(report: dict[str, Any]) -> str:
@@ -573,6 +608,9 @@ def result_support_checkpoint_sha256(report: dict[str, Any]) -> str:
         "metric_sources": report.get("metric_sources") or {},
         "claim_assessments": report.get("claim_assessments") or [],
         "failed_claims": report.get("failed_claims") or [],
+        "technical_blockers": report.get("technical_blockers") or [],
+        "workflow_blockers": report.get("workflow_blockers") or [],
+        "scientific_route_required": report.get("scientific_route_required"),
         "input_bindings": report.get("input_bindings") or {},
         "signals": report.get("signals") or {},
         "skipped_tasks": report.get("skipped_tasks") or [],
@@ -720,6 +758,10 @@ def _render_markdown(report: dict[str, Any]) -> str:
         lines.append(f"  - Planned claim: {item.get('planned_claim')}")
         if item.get("diagnosis"):
             lines.append(f"  - Diagnosis: {item.get('diagnosis')}")
+    if report.get("technical_blockers"):
+        lines.extend(["", "## Technical Binding Blockers", ""])
+        for item in report["technical_blockers"]:
+            lines.append(f"- {item.get('failure_type')}: {item.get('diagnosis')}")
     lines.extend(["", "## Recommended Routes", ""])
     if report.get("requires_user_decision"):
         for route in report.get("route_options") or []:
@@ -863,81 +905,92 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
         _assess_claim(claim, metric_records=metric_records, validity=validity)
         for claim in claims
     ]
+    technical_blockers: list[dict[str, Any]] = []
+    workflow_blockers: list[dict[str, Any]] = []
     if not claim_assessments:
-        claim_assessments.append({
-            "claim_id": "claim_contract_missing",
-            "planned_claim": "No structured claim contract or figure storyboard claim was found.",
-            "source": "inferred",
-            "support_status": "partially_supported",
-            "failure_type": "missing_claim_contract",
-            "diagnosis": "Draftpaper_loop cannot verify scientific support without a planned claim or storyboard finding.",
-        })
+        item = _technical_assessment(
+            claim_id="claim_contract_missing",
+            planned_claim="No structured claim contract or figure storyboard claim was found.",
+            source="inferred",
+            failure_type="missing_claim_contract",
+            diagnosis="Draftpaper_loop cannot verify scientific support without a planned claim or storyboard finding.",
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     for task in signal_report["pending_tasks"]:
         task_id = str(task.get("task_id") or "current_bound_pending_task")
         claim_assessments.append({
             "claim_id": task_id,
             "planned_claim": "A current pending analysis/data task must be resolved before Result Support can pass.",
             "source": task.get("source") or "current_bound_pending_tasks",
+            "assessment_kind": "workflow",
             "support_status": "not_supported",
             "failure_type": "current_bound_pending_task",
             "diagnosis": f"Current pending task {task_id} is bound to the selected Result Support inputs.",
         })
+        workflow_blockers.append(claim_assessments[-1])
     for task in signal_report["unbound_required_data_tasks"]:
-        claim_assessments.append({
-            "claim_id": task["task_id"],
-            "planned_claim": f"Required data role {task['required_role']} must have a current evidence binding.",
-            "source": "required_data_role_bindings",
-            "support_status": "not_supported",
-            "failure_type": "unbound_required_data_task",
-            "diagnosis": f"Required data role {task['required_role']} has no current binding.",
-            "route_task": task,
-        })
+        item = _technical_assessment(
+            claim_id=task["task_id"],
+            planned_claim=f"Required data role {task['required_role']} must have a current evidence binding.",
+            source="required_data_role_bindings",
+            failure_type="unbound_required_data_task",
+            diagnosis=f"Required data role {task['required_role']} has no current binding.",
+            route_task=task,
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     for task in signal_report["unbound_required_evidence_tasks"]:
         role = task["required_evidence_role"]
-        claim_assessments.append({
-            "claim_id": task["task_id"],
-            "planned_claim": f"Required evidence role {role} must have a current evidence binding.",
-            "source": "required_evidence_role_bindings",
-            "support_status": "not_supported",
-            "failure_type": "unbound_required_evidence_task",
-            "diagnosis": f"Required evidence role {role} has no current binding.",
-            "route_task": task,
-        })
+        item = _technical_assessment(
+            claim_id=task["task_id"],
+            planned_claim=f"Required evidence role {role} must have a current evidence binding.",
+            source="required_evidence_role_bindings",
+            failure_type="unbound_required_evidence_task",
+            diagnosis=f"Required evidence role {role} has no current binding.",
+            route_task=task,
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     for diagnostic in signal_report.get("blocking_diagnostics") or []:
-        claim_assessments.append({
-            "claim_id": f"result_support_diagnostic:{diagnostic.get('code')}:{diagnostic.get('source')}",
-            "planned_claim": "Every consumed result metric must be explicitly bound to the selected run.",
-            "source": diagnostic.get("source"),
-            "support_status": "not_supported",
-            "failure_type": diagnostic.get("code"),
-            "diagnosis": diagnostic,
-        })
+        item = _technical_assessment(
+            claim_id=f"result_support_diagnostic:{diagnostic.get('code')}:{diagnostic.get('source')}",
+            planned_claim="Every consumed result metric must be explicitly bound to the selected run.",
+            source=diagnostic.get("source"),
+            failure_type=str(diagnostic.get("code") or "result_support_diagnostic"),
+            diagnosis=diagnostic,
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     if evidence_identity_gate:
-        claim_assessments.append({
-            "claim_id": "metric_identity_gate",
-            "planned_claim": "The primary result must have a complete metric identity and an explicit primary metric contract.",
-            "source": "results/metric_identity_report.json",
-            "support_status": "not_supported",
-            "failure_type": "metric_identity_gate",
-            "diagnosis": {
+        item = _technical_assessment(
+            claim_id="metric_identity_gate",
+            planned_claim="The primary result must have a complete metric identity and an explicit primary metric contract.",
+            source="results/metric_identity_report.json",
+            failure_type="metric_identity_gate",
+            diagnosis={
                 "status": metric_identity_status,
                 "policy": "Legacy or ambiguous metric records remain visible for diagnosis but cannot support manuscript claims.",
             },
-        })
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     if bundle_gate:
-        claim_assessments.append({
-            "claim_id": "run_evidence_bundle_gate",
-            "planned_claim": "All consumed results must belong to one active validated run evidence bundle.",
-            "source": "results/active_run_evidence_bundle.json",
-            "support_status": "not_supported",
-            "failure_type": "run_evidence_bundle_gate",
-            "diagnosis": active_bundle,
-        })
+        item = _technical_assessment(
+            claim_id="run_evidence_bundle_gate",
+            planned_claim="All consumed results must belong to one active validated run evidence bundle.",
+            source="results/active_run_evidence_bundle.json",
+            failure_type="run_evidence_bundle_gate",
+            diagnosis=active_bundle,
+        )
+        claim_assessments.append(item)
+        technical_blockers.append(item)
     if reopen_pending:
         claim_assessments.append({
             "claim_id": "post_results_evidence_reopen_pending",
             "planned_claim": "Post-Results evidence findings must be resolved before Result Support can pass.",
             "source": "review/result_support_reopen_request.json",
+            "assessment_kind": "workflow",
             "support_status": "not_supported",
             "failure_type": "post_results_evidence_reopen_pending",
             "diagnosis": {
@@ -951,8 +1004,32 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
                 "blocking_reasons": reopen_blocking_reasons,
             },
         })
-    decision, support_level, requires_user_decision = _decision(claim_assessments, validity)
-    failed_claims = [item for item in claim_assessments if item.get("support_status") in {"not_supported", "partially_supported"}]
+        workflow_blockers.append(claim_assessments[-1])
+    # A missing run/identity can make a comparative claim appear to lack a
+    # pair. Keep the diagnostic visible, but do not ask the user to change a
+    # scientific claim until the deterministic binding issue is repaired.
+    if technical_blockers and not metric_records:
+        for item in claim_assessments:
+            if item.get("failure_type") in {
+                "missing_compatible_comparison_evidence",
+                "unknown_metric_optimization_direction",
+            }:
+                item["assessment_kind"] = "technical"
+                item["support_status"] = "technical_blocked"
+                technical_blockers.append(item)
+    decision, support_level, requires_user_decision = _decision(
+        claim_assessments,
+        validity,
+        technical_blockers=technical_blockers,
+    )
+    scientific_claim_assessments = [
+        item for item in claim_assessments
+        if str(item.get("assessment_kind") or "scientific") == "scientific"
+    ]
+    failed_claims = [
+        item for item in scientific_claim_assessments
+        if item.get("support_status") in {"not_supported", "partially_supported"}
+    ]
     report = {
         "status": "written",
         "schema_version": "dpl.result_support_checkpoint.v3",
@@ -972,7 +1049,19 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
         "active_run_evidence_bundle": active_bundle if (state.path / "results/active_run_evidence_bundle.json").is_file() else None,
         "metric_sources": signal_report["metric_sources"],
         "claim_assessments": claim_assessments,
+        "scientific_claim_assessments": scientific_claim_assessments,
         "failed_claims": failed_claims,
+        "technical_blockers": technical_blockers,
+        "workflow_blockers": workflow_blockers,
+        "technical_repair_required": bool(technical_blockers),
+        "scientific_route_required": bool(
+            requires_user_decision
+            and any(
+                str(item.get("assessment_kind") or "scientific") != "technical"
+                for item in claim_assessments
+                if item.get("support_status") in {"not_supported", "partially_supported"}
+            )
+        ),
         "route_options": [],
         "manuscript_may_proceed": decision == "pass",
         "stale_if_downgrade_route": ["results", "introduction", "data_writing", "methods_writing", "discussion", "latex", "quality_checks"],
@@ -1004,6 +1093,10 @@ def _assess_result_support_unlocked(project: str | Path) -> dict[str, Any]:
         "decision": decision,
         "support_level": support_level,
         "requires_user_decision": requires_user_decision,
+        "technical_repair_required": bool(technical_blockers),
+        "scientific_route_required": bool(report.get("scientific_route_required")),
+        "technical_blocker_count": len(technical_blockers),
+        "scientific_claim_count": len(scientific_claim_assessments),
         "result_support_checkpoint": str(results_dir / "result_support_checkpoint.json"),
         "checkpoint_sha256": report["checkpoint_sha256"],
         "route_options": report["route_options"],

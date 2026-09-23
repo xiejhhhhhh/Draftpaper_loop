@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 import hmac
+import os
 import secrets
 import subprocess
 import sys
@@ -126,6 +127,16 @@ def _arguments(value: str | None) -> dict[str, Any]:
     return payload
 
 
+def _cli_subprocess_environment() -> dict[str, str]:
+    env = sanitized_environment()
+    package_root = str(Path(__file__).resolve().parents[2])
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = os.pathsep.join(
+        [package_root, *([existing_pythonpath] if existing_pythonpath else [])]
+    )
+    return env
+
+
 def _argv(command: str, arguments: dict[str, Any]) -> list[str]:
     result = [command]
     for key, value in arguments.items():
@@ -182,7 +193,7 @@ def execute_command(
     completed = subprocess.run(
         [sys.executable, "-m", "draftpaper_cli.cli", *_argv(command, arguments)],
         cwd=root,
-        env=sanitized_environment(),
+        env=_cli_subprocess_environment(),
         capture_output=True,
         text=True,
         timeout=policy.timeout_seconds,

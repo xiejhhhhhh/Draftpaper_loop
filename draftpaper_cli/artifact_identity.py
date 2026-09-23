@@ -25,6 +25,13 @@ REPORT_VOLATILE_FIELDS = frozenset(
         "created_at",
         "state_revision",
         "stage_summary_sha256",
+        # These fields are written when a checkpoint is promoted or reopened.
+        # They bind an author decision to an evidence snapshot, but do not
+        # change the scientific report that the snapshot describes.
+        "human_confirmation_status",
+        "human_confirmation_checkpoint_hash",
+        "human_confirmation_subject_id",
+        "promoted_evidence_snapshot_id",
     }
 )
 
@@ -43,6 +50,8 @@ def sha256_file(path: Path) -> str:
 
 def _schema_family(relative: str, suffix: str) -> str:
     normalized = relative.replace("\\", "/").lower()
+    if normalized == "core_evidence/core_evidence_report.json":
+        return "dpl.report.v1"
     if normalized == "references/library.bib":
         return "dpl.reference_library.v1"
     if suffix in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".parquet", ".npz", ".pt", ".pth", ".bin"}:
@@ -128,6 +137,13 @@ def _normalized_text(text: str, *, remove_report_timestamps: bool) -> str:
     return "\n".join(line.rstrip() for line in normalized.splitlines()).strip() + "\n"
 
 
+def _normalized_tex_scientific_text(text: str) -> str:
+    """Keep scientific manuscript content stable across cosmetic TeX edits."""
+    from .manuscript_scientific_surface import normalize_scientific_text
+
+    return normalize_scientific_text(text) + "\n"
+
+
 def _semantic_payload(path: Path, relative: str) -> tuple[str, str, dict[str, Any] | None]:
     suffix = path.suffix.lower()
     schema_family = _schema_family(relative, suffix)
@@ -143,6 +159,8 @@ def _semantic_payload(path: Path, relative: str) -> tuple[str, str, dict[str, An
             volatile = REPORT_VOLATILE_FIELDS if schema_family == "dpl.report.v1" else frozenset()
             return canonical_json(payload, volatile_fields=volatile), f"schema:{schema_family}", None
     text = path.read_text(encoding="utf-8-sig", errors="replace")
+    if suffix == ".tex" and relative.replace("\\", "/").lower() in {"latex/main.tex", "latex/manuscript.tex"}:
+        return _normalized_tex_scientific_text(text), "schema:manuscript_scientific_surface.v1", None
     remove_timestamps = schema_family == "dpl.report.v1"
     return _normalized_text(text, remove_report_timestamps=remove_timestamps), f"schema:{schema_family}", None
 

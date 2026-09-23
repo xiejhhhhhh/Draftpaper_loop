@@ -159,7 +159,7 @@ class ChangeImpactTests(unittest.TestCase):
         self.assertEqual(artifact_role_for_path("data/data.tex"), ("section_prose", "data_writing"))
         self.assertEqual(artifact_role_for_path("data/processed/sample.csv"), ("processed_data", "data"))
         self.assertEqual(artifact_role_for_path("results/figures/main.png"), ("figure", "results"))
-        self.assertEqual(artifact_role_for_path("latex/sections/results.tex"), ("latex_style", "latex"))
+        self.assertEqual(artifact_role_for_path("latex/sections/results.tex"), ("manuscript_source", "sections"))
 
 
 if __name__ == "__main__":

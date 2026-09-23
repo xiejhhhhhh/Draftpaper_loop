@@ -21,6 +21,35 @@ def start_workflow(idea: str, field: str, target_journal: str = "General Academi
 
 def continue_workflow(project: str | Path) -> dict[str, Any]:
     from .extensions.status_projection import extension_status
+    from .revision_cycle import load_active_revision_cycle
+
+    cycle = load_active_revision_cycle(project)
+    if cycle and cycle.get("status") == "open" and cycle.get("mode") == "author_edit":
+        current = status_project(project)
+        reconciliation_status = str(cycle.get("reconciliation_status") or "pending")
+        return {
+            "status": "editing",
+            "project_path": str(project),
+            "revision_mode": "author_edit",
+            "automatic_upstream": False,
+            "reconciliation_status": reconciliation_status,
+            "draft_generation": cycle.get("draft_generation") or cycle.get("candidate_generation"),
+            "pipeline": {
+                "status": "paused_for_author_edit",
+                "next_action": {
+                    "command": "prepare-revision-reconciliation",
+                    "reason": "Automatic upstream re-entry is paused for this revision cycle; continue editing or start one centralized reconciliation.",
+                },
+            },
+            "verification": {
+                "status": "deferred",
+                "release_eligible": False,
+                "reason": "Candidate edits remain unreconciled with the scientific evidence baseline.",
+            },
+            "extensions": extension_status(project),
+            "automatic_review": None,
+            "status_after_review": current,
+        }
 
     automatic_review = None
     current = status_project(project)

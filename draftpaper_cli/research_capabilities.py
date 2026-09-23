@@ -647,7 +647,20 @@ def assess_plugin_sufficiency(project: str | Path) -> dict[str, Any]:
         "rescue_tasks": rescue_tasks,
         "policy": "Bootstrap sufficiency permits audited project-local implementation. Release sufficiency requires verified bindings. Contract-only, mock, plan, and fixture-only plugins cannot satisfy core figures; only exhausted project-local, registry, AcademicForge, and GitHub rescue may produce a scientific block.",
     }
-    binding_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"), "bindings": bindings}
+    from .binding_merge import merge_binding_records
+
+    previous_binding_plan = _read_json(state.path / BINDING_PLAN)
+    binding_plan = {
+        "status": "written",
+        "generated_at": utc_now(),
+        "source_report": SUFFICIENCY_REPORT,
+        "plugin_catalog_hash": catalog_snapshot.get("catalog_hash"),
+        "bindings": merge_binding_records(
+            previous_binding_plan.get("bindings") or [],
+            bindings,
+            producer="plugin_sufficiency",
+        ),
+    }
     gap_plan = {"status": "written", "generated_at": utc_now(), "source_report": SUFFICIENCY_REPORT, "gaps": rescue_tasks, "requires_human_confirmation": bool(rescue_tasks)}
     _write_json(state.path / SUFFICIENCY_REPORT, report)
     _write_json(state.path / "research_plan" / "plugin_catalog_snapshot.json", catalog_snapshot)

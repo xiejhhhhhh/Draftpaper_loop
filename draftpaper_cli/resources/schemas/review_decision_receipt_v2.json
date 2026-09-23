@@ -7,6 +7,8 @@
     "decision_status": {"enum": ["system_acknowledged", "agent_approved", "user_confirmed", "rejected", "refinement_required"]},
     "actor_type": {"enum": ["agent", "user", "system"]},
     "summary_sha256": {"type": ["string", "null"]},
+    "revision_cycle_id": {"type": ["string", "null"]},
+    "revision_candidate_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
     "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
     "stage": {"type": "string"},
     "runtime_fingerprint": {"type": ["string", "null"]},

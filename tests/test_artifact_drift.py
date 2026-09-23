@@ -14,6 +14,7 @@ from unittest import mock
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import load_project
+from draftpaper_cli.passport import load_project_passport
 
 from tests.test_orchestrator_passport import read_jsonl
 
@@ -31,6 +32,74 @@ class ArtifactDriftTests(unittest.TestCase):
             self.assertEqual(status["pipeline_state"], "drift_detected")
             self.assertEqual(status["next_action"]["command"], "sync-artifact-stale")
             self.assertIn("idea/idea.md", {item["path"] for item in status["drift"]["changed_artifacts"]})
+
+    def test_unregistered_added_artifact_is_visible_without_replacing_pipeline_route(self) -> None:
+        from draftpaper_cli.orchestrator import status_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Unregistered addition", field="workflow engineering")
+            added = project.path / "methods" / "run_analysis.py"
+            added.write_text("def run():\n    return 1\n", encoding="utf-8")
+
+            status = status_project(project.path)
+
+            self.assertNotEqual(status["pipeline_state"], "drift_detected")
+            self.assertTrue(status["pending_external_artifacts"])
+            self.assertFalse(status["release_eligible"])
+            self.assertIn("methods/run_analysis.py", {
+                item["path"] for item in status["pending_external_artifacts"]
+            })
+
+    def test_safe_mutation_does_not_adopt_unregistered_addition_into_passport(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Pending addition", field="workflow engineering").path
+            added = project / "methods" / "run_analysis.py"
+            added.write_text("def run():\n    return 1\n", encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "update-stage-status",
+                    "--project",
+                    str(project),
+                    "--stage",
+                    "references",
+                    "--status",
+                    "draft",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            assert json.loads(completed.stdout)["status"] in {"updated", "passed"}
+            passport = load_project_passport(project)
+            assert "methods/run_analysis.py" not in {
+                item["path"] for item in passport.get("artifacts") or []
+            }
+
+    def test_formal_release_paths_block_additions_only_until_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Release pending addition", field="workflow engineering").path
+            (project / "methods" / "run_analysis.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "assemble-latex",
+                    "--project",
+                    str(project),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            assert completed.returncode == 3
+            assert "preexisting_artifact_drift" in completed.stderr
 
     def test_sync_artifact_stale_requires_reconciliation_before_refreshing_passport(self) -> None:
         from draftpaper_cli.orchestrator import status_project

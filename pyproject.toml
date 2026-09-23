@@ -3,8 +3,7 @@ name = "draftpaper-cli"
 version = "0.43.2"
 description = "Local-first staged CLI workflow for research paper projects."
 readme = "docs/cli_workflow_priority_guide.md"
-license = "LicenseRef-Draftpaper-NonCommercial"
-license-files = ["LICENSE", "NOTICE"]
+license = { text = "LicenseRef-Draftpaper-NonCommercial" }
 requires-python = ">=3.10,<3.13"
 authors = [
   { name = "xiejhhhhhh", email = "xiejinhui22@mails.ucas.ac.cn" }
@@ -15,7 +14,12 @@ dependencies = [
   "PyYAML>=6.0",
   "bibtexparser>=1.4",
   "pypdf>=4",
+  "jsonschema>=4.22,<5",
 ]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 mcp = [
@@ -132,24 +136,31 @@ select = ["E4", "E7", "E9", "F"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
 include = [
+  "draftpaper_cli/artifact_scope.py",
   "draftpaper_cli/artifact_dag.py",
   "draftpaper_cli/command_contracts.py",
   "draftpaper_cli/command_registry.py",
   "draftpaper_cli/change_impact.py",
+  "draftpaper_cli/evidence_binding.py",
   "draftpaper_cli/execution_policy.py",
   "draftpaper_cli/gate_handlers.py",
+  "draftpaper_cli/governance_contract.py",
+  "draftpaper_cli/governance_report.py",
   "draftpaper_cli/install_profiles.py",
   "draftpaper_cli/token_report.py",
   "draftpaper_cli/manuscript_artifacts.py",
   "draftpaper_cli/manuscript_completion.py",
   "draftpaper_cli/manuscript_revision.py",
+  "draftpaper_cli/manuscript_scientific_surface.py",
   "draftpaper_cli/plugin_manifest_contract.py",
   "draftpaper_cli/project_state.py",
   "draftpaper_cli/release_contract.py",
   "draftpaper_cli/revision_transaction.py",
+  "draftpaper_cli/revision_cycle.py",
   "draftpaper_cli/review_revision.py",
   "draftpaper_cli/schema_registry.py",
   "draftpaper_cli/scoped_transaction.py",
+  "draftpaper_cli/scientific_baseline.py",
   "draftpaper_cli/safe_fetch.py",
   "draftpaper_cli/stale_sync.py",
   "draftpaper_cli/state_kernel.py",
@@ -158,6 +169,7 @@ include = [
   "draftpaper_cli/methods/formulas.py",
   "draftpaper_cli/methods/verification.py",
   "draftpaper_cli/methods/writer.py",
+  "draftpaper_cli/orchestrator.py",
   "draftpaper_cli/write_set_guard.py",
 ]
 reportMissingImports = false

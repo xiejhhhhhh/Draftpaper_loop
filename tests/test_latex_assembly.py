@@ -28,6 +28,7 @@ from draftpaper_cli.references import write_reference_outputs
 from draftpaper_cli.research_plan import generate_research_plan
 from draftpaper_cli.result_validity import assess_result_validity
 from draftpaper_cli.results import inventory_results, write_results
+from draftpaper_cli.revision_cycle import begin_revision_cycle, prepare_revision_reconciliation
 from tests.helpers import write_core_evidence_pass
 
 
@@ -541,6 +542,94 @@ class LatexAssemblyTests(unittest.TestCase):
             self.assertEqual(payload["status"], "written")
             self.assertEqual(payload["pdf_status"], "success")
             self.assertTrue(Path(payload["pdf"]).exists())
+
+    def test_cli_preview_isolated_from_formal_assembly_and_final_drift_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project_path = create_project(
+                root=tmp,
+                idea="Preview candidate",
+                field="astronomy",
+                project_slug_override="p",
+            ).path
+            for relative in (
+                "introduction/introduction.tex",
+                "data/data.tex",
+                "methods/methods.tex",
+                "results/results.tex",
+                "discussion/discussion.tex",
+            ):
+                path = project_path / relative
+                path.write_text(r"\section{" + Path(relative).parent.name.title() + r"}" + "\nCandidate.\n", encoding="utf-8")
+            (project_path / "references" / "library.bib").write_text("", encoding="utf-8")
+            (project_path / "latex" / "template" / "main.tex").write_text(
+                "\\documentclass{article}\n\\begin{document}\n\\title{%%DRAFTPAPER_TITLE%%}\n%%DRAFTPAPER_SECTIONS%%\n%%DRAFTPAPER_BIBLIOGRAPHY%%\n\\end{document}\n",
+                encoding="utf-8",
+            )
+            formal_main = project_path / "latex" / "main.tex"
+            formal_main.write_text("formal baseline\n", encoding="utf-8")
+            formal_before = formal_main.read_bytes()
+            refresh_project_passport(project_path, event="test_formal_baseline")
+            begin_revision_cycle(project_path, reason="deferred author edit", mode="author_edit")
+
+            runner = project_path / "methods" / "scripts" / "run_analysis.py"
+            runner.parent.mkdir(parents=True, exist_ok=True)
+            runner.write_text("def run():\n    return 1\n", encoding="utf-8")
+            refresh_project_passport(project_path, event="test_runner_baseline")
+            runner.write_text(runner.read_text(encoding="utf-8") + "\n# candidate edit\n", encoding="utf-8")
+            prepared = prepare_revision_reconciliation(project_path)
+            tool_dir = Path(tmp) / "tools"
+            tool_dir.mkdir()
+            _write_fake_tool(tool_dir, "xelatex", writes_pdf=True)
+            old_path = os.environ.get("PATH", "")
+            env = os.environ.copy()
+            env["PATH"] = str(tool_dir) + os.pathsep + old_path
+            env["LOCALAPPDATA"] = str(Path(tmp) / "no-localappdata")
+
+            preview = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "assemble-latex",
+                    "--project",
+                    str(project_path),
+                    "--purpose",
+                    "preview",
+                    "--compile-pdf",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            assert preview.returncode == 0, f"preview failed: stdout={preview.stdout} stderr={preview.stderr}"
+            payload = json.loads(preview.stdout)
+            preview_main = Path(payload["main_tex"])
+            assert payload["purpose"] == "preview"
+            assert payload["release_eligible"] is False
+            assert payload["unreconciled"] is True
+            assert payload["pdf_status"] == "success"
+            assert payload["human_review"]["zh-CN"] == prepared["summary_html.zh-CN"]
+            assert payload["human_review"]["en"] == prepared["summary_html.en"]
+            assert "revision_previews" in Path(payload["human_review"]["zh-CN"]).read_text(encoding="utf-8")
+            assert "UNRECONCILED DRAFT" in preview_main.read_text(encoding="utf-8")
+            assert formal_main.read_bytes() == formal_before
+
+            final = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "draftpaper_cli.cli",
+                    "assemble-latex",
+                    "--project",
+                    str(project_path),
+                ],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            assert final.returncode == 3
+            assert "preexisting_artifact_drift" in final.stderr
 
 
 if __name__ == "__main__":

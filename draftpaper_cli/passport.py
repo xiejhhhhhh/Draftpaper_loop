@@ -44,6 +44,110 @@ CODE_MANIFEST_ARTIFACTS = [
     "methods/model_provenance.json",
 ]
 
+# A project can contain scientific files created directly in an editor, not
+# only files named by a stage manifest. Discover those files inside the known
+# project work areas so direct edits enter the same drift/reconciliation path
+# as managed writes. Large raw data and model assets remain an explicit
+# manifest responsibility; hashing them on every status call would make the
+# passport a new source of latency.
+DIRECT_DISCOVERY_ROOTS = (
+    "idea",
+    "research_plan",
+    "research_feasibility",
+    "research_plan_feasibility",
+    "references",
+    "journal_profile",
+    "data",
+    "observations",
+    "method_plan",
+    "method_feasibility",
+    "figure_plan",
+    "figure_contracts",
+    "methods",
+    "code",
+    "result_validity",
+    "result_support",
+    "core_evidence",
+    "results",
+    "writing",
+    "data_writing",
+    "methods_writing",
+    "introduction",
+    "discussion",
+    "latex",
+    "integrity",
+    "quality_checks",
+)
+DIRECT_DISCOVERY_EXTENSIONS = frozenset(
+    {
+        ".bib",
+        ".csv",
+        ".css",
+        ".html",
+        ".ipynb",
+        ".jl",
+        ".json",
+        ".jpeg",
+        ".jpg",
+        ".md",
+        ".parquet",
+        ".pdf",
+        ".png",
+        ".py",
+        ".r",
+        ".sh",
+        ".svg",
+        ".tex",
+        ".toml",
+        ".tsv",
+        ".txt",
+        ".xml",
+        ".yaml",
+        ".yml",
+    }
+)
+DIRECT_DISCOVERY_EXCLUDED_DIRS = frozenset(
+    {
+        ".git",
+        ".draftpaper",
+        "__pycache__",
+        "cache",
+        "caches",
+        "checkpoints",
+        "compiled",
+        "evidence_snapshots",
+        "evidence_binding_receipts",
+        "tmp",
+        "temporary",
+        "revision_reconciliation",
+        "evidence_bindings",
+        "run_evidence_bundles",
+        "blind_reviews",
+    }
+)
+DIRECT_DISCOVERY_EXCLUDED_FILES = frozenset(
+    {
+        "evidence_snapshot_reopen_report.json",
+        "promoted_evidence_snapshot.json",
+    }
+)
+DIRECT_DISCOVERY_EXCLUDED_SUFFIXES = frozenset(
+    {
+        ".aux",
+        ".bbl",
+        ".bcf",
+        ".blg",
+        ".fdb_latexmk",
+        ".fls",
+        ".log",
+        ".out",
+        ".run.xml",
+        ".synctex.gz",
+        ".toc",
+    }
+)
+DIRECT_DISCOVERY_MAX_BYTES = 64 * 1024 * 1024
+
 
 class PassportError(RuntimeError):
     """Raised when DraftPaper passport or ledger artifacts cannot be read safely."""
@@ -222,6 +326,49 @@ def _code_manifest_artifacts(project_path: Path) -> list[str]:
     return candidates
 
 
+def _direct_workspace_artifacts(
+    project_path: Path,
+    *,
+    declared: set[str],
+    include_large: bool = False,
+) -> list[str]:
+    """Find likely author-edited artifacts without crawling project internals."""
+
+    discovered: list[str] = []
+    for root_name in DIRECT_DISCOVERY_ROOTS:
+        root = project_path / root_name
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file() or path.is_symlink():
+                continue
+            try:
+                relative = path.relative_to(project_path).as_posix()
+                size = path.stat().st_size
+            except OSError:
+                continue
+            parts = set(relative.split("/")[:-1])
+            if parts & DIRECT_DISCOVERY_EXCLUDED_DIRS:
+                continue
+            if path.name.startswith((".", "~$")) or path.name.endswith("~"):
+                continue
+            if path.name.lower() in DIRECT_DISCOVERY_EXCLUDED_FILES:
+                continue
+            suffix = path.suffix.lower()
+            if suffix not in DIRECT_DISCOVERY_EXTENSIONS:
+                continue
+            if any(relative.lower().endswith(item) for item in DIRECT_DISCOVERY_EXCLUDED_SUFFIXES):
+                continue
+            if size > DIRECT_DISCOVERY_MAX_BYTES and not include_large:
+                # Large data/model assets must be declared in a manifest so
+                # passport hashing and provenance can be scheduled explicitly.
+                # Governance scope may include them without reading their bytes.
+                continue
+            if relative not in declared:
+                discovered.append(relative)
+    return discovered
+
+
 def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
     """Collect current project artifacts with stable hashes."""
     project_path = project_root(project)
@@ -229,6 +376,8 @@ def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
     candidates = list(ROOT_ARTIFACTS)
     candidates.extend(_stage_manifest_outputs(project_path, metadata))
     candidates.extend(_code_manifest_artifacts(project_path))
+    declared = {str(item).replace("\\", "/").strip() for item in candidates if str(item).strip()}
+    candidates.extend(_direct_workspace_artifacts(project_path, declared=declared))
     seen: set[str] = set()
     artifacts: list[dict[str, Any]] = []
     for relative in candidates:

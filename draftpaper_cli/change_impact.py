@@ -155,6 +155,13 @@ def artifact_role_for_path(path: str) -> tuple[str, str]:
         "core_evidence/core_evidence_report.html",
     }:
         return "evidence_assessment", "core_evidence"
+    # The main manuscript source is a scientific surface.  Treating every
+    # file below latex/ as style metadata made a direct numeric edit look like
+    # a harmless layout change and allowed it to bypass evidence review.
+    if lowered in {"latex/main.tex", "latex/manuscript.tex"}:
+        return "manuscript_source", "latex"
+    if lowered.startswith("latex/sections/"):
+        return "manuscript_source", lowered.split("/", 2)[1]
     if lowered.startswith("latex/"):
         return "latex_style", "latex"
     if lowered.startswith("citation_audit/"):
@@ -385,7 +392,7 @@ def classify_change(
             "Only presentation metadata changed.",
             declaration,
         )
-    if role in {"section_prose", "abstract"}:
+    if role in {"section_prose", "abstract", "manuscript_source"}:
         semantics_changed = declaration.get("claim_semantics_changed") is not False
         return ChangeClassification(
             (

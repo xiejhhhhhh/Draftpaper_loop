@@ -1268,6 +1268,20 @@ def collect_result_support_signals(project: str | Path) -> dict[str, Any]:
         "required_data_role_bindings": role_signal,
         "required_evidence_role_bindings": evidence_role_signal,
     }
+    blocking_diagnostics = [
+        *selection_diagnostics,
+        *resolved_diagnostics,
+        *manifest_diagnostics,
+        *table_diagnostics,
+    ]
+    technical_repair_required = bool(
+        unbound_tasks
+        or unbound_evidence_tasks
+        or blocking_diagnostics
+        or role_signal.get("binding_diagnostics")
+        or evidence_role_signal.get("binding_diagnostics")
+    )
+    scientific_route_required = bool(pending_tasks)
     return {
         "adapter_order": list(SIGNAL_ADAPTERS),
         "selected_run_id": selected_run_id,
@@ -1276,26 +1290,17 @@ def collect_result_support_signals(project: str | Path) -> dict[str, Any]:
         "metrics": metrics,
         "metric_records": list(metric_records_by_identity.values()),
         "metric_sources": metric_sources,
-        "blocking_diagnostics": [
-            *selection_diagnostics,
-            *resolved_diagnostics,
-            *manifest_diagnostics,
-            *table_diagnostics,
-        ],
+        "blocking_diagnostics": blocking_diagnostics,
         "pending_tasks": pending_tasks,
         "skipped_tasks": skipped_tasks,
         "warnings": warnings,
         "unbound_required_data_tasks": unbound_tasks,
         "unbound_required_evidence_tasks": unbound_evidence_tasks,
-        "route_required": bool(
-            pending_tasks
-            or unbound_tasks
-            or unbound_evidence_tasks
-            or selection_diagnostics
-            or resolved_diagnostics
-            or manifest_diagnostics
-            or table_diagnostics
-        ),
+        "technical_repair_required": technical_repair_required,
+        "scientific_route_required": scientific_route_required,
+        # Kept as a compatibility aggregate for older consumers. New code
+        # must use the two explicit fields above to choose a route.
+        "route_required": bool(technical_repair_required or scientific_route_required),
     }
 
 

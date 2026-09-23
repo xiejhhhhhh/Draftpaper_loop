@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_binding_receipt.v1",
+  "type": "object",
+  "required": ["schema_version", "receipt_id", "packet_id", "packet_sha256", "bindings", "status", "receipt_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_binding_receipt.v1"},
+    "receipt_id": {"type": "string"},
+    "packet_id": {"type": "string"},
+    "packet_sha256": {"type": "string"},
+    "project_id": {"type": ["string", "null"]},
+    "bindings": {"type": "array", "minItems": 1},
+    "status": {"const": "applied"},
+    "receipt_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

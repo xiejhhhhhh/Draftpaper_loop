@@ -374,6 +374,13 @@ def audit_project_capabilities(project: str | Path) -> dict[str, Any]:
         }
         for item in core_unresolved
     ]
+    from .binding_merge import merge_binding_records
+
+    bindings = merge_binding_records(
+        bindings_payload.get("bindings") or [],
+        bindings,
+        producer="project_capability_audit",
+    )
     bindings_payload.update({"status": "written", "generated_at": utc_now(), "bindings": bindings})
     report = {
         "status": "written",

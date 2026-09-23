@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.manuscript_scientific_surface.v1",
+  "type": "object",
+  "required": ["schema_version", "surface_sha256", "artifacts"],
+  "properties": {
+    "schema_version": {"const": "dpl.manuscript_scientific_surface.v1"},
+    "surface_sha256": {"type": "string"},
+    "artifacts": {"type": "array"}
+  },
+  "additionalProperties": true
+}

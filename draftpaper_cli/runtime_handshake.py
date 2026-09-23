@@ -22,6 +22,7 @@ RUNTIME_PREFLIGHT = ".draftpaper/runtime_preflight.json"
 SCHEMA_VERSION = "dpl.runtime_lock.v1"
 IDENTITY_FIELDS = (
     "source_commit",
+    "source_tree_sha256",
     "distribution_version",
     "python_version",
     "command_registry_sha256",
@@ -81,6 +82,28 @@ def _resource_hash(relative: str) -> str | None:
     return _sha256_file(path)
 
 
+def _source_tree_hash() -> str:
+    """Hash editable framework source without crawling project data or caches."""
+    package_root = Path(__file__).resolve().parent
+    rows: list[tuple[str, str]] = []
+    excluded = {"__pycache__", ".pytest_cache", "tests", "data", "cache", "caches"}
+    suffixes = {".py", ".json", ".yaml", ".yml", ".toml", ".md"}
+    for path in sorted(package_root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in suffixes:
+            continue
+        try:
+            relative = path.relative_to(package_root).as_posix()
+            if any(part in excluded for part in Path(relative).parts):
+                continue
+            digest = _sha256_file(path)
+        except OSError:
+            continue
+        if digest:
+            rows.append((relative, digest))
+    payload = "\n".join(f"{relative}\0{digest}" for relative, digest in rows).encode("utf-8")
+    return _sha256_bytes(payload)
+
+
 def _skill_copy_parity(root: Path) -> str:
     canonical = Path(__file__).resolve().parent / "resources" / "draftpaper_workflow" / "SKILL.md"
     if not canonical.is_file():
@@ -120,6 +143,7 @@ def runtime_identity() -> dict[str, Any]:
         "observed_at": utc_now(),
         "source_root": str(root),
         "source_commit": _git_commit(root),
+        "source_tree_sha256": _source_tree_hash(),
         "distribution_version": distribution_version,
         "python_version": platform.python_version(),
         "python_executable": str(Path(sys.executable).resolve()),

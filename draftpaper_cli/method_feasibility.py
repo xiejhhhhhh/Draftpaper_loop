@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .data_contracts import assess_role_coverage, normalize_roles, read_json
+from .data_contracts import _discipline_extensions, assess_role_coverage, normalize_roles, read_json
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
 from .project_state import load_project, update_stage_status
@@ -38,7 +38,9 @@ def assess_method_feasibility(project: str | Path) -> dict[str, Any]:
     available_roles = normalize_roles((data_contract or {}).get("available_roles") or [])
     if isinstance(role_coverage, dict):
         available_roles = list(dict.fromkeys(available_roles + normalize_roles(role_coverage.get("available_roles") or [])))
-    coverage = assess_role_coverage(required_roles, available_roles)
+    acquisition = read_json(state.path / "data" / "data_acquisition_plan.json", {})
+    role_aliases, _ = _discipline_extensions(acquisition)
+    coverage = assess_role_coverage(required_roles, available_roles, role_aliases=role_aliases)
 
     method_families = [str(item) for item in (code_plan.get("method_families") or []) if str(item).strip()] if isinstance(code_plan, dict) else []
     validation_checks = [str(item) for item in (code_plan.get("validation_checks") or []) if str(item).strip()] if isinstance(code_plan, dict) else []

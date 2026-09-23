@@ -2,10 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "dpl.runtime_lock.v1",
   "type": "object",
-  "required": ["schema_version", "source_commit", "distribution_version", "command_registry_sha256", "skill_sha256", "plugin_catalog_hash"],
+  "required": ["schema_version", "source_commit", "source_tree_sha256", "distribution_version", "command_registry_sha256", "skill_sha256", "plugin_catalog_hash"],
   "properties": {
     "schema_version": {"const": "dpl.runtime_lock.v1"},
     "source_commit": {"type": ["string", "null"]},
+    "source_tree_sha256": {"type": "string"},
     "distribution_version": {"type": "string"},
     "python_version": {"type": "string"},
     "command_registry_sha256": {"type": ["string", "null"]},

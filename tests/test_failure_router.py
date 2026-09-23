@@ -81,3 +81,14 @@ def test_checkpoint_cli_output_leads_with_the_readable_page_and_defers_the_audit
     assert list(compact)[0] == "primary_human_review_html"
     assert compact["primary_human_review_html"] == decision
     assert list(compact)[-1] == "technical_audit_html"
+
+
+def test_evidence_failure_router_counts_one_attempt_for_many_rows() -> None:
+    from draftpaper_cli.evidence_repair_router import route_evidence_failures
+
+    report = route_evidence_failures([
+        {"code": "missing_run_identity", "detail_zh": "row 1"},
+        {"code": "missing_run_identity", "detail_zh": "row 2"},
+    ])
+    assert report["loop_guard"]["same_failure_class_count"] == 1
+    assert report["loop_guard"]["stop_and_report"] is False

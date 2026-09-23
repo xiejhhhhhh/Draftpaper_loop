@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .artifact_identity import compute_artifact_identity
-from .state_kernel import atomic_write_json
+from .state_kernel import atomic_write_json, file_lock
 
 
 BUNDLE_SCHEMA = "dpl.run_evidence_bundle.v1"
@@ -65,6 +65,38 @@ def _paths(values: Iterable[Any]) -> list[str]:
     return result
 
 
+def _input_entries(run_manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Normalize input-artifact spellings used by older producers."""
+    entries: list[dict[str, Any]] = []
+    for field in ("input_artifacts", "input_files", "input_data"):
+        raw = run_manifest.get(field)
+        if raw in (None, "", []):
+            continue
+        values = raw if isinstance(raw, list) else [raw]
+        if isinstance(raw, Mapping) and not raw.get("path"):
+            values = [{"path": value, "role": key} for key, value in raw.items()]
+        for value in values:
+            if isinstance(value, Mapping):
+                path = value.get("path") or value.get("file") or value.get("relative_path")
+                item = dict(value)
+            else:
+                path = value
+                item = {}
+            if path not in (None, ""):
+                item["path"] = path
+                item.setdefault("declared_by", field)
+                entries.append(item)
+    unique: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in entries:
+        raw_path = str(item.get("path") or "").replace("\\", "/").strip()
+        if not raw_path or raw_path in seen:
+            continue
+        seen.add(raw_path)
+        unique.append(item)
+    return unique
+
+
 def _artifact_list(root: Path, paths: Iterable[Any], *, role: str) -> list[dict[str, Any]]:
     artifacts: list[dict[str, Any]] = []
     for raw in _paths(paths):
@@ -81,6 +113,30 @@ def _artifact_list(root: Path, paths: Iterable[Any], *, role: str) -> list[dict[
     return artifacts
 
 
+def _input_artifact_list(root: Path, entries: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    artifacts: list[dict[str, Any]] = []
+    for item in entries:
+        raw = item.get("path")
+        relative = _safe_relative(root, raw)
+        base = {
+            "path": str(raw or ""),
+            "role": str(item.get("role") or "input"),
+            "declared_by": item.get("declared_by"),
+        }
+        if not relative:
+            base["status"] = "invalid_path"
+            artifacts.append(base)
+            continue
+        path = root / relative
+        if not path.is_file():
+            base.update({"path": relative, "status": "missing"})
+            artifacts.append(base)
+            continue
+        base.update({"path": relative, "status": "present", "identity": compute_artifact_identity(path, relative)})
+        artifacts.append(base)
+    return artifacts
+
+
 def _transaction_id(run_manifest: Mapping[str, Any], *, run_id: str) -> str:
     value = str(
         run_manifest.get("run_transaction_id")
@@ -93,7 +149,14 @@ def _transaction_id(run_manifest: Mapping[str, Any], *, run_id: str) -> str:
 
 
 def _bundle_hash(payload: Mapping[str, Any]) -> str:
-    stable = {key: value for key, value in payload.items() if key not in {"generated_at", "bundle_sha256"}}
+    # Storage paths and compatibility projection fields are derived after the
+    # content hash is chosen.  Including them would make an otherwise
+    # immutable bundle fail its own digest check after publication.
+    stable = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"generated_at", "bundle_sha256", "bundle_path", "active_pointer_path"}
+    }
     return hashlib.sha256(json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
@@ -112,14 +175,14 @@ def build_run_evidence_bundle(
     run_id = str(run_manifest.get("run_id") or run_manifest.get("execution_id") or "").strip()
     transaction_id = _transaction_id(run_manifest, run_id=run_id)
     outputs = run_manifest.get("output_files") or run_manifest.get("declared_outputs") or run_manifest.get("tables_generated") or []
-    inputs = run_manifest.get("input_artifacts") or run_manifest.get("input_files") or []
+    inputs = _input_entries(run_manifest)
     output_paths = [
         path
         for path in _paths(outputs)
         if path.replace("\\", "/").lstrip("./") not in _DERIVED_SELF_REFERENTIAL_OUTPUTS
     ]
     output_artifacts = _artifact_list(root, output_paths, role="output")
-    input_artifacts = _artifact_list(root, inputs, role="input")
+    input_artifacts = _input_artifact_list(root, inputs)
     missing_outputs = [item for item in output_artifacts if item.get("status") != "present"]
     metric_status = str((metric_identity or {}).get("status") or "not_registered")
     count_status = str((count_identity or {}).get("status") or "not_registered")
@@ -169,41 +232,68 @@ def build_run_evidence_bundle(
     return payload
 
 
-def publish_run_evidence_bundle(project: str | Path, bundle: Mapping[str, Any]) -> dict[str, Any]:
+def publish_run_evidence_bundle(
+    project: str | Path,
+    bundle: Mapping[str, Any],
+    *,
+    expected_active_bundle_sha256: str | None = None,
+) -> dict[str, Any]:
     """Write a bundle and atomically promote it only when it is validated."""
 
     root = Path(project).expanduser().resolve(strict=True)
-    transaction_id = str(bundle.get("run_transaction_id") or "unknown-run")
-    safe_id = hashlib.sha256(transaction_id.encode("utf-8")).hexdigest()[:24]
-    path = root / BUNDLE_DIR / f"{safe_id}.json"
-    payload = dict(bundle)
-    payload["bundle_path"] = path.relative_to(root).as_posix()
-    atomic_write_json(path, payload)
-    atomic_write_json(root / LATEST_BUNDLE, payload)
-    if str(payload.get("status")) == "validated":
+    lock_path = root / ".draftpaper" / "evidence_bundle_publish.lock"
+    with file_lock(lock_path):
+        payload = dict(bundle)
+        bundle_sha = str(payload.get("bundle_sha256") or "").strip()
+        if not bundle_sha:
+            bundle_sha = _bundle_hash(payload)
+            payload["bundle_sha256"] = bundle_sha
+        if _bundle_hash(payload) != bundle_sha:
+            raise ValueError("Evidence bundle content digest is invalid.")
         previous = _read_json(root / ACTIVE_POINTER)
-        if previous and previous.get("bundle_sha256") != payload.get("bundle_sha256"):
-            previous_receipt = {
-                "schema_version": BUNDLE_SCHEMA,
-                "status": "superseded",
-                "superseded_by": payload.get("bundle_sha256"),
-                "previous_bundle_sha256": previous.get("bundle_sha256"),
-                "previous_bundle_path": previous.get("bundle_path"),
+        previous_sha = str(previous.get("bundle_sha256") or "").strip()
+        if expected_active_bundle_sha256 is not None and previous_sha != str(expected_active_bundle_sha256).strip():
+            raise ValueError(
+                "The active bundle changed since the expected baseline; reload the active pointer before publishing."
+            )
+        # A transaction can produce validated, candidate, and failed attempts.
+        # Its transaction ID is lineage metadata, not a storage key.
+        path = root / BUNDLE_DIR / f"{bundle_sha}.json"
+        payload["bundle_path"] = path.relative_to(root).as_posix()
+        existing = _read_json(path)
+        if existing:
+            if existing.get("bundle_sha256") != bundle_sha or _bundle_hash(existing) != bundle_sha:
+                raise ValueError("Evidence bundle hash collision or corrupted bundle path.")
+            # Do not rewrite an existing immutable bundle when only audit time
+            # metadata changed for the same semantic content.
+            payload = dict(existing)
+        else:
+            atomic_write_json(path, payload)
+        # Compatibility projection only; stable readers follow bundle_path/hash.
+        atomic_write_json(root / LATEST_BUNDLE, payload)
+        if str(payload.get("status")) == "validated":
+            if previous and previous.get("bundle_sha256") != payload.get("bundle_sha256"):
+                previous_receipt = {
+                    "schema_version": BUNDLE_SCHEMA,
+                    "status": "superseded",
+                    "superseded_by": payload.get("bundle_sha256"),
+                    "previous_bundle_sha256": previous.get("bundle_sha256"),
+                    "previous_bundle_path": previous.get("bundle_path"),
+                }
+                atomic_write_json(root / BUNDLE_DIR / f"{previous.get('bundle_sha256', 'unknown')[:24]}-superseded.json", previous_receipt)
+            pointer = {
+                "schema_version": "dpl.active_run_evidence_pointer.v1",
+                "status": "active",
+                "run_transaction_id": payload.get("run_transaction_id"),
+                "run_id": payload.get("run_id"),
+                "bundle_path": payload.get("bundle_path"),
+                "bundle_sha256": payload.get("bundle_sha256"),
             }
-            atomic_write_json(root / BUNDLE_DIR / f"{previous.get('bundle_sha256', 'unknown')[:24]}-superseded.json", previous_receipt)
-        pointer = {
-            "schema_version": "dpl.active_run_evidence_pointer.v1",
-            "status": "active",
-            "run_transaction_id": payload.get("run_transaction_id"),
-            "run_id": payload.get("run_id"),
-            "bundle_path": payload.get("bundle_path"),
-            "bundle_sha256": payload.get("bundle_sha256"),
-        }
-        atomic_write_json(root / ACTIVE_POINTER, pointer)
-        payload["active_pointer_path"] = ACTIVE_POINTER
-    else:
-        payload["active_pointer_path"] = None
-    return payload
+            atomic_write_json(root / ACTIVE_POINTER, pointer)
+            payload["active_pointer_path"] = ACTIVE_POINTER
+        else:
+            payload["active_pointer_path"] = None
+        return payload
 
 
 def load_active_run_evidence_bundle(project: str | Path) -> dict[str, Any]:

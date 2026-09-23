@@ -37,7 +37,22 @@ MANAGED_STATE_ARTIFACTS = {
     "project.json",
     "project.yaml",
     "project_system_of_record.json",
+    "project_passport.yaml",
+    "artifact_ledger.jsonl",
+    "checkpoint_ledger.jsonl",
+    "integrity_ledger.jsonl",
+    "transaction_ledger.jsonl",
+    "token_ledger.jsonl",
+    "writing/scientific_evidence_registry.json",
 }
+MANAGED_STATE_PATH_PREFIXES = (
+    "results/evidence_snapshots/",
+    "results/run_evidence_bundles/",
+    "results/evidence_binding_receipts/",
+    "review/evidence_bindings/",
+    "review/revision_reconciliation/",
+    "quality_checks/blind_reviews/",
+)
 
 
 def _managed_change_metadata(root: Path) -> dict[str, dict[str, Any]]:
@@ -77,6 +92,11 @@ def _is_managed_state_artifact(path: str) -> bool:
     normalized = str(path or "").replace("\\", "/")
     return (
         normalized in MANAGED_STATE_ARTIFACTS
+        or normalized in {
+            "results/promoted_evidence_snapshot.json",
+            "results/evidence_snapshot_reopen_report.json",
+        }
+        or normalized.startswith(MANAGED_STATE_PATH_PREFIXES)
         or normalized.endswith("/stage_manifest.json")
         or normalized.startswith("stage_manifests/")
     )
@@ -194,26 +214,52 @@ def detect_artifact_drift(project: str | Path) -> dict[str, Any]:
                 "drift_kind": "added_artifact" if role != "unknown" else "unresolved_artifact",
             })
 
+    meaningful_changes = [
+        *[item for item in changed if item.get("drift_kind") != "byte_only_drift"],
+        *missing,
+        *added,
+    ]
+    # An unregistered file is useful evidence for the next reconciliation, but
+    # it is not the same failure mode as changing a previously accepted input.
+    # Keep both facts visible: callers may continue safe diagnostics while the
+    # release gate still sees the pending addition.
+    hard_reconciliation_items = [
+        *[item for item in changed if item.get("drift_kind") != "byte_only_drift"],
+        *missing,
+    ]
     source_stages = sorted(
         {
             item["stage"]
-            for item in [*changed, *missing, *added]
+            for item in meaningful_changes
             if item.get("stage") not in {"passport"} and item.get("drift_kind") not in {"byte_only_drift", "unresolved_artifact"}
         },
         key=_stage_sort_key,
     )
     drift_count = len(changed) + len(missing) + len(added)
+    byte_only_count = sum(1 for item in changed if item.get("drift_kind") == "byte_only_drift")
+    meaningful_drift_count = len(meaningful_changes)
     return {
-        "status": "drift_detected" if drift_count else "clean",
+        "status": (
+            "drift_detected"
+            if meaningful_drift_count
+            else "byte_only_drift"
+            if byte_only_count
+            else "clean"
+        ),
         "project_path": str(project_path),
         "drift_count": drift_count,
+        "meaningful_drift_count": meaningful_drift_count,
+        "byte_only_count": byte_only_count,
+        "requires_reconciliation": bool(meaningful_drift_count),
+        "hard_reconciliation_required": bool(hard_reconciliation_items),
+        "pending_external_artifacts": added,
         "changed_artifacts": changed,
         "missing_artifacts": missing,
         "added_artifacts": added,
         "source_stages": source_stages,
         "recommended_command": (
             f"python -m draftpaper_cli.cli sync-artifact-stale --project \"{project_path}\""
-            if drift_count else None
+            if meaningful_drift_count else None
         ),
     }
 

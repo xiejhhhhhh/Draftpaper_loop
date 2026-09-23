@@ -376,3 +376,23 @@ def test_new_method_family_needs_semantic_signature_not_one_generic_word(tmp_pat
 
     assert result["decision"] == "project_implementation_required"
     assert report["project_method_implementation_required"] == ["method:fig:transition_population_analysis"]
+
+
+def test_audit_and_registry_assessment_preserve_existing_local_binding(tmp_path) -> None:
+    from draftpaper_cli.project_capability_audit import audit_project_capabilities
+    from draftpaper_cli.research_capabilities import assess_plugin_sufficiency, resolve_research_capabilities
+
+    project = create_project(root=tmp_path, idea="Local binding order", field="astronomy").path
+    resolve_research_capabilities(project)
+    binding_path = project / "research_plan" / "plugin_binding_plan.json"
+    binding_path.write_text(json.dumps({"bindings": [{
+        "requirement_id": "method:figure_01:baseline_model",
+        "kind": "method",
+        "binding_scope": "project_local",
+        "plugin_id": "project_local:baseline_model",
+        "state": "covered_project_local",
+    }]}), encoding="utf-8")
+    assess_plugin_sufficiency(project)
+    audit_project_capabilities(project)
+    bindings = json.loads(binding_path.read_text(encoding="utf-8"))["bindings"]
+    assert any(item.get("plugin_id") == "project_local:baseline_model" for item in bindings)

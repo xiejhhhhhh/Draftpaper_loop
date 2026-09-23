@@ -44,7 +44,13 @@ def create_scientific_baseline(
     registry_id: str | None = None,
 ) -> dict[str, Any]:
     root = project_root(project)
-    parent = load_active_baseline(root)
+    parent_state = read_active_baseline_state(root)
+    if parent_state["status"] not in {"valid", "not_initialized"}:
+        raise ScientificBaselineError(
+            "Cannot create a new scientific baseline while the active baseline is "
+            f"{parent_state['status']}: {parent_state.get('reason')}."
+        )
+    parent = parent_state.get("baseline")
     parent_id = str(parent.get("baseline_id")) if parent else None
     registry = load_fact_registry(root, registry_id) if registry_id else load_fact_registry(root)
     if facts is not None:
@@ -120,31 +126,98 @@ def create_scientific_baseline(
 
 
 def load_active_baseline(project: str | Path) -> dict[str, Any] | None:
+    """Return the active baseline only when its pointer and content are valid.
+
+    Callers that need to distinguish a first-time project from an integrity
+    failure should use :func:`read_active_baseline_state`.  Keeping this
+    compatibility wrapper avoids changing older integrations while removing
+    the dangerous ``corrupt == not initialized`` ambiguity from new gates.
+    """
+    state = read_active_baseline_state(project)
+    return state.get("baseline") if state.get("status") == "valid" else None
+
+
+def read_active_baseline_state(project: str | Path) -> dict[str, Any]:
+    """Read the active baseline with an explicit integrity state.
+
+    A missing baseline is seedable only when the project has never created a
+    baseline.  A missing, malformed, or tampered pointer is an integrity
+    failure and must never be silently reinitialized.
+    """
     root = project_root(project)
     pointer_path = root / ACTIVE_POINTER
     if not pointer_path.is_file():
-        return None
+        history = root / BASELINE_DIR
+        has_history = history.is_dir() and any(history.glob("*.json"))
+        return {
+            "status": "missing" if has_history else "not_initialized",
+            "project_path": str(root),
+            "pointer_path": str(pointer_path.resolve()),
+            "baseline": None,
+            "reason": "active_pointer_missing",
+        }
     try:
         pointer = json.loads(pointer_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        return {
+            "status": "corrupt",
+            "project_path": str(root),
+            "pointer_path": str(pointer_path.resolve()),
+            "baseline": None,
+            "reason": "active_pointer_invalid",
+            "error": str(exc),
+        }
+    try:
         path = (root / str(pointer.get("path") or "")).resolve()
         path.relative_to(root.resolve())
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(payload, dict) or payload.get("schema_version") != BASELINE_SCHEMA:
-        return None
-    if payload.get("baseline_sha256") != _hash({key: value for key, value in payload.items() if key != "baseline_sha256"}):
-        return None
-    if pointer.get("baseline_id") != payload.get("baseline_id") or pointer.get("baseline_sha256") != payload.get("baseline_sha256"):
-        return None
-    return payload
+    except (OSError, ValueError, RuntimeError) as exc:
+        return {
+            "status": "unavailable",
+            "project_path": str(root),
+            "pointer_path": str(pointer_path.resolve()),
+            "baseline": None,
+            "reason": "active_baseline_unavailable",
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        status = "corrupt"
+        reason = "baseline_not_object"
+    elif payload.get("schema_version") != BASELINE_SCHEMA:
+        status = "unsupported_schema"
+        reason = "baseline_schema_mismatch"
+    elif payload.get("baseline_sha256") != _hash({key: value for key, value in payload.items() if key != "baseline_sha256"}):
+        status = "corrupt"
+        reason = "baseline_hash_mismatch"
+    elif pointer.get("baseline_id") != payload.get("baseline_id") or pointer.get("baseline_sha256") != payload.get("baseline_sha256"):
+        status = "corrupt"
+        reason = "pointer_payload_mismatch"
+    else:
+        status = "valid"
+        reason = "active_baseline_valid"
+    return {
+        "status": status,
+        "project_path": str(root),
+        "pointer_path": str(pointer_path.resolve()),
+        "baseline": payload if status == "valid" else None,
+        "reason": reason,
+    }
+
+
+def read_baseline_state(project: str | Path) -> dict[str, Any]:
+    """Public contract name for the active-baseline state reader."""
+    return read_active_baseline_state(project)
 
 
 def show_scientific_baseline(project: str | Path, *, baseline_id: str | None = None) -> dict[str, Any]:
     root = project_root(project)
-    payload = load_active_baseline(root) if not baseline_id else _load_baseline(root, baseline_id)
+    state = read_active_baseline_state(root) if not baseline_id else None
+    if baseline_id:
+        payload = _load_baseline(root, baseline_id)
+    else:
+        payload = state.get("baseline") if state else None
     if not payload:
-        return {"status": "not_found", "project_path": str(root)}
+        return {"status": state.get("status", "not_found") if state else "not_found", "project_path": str(root)}
     path = root / BASELINE_DIR / f"{payload['baseline_id']}.json"
     return {"status": "passed", "project_path": str(root), "baseline": payload, "baseline_path": str(path.resolve()), "active": load_active_baseline(root) == payload}
 
@@ -207,4 +280,13 @@ def _identity_from_files(root: Path, paths: tuple[str, ...]) -> dict[str, Any]:
     return result
 
 
-__all__ = ["ACTIVE_POINTER", "BASELINE_SCHEMA", "ScientificBaselineError", "create_scientific_baseline", "load_active_baseline", "show_scientific_baseline"]
+__all__ = [
+    "ACTIVE_POINTER",
+    "BASELINE_SCHEMA",
+    "ScientificBaselineError",
+    "create_scientific_baseline",
+    "load_active_baseline",
+    "read_active_baseline_state",
+    "read_baseline_state",
+    "show_scientific_baseline",
+]

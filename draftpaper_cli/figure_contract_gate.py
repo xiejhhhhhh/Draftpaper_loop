@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .data_contracts import assess_role_coverage, normalize_roles, read_json
+from .data_contracts import _discipline_extensions, assess_role_coverage, normalize_roles, read_json
 from .figure_semantics import validate_figure_semantics
 from .html_utils import write_html_report
 from .project_scaffold import _write_json, utc_now
@@ -31,6 +31,8 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
     alignment = read_json(state.path / "results" / "storyboard_alignment_report.json", {})
     method_feasibility = read_json(state.path / "methods" / "method_feasibility_report.json", {})
     data_coverage = read_json(state.path / "data" / "data_role_coverage_report.json", {})
+    acquisition = read_json(state.path / "data" / "data_acquisition_plan.json", {})
+    role_aliases, _ = _discipline_extensions(acquisition)
     figure_metadata = read_json(state.path / "results" / "figure_metadata.json", {})
     run_manifest = read_json(state.path / "methods" / "run_manifest.yaml", {})
     semantic_annotations = read_json(state.path / "results" / "figure_semantic_annotations.json", {})
@@ -143,7 +145,7 @@ def assess_figure_contracts(project: str | Path, *, propagate_stage_state: bool 
             )
             if not is_derived_method_output_role(role)
         ]
-        coverage = assess_role_coverage(required_data, available_data_roles)
+        coverage = assess_role_coverage(required_data, available_data_roles, role_aliases=role_aliases)
         required_methods = [
             str(item)
             for item in (

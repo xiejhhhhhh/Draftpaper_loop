@@ -616,6 +616,22 @@ for _name in sorted(DECLARED_COMMAND_NAMES):
     )
 
 COMMAND_SPECS.update({
+    "assemble-latex": CommandSpec(
+        "assemble-latex",
+        "release_coordinator",
+        True,
+        "release",
+        "latex_assembly",
+        "assemble_latex",
+        (("project", "project"), ("compile_pdf", "compile_pdf"), ("purpose", "purpose")),
+        allowed_write_globs=(
+            "latex/**",
+            ".draftpaper/revision_previews/**",
+            "review/revision_reconciliation/**",
+            "references/supplemental_bibliography_merge_report.json",
+            *_COMMON_MANAGED_WRITES,
+        ),
+    ),
     "assess-figure-contracts": CommandSpec(
         "assess-figure-contracts",
         "evidence_coordinator",
@@ -988,7 +1004,7 @@ COMMAND_SPECS.update({
     "verify-next-action": CommandSpec("verify-next-action", "state_kernel", False, "state", "doctor", "verify_next_action", (("project", "project"),), "status_passed"),
     "rebuild-derived": CommandSpec("rebuild-derived", "state_kernel", False, "state", "doctor", "rebuild_derived", (("project", "project"), ("dry_run", "dry_run"))),
     "start": CommandSpec("start", "state_kernel", True, "state", "workflow_macros", "start_workflow", (("root", "root"), ("idea", "idea"), ("field", "field"), ("target_journal", "target_journal"))),
-    "continue": CommandSpec("continue", "state_kernel", True, "state", "workflow_macros", "continue_workflow", (("project", "project"),), allowed_write_globs=(".draftpaper/**", "review/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "continue": CommandSpec("continue", "state_kernel", True, "state", "workflow_macros", "continue_workflow", (("project", "project"),), allowed_write_globs=(".draftpaper/**", "review/**", "lineage/**", "results/promoted_evidence_snapshot.json", "core_evidence/core_evidence_report.json", *_COMMON_MANAGED_WRITES)),
     "extension-doctor": CommandSpec(
         "extension-doctor",
         "state_kernel",
@@ -1085,10 +1101,18 @@ COMMAND_SPECS.update({
     "show-stage-activity": CommandSpec("show-stage-activity", "state_kernel", False, "state", "stage_activity", "show_stage_activity", (("project", "project"), ("stage", "stage"))),
     "begin-managed-change": CommandSpec("begin-managed-change", "state_kernel", True, "state", "managed_change", "begin_managed_change", (("project", "project"), ("intent", "intent"), ("change_class", "change_class"), ("paths", "paths"), ("content_file", "content_file")), allowed_write_globs=(".draftpaper/**", *_COMMON_MANAGED_WRITES)),
     "apply-managed-change": CommandSpec("apply-managed-change", "state_kernel", True, "state", "managed_change", "apply_managed_change", (("project", "project"), ("packet_id", "packet_id"), ("packet_hash", "packet_hash")), allowed_write_globs=("idea/**", "research_plan/**", "references/**", "data/**", "methods/**", "code/**", "results/**", "writing/**", "latex/**", "review/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
-    "begin-revision-cycle": CommandSpec("begin-revision-cycle", "state_kernel", True, "state", "revision_cycle", "begin_revision_cycle", (("project", "project"), ("reason", "reason"), ("requested_changes", "requested_changes"), ("allowed_change_classes", "allowed_change_classes"), ("protected_facts", "protected_facts"), ("expected_artifacts", "expected_artifacts"), ("started_by", "started_by"), ("baseline_id", "baseline_id")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "begin-revision-cycle": CommandSpec("begin-revision-cycle", "state_kernel", True, "state", "revision_cycle", "begin_revision_cycle", (("project", "project"), ("reason", "reason"), ("requested_changes", "requested_changes"), ("allowed_change_classes", "allowed_change_classes"), ("protected_facts", "protected_facts"), ("expected_artifacts", "expected_artifacts"), ("started_by", "started_by"), ("baseline_id", "baseline_id"), ("mode", "mode")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "set-revision-mode": CommandSpec("set-revision-mode", "state_kernel", True, "state", "revision_cycle", "set_revision_mode", (("project", "project"), ("mode", "mode")), protected_action=True, manual_only=True, allowed_write_globs=(".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "prepare-revision-reconciliation": CommandSpec("prepare-revision-reconciliation", "state_kernel", True, "state", "revision_cycle", "prepare_revision_reconciliation", (("project", "project"),), allowed_write_globs=("review/revision_reconciliation/**", ".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "apply-revision-reconciliation": CommandSpec("apply-revision-reconciliation", "state_kernel", True, "state", "revision_cycle", "apply_revision_reconciliation", (("project", "project"), ("reconciliation_id", "reconciliation_id"), ("packet_hash", "packet_hash"), ("decision_receipt_id", "decision_receipt_id")), protected_action=True, manual_only=True, allowed_write_globs=("review/revision_reconciliation/**", ".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "commit-revision-candidate": CommandSpec("commit-revision-candidate", "state_kernel", True, "release", "revision_cycle", "commit_revision_candidate", (("project", "project"), ("candidate_id", "candidate_id"), ("expected_baseline_id", "expected_baseline_id"), ("decision_receipt_id", "decision_receipt_id")), protected_action=True, manual_only=True, allowed_write_globs=("review/revision_reconciliation/**", ".draftpaper/**", "lineage/**", *_COMMON_MANAGED_WRITES)),
+    "inspect-evidence-bindings": CommandSpec("inspect-evidence-bindings", "results_coordinator", False, "results", "evidence_binding", "inspect_evidence_bindings", (("project", "project"),)),
+    "prepare-evidence-rebind": CommandSpec("prepare-evidence-rebind", "results_coordinator", True, "results", "evidence_binding", "prepare_evidence_rebind", (("project", "project"), ("binding_file", "binding_file")), allowed_write_globs=("review/evidence_bindings/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
+    "apply-evidence-rebind": CommandSpec("apply-evidence-rebind", "results_coordinator", True, "results", "evidence_binding", "apply_evidence_rebind", (("project", "project"), ("packet_path", "packet_path"), ("packet_hash", "packet_hash")), protected_action=True, manual_only=True, allowed_write_globs=("results/evidence_binding_receipts/**", "review/evidence_bindings/**", "writing/scientific_evidence_registry.json", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
     "audit-longitudinal-consistency": CommandSpec("audit-longitudinal-consistency", "state_kernel", True, "quality_checks", "longitudinal_consistency", "audit_longitudinal_consistency", (("project", "project"), ("output_root", "output_root")), allowed_write_globs=("review/consistency/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
     "reconcile-project-drift": CommandSpec("reconcile-project-drift", "state_kernel", True, "state", "stale_sync", "reconcile_project_drift", (("project", "project"), ("route", "route"), ("reconciliation_id", "reconciliation_id")), protected_action=True, manual_only=True, allowed_write_globs=("review/drift/**", ".draftpaper/**", *_COMMON_MANAGED_WRITES)),
     "show-scientific-baseline": CommandSpec("show-scientific-baseline", "state_kernel", False, "state", "scientific_baseline", "show_scientific_baseline", (("project", "project"), ("baseline_id", "baseline_id"))),
+    "audit-evidence-governance": CommandSpec("audit-evidence-governance", "state_kernel", False, "quality_checks", "governance_contract", "evaluate_governance", (("project", "project"), ("purpose", "purpose"), ("candidate_id", "candidate_id"), ("expected_baseline_id", "expected_baseline_id"), ("html_output", "html_output"), ("language", "language"), ("self_test_report", "self_test_report"))),
 })
 
 

@@ -9,7 +9,8 @@
     "decision_actor_type": {"enum": ["none", "system", "agent", "user"]},
     "risk_class": {"enum": ["C0", "C1", "C2", "C3"]},
     "stage_activity_bundle": {"type": "object"},
-    "baseline_refs": {"type": "object"}
+    "baseline_refs": {"type": "object"},
+    "revision_candidate_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
   },
   "additionalProperties": true
 }

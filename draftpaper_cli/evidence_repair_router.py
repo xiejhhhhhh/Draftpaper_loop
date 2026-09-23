@@ -48,8 +48,18 @@ def route_evidence_failures(
             detail = code
         rows.append({"code": code, "detail_zh": detail, "repair_layer": classify_evidence_failure(code)})
     rows.sort(key=lambda item: (_ORDER.index(item["repair_layer"]), item["code"]))
-    counts = Counter(str(item) for item in failure_history if str(item) in _ORDER)
-    counts.update(item["repair_layer"] for item in rows)
+    # A failure report is one repair attempt, even when it contains thousands
+    # of row-level diagnostics.  Count completed attempts from history and add
+    # at most one occurrence per layer for the current batch.
+    counts = Counter()
+    for item in failure_history:
+        if isinstance(item, dict):
+            layer = str(item.get("repair_layer") or item.get("failure_class") or item.get("code") or "")
+        else:
+            layer = str(item)
+        if layer in _ORDER:
+            counts[layer] += 1
+    counts.update({item["repair_layer"] for item in rows})
     first = rows[0]["repair_layer"] if rows else None
     change_class = {
         "producer": "evidence_repair",
@@ -75,6 +85,7 @@ def route_evidence_failures(
         "repair_order": list(_ORDER),
         "loop_guard": {
             "same_failure_class_count": max(counts.values(), default=0),
+            "current_batch_failure_class_count": len({item["repair_layer"] for item in rows}),
             "repeated_layers": repeated_layers,
             "stop_and_report": bool(repeated_layers),
             "root_cause_report_required": bool(repeated_layers),

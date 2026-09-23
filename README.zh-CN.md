@@ -71,6 +71,8 @@ Draftpaper-loop 把论文写作组织成证据优先的科研 loop：先确认�
 
 **证据身份与可读阶段审查。** 当前框架会在 Result Support 或 checkpoint 审查前验证 `MetricEvidence`、`CountEvidence`、`AggregationContract`、`PrimaryMetricContract`、`RunEvidenceBundle` 和 `FigureCodeTrace v2`。`dpl.checkpoint_summary.v6` 将作者可读的 `HumanDecisionBrief` 与 JSON-first 完整审计分离，记录 scientific/audit/presentation 三类指纹，将 StageActivity 限定在当前 checkpoint window，并把主图与决定陈述绑定。系统先核对身份再比较数值；不同 cohort、run、模型、验证设计或分母会被标记为不可直接比较，不会被静默合并。
 
+**证据治理与延后对账。** 修订周期现在把可信科学基线、实时工作区和每一代候选版本分开保存。`author_edit` 允许作者先连续修改正文、图表、代码和方法，再统一进行一次证据对账；`live` 模式则保留即时的上游路由。系统会发现声明科研目录中的编辑器直接修改，同时把生成回执和缓存排除在科研漂移集合之外。绑定 packet 会通过 JSON Pointer 或可审计的 CSV/TSV 唯一键行选择器读取真实来源值；只读命令 `audit-evidence-governance` 可生成结构化治理报告和可选的中英文 HTML。LaTeX/PDF 预览会明确标记为未对账草稿，不能直接成为发布版本。严格晋升要求候选哈希、父基线与不可变的 C3 用户确认回执精确匹配；科研语义变化必须先经过同一候选的用户确认，再完成对账。基线损坏、覆盖不完整、绑定过期或缺少治理自检时会阻止发布，但不会删除作者草稿。
+
 ### 从早期版本到当前框架
 
 - **v0.1-v0.13：论文项目与科研阶段地基。** 建立参考文献、期刊画像、research plan、方法/结果/讨论写作、artifact 追踪、Zotero、数据观察、科研绘图和阶段归属代码。

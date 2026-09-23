@@ -534,6 +534,12 @@ def build_section_evidence_pack(project: str | Path, section: str) -> dict[str, 
     for record in records:
         targets = {str(item).lower() for item in record.get("target_sections") or []}
         if not targets or normalized in targets:
+            # Keep Data focused on provenance and cohort counts; detailed audit,
+            # sensitivity, and reporting-unit outputs are consumed by Results/Discussion.
+            if normalized == "data":
+                source_artifact = str(record.get("source_artifact") or "")
+                if source_artifact not in {"results/result_manifest.yaml", "results/count_identity_report.json"}:
+                    continue
             selected_records.append(_pack_item(record, normalized))
     story_arc = narrative["figure_story_arc"].get("figure_groups") or []
     relevant_stories = []

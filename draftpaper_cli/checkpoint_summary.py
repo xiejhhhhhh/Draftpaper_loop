@@ -968,6 +968,18 @@ def write_stage_summary_v4(
         "revision_cycle_sha256": (cycle or {}).get("revision_cycle_sha256"),
     }
     summary["revision_cycle_id"] = (cycle or {}).get("revision_cycle_id")
+    summary["revision_candidate_sha256"] = (
+        cycle.get("candidate_packet_sha256")
+        if cycle
+        and cycle.get("status") == "open"
+        and cycle.get("reconciliation_status") in {"awaiting_decision", "reconciled"}
+        and cycle.get("candidate_packet_sha256")
+        and (
+            cycle.get("reconciliation_status") == "awaiting_decision"
+            or cycle.get("closed_candidate_generation") == cycle.get("candidate_generation")
+        )
+        else None
+    )
     summary["activity_summary_zh"] = activity.get("narrative_zh")
     summary["generated"] = activity.get("generated") or summary.get("generated") or []
     summary["modified"] = activity.get("modified") or summary.get("modified") or []

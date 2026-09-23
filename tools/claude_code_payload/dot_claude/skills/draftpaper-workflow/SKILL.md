@@ -26,34 +26,27 @@ mismatch stops the workflow; after an accepted runtime update, use
 
 ## Environment
 
-Python installation profiles do not include the complete paper-production
-toolchain. Before a publication run, use the read-only `doctor --target
-publication --json` check. On Windows, the repository's
-`tools/bootstrap_windows_environment.ps1 -Mode Check` reports the required
-Visual C++ x64 runtime, independent system Git, and private MiKTeX 25.12
-installation. After reviewing any remediation, run the explicit isolated
-verification command:
+Python profiles do not include the full paper-production toolchain. Before
+publication, run the read-only `doctor --target publication --json` check.
+On Windows, `tools/bootstrap_windows_environment.ps1 -Mode Check` reports
+the Visual C++ x64 runtime, system Git, and private MiKTeX 25.12. Review any
+remediation, then verify in an isolated output directory:
 
 ```powershell
 python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>
 ```
 
-This command is the authoritative smoke test for pypdf, XeLaTeX, pdfLaTeX,
-BibTeX, `kpsewhich`, resolved citations, and non-empty PDFs. It writes only to
-the requested output directory. Do not use it inside a real paper project;
-compile a separate temporary project through Draftpaper's formal LaTeX entry
-point when an end-to-end check is required. MinerU, GPU runtimes, Node.js,
-Java, and discipline-specific packages remain optional.
+This is the authoritative pypdf, XeLaTeX, pdfLaTeX, BibTeX, `kpsewhich`,
+citation, and non-empty-PDF smoke test. It writes only to the requested
+directory; never run it inside a real paper project. For end-to-end checks,
+compile a separate temporary project through Draftpaper's LaTeX entry point.
+MinerU, GPU runtimes, Node.js, Java, and discipline packages are optional.
 
-Use `requirements/runtime-constraints.txt` together with the selected extra on
-a handoff or clean-clone installation. `minimal` and `plotting` support Python
-3.10-3.12; `fulltext`, `research`, `publication`, `agent`, and `browser` use
-Python 3.11-3.12 because the vendored paper-fetch/PDF-Markdown runtime starts
-at Python 3.11. `research` is plotting plus fulltext; MCP is added only for
-the `agent` target. The browser extra is opt-in and does not install browser
-assets automatically. `config/environment.example` lists optional provider
-variables by name only; Doctor reports configuration state without exposing
-secret values.
+Use `requirements/runtime-constraints.txt` with the selected extra.
+`minimal`/`plotting` support Python 3.10-3.12; other extras require 3.11-3.12
+for vendored paper-fetch. `research` adds fulltext to plotting; `agent` adds
+MCP. Browser assets remain opt-in. Doctor reports optional provider-variable
+state without exposing secret values.
 
 ## Evidence and Literature
 
@@ -134,3 +127,13 @@ Use the CLI-owned sequence: `create-project`, `search-literature`,
 affected plan and writing. When results change, reopen core evidence and
 regenerate Results and downstream sections; use `status` to compute stale
 scope.
+
+## Evidence and Revision
+
+Use `prepare-evidence-rebind`/`apply-evidence-rebind` for legacy outputs;
+`author_edit` previews stay unreconciled until reconciliation. A semantic
+revision can be applied only after a C3 user-confirmation page displays the
+same frozen candidate SHA-256 and produces a candidate-bound receipt. Final
+promotion requires the exact candidate hash, parent baseline ID, and immutable
+user receipt ID; never hand-write a receipt or reuse one from an older
+candidate.

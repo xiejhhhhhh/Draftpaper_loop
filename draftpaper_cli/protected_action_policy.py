@@ -46,6 +46,7 @@ HUMAN_CHECKPOINT_POLICIES: dict[str, dict[str, str]] = {
     "apply-result-downgrade": _policy("scientific_route", "full", "result_route", "user_decision_receipt", "human_only", "C3"),
     "begin-revision-cycle": _policy("notification", "notification", "user_intent", "user_intent_receipt", "C1", "C0"),
     "checkpoint": _policy("notification", "none", "packet_build", "none", "system", "C0"),
+    "commit-revision-candidate": _policy("manuscript_release", "full", "release_identity", "user_decision_receipt", "human_only", "C3"),
     "configure-review-policy": _policy("operational_change", "compact", "authority_scope", "user_decision_receipt", "human_only", "C3"),
     "confirm-final-manuscript": _policy("manuscript_release", "full", "release_identity", "user_decision_receipt", "human_only", "C3"),
     "confirm-literature-corpus": _policy("literature_corpus", "compact", "literature_corpus_identity", "literature_confirmation_receipt", "human_only", "C2"),
@@ -66,6 +67,18 @@ HUMAN_CHECKPOINT_POLICIES: dict[str, dict[str, str]] = {
     "rollback-manuscript-completion": _policy("content_change", "compact", "completion_change_class", "operation_receipt", "C2_or_C3", "C2"),
     "rollback-manuscript-revision": _policy("content_change", "compact", "revision_change_class", "operation_receipt", "C1_or_C3", "C1"),
     "rollback-orphan-literature": _policy("operational_change", "compact", "active_work_impact", "operation_receipt", "C2_or_C3", "C2"),
+    "apply-evidence-rebind": _policy("operational_change", "compact", "binding_repair_scope", "evidence_binding_receipt", "human_only", "C3"),
+    "apply-revision-reconciliation": _policy("operational_change", "compact", "revision_reconciliation_scope", "reconciliation_receipt", "human_only", "C3"),
+    "set-revision-mode": _policy("operational_change", "compact", "revision_mode", "revision_mode_receipt", "human_only", "C3"),
+}
+
+# Keep the historical count stable for release audits. These rows are new
+# protected operations, not additional v0.41 human checkpoints.
+HISTORICAL_HUMAN_CHECKPOINT_COMMANDS = frozenset(HUMAN_CHECKPOINT_POLICIES) - {
+    "apply-evidence-rebind",
+    "apply-revision-reconciliation",
+    "set-revision-mode",
+    "commit-revision-candidate",
 }
 
 
@@ -140,7 +153,7 @@ def audit_human_checkpoint_policy(command_specs: Mapping[str, Any]) -> dict[str,
     return {
         "schema_version": POLICY_SCHEMA,
         "status": "passed" if not issues else "failed",
-        "historical_human_checkpoint_count": len(HUMAN_CHECKPOINT_POLICIES),
+        "historical_human_checkpoint_count": len(HISTORICAL_HUMAN_CHECKPOINT_COMMANDS),
         "rows": rows,
         "issues": issues,
     }
@@ -156,6 +169,7 @@ def audit_registered_human_checkpoint_policy() -> dict[str, Any]:
 
 __all__ = [
     "HUMAN_CHECKPOINT_POLICIES",
+    "HISTORICAL_HUMAN_CHECKPOINT_COMMANDS",
     "POLICY_SCHEMA",
     "audit_human_checkpoint_policy",
     "audit_registered_human_checkpoint_policy",

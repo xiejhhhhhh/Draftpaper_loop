@@ -94,8 +94,12 @@ def _sha(path: Path) -> str:
 
 
 def _project_license(root: Path) -> str:
-    match = re.search(r'^license\s*=\s*"([^"]+)"', (root / "pyproject.toml").read_text(encoding="utf-8"), re.MULTILINE)
-    return match.group(1) if match else ""
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^license\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    if match:
+        return match.group(1)
+    inline = re.search(r'^license\s*=\s*\{[^\n]*\btext\s*=\s*"([^"]+)"[^\n]*\}', text, re.MULTILINE)
+    return inline.group(1) if inline else ""
 
 
 def _actions_pinned(root: Path) -> bool:
@@ -405,7 +409,7 @@ def _build_release_manifest_local(repository: Path) -> dict[str, Any]:
             "c3_human_only": True,
             "semantic_continuity_receipt": "dpl.confirmation_continuity_receipt.v1",
             "immutable_baseline_schema": "dpl.scientific_baseline_bundle.v1",
-            "revision_cycle_schema": "dpl.revision_cycle.v1",
+            "revision_cycle_schema": "dpl.revision_cycle.v2",
             "fact_registry_schema": "dpl.canonical_fact_registry.v2",
         },
         "research_code_sources": {

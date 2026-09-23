@@ -425,11 +425,19 @@ def _check_manuscript_writing_quality(project_path: Path, issues: list[QualityIs
 def check_scientific_evidence_registry(project_path: str | Path) -> dict[str, Any]:
     """Validate scoped evidence and reject unresolved same-cohort conflicts."""
     registry = build_scientific_evidence_registry(project_path)
+    incomplete_binding_count = int(registry.get("incomplete_binding_count") or 0)
+    stale_receipt_count = int(registry.get("binding_receipt_stale_count") or 0)
+    invalid_receipt_count = int(registry.get("binding_receipt_invalid_count") or 0)
+    binding_blocked = bool(incomplete_binding_count or stale_receipt_count or invalid_receipt_count)
     return {
-        "status": "passed" if not registry.get("blocking_conflict_count") else "failed",
+        "status": "passed" if not registry.get("blocking_conflict_count") and not binding_blocked else "failed",
         "registry": EVIDENCE_REGISTRY_JSON,
         "record_count": registry.get("record_count", 0),
         "blocking_conflict_count": registry.get("blocking_conflict_count", 0),
+        "incomplete_binding_count": incomplete_binding_count,
+        "binding_receipt_stale_count": stale_receipt_count,
+        "binding_receipt_invalid_count": invalid_receipt_count,
+        "binding_blocked": binding_blocked,
         "conflicts": registry.get("conflicts") or [],
     }
 
@@ -441,6 +449,20 @@ def _check_scientific_evidence_registry(project_path: Path, issues: list[Quality
             "error",
             "scientific_evidence_conflict",
             f"Scientific evidence conflict must be resolved before publication: {item.get('code')}",
+            EVIDENCE_REGISTRY_JSON,
+        ))
+    if report.get("incomplete_binding_count"):
+        issues.append(QualityIssue(
+            "error",
+            "scientific_evidence_binding_incomplete",
+            "Scientific evidence contains records without a complete identity binding; prepare and apply an evidence rebind before release.",
+            EVIDENCE_REGISTRY_JSON,
+        ))
+    if report.get("binding_receipt_stale_count") or report.get("binding_receipt_invalid_count"):
+        issues.append(QualityIssue(
+            "error",
+            "scientific_evidence_binding_receipt_invalid",
+            "An evidence binding receipt is stale or invalid and cannot support a formal release.",
             EVIDENCE_REGISTRY_JSON,
         ))
     return report

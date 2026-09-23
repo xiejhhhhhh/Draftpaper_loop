@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_binding_packet.v1",
+  "type": "object",
+  "required": ["schema_version", "packet_id", "project_id", "bindings", "packet_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_binding_packet.v1"},
+    "packet_id": {"type": "string"},
+    "project_id": {"type": ["string", "null"]},
+    "source_input_sha256": {"type": "string"},
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source_artifact", "source_hash", "entity_role", "value"],
+        "properties": {
+          "evidence_id": {"type": "string"},
+          "source_artifact": {"type": "string"},
+          "source_hash": {"type": "string"},
+          "entity_role": {"type": "string"},
+          "value": {},
+          "source_locator": {"type": ["string", "null"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "packet_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

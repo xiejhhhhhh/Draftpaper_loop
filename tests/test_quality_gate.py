@@ -98,6 +98,55 @@ def prepared_assembled_project(tmp: str) -> Path:
         output_files=["results/tables/metrics.csv"] + [f"results/figures/result_figure_{index}.png" for index in range(1, 6)],
     )
     assess_result_validity(project.path)
+    # The assembled-project fixture represents a release-ready result and must
+    # carry the same identity binding contract enforced by the quality gate.
+    resolved_path = project.path / "results" / "resolved_result_evidence.json"
+    resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
+    primary_metric = dict(resolved.get("primary_metric") or {})
+    primary_metric.update({
+        "evidence_id": "fixture-primary-metric",
+        "estimand_id": "estimand:primary_f1",
+        "cohort_view_id": "cohort_view:main",
+        "analysis_spec_id": "analysis_spec:primary",
+        "run_id": "run:fixture-primary",
+        "sample_unit": "source",
+        "split_id": "test",
+        "split": "test",
+        "model_id": "model:primary",
+        "metric_dimension": "score",
+        "aggregation": "reported_scalar",
+    })
+    resolved["primary_metric"] = primary_metric
+    for record in resolved.get("evidence_records") or []:
+        if isinstance(record, dict):
+            record.update({
+                "estimand_id": "estimand:primary_f1",
+                "cohort_view_id": "cohort_view:main",
+                "analysis_spec_id": "analysis_spec:primary",
+                "sample_unit": "source",
+                "split_id": "test",
+                "split": "test",
+                "model_id": "model:primary",
+                "metric_dimension": "score",
+                "aggregation": "reported_scalar",
+            })
+    resolved_path.write_text(json.dumps(resolved), encoding="utf-8")
+    run_manifest_path = project.path / "methods" / "run_manifest.yaml"
+    run_manifest = json.loads(run_manifest_path.read_text(encoding="utf-8"))
+    for record in run_manifest.get("evidence_records") or []:
+        if isinstance(record, dict):
+            record.update({
+                "estimand_id": "estimand:primary_f1",
+                "cohort_view_id": "cohort_view:main",
+                "analysis_spec_id": "analysis_spec:primary",
+                "sample_unit": "source",
+                "split_id": "test",
+                "split": "test",
+                "model_id": "model:primary",
+                "metric_dimension": "score",
+                "aggregation": "reported_scalar",
+            })
+    run_manifest_path.write_text(json.dumps(run_manifest), encoding="utf-8")
     write_core_evidence_pass(project.path, figure_count=5)
     create_evidence_snapshot(project.path)
     inventory_results(project.path)

@@ -702,6 +702,8 @@ def record_user_checkpoint_confirmation(
     # Explicit user confirmation remains valid for a notification checkpoint.
     # It is stronger than the default system acknowledgement and preserves the
     # pre-v0.38 manual workflow for users who intentionally inspect every step.
+    revision_cycle_id = _summary_revision_cycle(project, checkpoint_hash)
+    revision_candidate_sha256 = _active_revision_candidate_hash(project, checkpoint_hash, revision_cycle_id)
     receipt = {
         "schema_version": DECISION_RECEIPT_SCHEMA,
         "receipt_id": uuid.uuid4().hex,
@@ -716,7 +718,7 @@ def record_user_checkpoint_confirmation(
         "authority_source": {"policy": "explicit_user_command", "policy_sha256": authority.get("policy_sha256")},
         "risk_class": authority.get("risk_class"),
         "stage": authority.get("stage"),
-        "revision_cycle_id": _summary_revision_cycle(project, checkpoint_hash),
+        "revision_cycle_id": revision_cycle_id,
         "runtime_fingerprint": authority.get("runtime_fingerprint"),
         "evidence_snapshot_id": _summary_evidence_snapshot(project, checkpoint_hash),
         "baseline_id": _summary_baseline_id(project, checkpoint_hash),
@@ -727,9 +729,42 @@ def record_user_checkpoint_confirmation(
         "note": note,
         "created_at": utc_now(),
     }
+    if revision_candidate_sha256:
+        receipt["revision_candidate_sha256"] = revision_candidate_sha256
     receipt["receipt_sha256"] = _decision_hash(receipt)
     _persist_decision_receipt(project, checkpoint_hash, receipt)
     return {"status": "user_confirmed", "project_path": str(project_root(project)), "receipt": receipt}
+
+
+def _active_revision_candidate_hash(
+    project: str | Path,
+    checkpoint_hash: str,
+    revision_cycle_id: str | None,
+) -> str | None:
+    if not revision_cycle_id:
+        return None
+    try:
+        from .revision_cycle import load_active_revision_cycle
+
+        active = load_active_revision_cycle(project)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    if (
+        not active
+        or active.get("status") != "open"
+        or active.get("revision_cycle_id") != revision_cycle_id
+        or active.get("reconciliation_status") not in {"awaiting_decision", "reconciled"}
+        or not active.get("candidate_packet_sha256")
+    ):
+        return None
+    if (
+        active.get("reconciliation_status") == "reconciled"
+        and active.get("closed_candidate_generation") != active.get("candidate_generation")
+    ):
+        return None
+    candidate_hash = str(active.get("candidate_packet_sha256") or "")
+    summary_candidate_hash = str(_summary_payload(project, checkpoint_hash).get("revision_candidate_sha256") or "")
+    return candidate_hash if candidate_hash and summary_candidate_hash == candidate_hash else None
 
 
 def acknowledge_notification_checkpoint(

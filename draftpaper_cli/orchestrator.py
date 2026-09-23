@@ -102,6 +102,28 @@ class OrchestratorError(RuntimeError):
     """Raised when the pipeline orchestrator cannot resolve a legal next action."""
 
 
+def _governance_snapshot(project: str | Path) -> dict[str, Any]:
+    """Return the shared governance decision without allowing audit failure to certify release."""
+    try:
+        from .governance_contract import evaluate_governance
+
+        return evaluate_governance(project, purpose="audit")
+    except Exception as exc:
+        return {
+            "schema_version": "dpl.evidence_governance_report.v1",
+            "status": "error",
+            "error": f"{type(exc).__name__}: {exc}",
+            "action_eligibility": {
+                "allow_edit": True,
+                "allow_preview": True,
+                "allow_promote": False,
+                "allow_close": False,
+                "allow_release": False,
+                "blocking_finding_ids": ["governance_evaluation_error"],
+            },
+        }
+
+
 def _stage_declared_outputs_current(project_path: Path, stage: str) -> bool:
     manifest_path = project_path / stage / "stage_manifest.json"
     if not manifest_path.exists():
@@ -236,6 +258,19 @@ def _plugin_execution_failures(project_path: Path) -> list[dict[str, Any]]:
 
 def _result_support_action(project_path: Path, result_support: dict[str, Any]) -> dict[str, Any] | None:
     decision = str(result_support.get("decision") or "")
+    technical_only = bool(
+        result_support.get("technical_repair_required")
+        and not result_support.get("scientific_route_required")
+    )
+    if technical_only:
+        return {
+            "stage": "result_support",
+            "command": "audit-evidence-identity",
+            "cli": _cli_for(project_path, "audit-evidence-identity"),
+            "reason": "Result Support found technical evidence-binding blockers. Inspect and repair the binding or registration first; no claim downgrade or scientific rescue route is selected automatically.",
+            "requires_user_decision": False,
+            "technical_blockers": result_support.get("technical_blockers") or [],
+        }
     if decision == "pass":
         return None
     selected_route = str(result_support.get("selected_route") or "")
@@ -1252,8 +1287,52 @@ def status_project(project: str | Path) -> dict[str, Any]:
             "result_support_checkpoint": "results/result_support_checkpoint.json",
             "next_action": result_support_action,
         }
+    from .revision_cycle import load_active_revision_cycle
+
+    revision_cycle = load_active_revision_cycle(state.path)
+    if revision_cycle and revision_cycle.get("status") == "open" and revision_cycle.get("mode") == "author_edit":
+        # A candidate edit may make method_plan or downstream stages stale.
+        # Report that fact without routing the user back into the upstream
+        # pipeline until the candidate generation is centrally reconciled.
+        edit_drift = detect_artifact_drift(state.path)
+        generation = revision_cycle.get("draft_generation") or revision_cycle.get("candidate_generation") or 1
+        reconciliation_status = str(revision_cycle.get("reconciliation_status") or "pending")
+        passport = load_project_passport(state.path)
+        awaiting = passport.get("awaiting_checkpoint")
+        checkpoint_paths: dict[str, Any] = {}
+        if awaiting:
+            from .checkpoint_summary import checkpoint_path_payload
+
+            checkpoint_paths = checkpoint_path_payload(state.path, awaiting)
+        return {
+            "status": "reported",
+            "project_path": str(state.path),
+            "pipeline_state": "author_edit_paused",
+            "revision_mode": "author_edit",
+            "automatic_upstream": False,
+            "reconciliation_status": reconciliation_status,
+            "draft_generation": generation,
+            "literature_provider_status": literature_provider_status,
+            "current_stage": state.metadata.get("current_stage"),
+            "awaiting_checkpoint": awaiting,
+            "workflow_gate": "awaiting_confirmation" if awaiting else "revision_reconciliation_pending",
+            "pending_checkpoint_paths": checkpoint_paths,
+            "passport": str(state.path / PASSPORT_FILES["passport"]),
+            "drift": edit_drift,
+            "release_eligible": False,
+            "next_action": {
+                "stage": "revision_cycle",
+                "command": "prepare-revision-reconciliation",
+                "cli": f"python -m draftpaper_cli.cli prepare-revision-reconciliation --project {_quote(state.path)}",
+                "reason": (
+                    "Automatic upstream re-entry is paused for this revision cycle. Continue editing or freeze the current generation for one centralized evidence reconciliation. An existing human checkpoint remains pending and is not consumed by author_edit mode."
+                    if awaiting
+                    else "Automatic upstream re-entry is paused for this revision cycle. Continue editing or freeze the current generation for one centralized evidence reconciliation."
+                ),
+            },
+        }
     drift = detect_artifact_drift(state.path)
-    if drift.get("status") == "drift_detected":
+    if drift.get("status") == "drift_detected" and drift.get("hard_reconciliation_required", True):
         return {
             "status": "reported",
             "project_path": str(state.path),
@@ -1291,6 +1370,18 @@ def status_project(project: str | Path) -> dict[str, Any]:
                 "reason": "A checkpoint is waiting for explicit resume confirmation.",
                 **checkpoint_paths,
             },
+        }
+    if result_support_action and result_support_action.get("command") == "audit-evidence-identity":
+        return {
+            "status": "reported",
+            "project_path": str(state.path),
+            "pipeline_state": "evidence_binding_repair_required",
+            "literature_provider_status": literature_provider_status,
+            "current_stage": state.metadata.get("current_stage"),
+            "awaiting_checkpoint": None,
+            "passport": str(state.path / PASSPORT_FILES["passport"]),
+            "result_support_checkpoint": "results/result_support_checkpoint.json",
+            "next_action": result_support_action,
         }
     core_report = _read_report(state.path, "core_evidence/core_evidence_report.json")
     core_stage = (state.metadata.get("stages") or {}).get("core_evidence") or {}
@@ -1366,6 +1457,7 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "review-final-manuscript": "final_manuscript_review_required",
         "confirm-final-manuscript": "awaiting_final_manuscript_confirmation",
         "choose-result-route": "awaiting_result_route",
+        "audit-evidence-identity": "evidence_binding_repair_required",
         "resolve-research-capabilities": "plugin_sufficiency_required",
         "assess-plugin-sufficiency": "plugin_sufficiency_required",
         "audit-project-capabilities": "capability_audit_required",
@@ -1397,6 +1489,11 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "prepare-independent-manuscript-review", "record-independent-manuscript-review", "assess-manuscript-quality-release"
     }:
         pipeline_state = "draft_pdf_ready"
+    governance = _governance_snapshot(state.path)
+    governance_actions = governance.get("action_eligibility") if isinstance(governance, dict) else {}
+    governance_release_eligible = bool(
+        isinstance(governance_actions, dict) and governance_actions.get("allow_release") is True
+    )
     return {
         "status": "reported",
         "project_path": str(state.path),
@@ -1406,6 +1503,11 @@ def status_project(project: str | Path) -> dict[str, Any]:
         "awaiting_checkpoint": None,
         "passport": str(state.path / PASSPORT_FILES["passport"]),
         "current_snapshot": _read_report(state.path, "results/promoted_evidence_snapshot.json").get("snapshot_id"),
+        "drift": drift,
+        "pending_external_artifacts": drift.get("pending_external_artifacts") or [],
+        "requires_reconciliation": bool(drift.get("requires_reconciliation")),
+        "governance": governance,
+        "release_eligible": not bool(drift.get("requires_reconciliation")) and governance_release_eligible,
         "next_action": next_action,
     }
 
@@ -1688,6 +1790,11 @@ def _resume_after_review_receipt(
     validation = validate_checkpoint_summary(state.path, checkpoint)
     if not validation.get("valid"):
         raise OrchestratorError("Checkpoint summary is stale; create a new review package before automatic resume.")
+    continuity = None
+    if checkpoint.get("stage") == "core_evidence":
+        if expected_status != "system_acknowledged":
+            raise OrchestratorError("Automatic core-evidence promotion requires preserved user confirmation.")
+        continuity = _validated_core_confirmation_continuity(state.path, checkpoint)
     resume_event = {
         "kind": "resume",
         "consumes_hash": checkpoint_hash,
@@ -1700,15 +1807,130 @@ def _resume_after_review_receipt(
         "actor_id": receipt.get("actor_id"),
         "decision_receipt_id": receipt_id,
     }
-    append_checkpoint_event(state.path, resume_event)
-    refresh_project_passport(state.path, event=event_name)
+    if continuity:
+        # Commit the current snapshot and its confirmation binding together
+        # with the resume event. Preserve the original user receipt; the new
+        # event remains system_acknowledged, never user_confirmed.
+        from .scoped_transaction import ScopedProjectTransaction
+        from .state_kernel import atomic_write_json
+
+        paths = (
+            "results/promoted_evidence_snapshot.json",
+            "core_evidence/core_evidence_report.json",
+            *PASSPORT_FILES.values(),
+        )
+        with ScopedProjectTransaction(state.path, paths) as transaction:
+            snapshot = create_evidence_snapshot(state.path)
+            if snapshot.get("snapshot_id") != checkpoint.get("evidence_snapshot_id"):
+                raise OrchestratorError("Core evidence changed during continuity promotion.")
+            core_path = state.path / "core_evidence" / "core_evidence_report.json"
+            core_report = json.loads(core_path.read_text(encoding="utf-8-sig"))
+            core_report.update({
+                "promoted_evidence_snapshot_id": snapshot["snapshot_id"],
+                "human_confirmation_status": "approved",
+                "human_confirmation_checkpoint_hash": continuity["previous_checkpoint_hash"],
+                "human_confirmation_subject_id": checkpoint["confirmation_subject_id"],
+            })
+            atomic_write_json(core_path, core_report)
+            resume_event.update({
+                "confirmation_continuity_receipt_id": continuity["receipt_id"],
+                "preserved_user_decision_receipt_id": continuity["previous_receipt_id"],
+                "evidence_snapshot_id": snapshot["snapshot_id"],
+            })
+            append_checkpoint_event(state.path, resume_event)
+            refresh_project_passport(state.path, event=event_name)
+            next_action = status_project(state.path)["next_action"]
+            transaction.commit()
+    else:
+        append_checkpoint_event(state.path, resume_event)
+        refresh_project_passport(state.path, event=event_name)
+        next_action = status_project(state.path)["next_action"]
     return {
         "status": "resumed_after_agent_review" if expected_status == "agent_approved" else "resumed_after_system_acknowledgement",
         "project_path": str(state.path),
         "consumed_checkpoint_hash": checkpoint_hash,
         "decision_status": expected_status,
         "decision_receipt_id": receipt_id,
-        "next_action": status_project(state.path)["next_action"],
+        "next_action": next_action,
+        "confirmation_continuity": continuity,
+    }
+
+
+def _validated_core_confirmation_continuity(project: Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
+    """Revalidate a hash-bound prior user decision before any promotion write."""
+    from .artifact_identity import canonical_json
+    from .checkpoint_summary import show_checkpoint_summary
+    from .confirmation_continuity import evaluate_confirmation_continuity
+
+    shown = show_checkpoint_summary(project, str(checkpoint.get("hash") or ""))
+    summary = shown.get("summary") or {}
+    continuity = summary.get("confirmation_continuity") or {}
+    if (
+        shown.get("status") != "ready_for_human_review"
+        or summary.get("decision_status") != "continuity_preserved"
+        or continuity.get("eligible") is not True
+        or continuity.get("classification") != "no_scientific_change"
+    ):
+        raise OrchestratorError("Core-evidence continuity is not qualified for automatic promotion.")
+    evaluated = evaluate_confirmation_continuity(
+        project,
+        checkpoint_type="core_evidence",
+        scientific_fingerprint=summary.get("scientific_decision_fingerprint") or {},
+        brief_semantic_sha256=str(summary.get("human_brief_semantic_sha256") or ""),
+        review_state=str(summary.get("review_state") or ""),
+        semantic_delta_class=str((summary.get("semantic_delta_from_last_confirmed") or {}).get("classification") or ""),
+        unresolved_issues=list(summary.get("unresolved") or []),
+    )
+    previous = evaluated.get("previous_receipt") or {}
+    if not evaluated.get("eligible") or not previous.get("checkpoint_hash"):
+        raise OrchestratorError("Core-evidence continuity no longer matches a valid user receipt.")
+    # A pointer alone is insufficient: validate the immutable receipt digest
+    # and every decision/package binding, with a project-confined path.
+    expected_path = (project / str(checkpoint.get("stage_summary_json") or "")).resolve().parent / "confirmation_continuity_receipt.json"
+    receipt_path = (project / str(continuity.get("receipt_path") or "")).resolve()
+    try:
+        receipt_path.relative_to(project.resolve())
+        if receipt_path != expected_path or not receipt_path.is_file():
+            raise ValueError("Missing or misplaced continuity receipt.")
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        digest_subject = {key: value for key, value in receipt.items() if key not in {"receipt_sha256", "created_at"}}
+        digest = hashlib.sha256(canonical_json(digest_subject).encode("utf-8")).hexdigest()
+    except (OSError, ValueError, AttributeError) as exc:
+        raise OrchestratorError("Core-evidence continuity receipt is invalid.") from exc
+    bindings = {
+        "schema_version": "dpl.confirmation_continuity_receipt.v1",
+        "checkpoint_type": "core_evidence",
+        "checkpoint_package_id": checkpoint.get("checkpoint_id"),
+        "previous_decision_receipt_id": previous.get("receipt_id"),
+        "previous_scientific_decision_sha256": previous.get("scientific_decision_sha256"),
+        "current_scientific_decision_sha256": (summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"),
+        "human_brief_semantic_sha256": summary.get("human_brief_semantic_sha256"),
+        "current_audit_bundle_sha256": summary.get("audit_bundle_sha256"),
+        "semantic_delta_class": "no_scientific_change",
+        "actor_type": "system",
+        "decision_effect": "preserve_previous_user_confirmation",
+    }
+    if (
+        receipt.get("receipt_sha256") != digest
+        or not receipt.get("receipt_id")
+        or any(receipt.get(key) != value for key, value in bindings.items())
+        or continuity.get("previous_receipt_id") != previous.get("receipt_id")
+    ):
+        raise OrchestratorError("Core-evidence continuity receipt bindings changed.")
+    try:
+        current_subject = evidence_confirmation_subject(project)
+    except EvidenceSnapshotMismatch as exc:
+        raise OrchestratorError(str(exc)) from exc
+    if any(
+        not checkpoint.get(key) or checkpoint.get(key) != current_subject.get(key)
+        for key in ("confirmation_subject_id", "evidence_snapshot_id")
+    ):
+        raise OrchestratorError("Core evidence changed after continuity was established.")
+    return {
+        "receipt_id": receipt["receipt_id"],
+        "previous_receipt_id": previous["receipt_id"],
+        "previous_checkpoint_hash": previous["checkpoint_hash"],
+        "scientific_decision_sha256": bindings["current_scientific_decision_sha256"],
     }
 
 
@@ -1770,6 +1992,9 @@ def run_pipeline(project: str | Path) -> dict[str, Any]:
         "status": "planned",
         "project_path": status["project_path"],
         "pipeline_state": status["pipeline_state"],
+        "pending_external_artifacts": status.get("pending_external_artifacts") or [],
+        "requires_reconciliation": bool(status.get("requires_reconciliation")),
+        "release_eligible": bool(status.get("release_eligible", True)),
         "next_action": status["next_action"],
     }
 

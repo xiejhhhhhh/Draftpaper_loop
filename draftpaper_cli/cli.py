@@ -386,6 +386,31 @@ def build_parser() -> argparse.ArgumentParser:
     revision_cycle.add_argument("--expected-artifact", dest="expected_artifacts", action="append", default=[])
     revision_cycle.add_argument("--started-by", default="user")
     revision_cycle.add_argument("--baseline-id", default=None)
+    revision_cycle.add_argument("--mode", choices=["live", "author_edit"], default="live", help="Choose immediate upstream validation or deferred author editing.")
+    revision_mode = subparsers.add_parser("set-revision-mode", help="Switch the open revision cycle between live and author_edit without clearing pending evidence state.")
+    revision_mode.add_argument("--project", required=True)
+    revision_mode.add_argument("--mode", choices=["live", "author_edit"], required=True)
+    prepare_reconciliation = subparsers.add_parser("prepare-revision-reconciliation", help="Freeze the current revision generation and write a centralized evidence reconciliation preview.")
+    prepare_reconciliation.add_argument("--project", required=True)
+    apply_reconciliation = subparsers.add_parser("apply-revision-reconciliation", help="Apply a hash-bound reconciliation; semantic changes require a matching C3 user decision receipt.")
+    apply_reconciliation.add_argument("--project", required=True)
+    apply_reconciliation.add_argument("--reconciliation-id", required=True)
+    apply_reconciliation.add_argument("--packet-hash", required=True)
+    apply_reconciliation.add_argument("--decision-receipt-id", default=None, help="Required when applying scientific-semantic changes after the matching C3 checkpoint is user-confirmed.")
+    commit_candidate = subparsers.add_parser("commit-revision-candidate", help="Promote only the exact reconciled candidate approved by a matching C3 user receipt.")
+    commit_candidate.add_argument("--project", required=True)
+    commit_candidate.add_argument("--candidate-id", required=True)
+    commit_candidate.add_argument("--expected-baseline-id", required=True)
+    commit_candidate.add_argument("--decision-receipt-id", required=True)
+    inspect_bindings = subparsers.add_parser("inspect-evidence-bindings", help="Inspect applied output binding receipts and source drift without writing.")
+    inspect_bindings.add_argument("--project", required=True)
+    prepare_bindings = subparsers.add_parser("prepare-evidence-rebind", help="Prepare a hash-bound receipt for an existing output without changing the output.")
+    prepare_bindings.add_argument("--project", required=True)
+    prepare_bindings.add_argument("--binding-file", required=True, help="JSON file containing explicit output binding rows.")
+    apply_bindings = subparsers.add_parser("apply-evidence-rebind", help="Apply a verified output binding receipt and rebuild the evidence registry.")
+    apply_bindings.add_argument("--project", required=True)
+    apply_bindings.add_argument("--packet-path", required=True)
+    apply_bindings.add_argument("--packet-hash", required=True)
     consistency = subparsers.add_parser("audit-longitudinal-consistency", help="Audit facts and manuscript references across revision cycles.")
     consistency.add_argument("--project", required=True)
     consistency.add_argument("--output-root", default=None)
@@ -396,6 +421,14 @@ def build_parser() -> argparse.ArgumentParser:
     baseline = subparsers.add_parser("show-scientific-baseline", help="Show the active or named immutable scientific baseline.")
     baseline.add_argument("--project", required=True)
     baseline.add_argument("--baseline-id", default=None)
+    governance = subparsers.add_parser("audit-evidence-governance", help="Evaluate evidence, drift, coverage, and release eligibility without mutating the project.")
+    governance.add_argument("--project", required=True)
+    governance.add_argument("--purpose", choices=["preview", "final", "audit"], default="audit")
+    governance.add_argument("--candidate-id", default=None)
+    governance.add_argument("--expected-baseline-id", default=None)
+    governance.add_argument("--html-output", default=None, help="Optional readable HTML path generated from the same structured report.")
+    governance.add_argument("--language", choices=["zh-CN", "en"], default="zh-CN")
+    governance.add_argument("--self-test-report", default=None, help="Optional passed report from tools/verify_evidence_governance.py.")
 
     extension_doctor = subparsers.add_parser(
         "extension-doctor",
@@ -905,6 +938,7 @@ def build_parser() -> argparse.ArgumentParser:
     latex = subparsers.add_parser("assemble-latex", help="Assemble staged sections into latex/main.tex.")
     latex.add_argument("--project", required=True, help="Path to a project directory or project.json.")
     latex.add_argument("--compile-pdf", action="store_true", help="Compile latex/main.tex into latex/main.pdf for review.")
+    latex.add_argument("--purpose", choices=["final", "preview"], default="final", help="Use an isolated unreconciled preview directory when purpose=preview.")
 
     pdf = subparsers.add_parser("compile-latex-pdf", help="Compile latex/main.tex into latex/main.pdf for review.")
     pdf.add_argument("--project", required=True, help="Path to a project directory or project.json.")
@@ -1411,6 +1445,7 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "evaluate-checkpoint-authority",
     "show-stage-activity",
     "show-scientific-baseline",
+    "audit-evidence-governance",
     "show-checkpoint-summary",
     "show-checkpoint-audit",
     "compare-checkpoint-decision",
@@ -1418,6 +1453,7 @@ _READ_ONLY_PROJECT_COMMANDS = {
     "validate-checkpoint-readability",
     "show-confirmation-continuity",
     "inspect-review-evidence",
+    "inspect-evidence-bindings",
     "audit-checkpoint-v5-migration",
     "shadow-checkpoint-v5",
     "shadow-checkpoint-v6",
@@ -1445,15 +1481,50 @@ def main(argv: list[str] | None = None) -> int:
         "reconcile-project-drift",
         "rebase-project-passport",
         "session-preflight",
+        "set-revision-mode",
+        "prepare-revision-reconciliation",
+        "apply-revision-reconciliation",
+        "run-integrity-gate",
+        "prepare-evidence-rebind",
+        "apply-evidence-rebind",
     }
+    author_edit_candidate_command = False
+    if command in {"begin-managed-change", "apply-managed-change"} and project:
+        # In author_edit, an existing external edit is itself the candidate
+        # under review.  Allow the scoped managed-edit transaction to continue
+        # while preserving the pending drift and the final release gate.
+        try:
+            from .revision_cycle import load_active_revision_cycle
+
+            cycle = load_active_revision_cycle(project)
+            if cycle and cycle.get("status") == "open" and cycle.get("mode") == "author_edit":
+                allows_preexisting_drift = True
+                author_edit_candidate_command = True
+        except (OSError, ValueError, ProjectStateError):
+            pass
+    # An isolated preview is explicitly allowed to render an unreconciled
+    # candidate. The final assembly path remains protected by the normal
+    # preexisting-drift gate, so preview cannot be used to publish around it.
+    if command == "assemble-latex" and getattr(args, "purpose", "final") == "preview":
+        allows_preexisting_drift = True
     preexisting_drift = False
+    preexisting_drift_report: dict[str, Any] = {}
     if mutates_project:
         try:
-            preexisting_drift = detect_artifact_drift(project).get("status") == "drift_detected"
+            preexisting_drift_report = detect_artifact_drift(project)
+            preexisting_drift = preexisting_drift_report.get("status") == "drift_detected"
         except (ArtifactDriftError, PassportError, ProjectStateError, OSError):
             preexisting_drift = True
 
-    if mutates_project and preexisting_drift and not allows_preexisting_drift:
+    hard_preexisting_drift = bool(preexisting_drift_report.get("hard_reconciliation_required", preexisting_drift))
+    formal_release_path = bool(
+        preexisting_drift
+        and (
+            command == "compile-latex-pdf"
+            or (spec is not None and spec.formal_stage == "release")
+        )
+    )
+    if mutates_project and (hard_preexisting_drift or formal_release_path) and not allows_preexisting_drift:
         message = "Project artifacts changed outside the managed command transaction. Synchronize stale state before retrying."
         try:
             record_command_transaction(
@@ -1634,7 +1705,22 @@ def main(argv: list[str] | None = None) -> int:
                 pass
             return exit_code
         event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
-        preserve_pending_drift = bool(command_payload.get("preserve_pending_drift"))
+        pending_additions_only = bool(
+            preexisting_drift
+            and not hard_preexisting_drift
+            and preexisting_drift_report.get("pending_external_artifacts")
+        )
+        explicit_baseline_adoption = command in {
+            "reconcile-project-drift",
+            "rebase-project-passport",
+            "apply-evidence-rebind",
+            "apply-revision-reconciliation",
+        }
+        preserve_pending_drift = bool(command_payload.get("preserve_pending_drift")) or author_edit_candidate_command or (
+            pending_additions_only and not explicit_baseline_adoption
+        )
+        if command == "run-integrity-gate" and preexisting_drift:
+            preserve_pending_drift = True
         try:
             if not preserve_pending_drift:
                 refresh_project_passport(project, event=event)

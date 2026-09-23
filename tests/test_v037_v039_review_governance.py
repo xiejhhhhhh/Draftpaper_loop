@@ -10,7 +10,7 @@ from draftpaper_cli.longitudinal_consistency import audit_longitudinal_consisten
 from draftpaper_cli.managed_change import ManagedChangeError, apply_managed_change, begin_managed_change
 from draftpaper_cli.orchestrator import checkpoint_project
 from draftpaper_cli.project_scaffold import create_project
-from draftpaper_cli.revision_cycle import begin_revision_cycle, close_revision_cycle
+from draftpaper_cli.revision_cycle import RevisionCycleError, begin_revision_cycle, close_revision_cycle
 from draftpaper_cli.review_policy import (
     ReviewPolicyError,
     configure_review_policy,
@@ -326,7 +326,9 @@ def test_managed_change_rejects_new_baseline_and_closed_revision_cycle(tmp_path:
         paths=["writing/paragraph.md"],
         content_file=str(source),
     )
-    close_revision_cycle(project, decision_receipt_id="test-close")
+    with pytest.raises(RevisionCycleError, match="unreconciled"):
+        close_revision_cycle(project, decision_receipt_id="test-close")
+    close_revision_cycle(project, decision_receipt_id="test-reject", status="rejected")
     with pytest.raises(ManagedChangeError, match="different or closed revision cycle"):
         apply_managed_change(project, packet_id=packet["packet"]["packet_id"], packet_hash=packet["packet_hash"])
     assert cycle["revision_cycle"]["status"] == "open"

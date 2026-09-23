@@ -396,7 +396,7 @@ def _ensure_aastex_author_block(main_tex: str) -> str:
     )
     if re.search(r"\\author\{\s*\}", main_tex):
         return re.sub(r"\\author\{\s*\}", lambda _match: author_block, main_tex, count=1)
-    if re.search(r"\\author\{[^{}]+\}", main_tex) and re.search(r"\\affiliation\{[^{}]+\}", main_tex):
+    if re.search(r"(?m)^\\author(?:\[[^\]]+\])?\{[^{}]+\}", main_tex) and re.search(r"(?m)^\\affiliation(?:\[[^\]]+\])?\{[^{}]+\}", main_tex):
         return main_tex
     title_match = re.search(r"\\title\{[^{}]*\}", main_tex)
     if title_match:
@@ -575,8 +575,9 @@ def _compact_self_audit_table(project_path: Path) -> str | None:
     ])
 
 
-def _copy_sections(project_path: Path, sections: dict[str, str]) -> list[str]:
-    section_dir = project_path / "latex" / "sections"
+def _copy_sections(project_path: Path, sections: dict[str, str], *, output_root: Path | None = None) -> list[str]:
+    output_root = output_root or project_path
+    section_dir = output_root / "latex" / "sections"
     section_dir.mkdir(parents=True, exist_ok=True)
     outputs = []
     for name, content in sections.items():
@@ -587,11 +588,13 @@ def _copy_sections(project_path: Path, sections: dict[str, str]) -> list[str]:
             compact_self_audit = _compact_self_audit_table(project_path)
             compact_relative = "latex/sections/table_01_data_roles_review.tex"
             if compact_table is not None:
-                (project_path / compact_relative).write_text(compact_table, encoding="utf-8")
+                (output_root / compact_relative).parent.mkdir(parents=True, exist_ok=True)
+                (output_root / compact_relative).write_text(compact_table, encoding="utf-8")
                 outputs.append(compact_relative)
             compact_self_audit_relative = "latex/sections/table_02_self_audit_ablation_review.tex"
             if compact_self_audit is not None:
-                (project_path / compact_self_audit_relative).write_text(compact_self_audit, encoding="utf-8")
+                (output_root / compact_self_audit_relative).parent.mkdir(parents=True, exist_ok=True)
+                (output_root / compact_self_audit_relative).write_text(compact_self_audit, encoding="utf-8")
                 outputs.append(compact_self_audit_relative)
 
             # Candidate prose refers to publication tables by their semantic
@@ -606,17 +609,19 @@ def _copy_sections(project_path: Path, sections: dict[str, str]) -> list[str]:
                 return rf"\input{{../results/tables/{table_name}}}"
 
             rendered = re.sub(r"\\input\{tables/([^{}\n]+)\}", _resolve_result_table, rendered)
-        (project_path / relative).write_text(rendered, encoding="utf-8")
+        (output_root / relative).write_text(rendered, encoding="utf-8")
         outputs.append(relative)
     return outputs
 
 
-def _copy_bibtex(project_path: Path) -> None:
+def _copy_bibtex(project_path: Path, *, output_root: Path | None = None) -> None:
     try:
         bibtex, _report = materialize_effective_bibliography(project_path)
     except BibliographyError as exc:
         raise LatexAssemblyError(str(exc)) from exc
-    (project_path / "latex" / "library.bib").write_text(bibtex, encoding="utf-8")
+    target_root = output_root or project_path
+    (target_root / "latex").mkdir(parents=True, exist_ok=True)
+    (target_root / "latex" / "library.bib").write_text(bibtex, encoding="utf-8")
 
 
 def _read_mapping(path: Path) -> dict[str, Any]:
@@ -854,7 +859,7 @@ def _ensure_math_support(tex: str) -> str:
     return tex[:documentclass.end()] + insertion + tex[documentclass.end():]
 
 
-def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
+def _render_main(project_path: Path, project_meta: dict[str, Any], *, graphic_root: Path | None = None) -> str:
     manuscript_metadata = _read_manuscript_metadata(project_path)
     template_path = project_path / "latex" / "template" / "main.tex"
     if not template_path.exists():
@@ -893,7 +898,14 @@ def _render_main(project_path: Path, project_meta: dict[str, Any]) -> str:
         rendered = rendered.rstrip() + "\n\n" + bibliography + "\n"
     rendered = _enforce_bibliography_style(rendered, bibliography_style)
     rendered = _ensure_math_support(rendered)
-    if "\\graphicspath" not in rendered:
+    if graphic_root is not None:
+        graphic_path = graphic_root.resolve().as_posix().replace(" ", r"\ ")
+        graphic_command = rf"\graphicspath{{{{{graphic_path}/}}}}"
+        if "\\graphicspath" in rendered:
+            rendered = re.sub(r"\\graphicspath\{\{[^}]*\}\}", graphic_command, rendered, count=1)
+        else:
+            rendered = rendered.replace("\\begin{document}", graphic_command + "\n\\begin{document}", 1)
+    elif "\\graphicspath" not in rendered:
         rendered = rendered.replace("\\begin{document}", "\\graphicspath{{../}}\n\\begin{document}", 1)
     aastex = "aastex" in str(journal_profile.get("documentclass") or "").lower() or bool(re.search(r"\\documentclass(?:\[[^\]]*\])?\{aastex", rendered, flags=re.I))
     if manuscript_metadata:
@@ -961,12 +973,13 @@ def _find_latex_executable(names: list[str]) -> str | None:
     return None
 
 
-def _write_pdf_manifest(project_path: Path, payload: dict[str, Any]) -> None:
+def _write_pdf_manifest(project_path: Path, payload: dict[str, Any], *, latex_dir: Path | None = None, update_stage: bool = True) -> None:
+    latex_dir = latex_dir or (project_path / "latex")
     profile = _read_journal_profile(project_path)
     requested_style = str(profile.get("bibliography_style") or "plainnat")
-    main_tex = (project_path / "latex" / "main.tex").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "latex" / "main.tex").is_file() else ""
-    aux_text = (project_path / "latex" / "main.aux").read_text(encoding="utf-8-sig", errors="replace") if (project_path / "latex" / "main.aux").is_file() else ""
-    bbl = project_path / "latex" / "main.bbl"
+    main_tex = (latex_dir / "main.tex").read_text(encoding="utf-8-sig", errors="replace") if (latex_dir / "main.tex").is_file() else ""
+    aux_text = (latex_dir / "main.aux").read_text(encoding="utf-8-sig", errors="replace") if (latex_dir / "main.aux").is_file() else ""
+    bbl = latex_dir / "main.bbl"
     payload["bibliography"] = {
         "profile_style": requested_style,
         "main_tex_styles": re.findall(r"\\bibliographystyle\{([^}]+)\}", main_tex),
@@ -974,11 +987,12 @@ def _write_pdf_manifest(project_path: Path, payload: dict[str, Any]) -> None:
         "bbl_sha256": hashlib.sha256(bbl.read_bytes()).hexdigest() if bbl.is_file() else None,
         "engine": "BibTeX",
     }
-    payload["input_artifact_hashes"] = _pdf_compile_input_hashes(project_path)
-    pdf = project_path / "latex" / "main.pdf"
+    payload["input_artifact_hashes"] = _pdf_compile_input_hashes(project_path) if latex_dir == project_path / "latex" else {}
+    pdf = latex_dir / "main.pdf"
     payload["pdf_sha256"] = hashlib.sha256(pdf.read_bytes()).hexdigest() if pdf.is_file() else None
-    _write_json(project_path / "latex" / "pdf_compile_manifest.json", payload)
-    _set_latex_manifest(project_path)
+    _write_json(latex_dir / "pdf_compile_manifest.json", payload)
+    if update_stage:
+        _set_latex_manifest(project_path)
 
 
 def _aux_requests_bibtex(aux_path: Path) -> bool:
@@ -1049,7 +1063,7 @@ def _ensure_local_bibstyle_fallback(latex_dir: Path, tex_file: Path) -> dict[str
     }
 
 
-def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dict[str, Any]:
+def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120, latex_dir: Path | None = None) -> dict[str, Any]:
     """Compile latex/main.tex into latex/main.pdf when a local LaTeX engine is available."""
     state = load_project(project)
     from .workspace_policy import WorkspacePolicyError, require_path_budget
@@ -1058,9 +1072,11 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
         require_path_budget(state.path)
     except WorkspacePolicyError as exc:
         raise LatexAssemblyError(str(exc)) from exc
-    tex_file = state.path / "latex" / "main.tex"
-    bib_file = state.path / "latex" / "library.bib"
-    log_file = state.path / "latex" / "main.compile.log"
+    latex_dir = (latex_dir or (state.path / "latex")).resolve()
+    tex_file = latex_dir / "main.tex"
+    bib_file = latex_dir / "library.bib"
+    log_file = latex_dir / "main.compile.log"
+    update_stage = latex_dir == (state.path / "latex").resolve()
     if not tex_file.exists():
         raise LatexAssemblyError("latex/main.tex is required before compiling a review PDF.")
     if not bib_file.exists():
@@ -1079,7 +1095,7 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
             "log": str(log_file),
         }
         log_file.write_text(message + "\n", encoding="utf-8")
-        _write_pdf_manifest(state.path, manifest)
+        _write_pdf_manifest(state.path, manifest, latex_dir=latex_dir, update_stage=update_stage)
         return {
             "status": "failed",
             "project_path": str(state.path),
@@ -1124,13 +1140,13 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "pdf": None,
                 "log": str(log_file),
             }
-            _write_pdf_manifest(state.path, manifest)
+            _write_pdf_manifest(state.path, manifest, latex_dir=latex_dir, update_stage=update_stage)
             return {
                 "status": "failed",
                 "project_path": str(state.path),
                 "pdf": None,
                 "compile_log": str(log_file),
-                "pdf_compile_manifest": str(state.path / "latex" / "pdf_compile_manifest.json"),
+                "pdf_compile_manifest": str(latex_dir / "pdf_compile_manifest.json"),
                 "message": message,
             }
 
@@ -1154,13 +1170,13 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
                 "pdf": None,
                 "log": str(log_file),
             }
-            _write_pdf_manifest(state.path, manifest)
+            _write_pdf_manifest(state.path, manifest, latex_dir=latex_dir, update_stage=update_stage)
             return {
                 "status": "failed",
                 "project_path": str(state.path),
                 "pdf": None,
                 "compile_log": str(log_file),
-                "pdf_compile_manifest": str(state.path / "latex" / "pdf_compile_manifest.json"),
+                "pdf_compile_manifest": str(latex_dir / "pdf_compile_manifest.json"),
                 "message": message,
             }
 
@@ -1202,19 +1218,21 @@ def compile_latex_pdf(project: str | Path, *, timeout_seconds: int = 120) -> dic
         "pdf": str(pdf_file) if pdf_file.exists() else None,
         "log": str(log_file),
     }
-    _write_pdf_manifest(state.path, manifest)
+    _write_pdf_manifest(state.path, manifest, latex_dir=latex_dir, update_stage=update_stage)
     return {
         "status": status,
         "project_path": str(state.path),
         "pdf": str(pdf_file) if pdf_file.exists() else None,
         "compile_log": str(log_file),
-        "pdf_compile_manifest": str(state.path / "latex" / "pdf_compile_manifest.json"),
+        "pdf_compile_manifest": str(latex_dir / "pdf_compile_manifest.json"),
         "message": message,
     }
 
 
-def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[str, Any]:
+def assemble_latex(project: str | Path, *, compile_pdf: bool = False, purpose: str = "final") -> dict[str, Any]:
     """Assemble staged manuscript sections into latex/main.tex and latex/library.bib."""
+    if purpose not in {"final", "preview"}:
+        raise LatexAssemblyError("LaTeX assembly purpose must be final or preview.")
     state = load_project(project)
     from .workspace_policy import WorkspacePolicyError, require_path_budget
 
@@ -1222,6 +1240,62 @@ def assemble_latex(project: str | Path, *, compile_pdf: bool = False) -> dict[st
         require_path_budget(state.path)
     except WorkspacePolicyError as exc:
         raise LatexAssemblyError(str(exc)) from exc
+    if purpose == "preview":
+        from .revision_cycle import load_active_revision_cycle
+
+        cycle = load_active_revision_cycle(state.path)
+        if not cycle or cycle.get("status") != "open":
+            raise LatexAssemblyError("Preview assembly requires an open revision cycle.")
+        generation = int(cycle.get("draft_generation") or cycle.get("candidate_generation") or 1)
+        preview_root = state.path / ".draftpaper" / "revision_previews" / str(cycle["revision_cycle_id"]) / f"generation-{generation:04d}"
+        preview_latex = preview_root / "latex"
+        sections = _read_sections(state.path)
+        citation_keys, bib_keys = _validate_citations(state.path, sections)
+        _copy_sections(state.path, sections, output_root=preview_root)
+        _copy_bibtex(state.path, output_root=preview_root)
+        result_artifacts, result_labels = _render_result_artifacts(state.path)
+        _validate_result_cross_references(state.path, sections, result_artifacts)
+        (preview_latex / "sections" / "result_artifacts.tex").write_text(result_artifacts, encoding="utf-8")
+        main_tex = preview_latex / "main.tex"
+        rendered = _render_main(state.path, state.metadata, graphic_root=state.path)
+        notice = "\\noindent\\textbf{UNRECONCILED DRAFT -- evidence reconciliation pending}\\par\\medskip\\n"
+        rendered = rendered.replace("\\begin{document}", "\\begin{document}\n" + notice, 1)
+        main_tex.write_text("% Draftpaper-loop preview; not eligible for release.\n" + rendered, encoding="utf-8")
+        result: dict[str, Any] = {
+            "status": "preview_written",
+            "purpose": "preview",
+            "project_path": str(state.path),
+            "preview_root": str(preview_root.resolve()),
+            "main_tex": str(main_tex.resolve()),
+            "library_bib": str((preview_latex / "library.bib").resolve()),
+            "section_count": len(sections),
+            "result_figure_count": len(result_labels),
+            "citation_count": len(citation_keys),
+            "bibtex_entry_count": len(bib_keys),
+            "revision_cycle_id": cycle["revision_cycle_id"],
+            "draft_generation": generation,
+            "reconciliation_status": cycle.get("reconciliation_status") or "pending",
+            "release_eligible": False,
+            "unreconciled": True,
+            # The candidate is deliberately written outside the formal
+            # passport baseline. The CLI must retain the pending drift so a
+            # later final assembly cannot treat this preview as reconciled.
+            "preserve_pending_drift": True,
+        }
+        if compile_pdf:
+            pdf_result = compile_latex_pdf(state.path, latex_dir=preview_latex)
+            result.update({"pdf_status": pdf_result["status"], "pdf": pdf_result["pdf"], "compile_log": pdf_result["compile_log"], "pdf_compile_manifest": pdf_result["pdf_compile_manifest"], "pdf_message": pdf_result["message"]})
+            from .revision_cycle import update_reconciliation_preview_pdf
+
+            result["human_review"] = update_reconciliation_preview_pdf(
+                state.path,
+                revision_cycle_id=str(cycle["revision_cycle_id"]),
+                generation=generation,
+                preview_pdf_path=str(pdf_result.get("pdf") or "") or None,
+            )
+        else:
+            result["human_review"] = {}
+        return result
     try:
         promoted_snapshot = validate_promoted_snapshot_for_writing(state.path)
     except EvidenceSnapshotMismatch as exc:

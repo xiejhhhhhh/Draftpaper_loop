@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
   "package_version": "0.43.2",
-  "workflow_skill_sha256": "e1aa749662b63f31a3ef06c091d006f8652592e12a3b722f031f4d7a1a5c2153",
+  "workflow_skill_sha256": "feeea10b855c244f77bf3e5fef61b81af302189e6cce3e7daee1c90b0374d543",
   "workflow_contract_sha256": "5cb8930b052e4cb4decb716d3536abfd139d135b5596ef8e995e4f76c197a326",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 273,
+  "command_count": 281,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",
@@ -218,7 +218,7 @@
     "c3_human_only": true,
     "semantic_continuity_receipt": "dpl.confirmation_continuity_receipt.v1",
     "immutable_baseline_schema": "dpl.scientific_baseline_bundle.v1",
-    "revision_cycle_schema": "dpl.revision_cycle.v1",
+    "revision_cycle_schema": "dpl.revision_cycle.v2",
     "fact_registry_schema": "dpl.canonical_fact_registry.v2"
   },
   "research_code_sources": {

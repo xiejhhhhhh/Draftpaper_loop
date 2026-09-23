@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.artifact_scope.v1",
+  "type": "object",
+  "required": ["schema_version", "scope_digest", "expected", "checked", "missing", "excluded"],
+  "properties": {
+    "schema_version": {"const": "dpl.artifact_scope.v1"},
+    "scope_digest": {"type": "string"},
+    "expected": {"type": "array"},
+    "checked": {"type": "array"},
+    "missing": {"type": "array"},
+    "excluded": {"type": "array"}
+  },
+  "additionalProperties": true
+}

@@ -30,6 +30,7 @@ from .data_acquisition import DataAcquisitionError, classify_data_access, prepar
 from .data_feasibility import DataGateError, assess_data_feasibility, assess_data_quality, inventory_data
 from .discussion import DiscussionCitationIntegrityError, MissingDiscussionInputsError, write_discussion
 from .evidence_registry import EvidenceConflictError, build_scientific_evidence_registry, ensure_registry_consistent
+from .evidence_binding import EvidenceBindingError, apply_evidence_rebind, inspect_evidence_bindings, prepare_evidence_rebind, validate_binding_sources
 from .evidence_resolver import resolve_figure_evidence, resolve_paragraph_evidence
 from .evidence_snapshot import create_evidence_snapshot, reopen_evidence_snapshot, validate_evidence_snapshot
 from .figure_semantic_annotations import FigureSemanticAnnotationError, submit_figure_semantic_annotations
@@ -140,8 +141,21 @@ from .review_policy import (
     revoke_agent_review,
 )
 from .canonical_fact_registry import CanonicalFactError, create_fact_registry, load_fact_registry
-from .scientific_baseline import ScientificBaselineError, create_scientific_baseline, load_active_baseline, show_scientific_baseline
-from .revision_cycle import RevisionCycleError, begin_revision_cycle, close_revision_cycle, load_active_revision_cycle
+from .scientific_baseline import ScientificBaselineError, create_scientific_baseline, load_active_baseline, read_baseline_state, show_scientific_baseline
+from .artifact_scope import collect_artifact_scope
+from .governance_contract import ActionEligibility, GovernanceCheckResult, evaluate_governance
+from .manuscript_scientific_surface import compare_manuscript_text, extract_manuscript_surface
+from .revision_cycle import (
+    RevisionCycleError,
+    apply_revision_reconciliation,
+    begin_revision_cycle,
+    close_revision_cycle,
+    commit_revision_candidate,
+    load_active_revision_cycle,
+    prepare_revision_reconciliation,
+    set_revision_mode,
+    update_reconciliation_preview_pdf,
+)
 from .longitudinal_consistency import audit_longitudinal_consistency, compare_fact_registries
 from .managed_change import ManagedChangeError, apply_managed_change, begin_managed_change
 from .stage_activity import build_stage_activity_bundle, show_stage_activity
@@ -239,9 +253,21 @@ __all__ = [
     "create_scientific_baseline",
     "load_active_baseline",
     "show_scientific_baseline",
+    "read_baseline_state",
+    "collect_artifact_scope",
+    "GovernanceCheckResult",
+    "ActionEligibility",
+    "evaluate_governance",
+    "compare_manuscript_text",
+    "extract_manuscript_surface",
     "begin_revision_cycle",
     "close_revision_cycle",
+    "commit_revision_candidate",
     "load_active_revision_cycle",
+    "set_revision_mode",
+    "prepare_revision_reconciliation",
+    "apply_revision_reconciliation",
+    "update_reconciliation_preview_pdf",
     "audit_longitudinal_consistency",
     "compare_fact_registries",
     "begin_managed_change",
@@ -253,6 +279,11 @@ __all__ = [
     "affected_stages",
     "build_scientific_evidence_registry",
     "ensure_registry_consistent",
+    "EvidenceBindingError",
+    "apply_evidence_rebind",
+    "inspect_evidence_bindings",
+    "prepare_evidence_rebind",
+    "validate_binding_sources",
     "create_evidence_snapshot",
     "reopen_evidence_snapshot",
     "validate_evidence_snapshot",

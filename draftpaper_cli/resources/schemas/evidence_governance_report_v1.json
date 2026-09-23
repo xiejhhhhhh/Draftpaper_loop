@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.evidence_governance_report.v1",
+  "type": "object",
+  "required": ["schema_version", "policy_id", "checks", "action_eligibility", "report_sha256"],
+  "properties": {
+    "schema_version": {"const": "dpl.evidence_governance_report.v1"},
+    "policy_id": {"type": "string"},
+    "checks": {"type": "array"},
+    "action_eligibility": {"type": "object"},
+    "report_sha256": {"type": "string"}
+  },
+  "additionalProperties": true
+}

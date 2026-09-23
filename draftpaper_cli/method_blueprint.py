@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .data_contracts import assess_role_coverage, available_data_roles
+from .data_contracts import _discipline_extensions, assess_role_coverage, available_data_roles
 from .discipline import infer_discipline_profile
 from .discipline_modules import get_discipline_module
 from .html_utils import write_html_report
@@ -102,9 +102,9 @@ def _available_data_roles(inventory: dict[str, Any], acquisition: dict[str, Any]
     return roles
 
 
-def _missing_roles(required: list[str], available: list[str]) -> list[str]:
+def _missing_roles(required: list[str], available: list[str], *, role_aliases: dict[str, str] | None = None) -> list[str]:
     concrete = [role for role in available if not role.startswith("missing:")]
-    return list(assess_role_coverage(required, concrete).get("missing_roles") or [])
+    return list(assess_role_coverage(required, concrete, role_aliases=role_aliases).get("missing_roles") or [])
 
 
 def _tokenize(text: Any) -> set[str]:
@@ -347,7 +347,8 @@ def prepare_method_blueprint(project: str | Path) -> dict[str, Any]:
         if has_structured_method_contract
         else selected_roles or list(hints.get("data_contract_hints") or [])
     )
-    missing_roles = _missing_roles(required_roles, available_roles)
+    role_aliases, _ = _discipline_extensions(acquisition_plan)
+    missing_roles = _missing_roles(required_roles, available_roles, role_aliases=role_aliases)
     selected_method_families = _selected_template_values(selected_templates, "method_family")
     selected_template_ids = _selected_template_values(selected_templates, "template_id")
     method_families = list(dict.fromkeys(list(requirements.get("method_families") or []) + selected_method_families + selected_template_ids))

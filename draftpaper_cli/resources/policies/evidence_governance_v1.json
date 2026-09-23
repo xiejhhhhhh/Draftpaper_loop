@@ -1,0 +1,18 @@
+{
+  "schema_version": "dpl.evidence_governance_policy.v1",
+  "policy_id": "evidence_governance_v1",
+  "rules": [
+    {"rule_id": "DG-01", "title_zh": "比较基准必须可信", "title_en": "Comparison baseline must be trusted", "checker": "baseline"},
+    {"rule_id": "DG-02", "title_zh": "候选修复不能推进基线", "title_en": "Candidate repair cannot advance the baseline", "checker": "drift"},
+    {"rule_id": "DG-03", "title_zh": "检查范围必须完整", "title_en": "Check coverage must be explicit", "checker": "scope"},
+    {"rule_id": "DG-04", "title_zh": "事实必须回到真实来源", "title_en": "Facts must resolve to their source", "checker": "bindings"},
+    {"rule_id": "DG-05", "title_zh": "正文按科学语义判断", "title_en": "Manuscript changes are judged semantically", "checker": "surface"},
+    {"rule_id": "DG-06", "title_zh": "影响范围必须有依赖依据", "title_en": "Impact must follow dependencies", "checker": "impact"},
+    {"rule_id": "DG-07", "title_zh": "编辑许可与证据状态分离", "title_en": "Edit permission is separate from evidence state", "checker": "eligibility"},
+    {"rule_id": "DG-08", "title_zh": "确认只适用于确切候选", "title_en": "Confirmation applies only to the exact candidate", "checker": "cycle"},
+    {"rule_id": "DG-09", "title_zh": "保护作者拥有的稿件", "title_en": "Protect author-owned manuscript sources", "checker": "ownership"},
+    {"rule_id": "DG-10", "title_zh": "异常和漏检不能伪装通过", "title_en": "Errors and omissions cannot masquerade as pass", "checker": "integrity"},
+    {"rule_id": "DG-11", "title_zh": "检查器必须有反向用例", "title_en": "Checkers require negative controls", "checker": "self_test"},
+    {"rule_id": "DG-12", "title_zh": "规则状态必须有执行证据", "title_en": "Rule status requires execution evidence", "checker": "execution"}
+  ]
+}

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from draftpaper_cli.project_scaffold import create_project
+from draftpaper_cli import runtime_handshake
 from draftpaper_cli.runtime_handshake import RUNTIME_LOCK, check_runtime_for_command, session_preflight
 
 
@@ -27,3 +28,14 @@ def test_session_preflight_initializes_and_detects_runtime_mismatch(tmp_path: Pa
     assert migrated["status"] == "updated"
     assert migrated["migration_receipt"]
     assert (project / RUNTIME_LOCK).read_text(encoding="utf-8").find("old-runtime") == -1
+
+
+def test_editable_source_tree_change_is_a_runtime_mismatch(monkeypatch, tmp_path: Path) -> None:
+    project = create_project(root=tmp_path, idea="Source tree handshake", field="machine learning").path
+    first = session_preflight(project)
+    assert first["current_identity"]["source_tree_sha256"]
+
+    monkeypatch.setattr(runtime_handshake, "_source_tree_hash", lambda: "changed-source-tree")
+    guard = check_runtime_for_command(project, "verify-methods")
+    assert guard["status"] == "blocked"
+    assert any(item["field"] == "source_tree_sha256" for item in guard["mismatches"])
