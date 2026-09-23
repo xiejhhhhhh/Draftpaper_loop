@@ -10,7 +10,7 @@ from draftpaper_cli.checkpoint_brief import build_human_decision_brief
 from draftpaper_cli.checkpoint_fingerprint import build_scientific_decision_fingerprint, compare_scientific_decisions
 from draftpaper_cli.checkpoint_html import render_checkpoint_decision_html
 from draftpaper_cli.checkpoint_migration import audit_checkpoint_v5_migration
-from draftpaper_cli.checkpoint_readability import build_checkpoint_readability_report
+from draftpaper_cli.checkpoint_readability import MAX_VISIBLE_CHARS, build_checkpoint_readability_report
 from draftpaper_cli.checkpoint_scope import build_checkpoint_scope
 from draftpaper_cli.checkpoint_shadow import _summary_schema, shadow_checkpoint_v5
 from draftpaper_cli.checkpoint_summary import show_checkpoint_summary, write_stage_summary_v4, write_stage_summary_v5
@@ -270,7 +270,7 @@ def test_readability_gate_enforces_the_author_page_hard_budget(tmp_path: Path) -
     assert baseline["checks"]["priority_sections_in_order"] is True
     assert baseline["checks"]["html_bytes_within_budget"] is True
 
-    oversized = html.replace("</body>", "<p>" + ("x" * 12001) + "</p></body>")
+    oversized = html.replace("</body>", "<p>" + ("x" * (MAX_VISIBLE_CHARS + 1)) + "</p></body>")
     blocked = build_checkpoint_readability_report(html=oversized, brief=brief)
     assert blocked["status"] == "blocked"
     assert "visible_chars_within_budget" in blocked["failure_codes"]

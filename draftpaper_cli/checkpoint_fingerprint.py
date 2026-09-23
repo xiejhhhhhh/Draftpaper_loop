@@ -16,6 +16,26 @@ PRESENTATION_FINGERPRINT_SCHEMA = "dpl.checkpoint_presentation_fingerprint.v1"
 
 _VOLATILE_KEYS = frozenset({"created_at", "updated_at", "generated_at", "recorded_at", "absolute_path", "project_path", "bundle_sha256"})
 
+_DECISION_FIELD_LABELS = {
+    "decision_brief.semantic_subject.facts": ("核心证据事实", "core evidence facts"),
+    "figure_claim_map": ("图表与论断的对应关系", "figure-to-claim bindings"),
+    "scientific_identity.plan_hash": ("研究蓝图身份", "research blueprint identity"),
+    "scientific_identity.method_analysis_contract_sha256": ("方法分析合同身份", "method-analysis contract identity"),
+    "scientific_identity.run_id": ("分析运行批次", "analysis run"),
+    "scientific_identity.cohort_id": ("研究样本范围", "study cohort"),
+    "scientific_identity.sample_unit": ("分析单位", "unit of analysis"),
+    "scientific_identity.validation_design": ("验证设计", "validation design"),
+    "scientific_identity.metric_definition_id": ("主指标定义", "primary metric definition"),
+    "scientific_identity.split_id": ("数据划分", "data split"),
+    "scientific_identity.model_id": ("模型身份", "model identity"),
+    "scientific_identity.aggregation_id": ("指标汇总方式", "metric aggregation"),
+    "decision_brief.semantic_subject.confirming": ("本次确认范围", "confirmation scope"),
+    "decision_brief.semantic_subject.not_confirming": ("本次不确认的内容", "items outside this confirmation"),
+    "decision_brief.semantic_subject.claim_boundaries": ("论断边界", "claim boundaries"),
+    "decision_brief.semantic_subject.figure_claims": ("图表支持的结论", "figure-supported claims"),
+    "decision_brief.semantic_subject.reopen_conditions": ("重新确认条件", "reconfirmation conditions"),
+}
+
 
 def _hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
@@ -229,6 +249,43 @@ def _diff(previous: Any, current: Any, prefix: str = "") -> list[dict[str, Any]]
     return [{"field": prefix or "root", "before": previous, "after": current}]
 
 
+def scientific_delta_field_label(field: str, *, locale: str = "zh-CN") -> str:
+    """Map an internal fingerprint path to an author-facing decision topic."""
+
+    known = _DECISION_FIELD_LABELS.get(field)
+    if known:
+        return known[1] if locale == "en" else known[0]
+    if field.endswith(".facts"):
+        return "core evidence facts" if locale == "en" else "核心证据事实"
+    if field.startswith("scientific_identity."):
+        return "scientific study identity" if locale == "en" else "研究设计与分析身份"
+    return "scientific decision content" if locale == "en" else "科学决定内容"
+
+
+def human_scientific_delta_summary(delta: Mapping[str, Any], *, locale: str = "zh-CN") -> str:
+    """Return an author-facing summary without exposing internal payload paths."""
+
+    if delta.get("classification") != "scientific_change" or not delta.get("changes"):
+        key = "summary_en" if locale == "en" else "summary_zh"
+        return str(delta.get(key) or delta.get("summary_zh") or "")
+    labels = []
+    for item in delta.get("changes") or []:
+        if not isinstance(item, Mapping):
+            continue
+        label = scientific_delta_field_label(str(item.get("field") or ""), locale=locale)
+        if label not in labels:
+            labels.append(label)
+    if not labels:
+        labels = ["scientific decision content" if locale == "en" else "科学决定内容"]
+    joined = ", ".join(labels) if locale == "en" else "、".join(labels)
+    if locale == "en":
+        return (
+            f"Compared with the latest valid confirmation, {joined} changed. "
+            "The itemized differences below show what was added, removed, or revised; a new author confirmation is required."
+        )
+    return f"相对最近一次有效确认，{joined}发生变化。下方列出具体新增、移除或修改内容，因此本次需要新的作者确认。"
+
+
 def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[str, Any]) -> dict[str, Any]:
     """Explain whether a new user decision is scientifically required."""
 
@@ -261,14 +318,14 @@ def compare_scientific_decisions(previous: dict[str, Any] | None, current: dict[
     before = _normalize_scientific_payload(previous.get("canonical_payload") if isinstance(previous.get("canonical_payload"), dict) else {})
     after = _normalize_scientific_payload(current.get("canonical_payload") if isinstance(current.get("canonical_payload"), dict) else {})
     changes = _diff(before, after)
-    names = "、".join(str(item.get("field")) for item in changes[:5]) or "科学决定内容"
-    return {
+    result = {
         "classification": "scientific_change",
         "requires_reconfirmation": True,
         "changes": changes[:50],
-        "summary_zh": f"相对最近一次有效确认，以下科学决定字段发生变化：{names}；需要新的作者确认。",
-        "summary_en": f"Compared with the latest valid confirmation, these scientific-decision fields changed: {names}; a new author confirmation is required.",
     }
+    result["summary_zh"] = human_scientific_delta_summary(result, locale="zh-CN")
+    result["summary_en"] = human_scientific_delta_summary(result, locale="en")
+    return result
 
 
 __all__ = [
@@ -279,6 +336,8 @@ __all__ = [
     "build_presentation_fingerprint",
     "build_scientific_decision_fingerprint",
     "compare_scientific_decisions",
+    "human_scientific_delta_summary",
+    "scientific_delta_field_label",
     "fingerprint_has_method_analysis_identity",
     "scientific_fingerprints_equivalent",
 ]

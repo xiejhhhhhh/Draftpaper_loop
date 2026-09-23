@@ -10,14 +10,15 @@ from typing import Any
 
 from .artifact_identity import canonical_json
 from .checkpoint_brief import validate_human_decision_brief
+from .checkpoint_fingerprint import human_scientific_delta_summary
 
 
 READABILITY_REPORT_SCHEMA = "dpl.checkpoint_readability_report.v1"
 MAX_HTML_BYTES = 256 * 1024
-MAX_VISIBLE_CHARS = 12000
+MAX_VISIBLE_CHARS = 20000
 MAX_TABLES = 8
 MAX_TABLE_ROWS = 80
-MAX_LINKS = 20
+MAX_LINKS = 32
 MAX_DECISION_SECTIONS = 16
 
 
@@ -138,9 +139,7 @@ def build_checkpoint_readability_report(
     expected_fact_ids = _expected_fact_ids(brief)
     question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
     delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
-    expected_delta = str(delta.get("summary_en") or "") if normalized_locale == "en" else str(delta.get("summary_zh") or "")
-    if not expected_delta:
-        expected_delta = str(delta.get("summary_zh") or "")
+    expected_delta = human_scientific_delta_summary(delta, locale=normalized_locale)
     html_bytes = len(html.encode("utf-8"))
     table_count = len(re.findall(r"<table\b", html, flags=re.IGNORECASE))
     table_row_count = len(re.findall(r"<tr\b", html, flags=re.IGNORECASE))

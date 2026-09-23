@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import os
 import json
-import hashlib
+from collections import Counter, defaultdict
 from html import escape
 from pathlib import Path
 from typing import Any
+
+from .checkpoint_fingerprint import human_scientific_delta_summary, scientific_delta_field_label
 
 
 _STATE_LABELS = {
@@ -544,45 +546,513 @@ def _statement_text(statement: dict[str, Any], locale: str) -> str:
 
 
 def _semantic_delta_text(delta: dict[str, Any], locale: str) -> str:
-    if locale == "en" and _text(delta.get("summary_en")):
-        return _text(delta.get("summary_en"))
-    return _text(delta.get("summary_zh"))
+    return _text(human_scientific_delta_summary(delta, locale=locale))
 
 
-def _compact_delta_value(value: Any, *, locale: str) -> str:
-    """Render a reviewable change summary without expanding audit payloads.
+_DELTA_VALUE_LABELS = {
+    "zh-CN": {
+        "metric": "指标",
+        "metric_definition_id": "指标定义",
+        "value": "数值",
+        "score": "得分",
+        "estimate": "估计值",
+        "cohort_id": "样本组",
+        "entity_type": "计数对象",
+        "count_mode": "计数口径",
+        "filter_contract_id": "筛选口径",
+        "run_id": "运行批次",
+        "split_id": "验证划分",
+        "model_id": "模型",
+        "validation_design": "验证设计",
+        "expected_cohort_id": "预期样本组",
+        "expected_split_id": "预期验证划分",
+        "caption_cohort_id": "图注样本组",
+        "caption_split_id": "图注验证划分",
+        "figure_cohort_id": "图表样本组",
+        "figure_split_id": "图表验证划分",
+        "plotted_series_ids": "图中绘制的数据序列",
+        "caption_series_ids": "图注声明的数据序列",
+        "claim_series_ids": "结论关联的数据序列",
+        "figure_quantity_kind": "图表数据类型",
+        "caption_quantity_kind": "图注数据类型",
+        "claim_quantity_kind": "结论数据类型",
+    },
+    "en": {
+        "metric": "Metric",
+        "metric_definition_id": "Metric definition",
+        "value": "Value",
+        "score": "Score",
+        "estimate": "Estimate",
+        "cohort_id": "Cohort",
+        "entity_type": "Counted entity",
+        "count_mode": "Counting rule",
+        "filter_contract_id": "Filter contract",
+        "run_id": "Run",
+        "split_id": "Validation split",
+        "model_id": "Model",
+        "validation_design": "Validation design",
+        "expected_cohort_id": "Expected cohort",
+        "expected_split_id": "Expected split",
+        "caption_cohort_id": "Caption cohort",
+        "caption_split_id": "Caption split",
+        "figure_cohort_id": "Figure cohort",
+        "figure_split_id": "Figure split",
+        "plotted_series_ids": "Plotted series",
+        "caption_series_ids": "Series named in caption",
+        "claim_series_ids": "Series tied to claim",
+        "figure_quantity_kind": "Figure quantity",
+        "caption_quantity_kind": "Caption quantity",
+        "claim_quantity_kind": "Claim quantity",
+    },
+}
 
-    Scientific-decision comparisons can legitimately contain whole lists of
-    facts or figure bindings.  Their complete before/after payload belongs in
-    the technical audit bundle; placing it verbatim on the human decision page
-    turns a concise confirmation into an unreadable wall of JSON.  Keep short
-    scalar values visible and replace larger structured values with their item
-    count plus a stable digest, which is sufficient to locate the exact delta
-    in the linked audit artifact.
-    """
+_FACT_TYPE_LABELS = {
+    "zh-CN": {
+        "metric": "指标事实",
+        "count": "样本计数",
+        "figure": "图表证据",
+        "finding": "研究发现",
+        "claim_boundary": "论断边界",
+        "identity": "研究身份",
+        "scope": "确认范围",
+    },
+    "en": {
+        "metric": "Metric fact",
+        "count": "Sample count",
+        "figure": "Figure evidence",
+        "finding": "Finding",
+        "claim_boundary": "Claim boundary",
+        "identity": "Research identity",
+        "scope": "Confirmation scope",
+    },
+}
 
-    if value in (None, ""):
-        return "无" if locale != "en" else "None"
+_COHORT_LABELS = {
+    "zh-CN": {
+        "registered_2023_samples": "2023 年登记样本",
+        "complete_aaew_records": "完整 AAEW 记录",
+        "reference_polygons_complete_0_30_60_90m": "完整的 0、30、60、90 米缓冲参考地块",
+        "anomaly_injection_2023": "2023 年异常注入样本",
+    },
+    "en": {
+        "registered_2023_samples": "2023 registered samples",
+        "complete_aaew_records": "complete AAEW records",
+        "reference_polygons_complete_0_30_60_90m": "complete 0/30/60/90 m buffer reference polygons",
+        "anomaly_injection_2023": "2023 anomaly-injection samples",
+    },
+}
+
+_COUNT_VALUE_LABELS = {
+    "entity_type": {
+        "zh-CN": {
+            "sample_record": "样本记录",
+            "support_profile": "支持档案",
+            "reference_polygon": "参考地块",
+            "spatial_block": "空间区块",
+            "reporting_unit": "报告单元",
+            "anomaly_instance": "异常注入实例",
+        },
+        "en": {
+            "sample_record": "sample records",
+            "support_profile": "support profiles",
+            "reference_polygon": "reference polygons",
+            "spatial_block": "spatial blocks",
+            "reporting_unit": "reporting units",
+            "anomaly_instance": "injected anomalies",
+        },
+    },
+    "count_mode": {
+        "zh-CN": {
+            "row_count": "记录总数",
+            "post_filter_row_count": "筛选后记录数",
+            "distinct_key_count": "不同档案数",
+            "distinct_polygon_id_count": "唯一地块数",
+            "distinct_group_count": "独立区块数",
+            "distinct_reporting_unit_count": "独立报告单元数",
+            "injection_instance_count": "注入实例数",
+            "unique": "去重后数量",
+        },
+        "en": {
+            "row_count": "total",
+            "post_filter_row_count": "post-filter",
+            "distinct_key_count": "distinct",
+            "distinct_polygon_id_count": "unique",
+            "distinct_group_count": "independent",
+            "distinct_reporting_unit_count": "unique",
+            "injection_instance_count": "injected",
+            "unique": "unique",
+        },
+    },
+}
+
+
+def _is_digest(value: str) -> bool:
+    normalized = value.removeprefix("sha256:").strip()
+    return len(normalized) in {32, 40, 64} and all(character in "0123456789abcdefABCDEF" for character in normalized)
+
+
+def _cohort_label(value: Any, *, locale: str) -> str:
+    raw = str(value or "")
+    slug = raw.partition(":")[2] if raw.startswith("cohort:") else raw
+    label = _COHORT_LABELS["en" if locale == "en" else "zh-CN"].get(slug)
+    if label:
+        return label
+    words = slug.replace("_", " ").strip()
+    return words or ("未登记" if locale != "en" else "Not recorded")
+
+
+def _count_label(field: str, value: Any, *, locale: str) -> str:
+    language = "en" if locale == "en" else "zh-CN"
+    return _COUNT_VALUE_LABELS.get(field, {}).get(language, {}).get(str(value), str(value).replace("_", " "))
+
+
+def _format_count(value: Any, *, locale: str) -> str:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return f"{value:,}"
+    return _human_delta_value(value, locale=locale)
+
+
+def _count_fact_description(value: dict[str, Any], *, locale: str) -> str:
+    cohort = _cohort_label(value.get("cohort_id"), locale=locale)
+    entity_key = str(value.get("entity_type") or "")
+    entity = _count_label("entity_type", entity_key, locale=locale)
+    mode = str(value.get("count_mode") or "")
+    count = _format_count(value.get("value", value.get("count")), locale=locale)
+    if locale == "en":
+        mode_label = {
+            "row_count": "total",
+            "post_filter_row_count": "post-filter",
+            "distinct_key_count": "distinct",
+            "distinct_polygon_id_count": "unique",
+            "distinct_group_count": "independent",
+            "distinct_reporting_unit_count": "independent",
+            "injection_instance_count": "controlled injected",
+            "unique": "unique",
+        }.get(mode, mode.replace("_", " "))
+        return f"{count} {mode_label} {entity} in {cohort}"
+
+    unit = {
+        "sample_record": "条",
+        "support_profile": "种",
+        "reference_polygon": "个",
+        "spatial_block": "个",
+        "reporting_unit": "个",
+        "anomaly_instance": "个",
+    }.get(entity_key, "个")
+    if mode == "row_count":
+        return f"{cohort}共有 {count} {unit}{entity}"
+    if mode == "post_filter_row_count":
+        return f"{cohort}筛选后保留 {count} {unit}{entity}"
+    mode_label = {
+        "distinct_key_count": "不同",
+        "distinct_polygon_id_count": "唯一",
+        "distinct_group_count": "独立",
+        "distinct_reporting_unit_count": "独立",
+        "injection_instance_count": "受控注入",
+        "unique": "去重后",
+    }.get(mode, mode.replace("_", " "))
+    return f"{cohort}：{count} {unit}{mode_label}{entity}"
+
+
+def _human_delta_value(value: Any, *, locale: str) -> str:
+    if value is None or value == "":
+        return "未登记" if locale != "en" else "Not recorded"
+    if isinstance(value, bool):
+        return ("是" if value else "否") if locale != "en" else ("Yes" if value else "No")
     if isinstance(value, str):
-        if len(value) <= 280:
-            return _text(value)
-        digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
-        label = f"文本 {len(value)} 字符" if locale != "en" else f"text, {len(value)} characters"
-        return f"{label}（SHA-256: <code>{digest}</code>）"
-    try:
-        rendered = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    except (TypeError, ValueError):
-        rendered = str(value)
-    if len(rendered) <= 280:
-        return _text(rendered)
-    digest = hashlib.sha256(rendered.encode("utf-8")).hexdigest()[:12]
+        if _is_digest(value):
+            return "内容身份指纹已变化" if locale != "en" else "Content identity fingerprint changed"
+        return value
     if isinstance(value, dict):
-        label = f"结构化对象，{len(value)} 个字段" if locale != "en" else f"structured object, {len(value)} fields"
-    elif isinstance(value, (list, tuple, set)):
-        label = f"结构化列表，{len(value)} 项" if locale != "en" else f"structured list, {len(value)} items"
+        parts = []
+        for key, item in sorted(value.items(), key=lambda pair: str(pair[0])):
+            normalized_key = str(key)
+            if normalized_key.endswith(("sha256", "_hash")) or normalized_key == "filter_contract_id":
+                continue
+            label = _DELTA_VALUE_LABELS["en" if locale == "en" else "zh-CN"].get(normalized_key)
+            label = label or normalized_key.replace("_", " ")
+            if normalized_key == "cohort_id":
+                rendered = _cohort_label(item, locale=locale)
+            elif normalized_key in {"entity_type", "count_mode"}:
+                rendered = _count_label(normalized_key, item, locale=locale)
+            else:
+                rendered = _human_delta_value(item, locale=locale)
+            parts.append(f"{label}: {rendered}")
+        if parts:
+            return "; ".join(parts)
+        return "科学内容指纹已变化" if locale != "en" else "Scientific content fingerprint changed"
+    if isinstance(value, (list, tuple)):
+        rendered = [_human_delta_value(item, locale=locale) for item in value]
+        rendered = [item for item in rendered if item]
+        return "、".join(rendered) if locale != "en" else ", ".join(rendered)
+    return str(value)
+
+
+def _canonical_delta_item(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _fact_identity(item: dict[str, Any]) -> str:
+    kind = str(item.get("fact_type") or "fact")
+    value = item.get("semantic_value")
+    if isinstance(value, dict):
+        if kind == "figure":
+            identity = {"figure_id": value.get("figure_id")}
+        elif kind == "count":
+            identity = {key: item_value for key, item_value in value.items() if key not in {"value", "count", "n"}}
+        elif kind == "metric":
+            identity = {
+                key: item_value
+                for key, item_value in value.items()
+                if key not in {"value", "score", "estimate", "metric_value", "metric_result"}
+            }
+        else:
+            identity = value
     else:
-        label = f"结构化值，{len(rendered)} 字符" if locale != "en" else f"structured value, {len(rendered)} characters"
-    return f"{label}（SHA-256: <code>{digest}</code>）"
+        identity = value
+    return f"{kind}:{_canonical_delta_item(identity)}"
+
+
+def _fact_description(item: dict[str, Any], *, locale: str) -> str:
+    kind = str(item.get("fact_type") or "fact")
+    type_label = _FACT_TYPE_LABELS["en" if locale == "en" else "zh-CN"].get(kind, "Fact" if locale == "en" else "事实")
+    value = item.get("semantic_value")
+    if kind == "figure" and isinstance(value, dict):
+        figure_id = _human_delta_value(value.get("figure_id"), locale=locale)
+        note = "图表内容或语义发生变化，请与下方本次主图预览对照。" if locale != "en" else "Figure content or meaning changed; compare with the current figure preview below."
+        return f"{type_label}“{figure_id}”：{note}" if locale != "en" else f'{type_label} "{figure_id}": {note}'
+    if kind == "count" and isinstance(value, dict):
+        return f"{type_label}: {_count_fact_description(value, locale=locale)}" if locale == "en" else f"{type_label}：{_count_fact_description(value, locale=locale)}。"
+    if kind == "metric" and isinstance(value, dict):
+        labels = _DELTA_VALUE_LABELS["en" if locale == "en" else "zh-CN"]
+        name = value.get("metric") or value.get("metric_definition_id") or value.get("name")
+        measured = value.get("value", value.get("score", value.get("estimate")))
+        details = [f"{labels['metric']}: {_human_delta_value(name, locale=locale)}"] if name else []
+        if measured is not None:
+            details.append(f"{labels['value']}: {_human_delta_value(measured, locale=locale)}")
+        for key in ("cohort_id", "model_id", "run_id", "split_id"):
+            if value.get(key) not in (None, ""):
+                details.append(f"{labels[key]}: {_human_delta_value(value[key], locale=locale)}")
+        return f"{type_label}：" + "；".join(details) if locale != "en" else f"{type_label}: " + "; ".join(details)
+    rendered = _human_delta_value(value, locale=locale)
+    return f"{type_label}：{rendered}" if locale != "en" else f"{type_label}: {rendered}"
+
+
+def _render_fact_list_delta(before: list[Any], after: list[Any], *, locale: str) -> str:
+    before_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    after_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in before:
+        if isinstance(item, dict):
+            before_groups[_fact_identity(item)].append(item)
+    for item in after:
+        if isinstance(item, dict):
+            after_groups[_fact_identity(item)].append(item)
+
+    added: list[dict[str, Any]] = []
+    removed: list[dict[str, Any]] = []
+    updated: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for identity in sorted(set(before_groups) | set(after_groups)):
+        old_items = sorted(before_groups.get(identity, []), key=_canonical_delta_item)
+        new_items = sorted(after_groups.get(identity, []), key=_canonical_delta_item)
+        old_counts = Counter(_canonical_delta_item(item.get("semantic_value")) for item in old_items)
+        new_counts = Counter(_canonical_delta_item(item.get("semantic_value")) for item in new_items)
+        old_exact: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        new_exact: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for item in old_items:
+            old_exact[_canonical_delta_item(item.get("semantic_value"))].append(item)
+        for item in new_items:
+            new_exact[_canonical_delta_item(item.get("semantic_value"))].append(item)
+        old_left = [item for key, items in old_exact.items() for item in items[max(0, new_counts[key]):]]
+        new_left = [item for key, items in new_exact.items() for item in items[max(0, old_counts[key]):]]
+        paired = min(len(old_left), len(new_left))
+        updated.extend(zip(old_left[:paired], new_left[:paired]))
+        removed.extend(old_left[paired:])
+        added.extend(new_left[paired:])
+
+    rows = []
+    for old_item, new_item in updated:
+        kind = str(new_item.get("fact_type") or "fact")
+        old_value = old_item.get("semantic_value")
+        new_value = new_item.get("semantic_value")
+        if kind == "figure":
+            description = _fact_description(new_item, locale=locale)
+        else:
+            description = (
+                f"{_FACT_TYPE_LABELS['en' if locale == 'en' else 'zh-CN'].get(kind, 'Fact' if locale == 'en' else '事实')}："
+                f"{_human_delta_value(old_value, locale=locale)} → {_human_delta_value(new_value, locale=locale)}"
+            )
+        rows.append(f"<li><strong>{'更新：' if locale != 'en' else 'Updated: '}</strong>{_text(description)}</li>")
+    for item in added:
+        prefix = "新增：" if locale != "en" else "Added: "
+        rows.append(f"<li><strong>{prefix}</strong>{_text(_fact_description(item, locale=locale))}</li>")
+    for item in removed:
+        prefix = "移除：" if locale != "en" else "Removed: "
+        rows.append(f"<li><strong>{prefix}</strong>{_text(_fact_description(item, locale=locale))}</li>")
+
+    if not rows:
+        return '<p class="muted">事实列表顺序或机器身份有变化，但未发现具体事实内容差异；请核对本页列出的当前事实。</p>' if locale != "en" else '<p class="muted">Only list ordering or machine identity changed; no fact-content difference was found. Review the current facts on this page.</p>'
+    summary = (
+        f"新增 {len(added)} 项、更新 {len(updated)} 项、移除 {len(removed)} 项。"
+        if locale != "en"
+        else f"{len(added)} added, {len(updated)} updated, {len(removed)} removed."
+    )
+    heading = "具体变化" if locale != "en" else "Itemized changes"
+    return f'<p class="delta-count">{summary}</p><h4>{heading}</h4><ul class="delta-list">{"".join(rows)}</ul>'
+
+
+_FIGURE_DELTA_FIELDS = (
+    "expected_cohort_id",
+    "expected_split_id",
+    "caption_cohort_id",
+    "caption_split_id",
+    "figure_cohort_id",
+    "figure_split_id",
+    "plotted_series_ids",
+    "caption_series_ids",
+    "claim_series_ids",
+    "figure_quantity_kind",
+    "caption_quantity_kind",
+    "claim_quantity_kind",
+)
+
+
+def _figure_claim_identity(item: dict[str, Any]) -> tuple[str, str]:
+    return str(item.get("claim_statement_id") or ""), str(item.get("figure_id") or "")
+
+
+def _figure_display_name(item: dict[str, Any], locale: str, brief: dict[str, Any] | None = None) -> str:
+    claim_id = str(item.get("claim_statement_id") or "")
+    suffix = claim_id.removeprefix("figure-")
+    claims = (brief or {}).get("figure_claims") or []
+    claim = next(
+        (
+            row
+            for row in claims
+            if isinstance(row, dict)
+            and isinstance(row.get("statement"), dict)
+            and str(row["statement"].get("statement_id") or "") == claim_id
+        ),
+        {},
+    )
+    title = str(claim.get("figure_id") or item.get("caption") or item.get("figure_id") or "")
+    if suffix.isdigit():
+        figure_number = f"Figure {suffix}" if locale == "en" else f"图 {suffix}"
+        return f"{figure_number}: {title}" if title else figure_number
+    return title or claim_id or ("figure" if locale == "en" else "图表")
+
+
+def _figure_anchor_id(statement_id: str) -> str:
+    safe_id = "".join(char if char.isalnum() or char in "-_" else "-" for char in statement_id)
+    return f"figure-evidence-{safe_id or 'current'}"
+
+
+def _figure_claim_change(old: dict[str, Any], new: dict[str, Any], *, brief: dict[str, Any], locale: str) -> str:
+    labels = _DELTA_VALUE_LABELS["en" if locale == "en" else "zh-CN"]
+    notes = []
+    if old.get("figure_semantic_sha256") != new.get("figure_semantic_sha256"):
+        notes.append(
+            "图表产物内容发生变化；本次确认记录未附上一版图像预览，无法仅凭记录说明图像细节差异。请核对当前图表，并与此前留存版本对照。"
+            if locale != "en"
+            else "The figure artifact changed. This confirmation record does not include the prior image, so its visual differences cannot be described from this record alone. Review the current figure and compare it with the prior version you retained."
+        )
+    for field in _FIGURE_DELTA_FIELDS:
+        if old.get(field) == new.get(field):
+            continue
+        before = _human_delta_value(old.get(field), locale=locale)
+        after = _human_delta_value(new.get(field), locale=locale)
+        label = labels.get(field, field.replace("_", " "))
+        notes.append(f"{label}: {before} → {after}")
+    if not notes:
+        notes.append("对应的科研字段发生变化；请核对该图及其支持的结论。" if locale != "en" else "A scientific field changed; review this figure and its supported claim.")
+    statement_id = str(new.get("claim_statement_id") or old.get("claim_statement_id") or "")
+    claim = next(
+        (
+            row
+            for row in brief.get("figure_claims") or []
+            if isinstance(row, dict)
+            and isinstance(row.get("statement"), dict)
+            and str(row["statement"].get("statement_id") or "") == statement_id
+        ),
+        {},
+    )
+    statement = claim.get("statement") if isinstance(claim.get("statement"), dict) else {}
+    claim_text = _statement_text(statement, locale) if statement else ""
+    anchor_id = _figure_anchor_id(statement_id)
+    link_label = "查看当前图表与对应说明" if locale != "en" else "View the current figure and its explanation"
+    rows = [f"<li>{_text(note)}</li>" for note in notes]
+    if claim_text:
+        label = "当前图表所对应的说明：" if locale != "en" else "Current figure explanation: "
+        rows.append(f"<li>{label}{_text(claim_text)}</li>")
+    rows.append(f'<li><a href="#{escape(anchor_id)}">{link_label}</a></li>')
+    title = _figure_display_name(new, locale, brief)
+    return f"<li><strong>{_text(title)}</strong><ul>{''.join(rows)}</ul></li>"
+
+
+def _render_figure_map_delta(before: list[Any], after: list[Any], *, brief: dict[str, Any], locale: str) -> str:
+    old_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    new_groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for item in before:
+        if isinstance(item, dict):
+            old_groups[_figure_claim_identity(item)].append(item)
+    for item in after:
+        if isinstance(item, dict):
+            new_groups[_figure_claim_identity(item)].append(item)
+
+    rows = []
+    for identity in sorted(set(old_groups) | set(new_groups)):
+        old_items = sorted(old_groups.get(identity, []), key=_canonical_delta_item)
+        new_items = sorted(new_groups.get(identity, []), key=_canonical_delta_item)
+        old_exact = Counter(_canonical_delta_item(item) for item in old_items)
+        new_exact = Counter(_canonical_delta_item(item) for item in new_items)
+        unchanged = old_exact & new_exact
+        old_seen: Counter[str] = Counter()
+        new_seen: Counter[str] = Counter()
+        old_left = []
+        new_left = []
+        for item in old_items:
+            key = _canonical_delta_item(item)
+            old_seen[key] += 1
+            if old_seen[key] > unchanged[key]:
+                old_left.append(item)
+        for item in new_items:
+            key = _canonical_delta_item(item)
+            new_seen[key] += 1
+            if new_seen[key] > unchanged[key]:
+                new_left.append(item)
+        # Each remaining row shares its claim and figure identity, so it is a semantic update.
+        paired = min(len(old_left), len(new_left))
+        for old, new in zip(old_left[:paired], new_left[:paired]):
+            rows.append(_figure_claim_change(old, new, brief=brief, locale=locale))
+        for item in new_left[paired:]:
+            prefix = "新增图表与论断绑定：" if locale != "en" else "Added figure-to-claim binding: "
+            rows.append(f"<li><strong>{prefix}{_text(_figure_display_name(item, locale, brief))}</strong></li>")
+        for item in old_left[paired:]:
+            prefix = "移除图表与论断绑定：" if locale != "en" else "Removed figure-to-claim binding: "
+            rows.append(f"<li><strong>{prefix}{_text(_figure_display_name(item, locale, brief))}</strong></li>")
+
+    if not rows:
+        return '<p class="muted">未发现图表与论断关系的具体变化。</p>' if locale != "en" else '<p class="muted">No specific figure-to-claim change was found.</p>'
+    heading = "图表级变化" if locale != "en" else "Figure-level changes"
+    return f'<h4>{heading}</h4><ul class="delta-list">{"".join(rows)}</ul>'
+
+
+def _render_semantic_change(item: dict[str, Any], *, brief: dict[str, Any], locale: str) -> str:
+    field = str(item.get("field") or "")
+    before, after = item.get("before"), item.get("after")
+    label = scientific_delta_field_label(field, locale=locale)
+    if field.endswith(".facts") and isinstance(before, list) and isinstance(after, list):
+        detail = _render_fact_list_delta(before, after, locale=locale)
+    elif field == "figure_claim_map" and isinstance(before, list) and isinstance(after, list):
+        detail = _render_figure_map_delta(before, after, brief=brief, locale=locale)
+    elif isinstance(before, str) and isinstance(after, str) and (_is_digest(before) or _is_digest(after)):
+        suffix = "对应的科学内容身份已变化，请核对上方的研究蓝图、方法或运行范围。" if locale != "en" else "Its scientific content identity changed; verify the corresponding blueprint, method, or run shown above."
+        detail = f"<p>{_text(label)}{_text(suffix)}</p>"
+    else:
+        before_text = _human_delta_value(before, locale=locale)
+        after_text = _human_delta_value(after, locale=locale)
+        arrow = " → "
+        detail = f'<p><strong>{"确认前" if locale != "en" else "Previously"}:</strong> {_text(before_text)}{arrow}<strong>{"本次" if locale != "en" else "Now"}:</strong> {_text(after_text)}</p>'
+    return f'<article class="delta-change"><h3>{_text(label)}</h3>{detail}</article>'
 
 
 def _brief_ref_links(root: Path, output_dir: Path, refs: list[Any], *, locale: str = "zh-CN") -> str:
@@ -699,9 +1169,10 @@ def render_checkpoint_decision_html(
             continue
         path = str(item.get("project_relative_path") or "")
         statement = item.get("statement") if isinstance(item.get("statement"), dict) else {}
+        figure_anchor = _figure_anchor_id(str(statement.get("statement_id") or ""))
         href = _link(root, output_dir, path)
         figures.append(
-            f'<article class="figure" data-statement-id="{escape(_text(statement.get("statement_id")))}" data-fact-refs="{escape(" ".join(_text(value) for value in statement.get("fact_refs") or []))}">'
+            f'<article id="{escape(figure_anchor)}" class="figure" data-statement-id="{escape(_text(statement.get("statement_id")))}" data-fact-refs="{escape(" ".join(_text(value) for value in statement.get("fact_refs") or []))}">'
             f'<h3>{_text(item.get("figure_id"))}</h3>'
             + (f'<a href="{href}"><img src="{href}" alt="{_text(item.get("figure_id"))}"></a>' if href and Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".svg"} else "")
             + f'<p>{_statement_text(statement, locale)}</p>'
@@ -713,17 +1184,15 @@ def render_checkpoint_decision_html(
     for item in delta.get("changes") or []:
         if not isinstance(item, dict):
             continue
-        before = _compact_delta_value(item.get("before"), locale=locale)
-        after = _compact_delta_value(item.get("after"), locale=locale)
-        changes.append(f'<li><code>{_text(item.get("field"))}</code>：{before} → {after}</li>')
+        changes.append(_render_semantic_change(item, brief=brief, locale=locale))
     change_note = (
-        '<p class="muted">结构化差异以摘要形式展示；完整逐项内容保留在技术审计包中。</p>'
+        '<p class="muted">这里解释科学内容如何变化；哈希只用于技术审计，不代替文字说明。</p>'
         if changes and locale != "en"
-        else '<p class="muted">Structured changes are summarized here; the technical audit retains the complete item-level delta.</p>'
+        else '<p class="muted">This section explains the scientific changes in words; hashes are audit identifiers, not explanations.</p>'
         if changes
         else ""
     )
-    change_html = ("<ul>" + "".join(changes) + "</ul>" + change_note) if changes else ""
+    change_html = ('<div class="delta-changes">' + "".join(changes) + "</div>" + change_note) if changes else ""
     deliverables = []
     for item in brief.get("latest_user_visible_deliverables") or []:
         if not isinstance(item, dict):
@@ -755,6 +1224,7 @@ p {{ overflow-wrap:anywhere; }} a {{ color:var(--blue); overflow-wrap:anywhere; 
 .lead {{ margin:14px 0 0; font-size:18px; font-weight:600; }} .muted,small {{ color:var(--muted); }} .notice {{ padding:11px 13px; border-left:4px solid var(--amber); background:var(--amber-bg); font-weight:600; }} .notice.success {{ border-color:var(--green); background:var(--green-bg); color:#14532d; }}
 ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li small {{ display:block; margin-top:3px; }} .refs {{ font-size:12px; }} .figure-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }} .figure {{ border:1px solid var(--line); padding:13px; min-width:0; }} .figure img {{ display:block; width:100%; max-height:230px; object-fit:contain; border:1px solid #e3e9f1; background:white; }}
 .meta {{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:14px; color:var(--muted); font-size:13px; }} .meta a {{ font-weight:600; }}
+.delta-change {{ margin:14px 0; padding:14px; border-left:4px solid var(--blue); background:#f8fafc; min-width:0; }} .delta-change h3 {{ margin:0 0 8px; }} .delta-count {{ margin:4px 0 8px; font-weight:700; }} .delta-list {{ margin-top:6px; }} .delta-list ul {{ margin-top:5px; }}
 @media (max-width:680px) {{ main {{ padding:14px 10px 42px; }} .hero,.section {{ padding:15px; }} h1 {{ font-size:25px; }} .figure-grid {{ grid-template-columns:minmax(0,1fr); }} .figure img {{ max-height:none; }} }}
 </style>
 </head>
