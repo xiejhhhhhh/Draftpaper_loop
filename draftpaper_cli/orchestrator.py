@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+from datetime import datetime, timezone
 from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any
 
 from .evidence_snapshot import (
@@ -248,12 +251,76 @@ def _read_report(project_path: Path, relative: str) -> dict[str, Any]:
 
 
 def _plugin_execution_failures(project_path: Path) -> list[dict[str, Any]]:
-    failures = []
-    for relative in ["data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl"]:
-        for event in read_jsonl(project_path / relative):
-            if str(event.get("status") or "") == "execution_failed":
-                failures.append(event)
-    return failures
+    histories: dict[tuple[str, str], list[tuple[datetime, int, int, int, dict[str, Any]]]] = {}
+    unorderable_failures: list[tuple[int, int, dict[str, Any]]] = []
+
+    def event_key(event: dict[str, Any]) -> tuple[str, str] | None:
+        requirement_id = str(event.get("requirement_id") or "").strip()
+        plugin_id = str(event.get("plugin_id") or "").strip()
+        return (requirement_id, plugin_id) if requirement_id and plugin_id else None
+
+    def event_time(event: dict[str, Any]) -> datetime | None:
+        raw = str(event.get("generated_at") or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def verified_project_result(event: dict[str, Any]) -> bool:
+        if event.get("status") != "project_executed" or event.get("scientific_evidence_status") != "project_result":
+            return False
+        outputs = event.get("output_hashes")
+        if not isinstance(outputs, dict) or not outputs:
+            return False
+        for relative, digest in outputs.items():
+            raw_path = str(relative or "").strip()
+            normalized_path = raw_path.replace("\\", "/")
+            if (
+                not raw_path
+                or PureWindowsPath(raw_path).drive
+                or PureWindowsPath(raw_path).is_absolute()
+                or PurePosixPath(normalized_path).is_absolute()
+                or ".." in PurePosixPath(normalized_path).parts
+                or not re.fullmatch(r"[0-9a-fA-F]{64}", str(digest or ""))
+            ):
+                return False
+        parameters = event.get("parameters")
+        if isinstance(parameters, dict) and "verification_output_count" in parameters:
+            output_count = parameters.get("verification_output_count")
+            if isinstance(output_count, bool) or not isinstance(output_count, int) or output_count != len(outputs):
+                return False
+        if str(event.get("plugin_id") or "").startswith("project_local:"):
+            if event.get("validation_level") not in {"project_asset_audited", "lineage_hash_and_semantic_audited"}:
+                return False
+        return True
+
+    for ledger_index, relative in enumerate(("data/plugin_execution_ledger.jsonl", "methods/plugin_execution_ledger.jsonl")):
+        for event_index, event in enumerate(read_jsonl(project_path / relative)):
+            status = str(event.get("status") or "")
+            is_failure = status == "execution_failed"
+            if not is_failure and not verified_project_result(event):
+                continue
+            key = event_key(event)
+            timestamp = event_time(event)
+            if is_failure and (key is None or timestamp is None):
+                unorderable_failures.append((ledger_index, event_index, event))
+                continue
+            if key is None or timestamp is None:
+                continue
+            histories.setdefault(key, []).append((timestamp, 1 if is_failure else 0, ledger_index, event_index, event))
+
+    active = list(unorderable_failures)
+    for history in histories.values():
+        latest = max(history, key=lambda row: row[:4])
+        if latest[1] == 1:
+            active.append((latest[2], latest[3], latest[4]))
+    active.sort(key=lambda row: (row[0], row[1]))
+    return [event for _, _, event in active]
 
 
 def _result_support_action(project_path: Path, result_support: dict[str, Any]) -> dict[str, Any] | None:
