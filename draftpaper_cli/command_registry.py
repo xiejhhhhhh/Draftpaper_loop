@@ -106,7 +106,11 @@ def _stage_write_globs(stage: str) -> tuple[str, ...]:
             "review/**",
             "references/reference_usage_plan.json",
         ),
-        "methods": ("methods/**", "data/**", "code/**", "results/**", "research_plan/**", "review/**", "writing/**", "latex/**", "references/**"),
+        "methods": (
+            "methods/**", "data/**", "code/**", "results/**", "research_plan/**",
+            "review/**", "writing/**", "latex/**", "references/**",
+            "supplementary/tables/*.csv", "supplementary/tables/*.tsv", "supplementary/tables/*.tex",
+        ),
         "results": ("results/**", "methods/**", "data/**", "code/**", "review/**", "writing/**", "latex/sections/results.tex"),
         "writing": ("writing/**", "latex/**", "introduction/**", "discussion/**", "results/**", "data/**", "methods/**", "references/**", "review/**"),
         "capabilities": ("research_plan/**", "journal_profile/**", "latex/**", "plugins/**", "data/**", "methods/**", "code/**", "results/**", "review/**"),

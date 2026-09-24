@@ -4,12 +4,15 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.data_feasibility import assess_data_feasibility, assess_data_quality, inventory_data
@@ -604,6 +607,95 @@ print(json.dumps({
                 next(item for item in payload["formulas"] if item["id"] == "coverage_rate")["used_by_figures"],
                 ["cohort"],
             )
+
+    def test_cli_verify_methods_commits_supplementary_tables(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Supplementary method tables", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            outputs = {
+                "results/tables/metrics.csv": "metric,value\nf1,0.88\n",
+                "supplementary/tables/control.csv": "test,value\ncontrol,1\n",
+                "supplementary/tables/control.tsv": "test\tvalue\ncontrol\t1\n",
+                "supplementary/tables/control.tex": "Control & 1 \\\\\n",
+            }
+            command = write_method_runner(project.path, text_outputs=outputs)
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
+            argv = [sys.executable, "-m", "draftpaper_cli.cli", "verify-methods", "--project", str(project.path), "--command", command]
+            for relative in outputs:
+                argv.extend(["--output", relative])
+
+            completed = subprocess.run(argv, capture_output=True, text=True)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout)["status"], "success")
+            for relative, content in outputs.items():
+                self.assertEqual((project.path / relative).read_text(encoding="utf-8"), content)
+            manifest = json.loads((project.path / "methods/run_manifest.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(set(manifest["output_artifact_hashes"]), set(outputs))
+            receipt = json.loads((project.path / "transaction_ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+            self.assertEqual(receipt["transaction_status"], "committed")
+            self.assertTrue(set(outputs) <= set(receipt["actual_write_set"]))
+
+    def test_cli_verify_methods_rollback_never_prints_success(self) -> None:
+        for output_mode in ("--json-full", "--compact"):
+            for recoverable in (True, False):
+                with self.subTest(output_mode=output_mode, recoverable=recoverable), tempfile.TemporaryDirectory() as tmp:
+                    project = create_project(root=tmp, idea="Rollback method output", field="workflow engineering")
+                    prepare_passing_data_gate(project.path)
+                    metrics = project.path / "results/tables/metrics.csv"
+                    metrics.parent.mkdir(parents=True, exist_ok=True)
+                    original = "metric,value\nf1,0.70\n" if recoverable else "x" * (8 * 1024 * 1024 + 1)
+                    metrics.write_text(original, encoding="utf-8")
+                    forbidden = "supplementary/tables/injected.py"
+                    command = write_method_runner(project.path, text_outputs={
+                        "results/tables/metrics.csv": "metric,value\nf1,0.88\n",
+                        forbidden: "print('not a table')\n",
+                    })
+                    refresh_project_passport(project.path, event="test_cli_fixture_prepared")
+                    original_state = (project.path / "project.json").read_bytes()
+
+                    completed = subprocess.run([
+                        sys.executable, "-m", "draftpaper_cli.cli", "verify-methods",
+                        "--project", str(project.path), "--command", command,
+                        "--output", "results/tables/metrics.csv", output_mode,
+                    ], capture_output=True, text=True)
+
+                    self.assertEqual(completed.returncode, 4 if recoverable else 5, completed.stderr)
+                    self.assertEqual(completed.stdout, "", "A rejected transaction must not publish its handler success.")
+                    payload = json.loads(completed.stderr)
+                    self.assertEqual(payload["status"], "boundary_violation")
+                    self.assertEqual(payload["violations"], [forbidden])
+                    self.assertEqual(payload["rollback"]["status"], "rolled_back" if recoverable else "rollback_incomplete")
+                    self.assertEqual(payload["command_exit_code"], completed.returncode)
+                    self.assertEqual((project.path / "project.json").read_bytes(), original_state)
+                    self.assertFalse((project.path / forbidden).exists())
+                    if recoverable:
+                        self.assertEqual(metrics.read_text(encoding="utf-8"), original)
+                    receipt = json.loads((project.path / "transaction_ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+                    self.assertEqual(receipt["scientific_exit_code"], 0)
+                    self.assertEqual(receipt["transaction_status"], payload["transaction_status"])
+
+    def test_cli_passport_failure_does_not_emit_method_success(self) -> None:
+        from draftpaper_cli.cli import main
+        from draftpaper_cli.passport import PassportError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = create_project(root=tmp, idea="Passport commit failure", field="workflow engineering")
+            prepare_passing_data_gate(project.path)
+            command = write_method_runner(project.path, text_outputs={"results/tables/metrics.csv": "metric,value\nf1,0.88\n"})
+            refresh_project_passport(project.path, event="test_cli_fixture_prepared")
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr), patch(
+                "draftpaper_cli.cli.refresh_project_passport", side_effect=PassportError("simulated refresh failure")
+            ):
+                code = main(["verify-methods", "--project", str(project.path), "--command", command,
+                             "--output", "results/tables/metrics.csv", "--json-full"])
+
+            self.assertEqual(code, 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertEqual(json.loads(stderr.getvalue())["status"], "error")
+            receipt = json.loads((project.path / "transaction_ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+            self.assertEqual(receipt["transaction_status"], "passport_refresh_failed")
 
     def test_verify_methods_fails_generated_png_without_metadata(self) -> None:
         from draftpaper_cli.methods import verify_methods

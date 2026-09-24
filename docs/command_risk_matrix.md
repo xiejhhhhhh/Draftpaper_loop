@@ -44,7 +44,7 @@ The current control plane contains 281 commands.
 | `assess-functional-quality-release` | `write_project` | none | none | none | none | release | yes | none | local_cpu | yes | `review/**`, `quality/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**` (+20) |
 | `assess-manuscript-quality` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
 | `assess-manuscript-quality-release` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
-| `assess-method-feasibility` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `assess-method-feasibility` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `assess-paper-quality-parity` | `write_project` | none | none | none | none | release | yes | none | local_cpu | yes | `review/**`, `quality/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**` (+20) |
 | `assess-plugin-sufficiency` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `assess-pre-execution-support` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
@@ -70,10 +70,10 @@ The current control plane contains 281 commands.
 | `benchmark-literature-quality` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
 | `bootstrap-discipline-foundation` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `build-argument-matrices` | `write_project` | none | none | none | none | state | yes | none | local_cpu | yes | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
-| `build-code-provenance` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `build-code-provenance` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `build-data-context` | `write_project` | none | none | none | none | data | yes | none | local_cpu | yes | `data/**`, `writing/**`, `research_plan/**`, `review/**`, `references/reference_usage_plan.json` (+17) |
 | `build-manuscript-source-map` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
-| `build-method-context` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `build-method-context` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `build-panel-contracts` | `write_project` | none | none | none | none | state | yes | none | local_cpu | yes | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
 | `build-paper-narrative` | `write_project` | none | none | none | none | state | yes | none | local_cpu | yes | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
 | `build-reference-registry` | `write_project` | none | none | none | none | references | yes | none | local_cpu | yes | `references/**`, `research_plan/**`, `citation_audit/**`, `writing/**`, `project.json` (+16) |
@@ -82,12 +82,12 @@ The current control plane contains 281 commands.
 | `build-statistical-validation-contract` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `capture-discipline-learning` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `checkpoint` | `write_project` | notification | none | none | system | state | yes | packet_build | local_cpu | no | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
-| `classify-code-ownership` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `classify-code-ownership` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `classify-data-access` | `write_project` | none | none | none | none | data | yes | none | local_cpu | yes | `data/**`, `writing/**`, `research_plan/**`, `review/**`, `references/reference_usage_plan.json` (+17) |
 | `classify-plugin-reusability` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `classify-skill-source` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `collect-literature` | `write_project` | none | none | none | none | references | yes | none | local_cpu | yes | `references/**`, `research_plan/**`, `citation_audit/**`, `writing/**`, `project.json` (+16) |
-| `collect-method-plan` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `collect-method-plan` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `commit-revision-candidate` | `human_checkpoint` | manuscript_release | full | user_decision_receipt | human_only | release | yes | human_only | local_cpu | no | `review/revision_reconciliation/**`, `.draftpaper/**`, `lineage/**`, `project.json`, `project.yaml` (+15) |
 | `compare-checkpoint-decision` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
 | `compare-research-plan-decision` | `read` | none | none | none | none | capabilities | no | none | local_cpu | yes | none |
@@ -117,13 +117,13 @@ The current control plane contains 281 commands.
 | `explain-reconfirmation` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
 | `explain-research-plan-reconfirmation` | `read` | none | none | none | none | capabilities | no | none | local_cpu | yes | none |
 | `extension-doctor` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
-| `extract-method-formulas` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `extract-method-formulas` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `extract-plugin-candidates` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `extract-review-rule-signals` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
 | `extract-skill-capabilities` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `fetch-research-code-archive` | `human_checkpoint` | plugin_license | compact | user_decision_receipt | human_only | capabilities | yes | human_only | local_cpu | no | `research_code_mining/**`, `references/**`, `project.json`, `project.yaml`, `project_passport.yaml` (+14) |
 | `generalize-plugin-candidate` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
-| `generate-analysis-code` | `execute_science` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `generate-analysis-code` | `execute_science` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `generate-citation-repair-plan` | `write_project` | none | none | none | none | references | yes | none | local_cpu | yes | `references/**`, `research_plan/**`, `citation_audit/**`, `writing/**`, `project.json` (+16) |
 | `generate-plan` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+27) |
 | `generate-revision-plan` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
@@ -175,11 +175,11 @@ The current control plane contains 281 commands.
 | `prepare-independent-manuscript-review` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
 | `prepare-literature-admission` | `write_project` | none | none | none | none | references | yes | none | local_cpu | yes | `references/**`, `project.json`, `project.yaml`, `project_passport.yaml`, `artifact_ledger.jsonl` (+13) |
 | `prepare-manuscript-completion` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/manuscript_completion/template.yaml`, `writing/manuscript_completion/missing_fields.json` |
-| `prepare-method-blueprint` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `prepare-method-blueprint` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `prepare-panel-repair` | `write_project` | none | none | none | none | state | yes | none | local_cpu | yes | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
 | `prepare-plugin-rescue` | `network_external` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
 | `prepare-pre-execution-rescue` | `write_project` | none | none | none | none | capabilities | yes | none | local_cpu | yes | `research_plan/**`, `journal_profile/**`, `latex/**`, `plugins/**`, `data/**` (+21) |
-| `prepare-project-method-implementation` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `prepare-project-method-implementation` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `prepare-result-rescue` | `human_checkpoint` | scientific_route | full | user_decision_receipt | human_only | results | yes | checkpoint_hash | local_cpu | no | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+19) |
 | `prepare-results-semantic-repair` | `write_project` | none | none | none | none | results | yes | none | local_cpu | yes | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+19) |
 | `prepare-revision` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
@@ -246,7 +246,7 @@ The current control plane contains 281 commands.
 | `rollback-manuscript-completion` | `human_checkpoint` | content_change | compact | operation_receipt | C2_or_C3 | writing | yes | human_only | local_cpu | no | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
 | `rollback-manuscript-revision` | `human_checkpoint` | content_change | compact | operation_receipt | C1_or_C3 | writing | yes | human_only | local_cpu | no | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
 | `rollback-orphan-literature` | `human_checkpoint` | operational_change | compact | operation_receipt | C2_or_C3 | references | yes | human_only | local_cpu | no | `references/**`, `project.json`, `project.yaml`, `project_passport.yaml`, `artifact_ledger.jsonl` (+13) |
-| `route-stage-code` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `route-stage-code` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `run-citation-repair-loop` | `write_project` | none | none | none | none | references | yes | none | local_cpu | yes | `references/**`, `research_plan/**`, `citation_audit/**`, `writing/**`, `project.json` (+16) |
 | `run-integrity-gate` | `write_project` | none | none | none | none | quality_checks | yes | none | local_cpu | yes | `review/**`, `quality_checks/**`, `integrity/**`, `citation_audit/**`, `latex/**` (+22) |
 | `run-pipeline` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
@@ -291,13 +291,13 @@ The current control plane contains 281 commands.
 | `validate-template-registry` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
 | `validate-third-party-provenance` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
 | `verify-environment` | `execute_science` | none | none | none | none | environment | no | none | local_cpu | no | none |
-| `verify-methods` | `execute_science` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `verify-methods` | `execute_science` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `verify-next-action` | `read` | none | none | none | none | state | no | none | local_cpu | yes | none |
 | `write-data` | `write_project` | none | none | none | none | data | yes | none | local_cpu | yes | `data/**`, `writing/**`, `research_plan/**`, `review/**`, `references/reference_usage_plan.json` (+17) |
 | `write-discussion` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
 | `write-github-contribution-guide` | `write_project` | none | none | none | none | state | yes | none | local_cpu | yes | `project.json`, `project_lineage.json`, `project_version_*.json`, `migration/**`, `recovery/**` (+19) |
 | `write-introduction` | `write_project` | none | none | none | none | writing | yes | none | local_cpu | yes | `writing/**`, `latex/**`, `introduction/**`, `discussion/**`, `results/**` (+21) |
-| `write-methods` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+21) |
+| `write-methods` | `write_project` | none | none | none | none | methods | yes | none | local_cpu | yes | `methods/**`, `data/**`, `code/**`, `results/**`, `research_plan/**` (+24) |
 | `write-results` | `write_project` | none | none | none | none | results | yes | none | local_cpu | yes | `results/**`, `methods/**`, `data/**`, `code/**`, `review/**` (+19) |
 
 The machine-readable command contract additionally contains input/output schemas, timeout, idempotency, parallel-safety and full read/write globs. Run `draftpaper validate-command-contracts` before release.

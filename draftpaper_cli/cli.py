@@ -1460,6 +1460,23 @@ _READ_ONLY_PROJECT_COMMANDS = {
 }
 
 
+def _emit_command_output(stdout: str, stderr: str, *, full_json: bool) -> None:
+    """Emit the handler result only after its outer transaction has settled."""
+    if stdout:
+        if full_json:
+            print(stdout, end="")
+        else:
+            try:
+                from .cli_output import compact_payload
+
+                payload = json.loads(stdout.strip().splitlines()[-1])
+                print(json.dumps(compact_payload(payload), ensure_ascii=True))
+            except (json.JSONDecodeError, IndexError, TypeError, ValueError):
+                print(stdout, end="")
+    if stderr:
+        print(stderr, end="", file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run one CLI command and commit managed writes independently of scientific outcome."""
     raw_argv = list(sys.argv[1:] if argv is None else argv)
@@ -1594,27 +1611,15 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     captured = io.StringIO()
+    captured_errors = io.StringIO()
     execution_result: list[tuple[Any, dict[str, Any], int]] = []
-    if full_json:
+    # A successful handler can still be rejected by write-set or commit checks.
+    # Keep its result private until those checks finish, including compact mode.
+    with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured_errors):
         exit_code = _main_without_passport_refresh(
             raw_argv,
             result_sink=execution_result,
         )
-    else:
-        with contextlib.redirect_stdout(captured):
-            exit_code = _main_without_passport_refresh(
-                raw_argv,
-                result_sink=execution_result,
-            )
-        output = captured.getvalue().strip()
-        if output:
-            try:
-                from .cli_output import compact_payload
-
-                payload = json.loads(output.splitlines()[-1])
-                print(json.dumps(compact_payload(payload), ensure_ascii=True))
-            except (json.JSONDecodeError, TypeError, ValueError):
-                print(output)
     command_args = execution_result[-1][0] if execution_result else args
     command_payload = execution_result[-1][1] if execution_result else {}
 
@@ -1655,18 +1660,26 @@ def main(argv: list[str] | None = None) -> int:
             assessment = write_guard.assess()
             if assessment.get("status") != "passed":
                 assessment["rollback"] = write_guard.rollback_violations(assessment)
+                rollback_complete = assessment["rollback"].get("status") == "rolled_back"
+                transaction_status = "boundary_violation_rolled_back" if rollback_complete else "boundary_violation_rollback_incomplete"
+                final_exit_code = 4 if rollback_complete else 5
+                assessment.update({
+                    "transaction_status": transaction_status,
+                    "command_exit_code": final_exit_code,
+                    "handler_status": command_payload.get("status"),
+                    "handler_exit_code": exit_code,
+                    "scientific_decision": "not_committed",
+                })
                 try:
                     record_command_transaction(
                         project,
                         command=command,
                         scientific_exit_code=exit_code,
-                        transaction_status=(
-                            "boundary_violation_rolled_back"
-                            if assessment["rollback"].get("status") == "rolled_back"
-                            else "boundary_violation_rollback_incomplete"
-                        ),
+                        transaction_status=transaction_status,
                         baseline_clean=not preexisting_drift,
                         message=json.dumps(assessment, ensure_ascii=True),
+                        failure_class="write_boundary_violation",
+                        actual_write_set=assessment.get("actual_write_set"),
                     )
                 except (PassportError, ProjectStateError, OSError):
                     pass
@@ -1676,13 +1689,13 @@ def main(argv: list[str] | None = None) -> int:
                         project,
                         workflow_trace,
                         process_status="completed",
-                        command_exit_code=4 if assessment["rollback"].get("status") == "rolled_back" else 5,
+                        command_exit_code=final_exit_code,
                         transaction_status=assessment["rollback"].get("status"),
                         scientific_decision="not_committed",
                         failure_class="write_boundary_violation",
                         action_kind="rollback",
                     )
-                return 4 if assessment["rollback"].get("status") == "rolled_back" else 5
+                return final_exit_code
             actual_write_set = tuple(
                 str(item) for item in assessment.get("actual_write_set") or ()
             )
@@ -1703,6 +1716,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             except (PassportError, ProjectStateError, OSError):
                 pass
+            _emit_command_output(captured.getvalue(), captured_errors.getvalue(), full_json=full_json)
             return exit_code
         event = f"cli:{command}" if exit_code == 0 else f"cli_nonzero:{command}"
         pending_additions_only = bool(
@@ -1780,6 +1794,7 @@ def main(argv: list[str] | None = None) -> int:
                 changed_paths=actual_write_set,
                 transaction_receipt=transaction_receipt,
             )
+    _emit_command_output(captured.getvalue(), captured_errors.getvalue(), full_json=full_json)
     return exit_code
 
 
