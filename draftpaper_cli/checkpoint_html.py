@@ -1036,6 +1036,44 @@ def _render_figure_map_delta(before: list[Any], after: list[Any], *, brief: dict
     return f'<h4>{heading}</h4><ul class="delta-list">{"".join(rows)}</ul>'
 
 
+def _render_semantic_list_delta(before: list[Any], after: list[Any], *, locale: str) -> str:
+    # Cancel exact matches as a multiset: repeated entries and their removal
+    # remain meaningful, but unchanged statements need not be printed twice.
+    common = Counter(map(_canonical_delta_item, before)) & Counter(map(_canonical_delta_item, after))
+    residuals = []
+    for values in (before, after):
+        remaining = common.copy()
+        changed = []
+        for value in values:
+            key = _canonical_delta_item(value)
+            if remaining[key]:
+                remaining[key] -= 1
+            else:
+                changed.append(value)
+        residuals.append(changed)
+    old, new = residuals
+    if not old and not new:
+        note = "仅列表顺序变化；科学内容未变化。" if locale != "en" else "Only list ordering changed; the scientific content is unchanged."
+        return f'<p class="muted">{note}</p>'
+    old_text = _human_delta_value(old, locale=locale)
+    new_text = _human_delta_value(new, locale=locale)
+    if old_text == new_text:
+        note = (
+            "对应的科学内容身份发生变化；请核对当前图表、方法或运行证据。"
+            if locale != "en"
+            else "The scientific content identity changed; review the current figure, method, or run evidence."
+        )
+        return f"<p>{_text(new_text)}</p><p>{note}</p>"
+    previous_label = "移除或更新前" if locale != "en" else "Removed or previous"
+    current_label = "新增或更新后" if locale != "en" else "Added or current"
+    parts = []
+    if old:
+        parts.append(f"<p><strong>{previous_label}:</strong> {_text(old_text)}</p>")
+    if new:
+        parts.append(f"<p><strong>{current_label}:</strong> {_text(new_text)}</p>")
+    return "".join(parts)
+
+
 def _render_semantic_change(item: dict[str, Any], *, brief: dict[str, Any], locale: str) -> str:
     field = str(item.get("field") or "")
     before, after = item.get("before"), item.get("after")
@@ -1044,6 +1082,18 @@ def _render_semantic_change(item: dict[str, Any], *, brief: dict[str, Any], loca
         detail = _render_fact_list_delta(before, after, locale=locale)
     elif field == "figure_claim_map" and isinstance(before, list) and isinstance(after, list):
         detail = _render_figure_map_delta(before, after, brief=brief, locale=locale)
+    elif (
+        field in {
+            "decision_brief.semantic_subject.confirming",
+            "decision_brief.semantic_subject.not_confirming",
+            "decision_brief.semantic_subject.claim_boundaries",
+            "decision_brief.semantic_subject.figure_claims",
+            "decision_brief.semantic_subject.reopen_conditions",
+        }
+        and isinstance(before, list)
+        and isinstance(after, list)
+    ):
+        detail = _render_semantic_list_delta(before, after, locale=locale)
     elif isinstance(before, str) and isinstance(after, str) and (_is_digest(before) or _is_digest(after)):
         suffix = "对应的科学内容身份已变化，请核对上方的研究蓝图、方法或运行范围。" if locale != "en" else "Its scientific content identity changed; verify the corresponding blueprint, method, or run shown above."
         detail = f"<p>{_text(label)}{_text(suffix)}</p>"
@@ -1108,17 +1158,26 @@ def _brief_facts(root: Path, output_dir: Path, brief: dict[str, Any], *, locale:
         *list((brief.get("scientific_context") or {}).get("count_fact_refs") or []),
     ]
     facts = {str(item.get("fact_id") or ""): item for item in brief.get("facts") or [] if isinstance(item, dict)}
-    rows = []
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for fact_id in dict.fromkeys(str(value) for value in fact_ids if str(value)):
         fact = facts.get(fact_id)
         if not fact:
             continue
+        # Coalesce display only when every field except the record ID agrees.
+        # Equal values with different labels, semantics or sources stay separate.
+        key = _canonical_delta_item({name: value for name, value in fact.items() if name != "fact_id"})
+        groups[key].append(fact)
+    rows = []
+    for group in groups.values():
+        fact = group[0]
+        fact_id = str(fact.get("fact_id") or "")
+        fact_refs = escape(" ".join(str(item.get("fact_id") or "") for item in group))
         value = fact.get("value")
         rendered = json.dumps(value, ensure_ascii=False, sort_keys=True) if isinstance(value, (dict, list)) else _text(value)
         refs = _brief_ref_links(root, output_dir, list(fact.get("evidence_refs") or []), locale=locale)
         label = _text(fact.get("label_en")) if locale == "en" else _text(fact.get("label_zh"))
         rows.append(
-            f'<li data-fact-id="{escape(fact_id)}"><strong>{label}</strong>：{rendered}'
+            f'<li data-fact-id="{escape(fact_id)}" data-fact-refs="{fact_refs}"><strong>{label}</strong>：{rendered}'
             + (f'<small class="refs">{labels["evidence"]}{refs}</small>' if refs else "")
             + "</li>"
         )
