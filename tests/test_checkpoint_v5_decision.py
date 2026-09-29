@@ -5,7 +5,11 @@ import json
 from pathlib import Path
 
 from draftpaper_cli.checkpoint_brief import build_human_decision_brief
-from draftpaper_cli.checkpoint_fingerprint import build_scientific_decision_fingerprint, compare_scientific_decisions
+from draftpaper_cli.checkpoint_fingerprint import (
+    build_scientific_decision_fingerprint,
+    compare_scientific_decisions,
+    scientific_fingerprints_equivalent,
+)
 from draftpaper_cli.checkpoint_scope import build_checkpoint_scope
 from draftpaper_cli.checkpoint_summary import validate_checkpoint_readability
 from draftpaper_cli.evidence_repair_router import route_evidence_failures
@@ -126,6 +130,80 @@ def test_ten_prose_citation_and_format_cycles_preserve_the_scientific_decision()
         decision = compare_scientific_decisions(confirmed, current)
         assert decision["classification"] == "no_scientific_change"
         assert decision["requires_reconfirmation"] is False
+
+
+def test_reindexed_core_evidence_preserves_confirmation_continuity() -> None:
+    """Snapshot IDs and fact reindexing are audit changes, not new science."""
+
+    before = {
+        "scientific_decision_sha256": "decision-before",
+        "canonical_payload": {
+            "checkpoint_type": "core_evidence",
+            "scientific_identity": {
+                "plan_hash": "plan-a",
+                "run_id": "run-a",
+                "cohort_id": "cohort-a",
+                "sample_unit": "source",
+                "validation_design": "controlled",
+                "metric_definition_id": "f1_diagnostic",
+                "evidence_snapshot_id": None,
+            },
+            "decision_brief": {
+                "semantic_subject": {
+                    "confirming": [
+                        {
+                            "metric": "f1_diagnostic",
+                            "value": 0.5,
+                            "evidence_snapshot_id": None,
+                        }
+                    ],
+                    "facts": [
+                        {
+                            "fact_type": "count",
+                            "semantic_value": {
+                                "cohort_id": "cohort-a",
+                                "entity_type": "source",
+                                "count_mode": "row_count",
+                                "value": 1824,
+                            },
+                        },
+                        {
+                            "fact_type": "count",
+                            "semantic_value": {
+                                "cohort_id": "cohort-a",
+                                "entity_type": "scenario_record_evaluation",
+                                "count_mode": "scenario_record_pair_count",
+                                "value": 960,
+                            },
+                        },
+                        {
+                            "fact_type": "count",
+                            "semantic_value": {
+                                "cohort_id": "cohort-a",
+                                "entity_type": "source",
+                                "count_mode": "row_count",
+                                "value": 1824,
+                            },
+                        },
+                    ],
+                    "claim_boundaries": ["audit only"],
+                }
+            },
+            "figure_claim_map": [],
+        }
+    }
+    after = copy.deepcopy(before)
+    after["scientific_decision_sha256"] = "decision-after"
+    subject = after["canonical_payload"]["decision_brief"]["semantic_subject"]
+    subject["confirming"][0]["evidence_snapshot_id"] = "snapshot-new"
+    subject["facts"] = subject["facts"][:1]
+    subject["facts"].append({"fact_type": "identity", "semantic_value": "snapshot-new"})
+    after["canonical_payload"]["scientific_identity"]["evidence_snapshot_id"] = "snapshot-new"
+
+    assert scientific_fingerprints_equivalent(before, after)
+    decision = compare_scientific_decisions(before, after)
+    assert decision["classification"] == "no_scientific_change"
+    assert decision["requires_reconfirmation"] is False
 
 
 def test_v6_checkpoint_page_is_readable_and_same_science_continues_without_new_user_hash(tmp_path: Path) -> None:

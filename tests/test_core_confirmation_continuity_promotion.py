@@ -26,6 +26,7 @@ from draftpaper_cli.project_scaffold import create_project
 from draftpaper_cli.project_state import update_stage_status
 from draftpaper_cli.result_evidence import resolve_result_evidence
 from draftpaper_cli.review_policy import acknowledge_notification_checkpoint
+from tests.core_batch_support import prepare_confirmable_core_batch
 from tests.test_orchestrator_passport import write_confirmable_core_evidence
 
 
@@ -77,6 +78,7 @@ def build_confirmed_continuity(tmp_path):
     refresh_project_passport(project, event="test_core_continuity_fixture")
     core_path = project / "core_evidence/core_evidence_report.json"
     assessed_core = read(core_path)
+    prepare_confirmable_core_batch(project)
     first = checkpoint_project(project, stage="core_evidence")
     resumed = resume_project(project, checkpoint_hash=first["checkpoint_hash"])
     user_receipt = resumed["decision_receipt"]
@@ -86,6 +88,7 @@ def build_confirmed_continuity(tmp_path):
     write(core_path, assessed_core)
     for stage in ("code", "methods", "result_validity", "result_support", "core_evidence"):
         update_stage_status(project, stage, "completed")
+    prepare_confirmable_core_batch(project)
     second = checkpoint_project(project, stage="core_evidence")
     assert second["confirmation_continuity"]["eligible"] is True, second.get("unresolved_issues")
     record = next(row for row in ledger(project / "checkpoint_ledger.jsonl") if row.get("hash") == second["checkpoint_hash"])
@@ -141,6 +144,70 @@ def test_cli_continuity_promotes_snapshot_without_new_user_confirmation(confirme
     assert event["preserved_user_decision_receipt_id"] == user_receipt["receipt_id"]
     assert status_project(project)["pipeline_state"] != "confirmation_required"
     assert status_project(project)["awaiting_checkpoint"] is None
+
+
+def test_legacy_stored_continuity_flags_are_recomputed_from_normalized_fingerprint(confirmed_continuity, monkeypatch):
+    """A pre-normalization package can still reuse the same scientific decision."""
+    import draftpaper_cli.checkpoint_summary as checkpoint_summary
+    import draftpaper_cli.orchestrator as orchestrator
+
+    project, _, second, record, user_receipt = confirmed_continuity
+    original_show = checkpoint_summary.show_checkpoint_summary
+
+    def stale_package(path, checkpoint_hash):
+        shown = original_show(path, checkpoint_hash)
+        summary = dict(shown["summary"])
+        summary["decision_status"] = "pending"
+        summary["confirmation_continuity"] = {
+            "eligible": False,
+            "classification": "scientific_change",
+            "previous_receipt_id": user_receipt["receipt_id"],
+            "receipt_path": None,
+        }
+        return {**shown, "summary": summary}
+
+    monkeypatch.setattr(checkpoint_summary, "show_checkpoint_summary", stale_package)
+    continuity = orchestrator._validated_core_confirmation_continuity(project, record)
+    assert continuity["previous_receipt_id"] == user_receipt["receipt_id"]
+    assert continuity["previous_checkpoint_hash"] == user_receipt["checkpoint_hash"]
+
+
+def test_resume_preserves_prior_user_confirmation_without_creating_a_new_one(confirmed_continuity, monkeypatch):
+    """Resume consumes an audit-only checkpoint as system continuity."""
+    import draftpaper_cli.checkpoint_summary as checkpoint_summary
+    import draftpaper_cli.orchestrator as orchestrator
+
+    project, _, second, record, user_receipt = confirmed_continuity
+    original_show = checkpoint_summary.show_checkpoint_summary
+
+    def stale_package(path, checkpoint_hash):
+        shown = original_show(path, checkpoint_hash)
+        summary = dict(shown["summary"])
+        summary["decision_status"] = "pending"
+        summary["confirmation_continuity"] = {
+            "eligible": False,
+            "classification": "scientific_change",
+            "previous_receipt_id": user_receipt["receipt_id"],
+            "receipt_path": None,
+        }
+        return {**shown, "summary": summary}
+
+    monkeypatch.setattr(checkpoint_summary, "show_checkpoint_summary", stale_package)
+    before_users = [
+        row for row in ledger(project / ".draftpaper/review_decision_ledger.jsonl")
+        if row.get("decision_status") == "user_confirmed"
+    ]
+    result = orchestrator.resume_project(project, checkpoint_hash=record["hash"], note="batch audit-only continuation")
+    assert result["status"] == "resumed_after_confirmation_continuity"
+    after_users = [
+        row for row in ledger(project / ".draftpaper/review_decision_ledger.jsonl")
+        if row.get("decision_status") == "user_confirmed"
+    ]
+    assert after_users == before_users
+    event = ledger(project / "checkpoint_ledger.jsonl")[-1]
+    assert event["decision_status"] == "continuity_preserved"
+    assert event["actor_type"] == "system"
+    assert event["preserved_user_decision_receipt_id"] == user_receipt["receipt_id"]
 
 
 @pytest.mark.parametrize("mode", ["missing", "invalid_digest", "rebound_previous_receipt"])

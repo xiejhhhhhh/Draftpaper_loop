@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .artifact_identity import compute_artifact_identity
+from .artifact_identity import canonical_json, compute_artifact_identity
 from .provenance import DPL_SCHEMAS, dpl_block, generated_by_block
 from .state_kernel import append_jsonl_locked, atomic_write_json
 
@@ -407,6 +407,116 @@ def collect_artifacts(project: str | Path) -> list[dict[str, Any]]:
     return artifacts
 
 
+CHECKPOINT_BATCH_ASSOCIATION_SCHEMA = "dpl.checkpoint_batch_association.v1"
+
+
+def _valid_checkpoint_batch_association(event: dict[str, Any]) -> bool:
+    if event.get("kind") != "checkpoint_batch_associated" or event.get("schema_version") != CHECKPOINT_BATCH_ASSOCIATION_SCHEMA:
+        return False
+    digest = str(event.get("association_sha256") or "")
+    payload = {key: value for key, value in event.items() if key != "association_sha256"}
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        return False
+    expected = hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
+    if digest != expected:
+        return False
+    required_strings = (
+        "checkpoint_hash", "checkpoint_package_sha256", "source_cycle_sha256", "batch_id",
+        "scope_sha256", "input_manifest_sha256", "candidate_file_sha256", "frozen_candidate_ref",
+    )
+    if any(not isinstance(event.get(field), str) or not event[field].strip() for field in required_strings):
+        return False
+    for field in (
+        "checkpoint_package_sha256", "source_cycle_sha256", "scope_sha256",
+        "input_manifest_sha256", "candidate_file_sha256",
+    ):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(event[field])):
+            return False
+    generation = event.get("candidate_generation")
+    if not isinstance(generation, int) or generation < 1:
+        return False
+    reference = Path(str(event.get("frozen_candidate_ref")).replace("\\", "/"))
+    if reference.is_absolute() or any(part in {"", ".", ".."} for part in reference.parts) or ":" in str(event.get("frozen_candidate_ref")):
+        return False
+    return True
+
+
+def checkpoint_batch_association(project: str | Path, checkpoint_hash: str) -> dict[str, Any] | None:
+    """Return one unambiguous, content-sealed legacy-to-batch association."""
+    root = project_root(project)
+    matches = [
+        row for row in read_jsonl(root / PASSPORT_FILES["checkpoint_ledger"])
+        if row.get("checkpoint_hash") == checkpoint_hash and _valid_checkpoint_batch_association(row)
+    ]
+    if not matches:
+        return None
+    if len({row["association_sha256"] for row in matches}) != 1:
+        return None
+    return matches[-1]
+
+
+def overlay_checkpoint_batch_association(project: str | Path, checkpoint: dict[str, Any]) -> dict[str, Any]:
+    """Project a verified association onto a legacy checkpoint without rewriting it."""
+    result = dict(checkpoint)
+    if checkpoint.get("kind") != "checkpoint" or checkpoint.get("stage") != "core_evidence":
+        return result
+    association = checkpoint_batch_association(project, str(checkpoint.get("hash") or ""))
+    if not association:
+        return result
+    if association.get("checkpoint_package_sha256") != checkpoint.get("stage_summary_sha256"):
+        return result
+    for key in ("batch_id", "scope_sha256", "input_manifest_sha256", "candidate_generation", "frozen_candidate_ref", "base_decision_receipt_id"):
+        original_value = checkpoint.get(key)
+        if original_value is not None and original_value != association.get(key):
+            return result
+    for key in (
+        "batch_id", "scope_sha256", "input_manifest_sha256", "candidate_generation",
+        "frozen_candidate_ref", "base_decision_receipt_id",
+    ):
+        result[key] = association.get(key)
+    result["legacy_batch_association"] = {
+        "association_sha256": association["association_sha256"],
+        "source_cycle_sha256": association["source_cycle_sha256"],
+        "checkpoint_package_sha256": association["checkpoint_package_sha256"],
+    }
+    return result
+
+
+def append_checkpoint_batch_association(project: str | Path, fields: dict[str, Any]) -> dict[str, Any]:
+    """Append an idempotent, sealed association and refresh the awaiting projection."""
+    root = project_root(project)
+    event = {
+        "kind": "checkpoint_batch_associated",
+        "schema_version": CHECKPOINT_BATCH_ASSOCIATION_SCHEMA,
+        **fields,
+        "created_at": utc_now(),
+    }
+    event["association_sha256"] = hashlib.sha256(canonical_json(event).encode("utf-8")).hexdigest()
+    if not _valid_checkpoint_batch_association(event):
+        raise ValueError("Legacy checkpoint batch association is incomplete or invalid.")
+    original = next((
+        row for row in reversed(read_jsonl(root / PASSPORT_FILES["checkpoint_ledger"]))
+        if row.get("kind") == "checkpoint" and row.get("hash") == event["checkpoint_hash"]
+    ), None)
+    if not original or original.get("stage") != "core_evidence":
+        raise ValueError("Batch association requires an existing core-evidence checkpoint event.")
+    if original.get("stage_summary_sha256") != event.get("checkpoint_package_sha256"):
+        raise ValueError("Batch association package hash does not match the immutable checkpoint event.")
+    for key in ("batch_id", "scope_sha256", "input_manifest_sha256", "candidate_generation", "frozen_candidate_ref", "base_decision_receipt_id"):
+        if original.get(key) is not None and original.get(key) != event.get(key):
+            raise ValueError("Batch association cannot override a conflicting checkpoint identity.")
+    existing = checkpoint_batch_association(root, str(event["checkpoint_hash"]))
+    if existing:
+        comparable = {key: value for key, value in event.items() if key not in {"created_at", "association_sha256"}}
+        prior = {key: value for key, value in existing.items() if key not in {"created_at", "association_sha256"}}
+        if comparable != prior:
+            raise ValueError("A conflicting legacy checkpoint batch association already exists.")
+        _write_passport(root, event="checkpoint_batch_association_recovery")
+        return existing
+    append_checkpoint_event(root, event)
+    return event
+
+
 def _latest_unconsumed_checkpoint(project_path: Path) -> dict[str, Any] | None:
     events = read_jsonl(project_path / PASSPORT_FILES["checkpoint_ledger"])
     consumed = {str(event.get("consumes_hash")) for event in events if event.get("kind") == "resume"}
@@ -417,7 +527,7 @@ def _latest_unconsumed_checkpoint(project_path: Path) -> dict[str, Any] | None:
     )
     for event in reversed(events):
         if event.get("kind") == "checkpoint" and str(event.get("hash")) not in consumed:
-            return event
+            return overlay_checkpoint_batch_association(project_path, event)
     return None
 
 

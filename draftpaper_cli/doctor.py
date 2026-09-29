@@ -104,13 +104,14 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
     cli = str(action.get("cli") or "")
 
     def checkpoint_review_paths() -> dict[str, Any]:
-        decision = action.get("stage_summary_zh_html")
+        decision = action.get("primary_human_review_html") or action.get("stage_summary_zh_html")
         audit_json = action.get("stage_audit_json")
         audit = action.get("stage_audit_zh_html")
         paths: dict[str, Any] = {}
         if isinstance(decision, dict):
             paths["primary_human_review_html"] = decision
-            paths["stage_summary_zh_html"] = decision
+            if action.get("stage_summary_zh_html") is not None:
+                paths["stage_summary_zh_html"] = action["stage_summary_zh_html"]
         if isinstance(audit_json, dict):
             paths["technical_audit_json"] = audit_json
             paths["stage_audit_json"] = audit_json
@@ -118,6 +119,9 @@ def verify_next_action(project: str | Path) -> dict[str, Any]:
             paths["technical_audit_html"] = audit
             paths["stage_audit_zh_html"] = audit
         for key in ("checkpoint_id", "scientific_decision_sha256", "stage_summary_json"):
+            if action.get(key) not in (None, ""):
+                paths[key] = action[key]
+        for key in ("preview_zh_html", "preview_en_html"):
             if action.get(key) not in (None, ""):
                 paths[key] = action[key]
         return paths

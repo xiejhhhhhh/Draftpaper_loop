@@ -390,6 +390,20 @@ def build_parser() -> argparse.ArgumentParser:
     revision_mode = subparsers.add_parser("set-revision-mode", help="Switch the open revision cycle between live and author_edit without clearing pending evidence state.")
     revision_mode.add_argument("--project", required=True)
     revision_mode.add_argument("--mode", choices=["live", "author_edit"], required=True)
+    prepare_core_batch = subparsers.add_parser("prepare-core-evidence-batch", help="Register the complete scoped C3 revision work before requesting confirmation.")
+    prepare_core_batch.add_argument("--project", required=True)
+    prepare_core_batch.add_argument("--changes", dest="changes_path", default=None)
+    shadow_core_migration = subparsers.add_parser("shadow-core-evidence-batch-migration", help="Inspect legacy revision scope without modifying the project.")
+    shadow_core_migration.add_argument("--project", required=True)
+    migrate_core_batch = subparsers.add_parser("migrate-core-evidence-batch", help="Migrate an eligible legacy cycle against its exact source hash and an explicit task manifest.")
+    migrate_core_batch.add_argument("--project", required=True)
+    migrate_core_batch.add_argument("--changes", dest="changes_path", required=True)
+    migrate_core_batch.add_argument("--expected-legacy-sha256", dest="expected_legacy_source_sha256", required=True)
+    assess_core_batch = subparsers.add_parser("assess-core-evidence-readiness", help="Read the C3 batch publication gate without changing the project.")
+    assess_core_batch.add_argument("--project", required=True)
+    finalize_core_batch = subparsers.add_parser("finalize-core-evidence-batch", help="Freeze a complete C3 candidate after task and evidence checks.")
+    finalize_core_batch.add_argument("--project", required=True)
+    finalize_core_batch.add_argument("--expected-scope-sha256", default=None)
     prepare_reconciliation = subparsers.add_parser("prepare-revision-reconciliation", help="Freeze the current revision generation and write a centralized evidence reconciliation preview.")
     prepare_reconciliation.add_argument("--project", required=True)
     apply_reconciliation = subparsers.add_parser("apply-revision-reconciliation", help="Apply a hash-bound reconciliation; semantic changes require a matching C3 user decision receipt.")
@@ -453,6 +467,14 @@ def build_parser() -> argparse.ArgumentParser:
     show_checkpoint.add_argument("--checkpoint-hash", default=None, help="Optional checkpoint hash; defaults to the latest checkpoint.")
     show_checkpoint.add_argument("--language", default="zh-CN", choices=["zh-CN", "en"], help="Summary language.")
     show_checkpoint.add_argument("--view", default="decision", choices=["decision", "audit"], help="Select the readable decision view or the technical audit view.")
+    pending_notice = subparsers.add_parser("pending-checkpoint-notification", help="Read a stable C3 notification without marking it delivered.")
+    pending_notice.add_argument("--project", required=True)
+    pending_notice.add_argument("--request-id", required=True)
+    pending_notice.add_argument("--consumer-id", required=True)
+    acknowledge_notice = subparsers.add_parser("acknowledge-checkpoint-notification", help="Record that a C3 notice was shown; this never approves science.")
+    acknowledge_notice.add_argument("--project", required=True)
+    acknowledge_notice.add_argument("--notification-id", required=True)
+    acknowledge_notice.add_argument("--consumer-id", required=True)
 
     show_checkpoint_audit = subparsers.add_parser("show-checkpoint-audit", help="Show the technical audit JSON path and the optional renderer route for a v6 checkpoint.")
     show_checkpoint_audit.add_argument("--project", required=True)
@@ -1500,6 +1522,9 @@ def main(argv: list[str] | None = None) -> int:
         "session-preflight",
         "set-revision-mode",
         "prepare-revision-reconciliation",
+        "prepare-core-evidence-batch",
+        "migrate-core-evidence-batch",
+        "finalize-core-evidence-batch",
         "apply-revision-reconciliation",
         "run-integrity-gate",
         "prepare-evidence-rebind",

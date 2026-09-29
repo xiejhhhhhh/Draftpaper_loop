@@ -51,6 +51,20 @@ def create_scientific_baseline(
             f"{parent_state['status']}: {parent_state.get('reason')}."
         )
     parent = parent_state.get("baseline")
+    if decision_receipt_id and parent and (
+        parent.get("decision_receipt_id") == decision_receipt_id
+        and parent.get("revision_cycle_id") == revision_cycle_id
+    ):
+        path = root / BASELINE_DIR / f"{parent['baseline_id']}.json"
+        pointer = _read_json(root, ACTIVE_POINTER)
+        return {
+            "status": "existing",
+            "project_path": str(root),
+            "baseline": parent,
+            "baseline_path": str(path.resolve()),
+            "active_pointer": str((root / ACTIVE_POINTER).resolve()),
+            "pointer": pointer,
+        }
     parent_id = str(parent.get("baseline_id")) if parent else None
     registry = load_fact_registry(root, registry_id) if registry_id else load_fact_registry(root)
     if facts is not None:

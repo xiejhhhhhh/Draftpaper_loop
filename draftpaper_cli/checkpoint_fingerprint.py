@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -15,6 +16,14 @@ AUDIT_FINGERPRINT_SCHEMA = "dpl.checkpoint_audit_fingerprint.v1"
 PRESENTATION_FINGERPRINT_SCHEMA = "dpl.checkpoint_presentation_fingerprint.v1"
 
 _VOLATILE_KEYS = frozenset({"created_at", "updated_at", "generated_at", "recorded_at", "absolute_path", "project_path", "bundle_sha256"})
+
+# These keys identify an audit indexing container rather than the scientific
+# subject.  A fresh evidence snapshot may legitimately assign new values (or
+# add a value where the earlier packet had ``null``) while preserving the same
+# cohort, metric, method, and claim boundary.
+_REINDEX_LOCATOR_KEYS = frozenset({"evidence_snapshot_id", "fact_id", "evidence_id"})
+_EVIDENCE_SNAPSHOT_ID_RE = re.compile(r"^[0-9a-f]{20}$")
+_DERIVED_FACT_SIGNATURES = frozenset({("count", "scenario_record_pair_count")})
 
 _DECISION_FIELD_LABELS = {
     "decision_brief.semantic_subject.facts": ("核心证据事实", "core evidence facts"),
@@ -49,6 +58,20 @@ def _stable(value: Any, *, volatile_keys: frozenset[str] = _VOLATILE_KEYS) -> An
     return value
 
 
+def _strip_reindex_locators(value: Any) -> Any:
+    """Remove regenerated audit locators without changing scientific values."""
+
+    if isinstance(value, Mapping):
+        return {
+            str(key): _strip_reindex_locators(item)
+            for key, item in value.items()
+            if str(key) not in _REINDEX_LOCATOR_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_reindex_locators(item) for item in value]
+    return value
+
+
 def _normalize_scientific_payload(payload: Any) -> Any:
     """Remove audit locators that must not manufacture a scientific delta.
 
@@ -65,11 +88,17 @@ def _normalize_scientific_payload(payload: Any) -> Any:
     normalized = dict(normalized)
 
     identity = normalized.get("scientific_identity")
+    reindexed_snapshot_ids: set[str] = set()
     if isinstance(identity, Mapping):
         identity = dict(identity)
         # Snapshot identity remains in the immutable audit/baseline records.
         # It is a versioned container, not a scientific estimand by itself.
+        for key in ("evidence_snapshot_id", "promoted_evidence_snapshot_id"):
+            value = identity.get(key)
+            if value not in (None, ""):
+                reindexed_snapshot_ids.add(str(value))
         identity.pop("evidence_snapshot_id", None)
+        identity.pop("promoted_evidence_snapshot_id", None)
         normalized["scientific_identity"] = identity
 
     decision_brief = normalized.get("decision_brief")
@@ -78,18 +107,54 @@ def _normalize_scientific_payload(payload: Any) -> Any:
         subject = decision_brief.get("semantic_subject")
         if isinstance(subject, Mapping):
             subject = dict(subject)
+            confirming = subject.get("confirming")
+            if isinstance(confirming, list):
+                subject["confirming"] = sorted(
+                    [_strip_reindex_locators(item) for item in confirming],
+                    key=canonical_json,
+                )
             facts = subject.get("facts")
             if isinstance(facts, list):
-                subject["facts"] = sorted(
-                    [
+                normalized_facts = [
+                    _strip_reindex_locators(
                         {
                             "fact_type": item.get("fact_type"),
                             "semantic_value": item.get("semantic_value"),
                         }
-                        if isinstance(item, Mapping)
-                        else item
-                        for item in facts
-                    ],
+                    )
+                    if isinstance(item, Mapping)
+                    else _strip_reindex_locators(item)
+                    for item in facts
+                ]
+                normalized_facts = [
+                    item
+                    for item in normalized_facts
+                    if not (
+                        isinstance(item, Mapping)
+                        and (
+                            (
+                                item.get("fact_type") == "identity"
+                                and (
+                                    str(item.get("semantic_value") or "") in reindexed_snapshot_ids
+                                    or _EVIDENCE_SNAPSHOT_ID_RE.fullmatch(str(item.get("semantic_value") or ""))
+                                )
+                            )
+                            or (
+                                item.get("fact_type"),
+                                str((item.get("semantic_value") or {}).get("count_mode") or "")
+                                if isinstance(item.get("semantic_value"), Mapping)
+                                else "",
+                            )
+                            in _DERIVED_FACT_SIGNATURES
+                        )
+                    )
+                ]
+                # Fact registries may be re-materialized with duplicate rows;
+                # duplicate elimination is safe because the fingerprint records
+                # the set of scientific facts, while the full ledger preserves
+                # row-level provenance.
+                subject["facts"] = sorted(
+                    {canonical_json(item): item for item in normalized_facts}.values(),
                     key=canonical_json,
                 )
             decision_brief["semantic_subject"] = subject

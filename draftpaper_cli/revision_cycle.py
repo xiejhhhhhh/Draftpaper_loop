@@ -21,6 +21,7 @@ from .scoped_transaction import ScopedProjectTransaction
 
 
 REVISION_SCHEMA = "dpl.revision_cycle.v2"
+BATCH_REVISION_SCHEMA = "dpl.revision_cycle.v3"
 LEGACY_REVISION_SCHEMA = "dpl.revision_cycle.v1"
 REVISION_DIR = "lineage/revision_cycles"
 ACTIVE_POINTER = ".draftpaper/active_revision_cycle.json"
@@ -41,6 +42,7 @@ def _revision_cycle_validator(schema_version: str) -> Draft202012Validator:
     schema_files = {
         LEGACY_REVISION_SCHEMA: "revision_cycle_v1.json",
         REVISION_SCHEMA: "revision_cycle_v2.json",
+        BATCH_REVISION_SCHEMA: "revision_cycle_v3.json",
     }
     filename = schema_files.get(schema_version)
     if filename is None:
@@ -67,10 +69,13 @@ def _validate_revision_cycle_record(payload: dict[str, Any], schema_version: str
 
 def _seal_revision_cycle_record(payload: dict[str, Any]) -> dict[str, Any]:
     sealed = dict(payload)
-    sealed["schema_version"] = REVISION_SCHEMA
+    schema_version = str(sealed.get("schema_version") or REVISION_SCHEMA)
+    if schema_version not in {REVISION_SCHEMA, BATCH_REVISION_SCHEMA}:
+        raise RevisionCycleError(f"Cannot seal unsupported revision-cycle schema: {schema_version}.")
+    sealed["schema_version"] = schema_version
     sealed.pop("revision_cycle_sha256", None)
     sealed["revision_cycle_sha256"] = _hash(sealed)
-    _validate_revision_cycle_record(sealed, REVISION_SCHEMA)
+    _validate_revision_cycle_record(sealed, schema_version)
     return sealed
 
 
@@ -867,7 +872,7 @@ def load_active_revision_cycle(project: str | Path) -> dict[str, Any] | None:
     if not isinstance(payload, dict):
         raise RevisionCycleError("Active revision cycle record must be a JSON object.")
     schema_version = payload.get("schema_version")
-    if schema_version not in {LEGACY_REVISION_SCHEMA, REVISION_SCHEMA}:
+    if schema_version not in {LEGACY_REVISION_SCHEMA, REVISION_SCHEMA, BATCH_REVISION_SCHEMA}:
         raise RevisionCycleError(f"Active revision cycle uses an unsupported schema: {schema_version or 'missing'}.")
     try:
         _validate_revision_cycle_record(payload, str(schema_version))

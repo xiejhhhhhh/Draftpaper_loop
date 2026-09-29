@@ -1480,8 +1480,24 @@ def write_stage_summary_v6(
     activity = json.loads((output_dir / "stage_activity_bundle.json").read_text(encoding="utf-8-sig"))
     relative_dir = str(base["project_relative_dir"])
 
+    batch_review: dict[str, Any] = {}
+    if stage == "core_evidence" and command == "checkpoint":
+        from .core_evidence_batch import core_evidence_batch_review
+        from .core_evidence_readiness import assess_core_evidence_readiness
+
+        readiness = assess_core_evidence_readiness(root)
+        batch_review = core_evidence_batch_review(root, readiness)
+        summary["core_evidence_batch"] = batch_review
+        request["batch_id"] = batch_review["batch_id"]
+        request["scope_sha256"] = batch_review["scope_sha256"]
+        request["input_manifest_sha256"] = batch_review["input_manifest_sha256"]
+
     # The renderer version is presentation identity, not scientific identity.
     presentation_fingerprint = build_presentation_fingerprint(brief, renderer_version="v6")
+    if batch_review:
+        presentation_fingerprint["canonical_payload"]["sections"].append("core_evidence_batch")
+        presentation_fingerprint["canonical_payload"]["batch_review_sha256"] = _hash_payload(batch_review)
+        presentation_fingerprint["presentation_sha256"] = _hash_payload(presentation_fingerprint["canonical_payload"])
     summary["schema_version"] = CHECKPOINT_SUMMARY_V6_SCHEMA
     summary["audit_bundle_ref"] = f"{relative_dir}/stage_audit.json"
     summary["audit_render_policy"] = "on_demand_cache_only"
@@ -1571,6 +1587,11 @@ def write_stage_summary_v6(
         "context_budget_bytes": 12 * 1024,
         "stage_summary_sha256": summary_hash,
     }
+    if batch_review:
+        agent["batch_id"] = batch_review["batch_id"]
+        agent["batch_task_count"] = batch_review["completed_task_count"]
+        agent["batch_summary_zh"] = batch_review["summary_zh"]
+        agent["batch_summary_en"] = batch_review["summary_en"]
     if len(json.dumps(agent, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 12 * 1024:
         raise CheckpointSummaryError("Checkpoint v6 Agent payload exceeds the 12 KB decision-context budget.")
 
@@ -2191,6 +2212,12 @@ def validate_checkpoint_summary(project: str | Path, checkpoint: dict[str, Any])
         summary = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         return {"status": "invalid", "valid": False, "reasons": [f"Invalid checkpoint summary: {exc}"]}
+    if not isinstance(summary, dict):
+        return {
+            "status": "invalid",
+            "valid": False,
+            "reasons": ["Invalid checkpoint summary: top-level JSON value must be an object."],
+        }
     reasons: list[str] = []
     schema = str(summary.get("schema_version") or "")
     if schema in LEGACY_CHECKPOINT_SUMMARY_SCHEMAS:

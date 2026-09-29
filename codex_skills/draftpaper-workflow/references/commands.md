@@ -24,6 +24,44 @@ python -m draftpaper_cli.cli import-version-assets --project <repo>\projects\my_
 python -m draftpaper_cli.cli validate-project-version --project <repo>\projects\my_project_v1
 ```
 
+## Consolidated Core-Evidence Confirmation
+
+Register the known core-evidence work as one scoped batch, check readiness,
+and freeze the candidate only after all required tasks and bindings are current:
+
+```powershell
+python -m draftpaper_cli.cli prepare-core-evidence-batch --project <repo>\projects\my_project --changes <core_evidence_tasks.json>
+python -m draftpaper_cli.cli assess-core-evidence-readiness --project <repo>\projects\my_project
+python -m draftpaper_cli.cli finalize-core-evidence-batch --project <repo>\projects\my_project
+python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage core_evidence
+```
+
+If finalization returns `needs_work`, open the returned Chinese and English
+readiness HTML pages, complete their listed tasks, and finalize again. These
+pages explain blockers and link current evidence; they do not authorize a
+confirmation. A repeated checkpoint call for the same frozen candidate returns
+the existing request. When a complete scientific identity proves that only
+audit or presentation artifacts changed, `status` routes to `continue` and
+preserves the prior user decision. Incomplete identity remains blocked from
+automatic continuity. For a legacy v1 cycle, inspect it first with
+`shadow-core-evidence-batch-migration`; migrate only if it reports
+`can_migrate=true`, passing the exact `source_cycle_sha256` and an explicit
+task manifest to `migrate-core-evidence-batch`.
+
+If `status` reports `legacy_core_checkpoint_migration_required`, do not
+immediately consume the old C3 checkpoint with `resume`, user confirmation, or
+Agent review. Run the read-only `shadow-core-evidence-batch-migration` command.
+When it reports `associate_complete_legacy_request`, register the complete
+authoritative task scope using `prepare-core-evidence-batch` and inspect the
+result. The framework may append a sealed association to the exact unchanged
+checkpoint package and frozen candidate, preserving the existing pending
+request. A pending request still requires author confirmation. A valid existing
+`approve/user_confirmed` receipt may only resume consumption of that same
+checkpoint and candidate; rejected, refinement, Agent, or system decisions are
+not reusable. If association is ineligible, incomplete, or mismatched,
+reconcile the complete scope, prepare a new batch, and preserve the old packet
+as audit-only. Never use an old decision for a new candidate.
+
 ## Evidence Recovery and Deferred Revision
 
 For an existing output file that lacks identity metadata, prepare and apply a

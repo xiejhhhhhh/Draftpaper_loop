@@ -54,13 +54,17 @@ HIGH_RISK_ROOT_FILES = {
 HIGH_RISK_SOURCE_NAMES = {
     "__init__.py",
     "checkpoint_fingerprint.py",
+    "checkpoint_summary.py",
+    "checkpoint_delivery.py",
     "cli.py",
     "command_registry.py",
+    "doctor.py",
     "integrity_gate.py",
     "orchestrator.py",
     "project_state.py",
     "release_contract.py",
     "revision_cycle.py",
+    "review_policy.py",
     "schema_registry.py",
     "state_kernel.py",
 }

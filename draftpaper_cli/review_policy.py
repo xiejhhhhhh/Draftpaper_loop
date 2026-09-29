@@ -596,6 +596,15 @@ def _decision_hash(payload: dict[str, Any]) -> str:
     return _hash_payload({key: value for key, value in payload.items() if key not in {"receipt_sha256", "created_at"}})
 
 
+def _guard_current_core_batch(project: str | Path, checkpoint_hash: str) -> None:
+    from .core_evidence_readiness import CoreEvidenceReadinessError, assert_current_batch_checkpoint
+
+    try:
+        assert_current_batch_checkpoint(project, checkpoint_hash=checkpoint_hash)
+    except CoreEvidenceReadinessError as exc:
+        raise ReviewPolicyError(str(exc)) from exc
+
+
 def review_checkpoint(
     project: str | Path,
     *,
@@ -606,6 +615,7 @@ def review_checkpoint(
     reviewer_agent_id: str | None = None,
     decision: str = "approve",
 ) -> dict[str, Any]:
+    _guard_current_core_batch(project, checkpoint_hash)
     authority = evaluate_checkpoint_authority(project, checkpoint_hash=checkpoint_hash)
     if actor != "agent":
         raise ReviewPolicyError("review-checkpoint is the Agent review route; user confirmation remains resume/confirm-*.")
@@ -696,6 +706,7 @@ def record_user_checkpoint_confirmation(
 ) -> dict[str, Any]:
     """Write a receipt for an actual user confirmation without mutating its summary."""
 
+    _guard_current_core_batch(project, checkpoint_hash)
     authority = evaluate_checkpoint_authority(project, checkpoint_hash=checkpoint_hash)
     if authority.get("review_state") != "confirmable":
         raise ReviewPolicyError("A stale or blocked checkpoint cannot be confirmed by the user.")
@@ -774,6 +785,7 @@ def acknowledge_notification_checkpoint(
 ) -> dict[str, Any]:
     """Record a non-scientific system acknowledgement for C0 notification stages."""
 
+    _guard_current_core_batch(project, checkpoint_hash)
     authority = evaluate_checkpoint_authority(project, checkpoint_hash=checkpoint_hash)
     if authority.get("status") != "notify_only":
         raise ReviewPolicyError("Only a confirmable notify-only checkpoint can be system-acknowledged.")

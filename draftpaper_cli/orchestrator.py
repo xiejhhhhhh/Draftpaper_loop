@@ -22,6 +22,7 @@ from .passport import (
     PassportError,
     append_checkpoint_event,
     load_project_passport,
+    overlay_checkpoint_batch_association,
     read_jsonl,
     refresh_project_passport,
     utc_now,
@@ -1333,6 +1334,46 @@ def _next_action(project_path: Path, metadata: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def _legacy_core_checkpoint_status(
+    project: Path,
+    awaiting: dict[str, Any],
+    *,
+    literature_provider_status: str,
+    current_stage: Any,
+) -> dict[str, Any]:
+    from .checkpoint_summary import checkpoint_path_payload
+    from .core_evidence_batch import shadow_core_evidence_batch_migration
+
+    shadow = shadow_core_evidence_batch_migration(project)
+    checkpoint_paths = checkpoint_path_payload(project, awaiting)
+    migration_cli = (
+        f"python -m draftpaper_cli.cli shadow-core-evidence-batch-migration "
+        f"--project {_quote(project)}"
+    )
+    return {
+        "status": "reported",
+        "project_path": str(project),
+        "pipeline_state": "legacy_core_checkpoint_migration_required",
+        "literature_provider_status": literature_provider_status,
+        "current_stage": current_stage,
+        "awaiting_checkpoint": awaiting,
+        "passport": str(project / PASSPORT_FILES["passport"]),
+        "core_evidence_batch_migration_shadow": shadow,
+        "workflow_gate": "legacy_scope_recovery_required",
+        "release_eligible": False,
+        "next_action": {
+            "stage": "core_evidence",
+            "command": "shadow-core-evidence-batch-migration",
+            "cli": migration_cli,
+            "reason": (
+                "This legacy core-evidence checkpoint has no registered C3 batch scope and cannot be consumed. "
+                "Inspect the read-only migration shadow and explicitly reconcile the full task scope before creating a new request."
+            ),
+            **checkpoint_paths,
+        },
+    }
+
+
 def status_project(project: str | Path) -> dict[str, Any]:
     """Return pipeline status, passport state, and the next CLI action."""
     state = load_project(project)
@@ -1366,6 +1407,13 @@ def status_project(project: str | Path) -> dict[str, Any]:
         reconciliation_status = str(revision_cycle.get("reconciliation_status") or "pending")
         passport = load_project_passport(state.path)
         awaiting = passport.get("awaiting_checkpoint")
+        if awaiting and awaiting.get("stage") == "core_evidence" and not awaiting.get("batch_id"):
+            return _legacy_core_checkpoint_status(
+                state.path,
+                awaiting,
+                literature_provider_status=literature_provider_status,
+                current_stage=state.metadata.get("current_stage"),
+            )
         checkpoint_paths: dict[str, Any] = {}
         if awaiting:
             from .checkpoint_summary import checkpoint_path_payload
@@ -1419,9 +1467,65 @@ def status_project(project: str | Path) -> dict[str, Any]:
     passport = load_project_passport(state.path)
     awaiting = passport.get("awaiting_checkpoint")
     if awaiting:
+        if awaiting.get("stage") == "core_evidence" and not awaiting.get("batch_id"):
+            return _legacy_core_checkpoint_status(
+                state.path,
+                awaiting,
+                literature_provider_status=literature_provider_status,
+                current_stage=state.metadata.get("current_stage"),
+            )
+        if awaiting.get("stage") == "core_evidence" and awaiting.get("batch_id"):
+            from .core_evidence_readiness import assess_core_evidence_readiness, existing_unready_preview_paths
+
+            readiness = assess_core_evidence_readiness(state.path)
+            review_paths = existing_unready_preview_paths(state.path, readiness)
+            if (
+                readiness.get("status") not in {"ready", "awaiting_confirmation"}
+                or awaiting.get("batch_id") != readiness.get("batch_id")
+                or awaiting.get("scope_sha256") != readiness.get("scope_sha256")
+                or awaiting.get("input_manifest_sha256") != readiness.get("input_manifest_sha256")
+            ):
+                return {
+                    "status": "reported",
+                    "project_path": str(state.path),
+                    "pipeline_state": "core_evidence_batch_pending",
+                    "current_stage": state.metadata.get("current_stage"),
+                    "awaiting_checkpoint": awaiting,
+                    "passport": str(state.path / PASSPORT_FILES["passport"]),
+                    "core_evidence_readiness": readiness,
+                    "release_eligible": False,
+                    **review_paths,
+                    "next_action": {
+                        "stage": "core_evidence",
+                        "command": "agent_action_required",
+                        "reason": "The frozen core-evidence candidate changed; the pending confirmation cannot be consumed.",
+                        "blocking_tasks": readiness.get("blocking_tasks") or [],
+                        **review_paths,
+                    },
+                }
         from .checkpoint_summary import checkpoint_path_payload
 
         checkpoint_paths = checkpoint_path_payload(state.path, awaiting)
+        if awaiting.get("stage") == "core_evidence":
+            from .review_policy import evaluate_checkpoint_authority
+
+            authority = evaluate_checkpoint_authority(state.path, checkpoint_hash=str(awaiting.get("hash") or ""))
+            if authority.get("status") == "notify_only":
+                return {
+                    "status": "reported",
+                    "project_path": str(state.path),
+                    "pipeline_state": "confirmation_continuity_ready",
+                    "current_stage": state.metadata.get("current_stage"),
+                    "awaiting_checkpoint": awaiting,
+                    "passport": str(state.path / PASSPORT_FILES["passport"]),
+                    "next_action": {
+                        "stage": "core_evidence",
+                        "command": "continue",
+                        "cli": f"python -m draftpaper_cli.cli continue --project {_quote(state.path)}",
+                        "reason": "The scientific decision is unchanged; consume the verified continuity receipt without new author confirmation.",
+                        **checkpoint_paths,
+                    },
+                }
         return {
             "status": "reported",
             "project_path": str(state.path),
@@ -1493,6 +1597,36 @@ def status_project(project: str | Path) -> dict[str, Any]:
             and promoted.get("snapshot_id") == subject.get("evidence_snapshot_id")
         )
         if not confirmation_current:
+            from .core_evidence_readiness import assess_core_evidence_readiness, existing_unready_preview_paths
+
+            readiness = assess_core_evidence_readiness(state.path)
+            if not readiness.get("publishable"):
+                review_paths = existing_unready_preview_paths(state.path, readiness)
+                proposed = str((readiness.get("next_action") or {}).get("command") or "agent_action_required")
+                cli = (
+                    f"python -m draftpaper_cli.cli {proposed} --project {_quote(state.path)}"
+                    if proposed in {"prepare-core-evidence-batch", "finalize-core-evidence-batch"}
+                    else None
+                )
+                return {
+                    "status": "reported",
+                    "project_path": str(state.path),
+                    "pipeline_state": "core_evidence_batch_pending",
+                    "current_stage": state.metadata.get("current_stage"),
+                    "awaiting_checkpoint": None,
+                    "passport": str(state.path / PASSPORT_FILES["passport"]),
+                    "core_evidence_readiness": readiness,
+                    "release_eligible": False,
+                    **review_paths,
+                    "next_action": {
+                        "stage": "core_evidence",
+                        "command": proposed,
+                        **({"cli": cli} if cli else {}),
+                        "reason": ", ".join(readiness.get("reason_codes") or []),
+                        "blocking_tasks": readiness.get("blocking_tasks") or [],
+                        **review_paths,
+                    },
+                }
             return {
                 "status": "reported",
                 "project_path": str(state.path),
@@ -1587,13 +1721,67 @@ def _checkpoint_hash(entry: dict[str, Any]) -> str:
 
 
 def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> dict[str, Any]:
+    """Publish at most one C3 request for a frozen candidate across callers."""
+    if stage != "core_evidence":
+        return _checkpoint_project_unlocked(project, stage=stage, note=note)
+    from .core_evidence_batch import CORE_EVIDENCE_OPERATION_LOCK
+    from .state_kernel import file_lock
+
+    root = load_project(project).path
+    with file_lock(root / CORE_EVIDENCE_OPERATION_LOCK):
+        return _checkpoint_project_unlocked(root, stage=stage, note=note)
+
+
+def _checkpoint_project_unlocked(project: str | Path, *, stage: str, note: str = "") -> dict[str, Any]:
     """Append a checkpoint ledger entry and wait for explicit resume."""
     state = load_project(project)
     if stage not in (state.metadata.get("stages") or {}):
         raise OrchestratorError(f"Unknown checkpoint stage: {stage}")
     passport = load_project_passport(state.path)
-    if passport.get("awaiting_checkpoint"):
+    awaiting = passport.get("awaiting_checkpoint")
+    if awaiting:
+        if stage == "core_evidence" and awaiting.get("stage") == stage:
+            from .checkpoint_summary import show_checkpoint_summary
+            from .core_evidence_readiness import assess_core_evidence_readiness
+
+            readiness = assess_core_evidence_readiness(state.path)
+            shown = show_checkpoint_summary(state.path, str(awaiting.get("hash") or ""))
+            if (
+                shown.get("status") == "ready_for_human_review"
+                and shown.get("review_state") == "confirmable"
+                and awaiting.get("batch_id") == readiness.get("batch_id")
+                and awaiting.get("scope_sha256") == readiness.get("scope_sha256")
+                and awaiting.get("input_manifest_sha256") == readiness.get("input_manifest_sha256")
+                and readiness.get("status") in {"ready", "awaiting_confirmation"}
+            ):
+                if readiness.get("status") == "ready":
+                    from .core_evidence_batch import mark_core_evidence_batch_awaiting
+
+                    mark_core_evidence_batch_awaiting(state.path, checkpoint_hash=str(awaiting["hash"]))
+                    readiness = assess_core_evidence_readiness(state.path)
+                from .checkpoint_summary import _publish_checkpoint_index
+
+                _publish_checkpoint_index(state.path, shown["summary"])
+                request = json.loads(Path(shown["confirmation_request"]).read_text(encoding="utf-8-sig"))
+                return {
+                    "status": "checkpoint_existing",
+                    "project_path": str(state.path),
+                    "checkpoint_hash": awaiting["hash"],
+                    "stage_summary_zh_html": shown["stage_summary_zh_html"],
+                    "stage_summary_en_html": shown.get("stage_summary_en_html"),
+                    "primary_human_review_html": shown["stage_summary_zh_html"],
+                    "confirmation_command": request.get("confirmation_command"),
+                    "core_evidence_readiness": readiness,
+                }
+            raise OrchestratorError("The pending core-evidence batch changed or is not confirmable; finish reconciliation before requesting a new checkpoint.")
         raise OrchestratorError("A checkpoint is already awaiting resume.")
+    if stage == "core_evidence":
+        from .core_evidence_readiness import assess_core_evidence_readiness
+
+        readiness = assess_core_evidence_readiness(state.path)
+        if not readiness.get("publishable"):
+            reasons = ", ".join(readiness.get("reason_codes") or [])
+            raise OrchestratorError(f"Core-evidence batch is not ready for confirmation: {reasons}.")
     from .checkpoint_summary import agent_artifact_paths, write_stage_summary_v6
 
     before_artifacts = load_project_passport(state.path).get("artifacts") or []
@@ -1618,11 +1806,22 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
     )
     base["checkpoint_id"] = f"{stage}-{hashlib.sha256(id_seed.encode('utf-8')).hexdigest()[:12]}"
     if stage == "core_evidence":
+        from .core_evidence_batch import load_core_evidence_batch
+
         try:
             subject = evidence_confirmation_subject(state.path)
         except EvidenceSnapshotMismatch as exc:
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
+        batch = load_core_evidence_batch(state.path)
+        base.update({
+            "batch_id": batch["batch_id"],
+            "base_decision_receipt_id": batch.get("base_decision_receipt_id"),
+            "scope_sha256": readiness["scope_sha256"],
+            "input_manifest_sha256": readiness["input_manifest_sha256"],
+            "candidate_generation": readiness["candidate_generation"],
+            "frozen_candidate_ref": batch["frozen_candidate_ref"],
+        })
     base["hash"] = _checkpoint_hash(base)
     final_summary = write_stage_summary_v6(
         state.path,
@@ -1634,11 +1833,24 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
         checkpoint_hash=base["hash"],
         publish_index=False,
     )
+    if stage == "core_evidence":
+        rendered = json.loads((state.path / final_summary["stage_summary_json"]).read_text(encoding="utf-8-sig"))
+        continuity = rendered.get("confirmation_continuity") or {}
+        audit_only = continuity.get("eligible") is True and continuity.get("classification") == "no_scientific_change"
+        if rendered.get("review_state") != "confirmable" or not (final_summary.get("confirmation_command") or audit_only):
+            raise OrchestratorError(
+                "The rendered core-evidence checkpoint is blocked or stale; no confirmation request was published. "
+                f"Inspect {state.path / final_summary['stage_summary_json']} and finish the batch preflight."
+            )
     base["stage_summary_sha256"] = final_summary["stage_summary_sha256"]
     base["scientific_decision_sha256"] = final_summary["scientific_decision_sha256"]
     base["stage_summary_json"] = final_summary["stage_summary_json"]
     base["stage_summary_zh_html"] = final_summary["stage_summary_zh_html"]
     append_checkpoint_event(state.path, base)
+    if stage == "core_evidence":
+        from .core_evidence_batch import mark_core_evidence_batch_awaiting
+
+        mark_core_evidence_batch_awaiting(state.path, checkpoint_hash=base["hash"])
     from .checkpoint_summary import _publish_checkpoint_index
 
     _publish_checkpoint_index(state.path, final_summary)
@@ -1689,14 +1901,87 @@ def checkpoint_project(project: str | Path, *, stage: str, note: str = "") -> di
 
 def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "") -> dict[str, Any]:
     """Consume a checkpoint by appending a resume ledger entry."""
+    root = load_project(project).path
+    events = read_jsonl(root / PASSPORT_FILES["checkpoint_ledger"])
+    if any(
+        event.get("kind") == "checkpoint"
+        and event.get("hash") == checkpoint_hash
+        and event.get("stage") == "core_evidence"
+        for event in events
+    ):
+        from .core_evidence_batch import CORE_EVIDENCE_OPERATION_LOCK
+        from .state_kernel import file_lock
+
+        with file_lock(root / CORE_EVIDENCE_OPERATION_LOCK):
+            return _resume_project_unlocked(root, checkpoint_hash=checkpoint_hash, note=note)
+    return _resume_project_unlocked(root, checkpoint_hash=checkpoint_hash, note=note)
+
+
+def _resume_project_unlocked(project: str | Path, *, checkpoint_hash: str, note: str = "") -> dict[str, Any]:
+    """Re-read the ledger after acquiring the core-evidence operation lock."""
     state = load_project(project)
     events = read_jsonl(state.path / PASSPORT_FILES["checkpoint_ledger"])
     checkpoints = [event for event in events if event.get("kind") == "checkpoint" and event.get("hash") == checkpoint_hash]
     if not checkpoints:
         raise OrchestratorError(f"Checkpoint hash not found: {checkpoint_hash}")
-    if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
-        raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
     checkpoint = checkpoints[-1]
+    if checkpoint.get("stage") == "core_evidence" and not checkpoint.get("batch_id"):
+        checkpoint = overlay_checkpoint_batch_association(state.path, checkpoint)
+    consumed_events = [
+        event for event in events
+        if event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash
+    ]
+    if consumed_events:
+        if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+            return _recover_core_evidence_batch_resume(
+                state.path, checkpoint=checkpoint, resume_event=consumed_events[-1],
+            )
+        raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
+    if checkpoint.get("stage") == "core_evidence" and not checkpoint.get("batch_id"):
+        raise OrchestratorError(
+            "Legacy core-evidence checkpoint has no registered batch scope; inspect the migration shadow and reconcile its full scope before resuming."
+        )
+    if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+        from .core_evidence_batch import load_core_evidence_batch
+        from .core_evidence_readiness import assess_core_evidence_readiness
+
+        readiness = assess_core_evidence_readiness(state.path)
+        batch = load_core_evidence_batch(state.path)
+        if (
+            readiness.get("status") not in {"ready", "awaiting_confirmation"}
+            or not batch
+            or checkpoint.get("batch_id") != readiness.get("batch_id")
+            or checkpoint.get("scope_sha256") != readiness.get("scope_sha256")
+            or checkpoint.get("input_manifest_sha256") != readiness.get("input_manifest_sha256")
+            or checkpoint.get("candidate_generation") != readiness.get("candidate_generation")
+            or checkpoint.get("frozen_candidate_ref") != batch.get("frozen_candidate_ref")
+            or checkpoint.get("base_decision_receipt_id") != batch.get("base_decision_receipt_id")
+        ):
+            raise OrchestratorError("The frozen core-evidence batch candidate changed; reconcile before confirming it.")
+    core_continuity_candidate = False
+    if str(checkpoint.get("stage") or "") == "core_evidence":
+        # Evaluate the immutable package identity before artifact validation.
+        # A batch may have refreshed stage manifests or removed an old
+        # promoted-snapshot pointer while preserving the normalized science.
+        # Such audit-only drift is handled by the continuity route below.
+        from .checkpoint_summary import show_checkpoint_summary
+        from .confirmation_continuity import evaluate_confirmation_continuity
+
+        try:
+            shown = show_checkpoint_summary(state.path, checkpoint_hash)
+            current_summary = shown.get("summary") or {}
+            evaluated = evaluate_confirmation_continuity(
+                state.path,
+                checkpoint_type="core_evidence",
+                scientific_fingerprint=current_summary.get("scientific_decision_fingerprint") or {},
+                brief_semantic_sha256=str(current_summary.get("human_brief_semantic_sha256") or ""),
+                review_state=str(current_summary.get("review_state") or ""),
+                semantic_delta_class=str((current_summary.get("semantic_delta_from_last_confirmed") or {}).get("classification") or ""),
+                unresolved_issues=list(current_summary.get("unresolved") or []),
+            )
+            core_continuity_candidate = bool(evaluated.get("eligible"))
+        except Exception:
+            core_continuity_candidate = False
     if checkpoint.get("stage_summary_sha256"):
         from .checkpoint_summary import validate_checkpoint_summary
 
@@ -1708,7 +1993,7 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
             # artifact collector.  Once the user has confirmed the exact plan,
             # that presentation-only binding is safe to consume if the packet
             # still exists and no other integrity reason is present.
-            if not _is_confirmed_research_plan_packet_compatibility_case(state.path, checkpoint, reasons):
+            if not core_continuity_candidate and not _is_confirmed_research_plan_packet_compatibility_case(state.path, checkpoint, reasons):
                 raise OrchestratorError(
                     "Checkpoint summary is stale; create a new human-review checkpoint. "
                     + "; ".join(reasons)
@@ -1726,13 +2011,46 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
             raise OrchestratorError(
                 "Core evidence changed after the checkpoint was created; create and review a new checkpoint."
             )
-    from .review_policy import record_user_checkpoint_confirmation
+        # A package created before continuity normalization can carry the
+        # already-confirmed scientific decision forward.  Only take that
+        # route when the live evaluator proves equivalence; first decisions
+        # and genuine scientific changes continue through the normal user
+        # receipt path below.
+        from .checkpoint_summary import show_checkpoint_summary
+        from .confirmation_continuity import evaluate_confirmation_continuity
 
-    user_receipt = record_user_checkpoint_confirmation(
-        state.path,
-        checkpoint_hash=checkpoint_hash,
-        note=note,
-    )
+        shown = show_checkpoint_summary(state.path, checkpoint_hash)
+        current_summary = shown.get("summary") or {}
+        evaluated = evaluate_confirmation_continuity(
+            state.path,
+            checkpoint_type="core_evidence",
+            scientific_fingerprint=current_summary.get("scientific_decision_fingerprint") or {},
+            brief_semantic_sha256=str(current_summary.get("human_brief_semantic_sha256") or ""),
+            review_state=str(current_summary.get("review_state") or ""),
+            semantic_delta_class=str((current_summary.get("semantic_delta_from_last_confirmed") or {}).get("classification") or ""),
+            unresolved_issues=list(current_summary.get("unresolved") or []),
+        )
+        if evaluated.get("eligible"):
+            preserved_continuity = _validated_core_confirmation_continuity(state.path, checkpoint)
+            return _resume_after_preserved_core_confirmation(
+                state.path,
+                checkpoint=checkpoint,
+                continuity=preserved_continuity,
+                note=note,
+            )
+    from .review_policy import decision_receipt_for_checkpoint, record_user_checkpoint_confirmation
+
+    existing_receipt = decision_receipt_for_checkpoint(state.path, checkpoint_hash)
+    if existing_receipt and existing_receipt.get("decision_status") == "user_confirmed":
+        user_receipt = {"receipt": existing_receipt}
+    elif existing_receipt:
+        raise OrchestratorError("This checkpoint already has a different decision receipt and cannot be user-confirmed again.")
+    else:
+        user_receipt = record_user_checkpoint_confirmation(
+            state.path,
+            checkpoint_hash=checkpoint_hash,
+            note=note,
+        )
     resume_event = {
         "kind": "resume",
         "consumes_hash": checkpoint_hash,
@@ -1746,6 +2064,13 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         "decision_receipt_id": user_receipt["receipt"].get("receipt_id"),
     }
     append_checkpoint_event(state.path, resume_event)
+    if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+        return _complete_core_evidence_batch_resume(
+            state.path,
+            checkpoint=checkpoint,
+            resume_event=resume_event,
+            decision_receipt=user_receipt["receipt"],
+        )
     promoted_snapshot = None
     if str(resume_event.get("stage") or "") == "core_evidence":
         promoted_snapshot = create_evidence_snapshot(state.path)
@@ -1777,7 +2102,21 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         revision_cycle_id=revision_cycle_id,
         reason="user_confirmed_checkpoint",
     )
-    if revision_cycle_id:
+    if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+        from .core_evidence_batch import resolve_core_evidence_batch
+
+        receipt_ref = (
+            Path(str(checkpoint["stage_summary_json"])).parent
+            / "review_decision_receipts"
+            / f"{user_receipt['receipt']['receipt_id']}.json"
+        ).as_posix()
+        resolve_core_evidence_batch(
+            state.path,
+            checkpoint_hash=checkpoint_hash,
+            receipt_ref=receipt_ref,
+            receipt_id=str(user_receipt["receipt"]["receipt_id"]),
+        )
+    elif revision_cycle_id:
         try:
             from .revision_cycle import close_revision_cycle
 
@@ -1798,6 +2137,347 @@ def resume_project(project: str | Path, *, checkpoint_hash: str, note: str = "")
         "evidence_snapshot_id": (promoted_snapshot or {}).get("snapshot_id"),
         "scientific_baseline": baseline_result,
         "decision_receipt": user_receipt["receipt"],
+        "next_action": status["next_action"],
+    }
+
+
+def _recover_core_evidence_batch_resume(
+    project: Path,
+    *,
+    checkpoint: dict[str, Any],
+    resume_event: dict[str, Any],
+    expected_status: str | None = None,
+    requested_receipt_id: str | None = None,
+) -> dict[str, Any]:
+    """Finish a C3 decision already recorded in the ledger without duplicating it."""
+
+    from .core_evidence_batch import load_core_evidence_batch
+    from .core_evidence_readiness import assess_core_evidence_readiness
+    from .evidence_snapshot import evidence_confirmation_subject
+    from .review_policy import decision_receipt_for_checkpoint
+
+    checkpoint_hash = str(checkpoint.get("hash") or "")
+    decision_status = str(resume_event.get("decision_status") or "")
+    batch = load_core_evidence_batch(project) or {}
+    if (
+        resume_event.get("stage") != "core_evidence"
+        or decision_status not in {"user_confirmed", "system_acknowledged", "continuity_preserved"}
+        or (expected_status is not None and decision_status != expected_status)
+        or checkpoint.get("batch_id") != batch.get("batch_id")
+        or batch.get("request_id") != checkpoint_hash
+        or resume_event.get("decision_receipt_id") is None
+        or (requested_receipt_id is not None and resume_event.get("decision_receipt_id") != requested_receipt_id)
+    ):
+        raise OrchestratorError("The consumed core-evidence checkpoint has no recoverable active batch decision.")
+    if batch.get("phase") == "closed":
+        raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
+    if batch.get("phase") != "awaiting_decision":
+        raise OrchestratorError("The consumed C3 decision is not attached to an awaiting batch; manual repair is required.")
+    readiness = assess_core_evidence_readiness(project)
+    if (
+        readiness.get("status") not in {"ready", "awaiting_confirmation"}
+        or checkpoint.get("scope_sha256") != readiness.get("scope_sha256")
+        or checkpoint.get("input_manifest_sha256") != readiness.get("input_manifest_sha256")
+        or checkpoint.get("candidate_generation") != readiness.get("candidate_generation")
+    ):
+        raise OrchestratorError("The frozen batch changed after its decision; recovery will not promote a different candidate.")
+    receipt = decision_receipt_for_checkpoint(project, checkpoint_hash)
+    if decision_status == "user_confirmed":
+        if (
+            not receipt
+            or receipt.get("receipt_id") != resume_event.get("decision_receipt_id")
+            or receipt.get("decision_status") != "user_confirmed"
+            or receipt.get("actor_type") != "user"
+        ):
+            raise OrchestratorError("The recorded core-evidence decision receipt is missing, invalid, or mismatched.")
+    else:
+        expected_receipt_status = "system_acknowledged" if decision_status == "system_acknowledged" else None
+        if expected_receipt_status and (
+            not receipt
+            or receipt.get("receipt_id") != resume_event.get("decision_receipt_id")
+            or receipt.get("decision_status") != expected_receipt_status
+        ):
+            raise OrchestratorError("The recorded system acknowledgement is missing, invalid, or mismatched.")
+        return _recover_core_evidence_continuity_resume(
+            project,
+            checkpoint=checkpoint,
+            resume_event=resume_event,
+            batch=batch,
+            readiness=readiness,
+            decision_receipt=receipt,
+        )
+    try:
+        current_subject = evidence_confirmation_subject(project)
+    except Exception as exc:
+        raise OrchestratorError("The confirmed core-evidence subject can no longer be verified.") from exc
+    if (
+        checkpoint.get("confirmation_subject_id") != current_subject.get("confirmation_subject_id")
+        or checkpoint.get("evidence_snapshot_id") != current_subject.get("evidence_snapshot_id")
+    ):
+        raise OrchestratorError("Core evidence changed after the recorded decision; recovery will not promote it.")
+    return _complete_core_evidence_batch_resume(
+        project,
+        checkpoint=checkpoint,
+        resume_event=resume_event,
+        decision_receipt=receipt,
+        recovered=True,
+    )
+
+
+def _recover_core_evidence_continuity_resume(
+    project: Path,
+    *,
+    checkpoint: dict[str, Any],
+    resume_event: dict[str, Any],
+    batch: dict[str, Any],
+    readiness: dict[str, Any],
+    decision_receipt: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Close a continuity batch after its atomic promotion already committed."""
+
+    from .core_evidence_batch import resolve_core_evidence_batch
+    from .evidence_snapshot import evidence_confirmation_subject
+    from .state_kernel import atomic_write_json
+
+    continuity = _validated_core_confirmation_continuity(project, checkpoint)
+    if (
+        resume_event.get("confirmation_continuity_receipt_id", continuity["receipt_id"])
+        != continuity["receipt_id"]
+        or resume_event.get("preserved_user_decision_receipt_id", continuity["previous_receipt_id"])
+        != continuity["previous_receipt_id"]
+    ):
+        raise OrchestratorError("The consumed continuity event does not match its validated prior decision.")
+    if decision_receipt and decision_receipt.get("receipt_id") != resume_event.get("decision_receipt_id"):
+        raise OrchestratorError("The notification receipt does not match the consumed continuity event.")
+    try:
+        subject = evidence_confirmation_subject(project)
+    except Exception as exc:
+        raise OrchestratorError("The preserved core-evidence subject can no longer be verified.") from exc
+    if (
+        subject.get("confirmation_subject_id") != checkpoint.get("confirmation_subject_id")
+        or subject.get("evidence_snapshot_id") != checkpoint.get("evidence_snapshot_id")
+        or checkpoint.get("batch_id") != batch.get("batch_id")
+        or checkpoint.get("scope_sha256") != readiness.get("scope_sha256")
+        or checkpoint.get("input_manifest_sha256") != readiness.get("input_manifest_sha256")
+        or checkpoint.get("candidate_generation") != readiness.get("candidate_generation")
+    ):
+        raise OrchestratorError("The continuity candidate changed after its receipt; recovery will not promote it.")
+    if batch.get("phase") != "awaiting_decision":
+        raise OrchestratorError("The continuity receipt is not attached to an awaiting batch.")
+    snapshot = create_evidence_snapshot(project)
+    if snapshot.get("snapshot_id") != checkpoint.get("evidence_snapshot_id"):
+        raise OrchestratorError("The promoted snapshot does not match the preserved confirmation.")
+    report_path = project / "core_evidence" / "core_evidence_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+    report.update({
+        "promoted_evidence_snapshot_id": snapshot["snapshot_id"],
+        "human_confirmation_status": "approved",
+        "human_confirmation_checkpoint_hash": continuity["previous_checkpoint_hash"],
+        "human_confirmation_subject_id": checkpoint["confirmation_subject_id"],
+    })
+    atomic_write_json(report_path, report)
+    refresh_project_passport(project, event="core_evidence_continuity_resume_recovery")
+    receipt_ref = (
+        Path(str(checkpoint["stage_summary_json"])).parent / "confirmation_continuity_receipt.json"
+    ).as_posix()
+    closed = resolve_core_evidence_batch(
+        project,
+        checkpoint_hash=str(checkpoint["hash"]),
+        receipt_ref=receipt_ref,
+        receipt_id=str(continuity["receipt_id"]),
+    )
+    if closed.get("phase") != "closed":
+        raise OrchestratorError("The continuity batch was not closed during recovery.")
+    status = status_project(project)
+    return {
+        "status": "resumed_after_confirmation_continuity" if resume_event.get("decision_status") == "continuity_preserved" else "resumed_after_system_acknowledgement",
+        "project_path": str(project),
+        "consumed_checkpoint_hash": checkpoint.get("hash"),
+        "decision_status": resume_event.get("decision_status"),
+        "decision_receipt_id": resume_event.get("decision_receipt_id"),
+        "preserved_user_decision_receipt_id": continuity.get("previous_receipt_id"),
+        "confirmation_continuity": continuity,
+        "recovered": True,
+        "next_action": status["next_action"],
+    }
+
+
+def _complete_core_evidence_batch_resume(
+    project: Path,
+    *,
+    checkpoint: dict[str, Any],
+    resume_event: dict[str, Any],
+    decision_receipt: dict[str, Any],
+    recovered: bool = False,
+) -> dict[str, Any]:
+    """Idempotently promote the exact C3 subject, create its baseline, and close its batch."""
+
+    from .core_evidence_batch import resolve_core_evidence_batch
+    from .core_evidence_readiness import assess_core_evidence_readiness
+    from .evidence_snapshot import evidence_confirmation_subject
+    from .scientific_baseline import create_scientific_baseline
+    from .state_kernel import atomic_write_json
+
+    state = load_project(project)
+    checkpoint_hash = str(checkpoint.get("hash") or "")
+    if (
+        resume_event.get("consumes_hash") != checkpoint_hash
+        or resume_event.get("decision_receipt_id") != decision_receipt.get("receipt_id")
+        or decision_receipt.get("checkpoint_hash") != checkpoint_hash
+        or decision_receipt.get("decision_status") != "user_confirmed"
+        or decision_receipt.get("actor_type") != "user"
+    ):
+        raise OrchestratorError("The core-evidence resume event is not bound to its exact user decision receipt.")
+    readiness = assess_core_evidence_readiness(state.path)
+    if (
+        readiness.get("status") != "awaiting_confirmation"
+        or checkpoint.get("batch_id") != readiness.get("batch_id")
+        or checkpoint.get("scope_sha256") != readiness.get("scope_sha256")
+        or checkpoint.get("input_manifest_sha256") != readiness.get("input_manifest_sha256")
+        or checkpoint.get("candidate_generation") != readiness.get("candidate_generation")
+    ):
+        raise OrchestratorError("The frozen batch changed after its decision; the exact confirmed candidate is not current.")
+    try:
+        current_subject = evidence_confirmation_subject(state.path)
+    except Exception as exc:
+        raise OrchestratorError("The confirmed core-evidence subject can no longer be verified.") from exc
+    if (
+        checkpoint.get("confirmation_subject_id") != current_subject.get("confirmation_subject_id")
+        or checkpoint.get("evidence_snapshot_id") != current_subject.get("evidence_snapshot_id")
+    ):
+        raise OrchestratorError("Core evidence changed after the recorded decision; recovery will not promote it.")
+    snapshot = create_evidence_snapshot(state.path)
+    if snapshot.get("snapshot_id") != checkpoint.get("evidence_snapshot_id"):
+        raise OrchestratorError("The promoted evidence snapshot does not match the confirmed checkpoint subject.")
+    core_report_path = state.path / "core_evidence" / "core_evidence_report.json"
+    core_report = json.loads(core_report_path.read_text(encoding="utf-8-sig"))
+    core_report["promoted_evidence_snapshot_id"] = snapshot.get("snapshot_id")
+    core_report["human_confirmation_status"] = "approved"
+    core_report["human_confirmation_checkpoint_hash"] = checkpoint_hash
+    core_report["human_confirmation_subject_id"] = checkpoint.get("confirmation_subject_id")
+    atomic_write_json(core_report_path, core_report)
+    refresh_project_passport(state.path, event="core_evidence_resume_recovery" if recovered else "core_evidence_resume")
+    revision_cycle_id = None
+    try:
+        from .revision_cycle import load_active_revision_cycle
+
+        active_cycle = load_active_revision_cycle(state.path)
+        if active_cycle and active_cycle.get("status") == "open":
+            revision_cycle_id = active_cycle.get("revision_cycle_id")
+    except Exception:
+        pass
+    baseline_result = create_scientific_baseline(
+        state.path,
+        decision_receipt_id=str(decision_receipt.get("receipt_id")),
+        revision_cycle_id=revision_cycle_id,
+        reason="user_confirmed_checkpoint",
+    )
+    batch = resolve_core_evidence_batch(
+        state.path,
+        checkpoint_hash=checkpoint_hash,
+        receipt_ref=(
+            Path(str(checkpoint["stage_summary_json"])).parent
+            / "review_decision_receipts"
+            / f"{decision_receipt['receipt_id']}.json"
+        ).as_posix(),
+        receipt_id=str(decision_receipt["receipt_id"]),
+    )
+    if batch.get("phase") != "closed":
+        raise OrchestratorError("The confirmed evidence batch was not closed during resume recovery.")
+    status = status_project(state.path)
+    return {
+        "status": "resumed",
+        "project_path": str(state.path),
+        "consumed_checkpoint_hash": checkpoint_hash,
+        "evidence_snapshot_id": snapshot.get("snapshot_id"),
+        "scientific_baseline": baseline_result,
+        "decision_receipt": decision_receipt,
+        "recovered": recovered,
+        "next_action": status["next_action"],
+    }
+
+
+def _resume_after_preserved_core_confirmation(
+    project: Path,
+    *,
+    checkpoint: dict[str, Any],
+    continuity: dict[str, Any],
+    note: str = "",
+) -> dict[str, Any]:
+    """Promote an equivalent core package without creating a new user receipt."""
+
+    state = load_project(project)
+    checkpoint_hash = str(checkpoint.get("hash") or "")
+    events = read_jsonl(state.path / PASSPORT_FILES["checkpoint_ledger"])
+    if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
+        raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
+    from .scoped_transaction import ScopedProjectTransaction
+    from .state_kernel import atomic_write_json
+
+    resume_event = {
+        "kind": "resume",
+        "consumes_hash": checkpoint_hash,
+        "stage": "core_evidence",
+        "note": note or "continued by preserved confirmation continuity",
+        "created_at": utc_now(),
+        "project_id": state.metadata.get("project_id"),
+        "decision_status": "continuity_preserved",
+        "actor_type": "system",
+        "actor_id": "draftpaper-cli",
+        "decision_receipt_id": continuity["receipt_id"],
+    }
+    paths = (
+        "results/promoted_evidence_snapshot.json",
+        "core_evidence/core_evidence_report.json",
+        *PASSPORT_FILES.values(),
+    )
+    with ScopedProjectTransaction(state.path, paths) as transaction:
+        snapshot = create_evidence_snapshot(state.path)
+        if snapshot.get("snapshot_id") != checkpoint.get("evidence_snapshot_id"):
+            raise OrchestratorError("Core evidence changed during continuity promotion.")
+        core_path = state.path / "core_evidence" / "core_evidence_report.json"
+        core_report = json.loads(core_path.read_text(encoding="utf-8-sig"))
+        core_report.update(
+            {
+                "promoted_evidence_snapshot_id": snapshot["snapshot_id"],
+                "human_confirmation_status": "approved",
+                "human_confirmation_checkpoint_hash": continuity["previous_checkpoint_hash"],
+                "human_confirmation_subject_id": checkpoint["confirmation_subject_id"],
+            }
+        )
+        atomic_write_json(core_path, core_report)
+        resume_event.update(
+            {
+                "confirmation_continuity_receipt_id": continuity["receipt_id"],
+                "preserved_user_decision_receipt_id": continuity["previous_receipt_id"],
+                "evidence_snapshot_id": snapshot["snapshot_id"],
+            }
+        )
+        append_checkpoint_event(state.path, resume_event)
+        refresh_project_passport(state.path, event="core_evidence_continuity_resume")
+        transaction.commit()
+    if checkpoint.get("batch_id"):
+        from .core_evidence_batch import resolve_core_evidence_batch
+
+        receipt_ref = (
+            Path(str(checkpoint["stage_summary_json"])).parent / "confirmation_continuity_receipt.json"
+        ).as_posix()
+        resolve_core_evidence_batch(
+            state.path,
+            checkpoint_hash=checkpoint_hash,
+            receipt_ref=receipt_ref,
+            receipt_id=str(continuity["receipt_id"]),
+        )
+    status = status_project(state.path)
+    return {
+        "status": "resumed_after_confirmation_continuity",
+        "project_path": str(state.path),
+        "consumed_checkpoint_hash": checkpoint_hash,
+        "evidence_snapshot_id": snapshot.get("snapshot_id"),
+        "decision_status": "continuity_preserved",
+        "decision_receipt": None,
+        "preserved_user_decision_receipt_id": continuity["previous_receipt_id"],
+        "confirmation_continuity": continuity,
         "next_action": status["next_action"],
     }
 
@@ -1834,12 +2514,57 @@ def _resume_after_review_receipt(
     expected_status: str,
     event_name: str,
 ) -> dict[str, Any]:
+    root = load_project(project).path
+    events = read_jsonl(root / PASSPORT_FILES["checkpoint_ledger"])
+    checkpoint = next((
+        event for event in reversed(events)
+        if event.get("kind") == "checkpoint" and event.get("hash") == checkpoint_hash
+    ), None)
+    if checkpoint and checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+        from .core_evidence_batch import CORE_EVIDENCE_OPERATION_LOCK
+        from .state_kernel import file_lock
+
+        with file_lock(root / CORE_EVIDENCE_OPERATION_LOCK):
+            return _resume_after_review_receipt_unlocked(
+                root,
+                checkpoint_hash=checkpoint_hash,
+                receipt_id=receipt_id,
+                expected_status=expected_status,
+                event_name=event_name,
+            )
+    return _resume_after_review_receipt_unlocked(
+        root,
+        checkpoint_hash=checkpoint_hash,
+        receipt_id=receipt_id,
+        expected_status=expected_status,
+        event_name=event_name,
+    )
+
+
+def _resume_after_review_receipt_unlocked(
+    project: str | Path,
+    *,
+    checkpoint_hash: str,
+    receipt_id: str,
+    expected_status: str,
+    event_name: str,
+) -> dict[str, Any]:
     state = load_project(project)
     events = read_jsonl(state.path / PASSPORT_FILES["checkpoint_ledger"])
     checkpoints = [event for event in events if event.get("kind") == "checkpoint" and event.get("hash") == checkpoint_hash]
     if not checkpoints:
         raise OrchestratorError(f"Checkpoint hash not found: {checkpoint_hash}")
-    if any(event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash for event in events):
+    consumed_events = [
+        event for event in events
+        if event.get("kind") == "resume" and event.get("consumes_hash") == checkpoint_hash
+    ]
+    if consumed_events:
+        checkpoint = checkpoints[-1]
+        if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+            return _recover_core_evidence_batch_resume(
+                state.path, checkpoint=checkpoint, resume_event=consumed_events[-1],
+                expected_status=expected_status, requested_receipt_id=receipt_id,
+            )
         raise OrchestratorError(f"Checkpoint hash has already been consumed: {checkpoint_hash}")
     from .review_policy import decision_receipt_for_checkpoint, evaluate_checkpoint_authority
 
@@ -1852,6 +2577,10 @@ def _resume_after_review_receipt(
     if not receipt or receipt.get("receipt_id") != receipt_id or receipt.get("decision_status") != expected_status:
         raise OrchestratorError(f"Resume requires the matching {expected_status} decision receipt.")
     checkpoint = checkpoints[-1]
+    if checkpoint.get("stage") == "core_evidence" and checkpoint.get("batch_id"):
+        from .core_evidence_readiness import assert_current_batch_checkpoint
+
+        assert_current_batch_checkpoint(state.path, checkpoint_hash=checkpoint_hash)
     from .checkpoint_summary import validate_checkpoint_summary
 
     validation = validate_checkpoint_summary(state.path, checkpoint)
@@ -1908,6 +2637,20 @@ def _resume_after_review_receipt(
             refresh_project_passport(state.path, event=event_name)
             next_action = status_project(state.path)["next_action"]
             transaction.commit()
+        if checkpoint.get("batch_id"):
+            from .core_evidence_batch import resolve_core_evidence_batch
+
+            receipt_ref = (
+                Path(str(checkpoint["stage_summary_json"])).parent
+                / "review_decision_receipts"
+                / f"{receipt_id}.json"
+            ).as_posix()
+            resolve_core_evidence_batch(
+                state.path,
+                checkpoint_hash=checkpoint_hash,
+                receipt_ref=receipt_ref,
+                receipt_id=receipt_id,
+            )
     else:
         append_checkpoint_event(state.path, resume_event)
         refresh_project_passport(state.path, event=event_name)
@@ -1927,17 +2670,15 @@ def _validated_core_confirmation_continuity(project: Path, checkpoint: dict[str,
     """Revalidate a hash-bound prior user decision before any promotion write."""
     from .artifact_identity import canonical_json
     from .checkpoint_summary import show_checkpoint_summary
-    from .confirmation_continuity import evaluate_confirmation_continuity
+    from .confirmation_continuity import (
+        evaluate_confirmation_continuity,
+        write_confirmation_continuity_receipt,
+    )
 
     shown = show_checkpoint_summary(project, str(checkpoint.get("hash") or ""))
     summary = shown.get("summary") or {}
     continuity = summary.get("confirmation_continuity") or {}
-    if (
-        shown.get("status") != "ready_for_human_review"
-        or summary.get("decision_status") != "continuity_preserved"
-        or continuity.get("eligible") is not True
-        or continuity.get("classification") != "no_scientific_change"
-    ):
+    if shown.get("status") != "ready_for_human_review":
         raise OrchestratorError("Core-evidence continuity is not qualified for automatic promotion.")
     evaluated = evaluate_confirmation_continuity(
         project,
@@ -1951,9 +2692,47 @@ def _validated_core_confirmation_continuity(project: Path, checkpoint: dict[str,
     previous = evaluated.get("previous_receipt") or {}
     if not evaluated.get("eligible") or not previous.get("checkpoint_hash"):
         raise OrchestratorError("Core-evidence continuity no longer matches a valid user receipt.")
+    # Recompute continuity from the normalized scientific identity before
+    # trusting package-local flags.  Older packages were built before
+    # reindex-only locators and derived audit rows were normalized, so their
+    # stored decision_status can conservatively say scientific_change even
+    # when the current scientific decision is equivalent.  Repair only the
+    # package-local continuity receipt; the immutable user receipt remains
+    # untouched and no new user decision is created.
+    stored_eligible = (
+        summary.get("decision_status") == "continuity_preserved"
+        and continuity.get("eligible") is True
+        and continuity.get("classification") == "no_scientific_change"
+    )
+    expected_path = (project / str(checkpoint.get("stage_summary_json") or "")).resolve().parent / "confirmation_continuity_receipt.json"
+    if not stored_eligible:
+        if not expected_path.is_file():
+            receipt_result = write_confirmation_continuity_receipt(
+                expected_path.parent,
+                checkpoint_type="core_evidence",
+                checkpoint_package_id=str(checkpoint.get("checkpoint_id") or ""),
+                scientific_decision_sha256=str((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256") or ""),
+                human_brief_semantic_sha256=str(summary.get("human_brief_semantic_sha256") or ""),
+                audit_bundle_sha256=str(summary.get("audit_bundle_sha256") or ""),
+                previous_receipt=previous,
+                classified_changes=[
+                    {
+                        "classification": "audit_reindex_only",
+                        "reason": "Normalized checkpoint identity differs only by evidence snapshot and derived audit-row locators.",
+                    }
+                ],
+            )
+            receipt_path_value = str(Path(receipt_result["path"]).resolve().relative_to(project.resolve())).replace("\\", "/")
+        else:
+            receipt_path_value = str(expected_path.relative_to(project.resolve())).replace("\\", "/")
+        continuity = {
+            "eligible": True,
+            "classification": "no_scientific_change",
+            "previous_receipt_id": previous.get("receipt_id"),
+            "receipt_path": receipt_path_value,
+        }
     # A pointer alone is insufficient: validate the immutable receipt digest
     # and every decision/package binding, with a project-confined path.
-    expected_path = (project / str(checkpoint.get("stage_summary_json") or "")).resolve().parent / "confirmation_continuity_receipt.json"
     receipt_path = (project / str(continuity.get("receipt_path") or "")).resolve()
     try:
         receipt_path.relative_to(project.resolve())

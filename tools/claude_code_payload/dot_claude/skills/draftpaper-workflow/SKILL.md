@@ -117,6 +117,22 @@ revalidates policy and scope; C2 needs scientific-freeze permission and an
 independent reviewer; C3 scientific routes, claim choices, plugin promotion,
 licenses, author identity, final manuscript, and release remain human-only.
 
+Use `prepare-core-evidence-batch` and resolve readiness blockers before C3.
+If `status` identifies a legacy core-evidence checkpoint without a registered
+batch scope, do not immediately run `resume`, user confirmation, or Agent
+review. Inspect `shadow-core-evidence-batch-migration` first. If it reports
+`associate_complete_legacy_request`, register the complete authoritative task
+scope with `prepare-core-evidence-batch` and inspect its result: the framework
+may append a sealed association to the exact unchanged checkpoint package and
+candidate, preserving that existing pending request without rewriting the
+checkpoint event. A pending request still requires author confirmation. If the
+package already has a valid `approve/user_confirmed` receipt, it may only resume
+consumption of that same checkpoint and candidate. Rejected, refinement,
+Agent, or system decisions are not reusable. If the shadow is ineligible,
+incomplete, or mismatched, reconcile the full task scope and prepare a new
+batch; preserve the old packet as audit-only and never reuse its decision for
+the new candidate.
+
 ## Stage Order
 
 Use the CLI-owned sequence: `create-project`, `search-literature`,

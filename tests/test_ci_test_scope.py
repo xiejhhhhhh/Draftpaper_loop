@@ -26,6 +26,14 @@ def test_high_risk_paths_require_full_suite():
         "draftpaper_cli/evidence/binder.py",
         "draftpaper_cli/schemas/new_schema.py",
         "draftpaper_cli/cli.py",
+        "draftpaper_cli/doctor.py",
+        "draftpaper_cli/checkpoint_summary.py",
+        "draftpaper_cli/checkpoint_delivery.py",
+        "draftpaper_cli/review_policy.py",
+        "draftpaper_cli/passport.py",
+        "draftpaper_cli/core_evidence_batch.py",
+        "draftpaper_cli/core_evidence_readiness.py",
+        "draftpaper_cli/resources/schemas/revision_cycle_v3.json",
     ):
         scope = classify_changed_paths([path])
         assert scope.mode == "full", path

@@ -40,6 +40,14 @@ def _link(root: Path, output_dir: Path, relative: str) -> str:
     return escape(Path(os.path.relpath(target, output_dir)).as_posix())
 
 
+def _package_link(root: Path, output_dir: Path, filename: str) -> str:
+    try:
+        package_relative = output_dir.resolve().relative_to(root.resolve())
+    except ValueError:
+        return ""
+    return _link(root, output_dir, (package_relative / filename).as_posix())
+
+
 def _text(value: Any) -> str:
     return escape(str(value or ""))
 
@@ -1203,10 +1211,14 @@ def render_checkpoint_decision_html(
     delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
     decision_question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
     audit_name = "stage_audit.json" if summary.get("schema_version") == "dpl.checkpoint_summary.v6" else "stage_audit.zh-CN.html"
-    audit_href = _link(root, output_dir, audit_name)
+    audit_href = _package_link(root, output_dir, audit_name)
     summary_href = _link(root, output_dir, str(summary.get("stage_summary_path") or ""))
-    request_href = _link(root, output_dir, "confirmation_request.json")
-    readability_href = _link(root, output_dir, "checkpoint_readability_report.en.json" if locale == "en" else "checkpoint_readability_report.json")
+    request_href = _package_link(root, output_dir, "confirmation_request.json")
+    readability_href = _package_link(
+        root,
+        output_dir,
+        "checkpoint_readability_report.en.json" if locale == "en" else "checkpoint_readability_report.json",
+    )
     confirmation_command = request.get("confirmation_command") if (summary.get("confirmation_contract") or {}).get("confirmation_command_allowed") else None
     continuity_note = ""
     if continuity.get("eligible"):
@@ -1252,6 +1264,26 @@ def render_checkpoint_decision_html(
         else ""
     )
     change_html = ('<div class="delta-changes">' + "".join(changes) + "</div>" + change_note) if changes else ""
+    batch = summary.get("core_evidence_batch") if isinstance(summary.get("core_evidence_batch"), dict) else {}
+    batch_html = ""
+    if batch:
+        task_rows = []
+        for task in batch.get("tasks") or []:
+            if not isinstance(task, dict):
+                continue
+            title = task.get("title_en") if locale == "en" else task.get("title_zh")
+            paths = sorted(set([*(task.get("evidence_refs") or []), *(task.get("expected_artifacts") or [])]))
+            linked = "".join(
+                f'<li><a href="{_link(root, output_dir, str(path))}">{_text(path)}</a></li>'
+                for path in paths
+            )
+            task_rows.append(f'<li><strong>{_text(title)}</strong><ul>{linked}</ul></li>')
+        heading = "Completed in this round" if locale == "en" else "本轮已完成的工作"
+        narrative = batch.get("summary_en") if locale == "en" else batch.get("summary_zh")
+        batch_html = (
+            f'<section class="section" data-batch-id="{escape(_text(batch.get("batch_id")))}">'
+            f'<h2>{heading}</h2><p>{_text(narrative)}</p><ul>{"".join(task_rows)}</ul></section>'
+        )
     deliverables = []
     for item in brief.get("latest_user_visible_deliverables") or []:
         if not isinstance(item, dict):
@@ -1296,6 +1328,7 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 <div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span>{candidate_meta}<a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
 </header>
 <section class="section"><h2>{labels["changed"]}</h2><p>{_semantic_delta_text(delta, locale) or labels["first"]}</p>{change_html}</section>
+{batch_html}
 <section class="section"><h2>{labels["confirming"]}</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []), locale=locale)}</section>
 <section class="section"><h2>{labels["facts"]}</h2>{_brief_facts(root, output_dir, brief, locale=locale)}<p class="muted">{labels["facts_note"]}</p></section>
 <section class="section"><h2>{labels["context"]}</h2>{_brief_statements(root, output_dir, list(brief.get("key_findings") or []), locale=locale)}</section>

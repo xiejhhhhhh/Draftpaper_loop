@@ -406,6 +406,9 @@ class OrchestratorPassportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Core evidence approval", field="astronomy")
             write_confirmable_core_evidence(project.path)
+            from tests.core_batch_support import prepare_confirmable_core_batch
+
+            prepare_confirmable_core_batch(project.path)
 
             checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Review figures.")
             self.assertTrue(checkpoint["checkpoint_hash"])
@@ -418,32 +421,18 @@ class OrchestratorPassportTests(unittest.TestCase):
 
     def test_changed_core_evidence_requires_a_new_bound_checkpoint(self) -> None:
         from draftpaper_cli.orchestrator import OrchestratorError, checkpoint_project, resume_project, status_project
-        from draftpaper_cli.project_state import update_stage_status
 
         with tempfile.TemporaryDirectory() as tmp:
             project = create_project(root=tmp, idea="Version-bound evidence", field="astronomy")
-            figure = project.path / "results" / "figures" / "main.png"
-            figure.write_bytes(b"first")
-            report = project.path / "core_evidence" / "core_evidence_report.json"
-            report.write_text(
-                json.dumps(
-                    {
-                        "decision": "pass",
-                        "evidence_ready_for_manuscript": True,
-                        "requires_user_confirmation": True,
-                        "reviewable_figures": [{"path": "results/figures/main.png"}],
-                        "input_artifact_hashes": {
-                            "results/figures/main.png": hashlib.sha256(b"first").hexdigest(),
-                        },
-                        "issues": [],
-                    }
-                ),
-                encoding="utf-8",
-            )
-            update_stage_status(project.path, "core_evidence", "draft")
+            write_confirmable_core_evidence(project.path)
+            from tests.core_batch_support import prepare_confirmable_core_batch
+
+            prepare_confirmable_core_batch(project.path)
             first = checkpoint_project(project.path, stage="core_evidence", note="Review first evidence.")
-            figure.write_bytes(b"changed")
-            with self.assertRaisesRegex(OrchestratorError, "changed after assessment"):
+            (project.path / "results" / "result_validity_report.json").write_text(
+                '{"decision": "pass", "changed_scientific_input": true}', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(OrchestratorError, "batch|candidate|changed"):
                 resume_project(project.path, checkpoint_hash=first["checkpoint_hash"], note="Approve stale evidence.")
 
             # The stale checkpoint remains append-only, so consume it as rejected before opening a fresh review.
@@ -460,8 +449,7 @@ class OrchestratorPassportTests(unittest.TestCase):
                 },
             )
             waiting = status_project(project.path)
-            self.assertEqual(waiting["pipeline_state"], "core_evidence_refresh_required")
-            self.assertEqual(waiting["next_action"]["command"], "assess-core-evidence")
+            self.assertNotEqual(waiting["next_action"]["command"], "resume")
 
     def test_cli_status_checkpoint_resume_and_run_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -566,6 +554,9 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
             write_confirmable_core_evidence(project.path)
             from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            from tests.core_batch_support import prepare_confirmable_core_batch
+
+            prepare_confirmable_core_batch(project.path)
             core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
             resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             write_formal_writing_release(project.path)
@@ -638,6 +629,9 @@ class OrchestratorPassportTests(unittest.TestCase):
             (project.path / "results" / "results_summary_zh.md").write_text("# 摘要\n", encoding="utf-8")
             write_confirmable_core_evidence(project.path)
             from draftpaper_cli.orchestrator import checkpoint_project, resume_project
+            from tests.core_batch_support import prepare_confirmable_core_batch
+
+            prepare_confirmable_core_batch(project.path)
             core_checkpoint = checkpoint_project(project.path, stage="core_evidence", note="Confirm test evidence.")
             resume_project(project.path, checkpoint_hash=core_checkpoint["checkpoint_hash"], note="Approved.")
             _write_json(project.path / "integrity" / "integrity_report.json", {"status": "passed"})

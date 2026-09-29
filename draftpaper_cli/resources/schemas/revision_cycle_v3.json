@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.revision_cycle.v3",
+  "type": "object",
+  "required": [
+    "schema_version", "revision_cycle_id", "project_id", "parent_baseline_id",
+    "reason", "requested_changes", "allowed_change_classes", "protected_facts",
+    "expected_artifacts", "expected_decision_items", "pending_tasks", "scope",
+    "revision_generation", "review_status", "started_by", "started_at", "status",
+    "mode", "automatic_upstream", "reconciliation_status", "draft_generation",
+    "candidate_generation", "candidate_baseline_id", "closed_by_decision_receipt",
+    "evidence_batch", "revision_cycle_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.revision_cycle.v3"},
+    "revision_cycle_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": ["string", "null"]},
+    "parent_baseline_id": {"type": ["string", "null"]},
+    "reason": {"type": "string", "minLength": 1},
+    "requested_changes": {"$ref": "#/$defs/stringArray"},
+    "allowed_change_classes": {"$ref": "#/$defs/stringArray"},
+    "protected_facts": {"$ref": "#/$defs/stringArray"},
+    "expected_artifacts": {"$ref": "#/$defs/stringArray"},
+    "expected_decision_items": {"$ref": "#/$defs/stringArray"},
+    "pending_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "allOf": [
+          {
+            "if": {"properties": {"checkpoint_scope": {"const": "core_evidence"}}, "required": ["checkpoint_scope"]},
+            "then": {"$ref": "#/$defs/coreTask"}
+          }
+        ],
+        "additionalProperties": true
+      }
+    },
+    "scope": {"type": "string", "minLength": 1},
+    "revision_generation": {"type": "integer", "minimum": 1},
+    "review_status": {"enum": ["drafting", "validating", "ready_for_review", "awaiting_decision"]},
+    "started_by": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "minLength": 1},
+    "status": {"enum": ["open", "closed", "superseded", "rejected"]},
+    "mode": {"enum": ["live", "author_edit"]},
+    "automatic_upstream": {"type": "boolean"},
+    "reconciliation_status": {"enum": ["reconciled", "pending", "reviewing", "repair_required", "awaiting_decision"]},
+    "draft_generation": {"type": "integer", "minimum": 1},
+    "candidate_generation": {"type": "integer", "minimum": 1},
+    "candidate_baseline_id": {"type": ["string", "null"]},
+    "closed_by_decision_receipt": {"type": ["string", "null"]},
+    "closed_candidate_generation": {"type": ["integer", "null"], "minimum": 1},
+    "candidate_packet_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "updated_at": {"type": "string", "minLength": 1},
+    "mode_changed_at": {"type": "string", "minLength": 1},
+    "closed_at": {"type": "string", "minLength": 1},
+    "commit_receipt_path": {"type": "string", "minLength": 1},
+    "migration_status": {"enum": ["legacy_unverified", "explicitly_scoped"]},
+    "migration_source_schema_version": {"const": "dpl.revision_cycle.v1"},
+    "migration_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "migration_missing_fields": {"$ref": "#/$defs/stringArray"},
+    "migration_defaulted_fields": {"$ref": "#/$defs/stringArray"},
+    "legacy_mode_hint": {"type": ["string", "null"], "enum": ["live", "author_edit", null]},
+    "legacy_source_record": {"type": "object", "additionalProperties": true},
+    "evidence_batch": {"$ref": "#/$defs/evidenceBatch"},
+    "revision_cycle_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "stringArray": {"type": "array", "items": {"type": "string"}},
+    "coreTask": {
+      "type": "object",
+      "required": [
+        "task_id", "title_zh", "title_en", "checkpoint_scope", "origin_ref",
+        "effect_class", "required_before_publication", "depends_on", "evidence_refs",
+        "expected_artifacts", "completion_checks", "completion_receipts", "status"
+      ],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "title_zh": {"type": "string", "minLength": 1},
+        "title_en": {"type": "string", "minLength": 1},
+        "checkpoint_scope": {"const": "core_evidence"},
+        "origin_ref": {"type": "string", "minLength": 1},
+        "effect_class": {"enum": ["scientific", "binding", "presentation", "unknown"]},
+        "required_before_publication": {"type": "boolean"},
+        "depends_on": {"$ref": "#/$defs/stringArray"},
+        "evidence_refs": {"$ref": "#/$defs/stringArray"},
+        "expected_artifacts": {"$ref": "#/$defs/stringArray"},
+        "completion_checks": {"$ref": "#/$defs/stringArray"},
+        "completion_receipts": {"type": "array", "items": {"type": "object"}},
+        "status": {"enum": ["pending", "running", "completed", "blocked", "deferred", "cancelled"]}
+      }
+    },
+    "evidenceBatch": {
+      "type": "object",
+      "required": [
+        "batch_id", "base_decision_receipt_id", "base_snapshot_id", "scope_sha256",
+        "phase", "finalization_requested", "frozen_candidate_ref", "request_id",
+        "resolution_receipt_ref"
+      ],
+      "properties": {
+        "batch_id": {"type": "string", "minLength": 1},
+        "base_decision_receipt_id": {"type": ["string", "null"]},
+        "base_snapshot_id": {"type": ["string", "null"]},
+        "scope_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "phase": {"enum": ["collecting", "validating", "ready_for_review", "awaiting_decision", "closed", "abandoned"]},
+        "finalization_requested": {"type": "boolean"},
+        "frozen_candidate_ref": {"type": ["string", "null"]},
+        "request_id": {"type": ["string", "null"]},
+        "resolution_receipt_ref": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

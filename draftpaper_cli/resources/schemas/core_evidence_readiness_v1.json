@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dpl.core_evidence_readiness.v1",
+  "type": "object",
+  "required": [
+    "schema_version", "status", "publishable", "batch_id", "candidate_generation",
+    "base_decision_receipt_id", "scope_sha256", "input_manifest_sha256",
+    "blocking_tasks", "active_job_ids", "reason_codes", "next_action"
+  ],
+  "properties": {
+    "schema_version": {"const": "dpl.core_evidence_readiness.v1"},
+    "status": {"enum": ["collecting", "validating", "blocked", "ready", "awaiting_confirmation", "confirmed"]},
+    "publishable": {"type": "boolean"},
+    "batch_id": {"type": ["string", "null"]},
+    "candidate_generation": {"type": ["integer", "null"], "minimum": 1},
+    "base_decision_receipt_id": {"type": ["string", "null"]},
+    "scope_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "input_manifest_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "confirmation_subject_id": {"type": ["string", "null"]},
+    "evidence_snapshot_id": {"type": ["string", "null"]},
+    "blocking_tasks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "active_job_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "reason_codes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "candidate_check": {"type": "object"},
+    "next_action": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {"command": {"type": "string", "minLength": 1}},
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"publishable": {"const": true}}, "required": ["publishable"]},
+      "then": {"properties": {"status": {"const": "ready"}, "reason_codes": {"maxItems": 0}}}
+    }
+  ]
+}
