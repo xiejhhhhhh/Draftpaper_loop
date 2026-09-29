@@ -62,7 +62,7 @@ def test_core_evidence_confirmation_summarizes_round_and_after_confirmation_work
     assert "Validate result" in en and "Check sample boundary" in en
     assert "What happens after confirmation" in en
     assert "installation" in en and "typesetting" in en and "PDF" in en
-    assert "must not change the confirmed data, method, validation identity, metrics, figure semantics, or claim boundaries" in en
+    assert "must not change the confirmed dataset, method, validation identity, metrics, figure semantics, or claim boundaries" in en
     zh_report = build_checkpoint_readability_report(html=zh, brief=summary["decision_brief"])
     en_report = build_checkpoint_readability_report(html=en, brief=summary["decision_brief"], locale="en")
     assert zh_report["checks"]["core_evidence_round_overview_present"] is True

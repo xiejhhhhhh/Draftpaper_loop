@@ -1292,7 +1292,7 @@ def render_checkpoint_decision_html(
             after_text = (
                 "Confirmation freezes this candidate as the current scientific baseline. The workflow will proceed only to its next eligible step; "
                 "later work may include formal installation, manuscript writing, typesetting, or PDF compilation where applicable. "
-                "Those steps must not change the confirmed data, method, validation identity, metrics, figure semantics, or claim boundaries. "
+                "Those steps must not change the confirmed dataset, method, validation identity, metrics, figure semantics, or claim boundaries. "
                 "A scientific change must be registered and reviewed as a new batch."
             )
         else:

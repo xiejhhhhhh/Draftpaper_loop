@@ -149,7 +149,7 @@ def build_checkpoint_readability_report(
     )
     overview_body = _visible_text(overview_match.group(1)) if overview_match else ""
     after_confirmation_terms = (
-        ("What happens after confirmation", "formal installation", "typesetting", "PDF", "must not change the confirmed data", "new batch")
+        ("What happens after confirmation", "formal installation", "typesetting", "PDF", "must not change the confirmed dataset", "new batch")
         if normalized_locale == "en"
         else ("确认后会继续什么", "正式安装", "排版", "PDF", "不得改变本次确认的数据", "新批次")
     )
