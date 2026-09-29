@@ -86,6 +86,27 @@ def test_known_batch_does_not_publish_after_first_task(tmp_path: Path) -> None:
         )
 
 
+def test_checkpoint_fails_closed_if_ready_batch_record_is_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from draftpaper_cli import core_evidence_readiness
+
+    project = create_project(root=tmp_path / "project", idea="Missing ready batch", field="generic").path
+    write_confirmable_core_evidence(project)
+    monkeypatch.setattr(
+        core_evidence_readiness,
+        "assess_core_evidence_readiness",
+        lambda _: {
+            "status": "ready",
+            "publishable": True,
+            "scope_sha256": "a" * 64,
+            "input_manifest_sha256": "b" * 64,
+            "candidate_generation": 1,
+        },
+    )
+
+    with pytest.raises(OrchestratorError, match="Core-evidence batch is unavailable"):
+        checkpoint_project(project, stage="core_evidence")
+
+
 def test_unready_batch_has_bilingual_preview_without_confirmation_action(tmp_path: Path) -> None:
     from draftpaper_cli.core_evidence_batch import prepare_core_evidence_batch
     from draftpaper_cli.core_evidence_readiness import finalize_core_evidence_batch

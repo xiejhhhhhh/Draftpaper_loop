@@ -1814,6 +1814,10 @@ def _checkpoint_project_unlocked(project: str | Path, *, stage: str, note: str =
             raise OrchestratorError(str(exc)) from exc
         base.update(subject)
         batch = load_core_evidence_batch(state.path)
+        if batch is None:
+            raise OrchestratorError(
+                "Core-evidence batch is unavailable after readiness passed; no checkpoint was published."
+            )
         base.update({
             "batch_id": batch["batch_id"],
             "base_decision_receipt_id": batch.get("base_decision_receipt_id"),
