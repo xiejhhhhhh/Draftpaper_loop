@@ -307,6 +307,25 @@ def _prepare_core_evidence_batch(
 ) -> dict[str, Any]:
     root = project_root(project)
     incoming = _incoming_tasks(changes_path)
+    incoming_core: dict[str, dict[str, Any]] = {}
+    incoming_other: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in incoming:
+        scope = row.get("checkpoint_scope")
+        if not isinstance(scope, str):
+            raise CoreEvidenceBatchError("Every imported revision task needs an explicit checkpoint scope.")
+        if scope == "core_evidence":
+            normalized = _normalized_task(row)
+            identifier = normalized["task_id"]
+            if identifier in incoming_core and incoming_core[identifier] != normalized:
+                raise CoreEvidenceBatchError(f"Conflicting duplicate core-evidence task ID: {identifier}.")
+            incoming_core[identifier] = normalized
+        else:
+            task_id = row.get("task_id")
+            identity = str(task_id) if isinstance(task_id, str) and task_id.strip() else _digest(row)
+            key = (scope, identity)
+            if key in incoming_other and incoming_other[key] != row:
+                raise CoreEvidenceBatchError(f"Conflicting duplicate task identity in scope {scope}: {identity}.")
+            incoming_other[key] = row
     active = load_active_revision_cycle(root)
     if active and active.get("status") != "open":
         active = None
@@ -323,12 +342,26 @@ def _prepare_core_evidence_batch(
         if not incoming:
             raise CoreEvidenceBatchError("Legacy migration needs an explicit new core-evidence task manifest.")
     previous_batch = (active or {}).get("evidence_batch") or {}
-    old_tasks = [] if migrating_legacy or previous_batch.get("phase") in {"closed", "abandoned"} else list((active or {}).get("pending_tasks") or [])
+    previous_batch_closed = previous_batch.get("phase") in {"closed", "abandoned"}
+    old_tasks = []
+    if active and not migrating_legacy:
+        old_tasks = [
+            row for row in active.get("pending_tasks") or []
+            if not (
+                previous_batch_closed
+                and isinstance(row, dict)
+                and row.get("checkpoint_scope") == "core_evidence"
+            )
+        ]
     merged: dict[str, dict[str, Any]] = {}
+    other_scoped: dict[tuple[str, str], dict[str, Any]] = {}
     for row in [*old_tasks, *incoming]:
         if not isinstance(row, dict) or not isinstance(row.get("checkpoint_scope"), str):
             raise CoreEvidenceBatchError("An existing revision task has an unclassified checkpoint scope.")
         if row["checkpoint_scope"] != "core_evidence":
+            identifier = row.get("task_id")
+            identity = str(identifier) if isinstance(identifier, str) and identifier.strip() else _digest(row)
+            other_scoped[(row["checkpoint_scope"], identity)] = row
             continue
         if not isinstance(row.get("task_id"), str):
             raise CoreEvidenceBatchError("An existing core-evidence task has no task ID.")
@@ -336,18 +369,53 @@ def _prepare_core_evidence_batch(
     tasks = [_normalized_task(merged[key]) for key in sorted(merged)]
     if not tasks:
         raise CoreEvidenceBatchError("The core-evidence batch needs at least one scoped task.")
+    cycle_tasks = [other_scoped[key] for key in sorted(other_scoped)] + tasks
     _validate_dependencies(tasks)
     scope_hash = _digest([{field: task[field] for field in _SCOPE_FIELDS} for task in tasks])
     if active and previous_batch.get("phase") not in {"closed", "abandoned"}:
-        if tasks == active.get("pending_tasks") and scope_hash == previous_batch.get("scope_sha256"):
+        active_core_tasks = [
+            task for task in active.get("pending_tasks") or []
+            if isinstance(task, dict) and task.get("checkpoint_scope") == "core_evidence"
+        ]
+        if tasks == active_core_tasks and scope_hash == previous_batch.get("scope_sha256"):
             association = _pending_legacy_association(root, active)
             if _association_matches_batch(association, previous_batch):
                 _record_legacy_batch_association(root, association)
+                if cycle_tasks != active.get("pending_tasks"):
+                    updated = dict(active)
+                    updated["pending_tasks"] = cycle_tasks
+                    updated["revision_generation"] = int(active.get("revision_generation") or 1) + 1
+                    updated["updated_at"] = utc_now()
+                    updated = _seal_revision_cycle_record(updated)
+                    path = _write_revision(root, updated)
+                    return {
+                        "status": "associated_existing_request",
+                        "project_path": str(root),
+                        "revision_cycle": updated,
+                        "revision_cycle_path": str(path.resolve()),
+                        "batch": previous_batch,
+                        "other_scope_tasks_updated": True,
+                    }
                 return {
                     "status": "associated_existing_request",
                     "project_path": str(root),
                     "revision_cycle": active,
                     "batch": previous_batch,
+                }
+            if cycle_tasks != active.get("pending_tasks"):
+                updated = dict(active)
+                updated["pending_tasks"] = cycle_tasks
+                updated["revision_generation"] = int(active.get("revision_generation") or 1) + 1
+                updated["updated_at"] = utc_now()
+                updated = _seal_revision_cycle_record(updated)
+                path = _write_revision(root, updated)
+                return {
+                    "status": "existing",
+                    "project_path": str(root),
+                    "revision_cycle": updated,
+                    "revision_cycle_path": str(path.resolve()),
+                    "batch": previous_batch,
+                    "other_scope_tasks_updated": True,
                 }
             _supersede_old_request(root, previous_batch, source_cycle_sha256=source_cycle_sha256)
             return {"status": "existing", "project_path": str(root), "revision_cycle": active, "batch": previous_batch}
@@ -358,7 +426,7 @@ def _prepare_core_evidence_batch(
             association = None
     if active is None:
         active = begin_revision_cycle(
-            root, reason="core_evidence_batch", scope="core_evidence", pending_tasks=tasks,
+            root, reason="core_evidence_batch", scope="core_evidence", pending_tasks=cycle_tasks,
             expected_artifacts=sorted({path for task in tasks for path in task["expected_artifacts"]}),
             started_by="user" if incoming else "system",
         )["revision_cycle"]
@@ -402,7 +470,7 @@ def _prepare_core_evidence_batch(
     revision["schema_version"] = BATCH_REVISION_SCHEMA
     if migrating_legacy:
         revision["migration_status"] = "explicitly_scoped"
-    revision["pending_tasks"] = tasks
+    revision["pending_tasks"] = cycle_tasks
     revision["evidence_batch"] = batch
     revision["review_status"] = "awaiting_decision" if association else "drafting"
     if previous_batch.get("phase") in {"ready_for_review", "awaiting_decision", "closed", "abandoned"}:

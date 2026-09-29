@@ -245,6 +245,35 @@ def test_same_frozen_candidate_has_one_pending_checkpoint(tmp_path: Path) -> Non
     assert shadow["recovery"]["action"] == "reuse_exact_existing_request"
 
 
+def test_other_gate_task_update_does_not_reopen_frozen_core_batch(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import load_core_evidence_batch, prepare_core_evidence_batch
+
+    project = _ready_project(tmp_path)
+    first = checkpoint_project(project, stage="core_evidence")
+    batch_before = load_core_evidence_batch(project)
+    changes_path = project / "batch_changes.json"
+    changes = json.loads(changes_path.read_text(encoding="utf-8"))
+    changes["tasks"].append({
+        "task_id": "release_doi",
+        "checkpoint_scope": "post_acceptance",
+        "status": "pending",
+        "title_en": "Add the final publication DOI",
+    })
+    changes_path.write_text(json.dumps(changes, ensure_ascii=False), encoding="utf-8")
+
+    prepared = prepare_core_evidence_batch(project, changes_path=changes_path)
+
+    batch_after = load_core_evidence_batch(project)
+    assert prepared["other_scope_tasks_updated"] is True
+    assert any(row.get("task_id") == "release_doi" for row in prepared["revision_cycle"]["pending_tasks"])
+    assert batch_after["phase"] == "awaiting_decision"
+    assert batch_after["request_id"] == first["checkpoint_hash"]
+    second = checkpoint_project(project, stage="core_evidence")
+    assert second["status"] == "checkpoint_existing"
+    assert second["checkpoint_hash"] == first["checkpoint_hash"]
+    assert batch_before["scope_sha256"] == batch_after["scope_sha256"]
+
+
 def test_checkpoint_retry_repairs_index_after_publish_interruption(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

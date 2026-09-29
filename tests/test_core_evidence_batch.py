@@ -65,6 +65,28 @@ def test_prepare_batch_rejects_dependency_cycle(tmp_path: Path) -> None:
     assert load_active_revision_cycle(project) is None
 
 
+def test_prepare_batch_rejects_conflicting_duplicate_task_identity(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import CoreEvidenceBatchError, prepare_core_evidence_batch
+
+    project = create_project(root=tmp_path, idea="Conflicting task identity", field="generic").path
+    required_science = _task("shared_task_id")
+    optional_presentation = {
+        **required_science,
+        "title_zh": "仅调整呈现",
+        "title_en": "Presentation only",
+        "effect_class": "presentation",
+        "required_before_publication": False,
+        "evidence_refs": [],
+        "expected_artifacts": [],
+    }
+    path = _changes_file(project, [required_science, optional_presentation])
+
+    with pytest.raises(CoreEvidenceBatchError, match="duplicate|conflict"):
+        prepare_core_evidence_batch(project, changes_path=path)
+
+    assert load_active_revision_cycle(project) is None
+
+
 def test_unscoped_legacy_task_requires_explicit_classification(tmp_path: Path) -> None:
     from draftpaper_cli.core_evidence_batch import CoreEvidenceBatchError, prepare_core_evidence_batch
 
@@ -83,6 +105,32 @@ def test_one_required_task_is_a_valid_batch(tmp_path: Path) -> None:
     result = prepare_core_evidence_batch(project, changes_path=_changes_file(project, [_task("one")]))
     assert result["batch"]["phase"] == "collecting"
     assert len(result["revision_cycle"]["pending_tasks"]) == 1
+
+
+def test_prepare_batch_preserves_tasks_for_other_gates(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import prepare_core_evidence_batch
+
+    project = create_project(root=tmp_path, idea="Scoped task preservation", field="generic").path
+    existing_release_task = {
+        "task_id": "release_doi",
+        "checkpoint_scope": "post_acceptance",
+        "status": "pending",
+        "title_en": "Add the final publication DOI",
+    }
+    imported_literature_task = {
+        "task_id": "literature_gate",
+        "checkpoint_scope": "literature_review",
+        "status": "pending",
+        "title_en": "Complete literature review confirmation",
+    }
+    begin_revision_cycle(project, pending_tasks=[existing_release_task])
+    path = _changes_file(project, [_task("core_result"), imported_literature_task])
+
+    result = prepare_core_evidence_batch(project, changes_path=path)
+
+    rows = result["revision_cycle"]["pending_tasks"]
+    assert {row["task_id"] for row in rows} == {"release_doi", "literature_gate", "core_result"}
+    assert all(row["checkpoint_scope"] == "core_evidence" for row in rows if row["task_id"] == "core_result")
 
 
 def test_scientific_task_cannot_opt_out_of_confirmation_readiness(tmp_path: Path) -> None:
