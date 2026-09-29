@@ -140,6 +140,19 @@ def build_checkpoint_readability_report(
     question = brief.get("decision_question") if isinstance(brief.get("decision_question"), dict) else {}
     delta = brief.get("semantic_delta") if isinstance(brief.get("semantic_delta"), dict) else {}
     expected_delta = human_scientific_delta_summary(delta, locale=normalized_locale)
+    has_core_evidence_batch = bool(re.search(r"\bdata-batch-id\s*=", html, flags=re.IGNORECASE))
+    overview_heading = "Round overview" if normalized_locale == "en" else "本阶段工作概述"
+    overview_match = re.search(
+        rf"<h2>{re.escape(overview_heading)}</h2>\s*<p>(.*?)</p>",
+        html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    overview_body = _visible_text(overview_match.group(1)) if overview_match else ""
+    after_confirmation_terms = (
+        ("What happens after confirmation", "formal installation", "typesetting", "PDF", "must not change the confirmed data", "new batch")
+        if normalized_locale == "en"
+        else ("确认后会继续什么", "正式安装", "排版", "PDF", "不得改变本次确认的数据", "新批次")
+    )
     html_bytes = len(html.encode("utf-8"))
     table_count = len(re.findall(r"<table\b", html, flags=re.IGNORECASE))
     table_row_count = len(re.findall(r"<tr\b", html, flags=re.IGNORECASE))
@@ -155,6 +168,12 @@ def build_checkpoint_readability_report(
         "priority_sections_in_order": _priority_order_ok(html, normalized_locale),
         "decision_question_present": _display_text(question, normalized_locale) in text,
         "semantic_delta_present": expected_delta in text,
+        "core_evidence_round_overview_present": (
+            not has_core_evidence_batch or len(overview_body.strip()) >= 24
+        ),
+        "core_evidence_follow_up_boundary_present": (
+            not has_core_evidence_batch or all(term in text for term in after_confirmation_terms)
+        ),
         "reopen_conditions_present": bool(brief.get("reopen_conditions")),
         "brief_contract_valid": not issues,
         "rendered_statement_coverage": expected_statement_ids <= rendered_statement_ids,

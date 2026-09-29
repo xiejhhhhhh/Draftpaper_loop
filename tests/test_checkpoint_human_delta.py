@@ -6,6 +6,80 @@ from draftpaper_cli.checkpoint_html import render_checkpoint_decision_html
 from draftpaper_cli.checkpoint_readability import build_checkpoint_readability_report
 
 
+def test_core_evidence_confirmation_summarizes_round_and_after_confirmation_work(tmp_path: Path) -> None:
+    batch = {
+        "batch_id": "batch-1",
+        "summary_zh": "本轮完成核验结果和样本边界。",
+        "summary_en": "This round completed Validate result and Check sample boundary.",
+        "tasks": [
+            {
+                "title_zh": "核验结果",
+                "title_en": "Validate result",
+                "evidence_refs": ["results/metrics.json"],
+                "expected_artifacts": ["results/validated_metrics.json"],
+            },
+            {
+                "title_zh": "核对样本边界",
+                "title_en": "Check sample boundary",
+                "evidence_refs": ["data/sample_manifest.json"],
+                "expected_artifacts": ["results/sample_flow.csv"],
+            },
+        ],
+    }
+    summary = {
+        "schema_version": "dpl.checkpoint_summary.v6",
+        "review_state": "confirmable",
+        "checkpoint_title_zh": "核心证据确认",
+        "stage_narrative_zh": "本阶段实际核验了核心指标并修订样本边界，产出更新后的指标和样本流程文件。",
+        "core_evidence_batch": batch,
+        "decision_brief": {
+            "decision_question": {"text_zh": "请确认本轮核心证据。", "text_en": "Confirm this round's core evidence."},
+            "semantic_delta": {"classification": "first_scientific_decision", "changes": []},
+            "confirming": [],
+            "facts": [],
+            "key_findings": [],
+            "figure_claims": [],
+            "claim_boundaries": [],
+            "not_confirming": [],
+            "reopen_conditions": [],
+            "latest_user_visible_deliverables": [],
+            "downstream_effects": [],
+        },
+        "confirmation_contract": {"confirmation_command_allowed": False},
+        "confirmation_meaning_zh": "确认后冻结本次候选。",
+    }
+
+    zh = render_checkpoint_decision_html(tmp_path, tmp_path, summary, {})
+    en = render_checkpoint_decision_html(tmp_path, tmp_path, summary, {}, locale="en")
+
+    assert "本阶段实际核验了核心指标并修订样本边界" in zh
+    assert "核验结果" in zh and "核对样本边界" in zh
+    assert "results/metrics.json" in zh and "results/sample_flow.csv" in zh
+    assert "确认后会继续什么" in zh
+    assert "正式安装" in zh and "排版" in zh and "PDF" in zh
+    assert "不得改变本次确认的数据、方法、验证身份、指标、图表语义和论断边界" in zh
+    assert "Round overview" in en
+    assert "Validate result" in en and "Check sample boundary" in en
+    assert "What happens after confirmation" in en
+    assert "installation" in en and "typesetting" in en and "PDF" in en
+    assert "must not change the confirmed data, method, validation identity, metrics, figure semantics, or claim boundaries" in en
+    zh_report = build_checkpoint_readability_report(html=zh, brief=summary["decision_brief"])
+    en_report = build_checkpoint_readability_report(html=en, brief=summary["decision_brief"], locale="en")
+    assert zh_report["checks"]["core_evidence_round_overview_present"] is True
+    assert zh_report["checks"]["core_evidence_follow_up_boundary_present"] is True
+    assert en_report["checks"]["core_evidence_round_overview_present"] is True
+    assert en_report["checks"]["core_evidence_follow_up_boundary_present"] is True
+
+
+def test_core_evidence_batch_readability_gate_requires_round_summary_and_scientific_boundary() -> None:
+    incomplete = '<html lang="zh-CN"><body><section data-batch-id="batch-1"><h2>本阶段工作概述</h2><p>只写了一个标题。</p></section></body></html>'
+
+    report = build_checkpoint_readability_report(html=incomplete, brief={})
+
+    assert report["checks"]["core_evidence_round_overview_present"] is False
+    assert report["checks"]["core_evidence_follow_up_boundary_present"] is False
+
+
 def test_scientific_change_page_explains_fact_and_figure_deltas_without_hashes(tmp_path: Path) -> None:
     facts_before = [
         {

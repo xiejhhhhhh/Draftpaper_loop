@@ -1266,6 +1266,8 @@ def render_checkpoint_decision_html(
     change_html = ('<div class="delta-changes">' + "".join(changes) + "</div>" + change_note) if changes else ""
     batch = summary.get("core_evidence_batch") if isinstance(summary.get("core_evidence_batch"), dict) else {}
     batch_html = ""
+    round_overview_html = ""
+    after_confirmation_html = ""
     if batch:
         task_rows = []
         for task in batch.get("tasks") or []:
@@ -1278,12 +1280,37 @@ def render_checkpoint_decision_html(
                 for path in paths
             )
             task_rows.append(f'<li><strong>{_text(title)}</strong><ul>{linked}</ul></li>')
-        heading = "Completed in this round" if locale == "en" else "本轮已完成的工作"
-        narrative = batch.get("summary_en") if locale == "en" else batch.get("summary_zh")
+        task_heading = "Completed tasks and linked outputs" if locale == "en" else "本轮已完成的任务及其证据与产物"
         batch_html = (
             f'<section class="section" data-batch-id="{escape(_text(batch.get("batch_id")))}">'
-            f'<h2>{heading}</h2><p>{_text(narrative)}</p><ul>{"".join(task_rows)}</ul></section>'
+            f'<h2>{task_heading}</h2><ul>{"".join(task_rows)}</ul></section>'
         )
+        if locale == "en":
+            overview_heading = "Round overview"
+            overview = str(batch.get("summary_en") or "")
+            after_heading = "What happens after confirmation"
+            after_text = (
+                "Confirmation freezes this candidate as the current scientific baseline. The workflow will proceed only to its next eligible step; "
+                "later work may include formal installation, manuscript writing, typesetting, or PDF compilation where applicable. "
+                "Those steps must not change the confirmed data, method, validation identity, metrics, figure semantics, or claim boundaries. "
+                "A scientific change must be registered and reviewed as a new batch."
+            )
+        else:
+            overview_heading = "本阶段工作概述"
+            overview = str(summary.get("stage_narrative_zh") or summary.get("activity_summary_zh") or batch.get("summary_zh") or "")
+            after_heading = "确认后会继续什么"
+            after_text = (
+                "确认后，本候选将成为当前有效的科学基线。工作流只会继续到项目状态允许的下一步；"
+                "后续可能包括正式安装、稿件撰写、排版或 PDF 编译（以当前项目流程为准）。"
+                "这些步骤不得改变本次确认的数据、方法、验证身份、指标、图表语义和论断边界。"
+                "任何科学内容变化都必须登记为新批次并重新核查。"
+            )
+        round_overview_html = (
+            f'<section class="section"><h2>{overview_heading}</h2><p>{_text(overview)}</p></section>'
+            if overview
+            else ""
+        )
+        after_confirmation_html = f'<section class="section"><h2>{after_heading}</h2><p>{after_text}</p></section>'
     deliverables = []
     for item in brief.get("latest_user_visible_deliverables") or []:
         if not isinstance(item, dict):
@@ -1328,6 +1355,7 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 <div class="meta"><span>{labels["science"]}<code>{_text((summary.get("scientific_decision_fingerprint") or {}).get("scientific_decision_sha256"))}</code></span>{candidate_meta}<a href="{audit_href}">{labels["audit"]}</a><a href="{summary_href}">{labels["summary"]}</a><a href="{request_href}">{labels["contract"]}</a><a href="{readability_href}">{labels["readability"]}</a></div>
 </header>
 <section class="section"><h2>{labels["changed"]}</h2><p>{_semantic_delta_text(delta, locale) or labels["first"]}</p>{change_html}</section>
+{round_overview_html}
 {batch_html}
 <section class="section"><h2>{labels["confirming"]}</h2>{_brief_statements(root, output_dir, list(brief.get("confirming") or []), locale=locale)}</section>
 <section class="section"><h2>{labels["facts"]}</h2>{_brief_facts(root, output_dir, brief, locale=locale)}<p class="muted">{labels["facts_note"]}</p></section>
@@ -1338,6 +1366,7 @@ ul {{ margin:8px 0 0; padding-left:22px; }} li {{ margin:8px 0; }} li .refs,li s
 <section class="section"><h2>{labels["reopen"]}</h2>{_brief_statements(root, output_dir, list(brief.get("reopen_conditions") or []), locale=locale)}</section>
 <section class="section"><h2>{labels["deliverables"]}</h2>{deliverable_html}</section>
 <section class="section"><h2>{labels["meaning"]}</h2>{_brief_statements(root, output_dir, list(brief.get("downstream_effects") or []), locale=locale)}<p><strong>{labels["command"]}</strong></p>{confirmation_html}</section>
+{after_confirmation_html}
 </main></body></html>\n'''
 
 

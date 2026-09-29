@@ -186,14 +186,25 @@ def core_evidence_batch_review(project: str | Path, readiness: dict[str, Any]) -
         and task.get("required_before_publication")
     ]
     count = len(tasks)
+    titles_zh = "、".join(str(task["title_zh"])[:180] for task in tasks[:4])
+    titles_en = "; ".join(str(task["title_en"])[:180] for task in tasks[:4])
+    omitted = count - min(count, 4)
+    suffix_zh = f"等另 {omitted} 项" if omitted else ""
+    suffix_en = f" and {omitted} more" if omitted else ""
     return {
         "batch_id": batch["batch_id"],
         "base_decision_receipt_id": batch.get("base_decision_receipt_id"),
         "scope_sha256": readiness["scope_sha256"],
         "input_manifest_sha256": readiness["input_manifest_sha256"],
         "completed_task_count": count,
-        "summary_zh": f"本轮已完成并核验 {count} 项核心证据相关修订；下面列出全部已登记工作及其证据来源。请结合科学事实、图表和论断边界确认整轮结果。",
-        "summary_en": f"This round completed and checked {count} core-evidence tasks. All registered work and its evidence sources are listed below; review the scientific facts, figures, and claim boundaries together.",
+        "summary_zh": (
+            f"本轮已完成并核验 {count} 项核心证据任务：{titles_zh}{suffix_zh}。"
+            "下方逐项列出任务关联的证据与产物；请结合本轮变化、实际结果和论断边界整体确认。"
+        ),
+        "summary_en": (
+            f"This round completed and checked {count} core-evidence tasks: {titles_en}{suffix_en}. "
+            "The task list below links their evidence and outputs; review it together with the scientific changes, results, and claim boundaries."
+        ),
         "tasks": tasks,
     }
 

@@ -963,6 +963,17 @@ def test_confirmation_page_describes_the_whole_batch_in_both_languages(tmp_path:
 
     assert "核验结果" in zh and "核对样本边界" in zh
     assert "Validate result" in en and "Check sample boundary" in en
+    assert '<h2>本阶段工作概述</h2>' in zh
+    assert summary["stage_narrative_zh"] in zh
+    assert '<h2>Round overview</h2>' in en
+    assert "Validate result" in summary["core_evidence_batch"]["summary_en"]
+    assert "Check sample boundary" in summary["core_evidence_batch"]["summary_en"]
+    assert '<h2>确认后会继续什么</h2>' in zh
+    assert "排版" in zh and "PDF" in zh
+    assert "确认的数据、方法、验证身份、指标、图表语义和论断边界" in zh
+    assert '<h2>What happens after confirmation</h2>' in en
+    assert "typesetting" in en and "PDF" in en
+    assert "dataset, method, validation identity, metrics, figure semantics, or claim boundaries" in en
     assert "result_validity_report.json" in zh
     assert 'href="stage_audit.json"' in zh
     assert 'href="confirmation_request.json"' in zh

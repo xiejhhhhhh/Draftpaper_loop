@@ -35,6 +35,44 @@ def _changes_file(project: Path, tasks: list[dict]) -> Path:
     return path
 
 
+def test_core_evidence_batch_review_names_work_and_bounds_summary_size(monkeypatch, tmp_path: Path) -> None:
+    from draftpaper_cli import core_evidence_batch
+
+    tasks = [
+        {
+            "task_id": f"task_{index}",
+            "title_zh": f"核验事项 {index}",
+            "title_en": f"Validate item {index}",
+            "checkpoint_scope": "core_evidence",
+            "required_before_publication": True,
+            "effect_class": "scientific",
+            "evidence_refs": [f"results/evidence_{index}.json"],
+            "expected_artifacts": [f"results/output_{index}.json"],
+        }
+        for index in range(1, 6)
+    ]
+    monkeypatch.setattr(core_evidence_batch, "load_active_revision_cycle", lambda _project: {"pending_tasks": tasks})
+    monkeypatch.setattr(core_evidence_batch, "load_core_evidence_batch", lambda _project: {"batch_id": "batch-1"})
+
+    review = core_evidence_batch.core_evidence_batch_review(
+        tmp_path,
+        {
+            "publishable": True,
+            "batch_id": "batch-1",
+            "scope_sha256": "scope-hash",
+            "input_manifest_sha256": "manifest-hash",
+        },
+    )
+
+    assert review["completed_task_count"] == 5
+    assert "核验事项 1" in review["summary_zh"]
+    assert "另 1 项" in review["summary_zh"]
+    assert "Validate item 1" in review["summary_en"]
+    assert "and 1 more" in review["summary_en"]
+    assert len(review["summary_zh"]) < 500 and len(review["summary_en"]) < 700
+    assert len(review["tasks"]) == 5
+
+
 def test_prepare_batch_upgrades_cycle_and_reuses_same_scope(tmp_path: Path) -> None:
     from draftpaper_cli.core_evidence_batch import load_core_evidence_batch, prepare_core_evidence_batch
 
