@@ -40,6 +40,7 @@ class CoreEvidenceBatchError(RuntimeError):
 CORE_EVIDENCE_OPERATION_LOCK = ".draftpaper/core_evidence_batch_operation"
 _EFFECT_CLASSES = {"scientific", "binding", "presentation", "unknown"}
 _TASK_STATUSES = {"pending", "running", "completed", "blocked", "deferred", "cancelled"}
+_REVISION_TASK_SCOPES = frozenset({"core_evidence", "literature_review", "post_acceptance"})
 _TASK_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _LIST_FIELDS = ("depends_on", "evidence_refs", "expected_artifacts", "completion_checks")
 _SCOPE_FIELDS = (
@@ -309,10 +310,19 @@ def _prepare_core_evidence_batch(
     incoming = _incoming_tasks(changes_path)
     incoming_core: dict[str, dict[str, Any]] = {}
     incoming_other: dict[tuple[str, str], dict[str, Any]] = {}
+    incoming_by_id: dict[str, dict[str, Any]] = {}
     for row in incoming:
         scope = row.get("checkpoint_scope")
         if not isinstance(scope, str):
             raise CoreEvidenceBatchError("Every imported revision task needs an explicit checkpoint scope.")
+        if scope not in _REVISION_TASK_SCOPES:
+            raise CoreEvidenceBatchError(f"Unknown checkpoint scope {scope!r}; explicitly classify the task before C3.")
+        task_id = row.get("task_id")
+        if isinstance(task_id, str) and task_id.strip():
+            prior = incoming_by_id.get(task_id)
+            if prior is not None and prior != row:
+                raise CoreEvidenceBatchError(f"Conflicting duplicate revision task ID across scopes: {task_id}.")
+            incoming_by_id[task_id] = row
         if scope == "core_evidence":
             normalized = _normalized_task(row)
             identifier = normalized["task_id"]
@@ -356,12 +366,32 @@ def _prepare_core_evidence_batch(
     merged: dict[str, dict[str, Any]] = {}
     other_scoped: dict[tuple[str, str], dict[str, Any]] = {}
     for row in [*old_tasks, *incoming]:
-        if not isinstance(row, dict) or not isinstance(row.get("checkpoint_scope"), str):
+        if not isinstance(row, dict):
             raise CoreEvidenceBatchError("An existing revision task has an unclassified checkpoint scope.")
-        if row["checkpoint_scope"] != "core_evidence":
-            identifier = row.get("task_id")
+        scope = row.get("checkpoint_scope")
+        identifier = row.get("task_id")
+        if not isinstance(scope, str) or scope not in _REVISION_TASK_SCOPES:
+            replacement = incoming_by_id.get(str(identifier)) if isinstance(identifier, str) else None
+            if replacement is None:
+                raise CoreEvidenceBatchError(
+                    f"Existing task {identifier or '<unknown>'} has an unknown checkpoint scope; reclassify it explicitly before C3."
+                )
+            if scope == "core_evidence" or replacement.get("checkpoint_scope") != "core_evidence":
+                raise CoreEvidenceBatchError(
+                    f"Task {identifier} cannot be moved out of core-evidence scope during batch preparation."
+                )
+            continue
+        if isinstance(identifier, str) and identifier in incoming_by_id:
+            replacement_scope = incoming_by_id[identifier].get("checkpoint_scope")
+            if replacement_scope != scope:
+                if scope == "core_evidence" and replacement_scope != "core_evidence":
+                    raise CoreEvidenceBatchError(
+                        f"Core-evidence task {identifier} cannot be reclassified to a non-core scope during batch preparation."
+                    )
+                continue
+        if scope != "core_evidence":
             identity = str(identifier) if isinstance(identifier, str) and identifier.strip() else _digest(row)
-            other_scoped[(row["checkpoint_scope"], identity)] = row
+            other_scoped[(scope, identity)] = row
             continue
         if not isinstance(row.get("task_id"), str):
             raise CoreEvidenceBatchError("An existing core-evidence task has no task ID.")

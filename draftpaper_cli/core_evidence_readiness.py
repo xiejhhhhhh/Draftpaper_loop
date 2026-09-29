@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_identity import canonical_json, compute_artifact_identity
-from .core_evidence_batch import CORE_EVIDENCE_OPERATION_LOCK, _write_revision, load_core_evidence_batch
+from .core_evidence_batch import (
+    CORE_EVIDENCE_OPERATION_LOCK,
+    _REVISION_TASK_SCOPES,
+    _write_revision,
+    load_core_evidence_batch,
+)
 from .evidence_snapshot import EvidenceSnapshotMismatch, evidence_confirmation_subject
 from .passport import load_project_passport, overlay_checkpoint_batch_association, project_root, read_jsonl, utc_now
 from .revision_cycle import load_active_revision_cycle, _seal_revision_cycle_record
@@ -171,13 +176,21 @@ def assess_core_evidence_readiness(project: str | Path) -> dict[str, Any]:
             "reason_codes": ["batch_scope_not_registered", *(["legacy_tasks_pending"] if legacy_blockers else [])],
             "next_action": {"command": "prepare-core-evidence-batch"},
         }
+    pending_tasks = cycle.get("pending_tasks") or []
+    blocking_tasks: list[str] = []
+    reasons: set[str] = set()
+    for index, task in enumerate(pending_tasks):
+        scope = task.get("checkpoint_scope") if isinstance(task, dict) else None
+        if isinstance(scope, str) and scope in _REVISION_TASK_SCOPES:
+            continue
+        identifier = str(task.get("task_id") or f"unclassified_task_{index + 1}") if isinstance(task, dict) else f"unclassified_task_{index + 1}"
+        blocking_tasks.append(identifier)
+        reasons.add("unclassified_checkpoint_scope")
     tasks = [
-        task for task in cycle.get("pending_tasks") or []
+        task for task in pending_tasks
         if isinstance(task, dict) and task.get("checkpoint_scope") == "core_evidence"
     ]
     statuses = {str(task.get("task_id")): str(task.get("status")) for task in tasks}
-    blocking_tasks: list[str] = []
-    reasons: set[str] = set()
     for task in tasks:
         identifier = str(task["task_id"])
         required = bool(task.get("required_before_publication"))
@@ -326,7 +339,12 @@ def _write_unready_preview(root: Path, report: dict[str, Any]) -> dict[str, str]
     directory.mkdir(parents=True, exist_ok=True)
     tasks = [
         task for task in cycle.get("pending_tasks") or []
-        if isinstance(task, dict) and task.get("checkpoint_scope") == "core_evidence"
+        if isinstance(task, dict)
+        and (
+            task.get("checkpoint_scope") == "core_evidence"
+            or not isinstance(task.get("checkpoint_scope"), str)
+            or task.get("checkpoint_scope") not in _REVISION_TASK_SCOPES
+        )
     ]
     result: dict[str, str] = {}
     for lang, filename, other, heading, intro, reason_heading, task_heading in (
@@ -347,6 +365,7 @@ def _write_unready_preview(root: Path, report: dict[str, Any]) -> dict[str, str]
             title = task.get("title_zh") if lang == "zh-CN" else task.get("title_en")
             identifier = str(task.get("task_id") or "")
             status = str(task.get("status") or "unknown")
+            scope = str(task.get("checkpoint_scope") or "missing")
             if identifier in report.get("blocking_tasks", []):
                 status = "待完成" if lang == "zh-CN" else "Needs work"
             refs = []
@@ -360,7 +379,7 @@ def _write_unready_preview(root: Path, report: dict[str, Any]) -> dict[str, str]
                     refs.append(f"<span>{label}</span>")
             rows.append(
                 f"<li><strong>{html.escape(str(title or identifier))}</strong> "
-                f"<code>{html.escape(identifier)}</code> <small>{html.escape(status)}</small>"
+                f"<code>{html.escape(identifier)}</code> <small>{html.escape(status)} · scope: {html.escape(scope)}</small>"
                 f"<div class=refs>{' · '.join(refs)}</div></li>"
             )
         page = (

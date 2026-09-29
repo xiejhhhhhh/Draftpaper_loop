@@ -55,6 +55,32 @@ def test_readiness_keeps_pending_task_even_without_a_core_report(tmp_path: Path)
     assert not (project / "review" / "revision_reconciliation" / "core_evidence_readiness.json").exists()
 
 
+def test_readiness_blocks_unrecognized_checkpoint_scope(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_readiness import assess_core_evidence_readiness, finalize_core_evidence_batch
+    from draftpaper_cli.core_evidence_batch import _write_revision
+    from draftpaper_cli.revision_cycle import _seal_revision_cycle_record, load_active_revision_cycle
+
+    project = _prepared_project(tmp_path, _task("known_core_task"))
+    cycle = load_active_revision_cycle(project)
+    assert cycle is not None
+    cycle["pending_tasks"].append({
+        **_task("misscoped_science"),
+        "checkpoint_scope": "core_evidnce",
+    })
+    _write_revision(project, _seal_revision_cycle_record(cycle))
+
+    report = assess_core_evidence_readiness(project)
+
+    assert report["publishable"] is False
+    assert "unclassified_checkpoint_scope" in report["reason_codes"]
+    assert "misscoped_science" in report["blocking_tasks"]
+    preview = finalize_core_evidence_batch(project)
+    assert preview["status"] == "needs_work"
+    page = Path(preview["preview_zh_html"]).read_text(encoding="utf-8")
+    assert "misscoped_science" in page
+    assert "core_evidnce" in page
+
+
 def test_completed_task_with_stale_receipt_is_not_ready(tmp_path: Path) -> None:
     from draftpaper_cli.core_evidence_readiness import assess_core_evidence_readiness
 

@@ -36,6 +36,12 @@ python -m draftpaper_cli.cli finalize-core-evidence-batch --project <repo>\proje
 python -m draftpaper_cli.cli checkpoint --project <repo>\projects\my_project --stage core_evidence
 ```
 
+Each task manifest must use a recognized `checkpoint_scope`: `core_evidence`,
+`literature_review`, or `post_acceptance`. Unknown scopes and conflicting task
+IDs fail closed; an existing core-evidence task cannot be moved to a non-core
+scope as part of batch preparation. Correct a legacy unknown scope by
+re-importing that task with the same ID and an explicit `core_evidence` scope.
+
 If finalization returns `needs_work`, open the returned Chinese and English
 readiness HTML pages, complete their listed tasks, and finalize again. These
 pages explain blockers and link current evidence; they do not authorize a

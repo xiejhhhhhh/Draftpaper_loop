@@ -87,6 +87,52 @@ def test_prepare_batch_rejects_conflicting_duplicate_task_identity(tmp_path: Pat
     assert load_active_revision_cycle(project) is None
 
 
+def test_prepare_batch_rejects_unknown_checkpoint_scope_instead_of_excluding_it(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import CoreEvidenceBatchError, prepare_core_evidence_batch
+
+    project = create_project(root=tmp_path, idea="Unknown checkpoint scope", field="generic").path
+    misscoped_science = {**_task("misscoped_science"), "checkpoint_scope": "core_evidnce"}
+    path = _changes_file(project, [_task("known_core_task"), misscoped_science])
+
+    with pytest.raises(CoreEvidenceBatchError, match="(?i)unknown.*checkpoint scope|checkpoint scope.*unknown"):
+        prepare_core_evidence_batch(project, changes_path=path)
+
+    assert load_active_revision_cycle(project) is None
+
+
+def test_prepare_batch_can_explicitly_reclassify_an_existing_unknown_scope(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import prepare_core_evidence_batch
+
+    project = create_project(root=tmp_path, idea="Reclassify checkpoint scope", field="generic").path
+    begin_revision_cycle(
+        project,
+        pending_tasks=[{**_task("recovered_task"), "checkpoint_scope": "core_evidnce"}],
+    )
+
+    result = prepare_core_evidence_batch(
+        project, changes_path=_changes_file(project, [_task("recovered_task")]),
+    )
+
+    tasks = result["revision_cycle"]["pending_tasks"]
+    assert len(tasks) == 1
+    assert tasks[0]["task_id"] == "recovered_task"
+    assert tasks[0]["checkpoint_scope"] == "core_evidence"
+
+
+def test_prepare_batch_rejects_reclassifying_core_task_out_of_c3_scope(tmp_path: Path) -> None:
+    from draftpaper_cli.core_evidence_batch import CoreEvidenceBatchError, prepare_core_evidence_batch
+
+    project = create_project(root=tmp_path, idea="Preserve core task scope", field="generic").path
+    begin_revision_cycle(project, pending_tasks=[_task("anchor"), _task("core_science")])
+    changes = _changes_file(project, [
+        _task("anchor"),
+        {**_task("core_science"), "checkpoint_scope": "post_acceptance"},
+    ])
+
+    with pytest.raises(CoreEvidenceBatchError, match="cannot be reclassified to a non-core scope"):
+        prepare_core_evidence_batch(project, changes_path=changes)
+
+
 def test_unscoped_legacy_task_requires_explicit_classification(tmp_path: Path) -> None:
     from draftpaper_cli.core_evidence_batch import CoreEvidenceBatchError, prepare_core_evidence_batch
 
