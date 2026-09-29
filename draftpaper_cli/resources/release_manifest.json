@@ -1,12 +1,12 @@
 {
   "schema_version": "dpl.release_manifest.v1",
   "package_version": "0.43.2",
-  "workflow_skill_sha256": "feeea10b855c244f77bf3e5fef61b81af302189e6cce3e7daee1c90b0374d543",
-  "workflow_contract_sha256": "5cb8930b052e4cb4decb716d3536abfd139d135b5596ef8e995e4f76c197a326",
+  "workflow_skill_sha256": "80be5ce76bb9b06de4b3ae6af16a61ece541956e04851ea7387e1d24590eba4a",
+  "workflow_contract_sha256": "da91721b8f289624ce2a1a61520b079ea7a69358b3fc6f9ecdee74e20aabc5bd",
   "plugin_count": 230,
   "fixture_count": 601,
   "plugin_catalog_hash": "fdeb68809995849b373489a0fd0e322e8fc88f716a8281802f3d0cb6b9b88f5a",
-  "command_count": 281,
+  "command_count": 288,
   "command_contract_status": "passed",
   "required_cli_commands": [
     "assemble-latex",

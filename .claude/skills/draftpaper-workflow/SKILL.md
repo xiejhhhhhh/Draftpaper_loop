@@ -26,64 +26,51 @@ mismatch stops the workflow; after an accepted runtime update, use
 
 ## Environment
 
-Python profiles do not include the full paper-production toolchain. Before
-publication, run the read-only `doctor --target publication --json` check.
-On Windows, `tools/bootstrap_windows_environment.ps1 -Mode Check` reports
-the Visual C++ x64 runtime, system Git, and private MiKTeX 25.12. Review any
-remediation, then verify in an isolated output directory:
+Before publication, run `doctor --target publication --json`. On Windows,
+`tools/bootstrap_windows_environment.ps1 -Mode Check` checks Visual C++ x64,
+Git, and MiKTeX. Review remediation, then verify in a temporary directory:
 
 ```powershell
 python -m draftpaper_cli verify-environment --target publication --compile-latex --output <output>
 ```
 
-This is the authoritative pypdf, XeLaTeX, pdfLaTeX, BibTeX, `kpsewhich`,
-citation, and non-empty-PDF smoke test. It writes only to the requested
-directory; never run it inside a real paper project. For end-to-end checks,
-compile a separate temporary project through Draftpaper's LaTeX entry point.
-MinerU, GPU runtimes, Node.js, Java, and discipline packages are optional.
-
-Use `requirements/runtime-constraints.txt` with the selected extra.
-`minimal`/`plotting` support Python 3.10-3.12; other extras require 3.11-3.12
-for vendored paper-fetch. `research` adds fulltext to plotting; `agent` adds
-MCP. Browser assets remain opt-in. Doctor reports optional provider-variable
-state without exposing secret values.
+It checks pypdf, XeLaTeX/pdfLaTeX, BibTeX, `kpsewhich`, citations, and a
+non-empty PDF. Output stays in that directory; never target a real paper
+project. End-to-end checks use a separate temporary project. MinerU, GPU,
+Node.js, Java, and discipline packages are optional. Use
+`requirements/runtime-constraints.txt` with the selected extra. `minimal` and
+`plotting` support Python 3.10-3.12; other extras need 3.11-3.12. `research`
+adds fulltext; `agent` adds MCP. Browser assets are opt-in. Doctor does not
+expose optional-provider secrets.
 
 ## Evidence and Literature
 
-Treat a fixture, candidate, plan-only plugin, or mock as a contract check, not
-live scientific evidence. A project-local method is usable only after its
-inputs, outputs, hashes, and execution scope are recorded. Validate
-`MetricEvidence`, `CountEvidence`, the active `RunEvidenceBundle`, and
-`FigureCodeTrace v2` before result support or a checkpoint. Compare evidence
-identity before values: different models, cohorts, splits, or denominators are
-not numerically comparable.
+Fixtures, mocks, and plan-only plugins test contracts, not scientific results.
+Record local method inputs, outputs, hashes, and scope. Validate
+`MetricEvidence`, `CountEvidence`, active `RunEvidenceBundle`, and
+`FigureCodeTrace v2`; compare identity before values because models, cohorts,
+splits, or denominators may differ.
 
 Literature discovery, identity resolution, and full-text fetching are separate.
-Discovery sources propose candidates; they do not prove citation fitness.
-`search-literature` applies symmetric discipline and topic gates, resolves
-DOI/title/author/year identity, then uses the vendored paper-fetch adapter for
-evidence-on-demand. Do not fetch all candidates by default. Re-score fetched
-metadata or text; mismatched, off-topic, ambiguous, review-required, and orphan
-records remain quarantined outside active snapshots, citation pools, summaries,
-and Agent context. GitHub and Zenodo code leads are metadata-only unless the
-guarded archive route is explicitly approved; never execute third-party archive
-code during enrichment.
+`search-literature` proposes candidates, applies symmetric discipline/topic
+gates, and resolves DOI/title/author/year identity. The vendored paper-fetch
+adapter resolves known candidates and fetches evidence on demand; it does not
+discover topics or justify fetching every result. Re-score fetched content;
+keep mismatched, off-topic, ambiguous, review-required, and orphan records out
+of active snapshots, citation pools, summaries, and Agent context. GitHub and
+Zenodo code leads stay metadata-only unless the guarded archive route is
+approved; never execute third-party code during enrichment.
 
-Teaching uses an explicit confirmed corpus, not an inferred active directory.
-After `review-literature-coverage`, show the hash-bound
-`literature_confirmation_packet` and use `confirm-literature-corpus --packet-hash
-<hash>` only after human review. Its receipt binds the canonical registry, active
-literature snapshot, and project usage plan; any change to those inputs requires
-a fresh packet and confirmation before Learn may publish deep literature cards.
-
-After a literature search, run `prepare-literature-admission` and inspect its
-hash-bound candidate packet. Every candidate must be explicitly accepted,
-excluded, or deferred; a gate-rejected candidate requires a recorded reason and
-an explicit override before activation. Run `activate-literature-corpus` only
-with that packet hash and decision manifest, then perform the normal coverage
-review and corpus confirmation. The vendored paper-fetch adapter is used for
-identity resolution and evidence-on-demand; it is not a substitute for
-discipline-aware discovery and it does not justify fetching every candidate.
+After search, inspect the hash-bound packet from
+`prepare-literature-admission`; accept, exclude, or defer every candidate.
+Gate-rejected candidates need a reason and explicit override before activation.
+Run `activate-literature-corpus` with that packet hash and decision manifest,
+then `review-literature-coverage`. Teaching uses only the explicitly confirmed
+corpus, never an inferred active directory. Show its hash-bound
+`literature_confirmation_packet`, then run
+`confirm-literature-corpus --packet-hash <hash>` only after human review. Its
+receipt binds the canonical registry, active snapshot, and usage plan; input
+changes require a fresh packet before Learn publishes literature cards.
 
 ## Human Review
 
@@ -94,44 +81,41 @@ confirmation request. Technical audit HTML is created only by
 and never an immutable package artifact. Do not create a project-external
 readability sidecar.
 
-Research-plan confirmation uses an immutable, versioned `HumanReviewPacket`.
-Read it with `show-human-review-packet`; validate it with
-`validate-research-plan-review`; compare decisions with
-`compare-research-plan-decision`; and explain an actual reopen with
-`explain-research-plan-reconfirmation`. Equivalent valid reviews reuse the
-prior packet and produce a continuity receipt. Scientific question, data role,
-method, cohort, split, metric, claim boundary, or figure semantics changes need
-an explicit new human decision.
+Research-plan review uses an immutable `HumanReviewPacket`: read with
+`show-human-review-packet`, validate with `validate-research-plan-review`,
+compare with `compare-research-plan-decision`, and explain reopens with
+`explain-research-plan-reconfirmation`. Equivalent reviews reuse the packet;
+changes to question, data role, method, cohort, split, metric, claim boundary,
+or figure semantics need a new decision.
 
-For a checkpoint, show the readable decision page before audit paths, then its
-semantic delta, deliverables, exclusions, unresolved issues, and confirmation
-meaning. Use `inspect-review-evidence --ref <reference>` only for selected
-evidence. `show-checkpoint-summary`, `render-checkpoint-audit`,
-`validate-checkpoint-readability`, and `shadow-checkpoint-v6` are read-only
-inspection or shadow tools.
+For a checkpoint, show the readable decision page first, then its semantic
+delta, deliverables, exclusions, unresolved issues, and confirmation meaning.
+Use `inspect-review-evidence --ref <reference>` only for selected evidence.
+`show-checkpoint-summary`, `render-checkpoint-audit`,
+`validate-checkpoint-readability`, and `shadow-checkpoint-v6` are read-only.
 
 `checkpoint` constructs the packet; `resume` consumes a valid receipt. Agent
-approval is permitted only within an active hash-bound delegation and records
-`agent_approved`, never `user_confirmed`. C0 may be system-acknowledged; C1
-revalidates policy and scope; C2 needs scientific-freeze permission and an
-independent reviewer; C3 scientific routes, claim choices, plugin promotion,
-licenses, author identity, final manuscript, and release remain human-only.
+approval requires active hash-bound delegation and records `agent_approved`,
+never `user_confirmed`. C0 may be system-acknowledged; C1 revalidates policy
+and scope; C2 needs scientific-freeze permission and an independent reviewer.
+C3 scientific routes, claims, plugin promotion, licenses, author identity,
+final manuscript, and release remain human-only. For C3 delivery, query
+`pending-checkpoint-notification` with the request and stable consumer ID; show
+the returned page, then acknowledge only after display. Acknowledgement records
+delivery only (`decision_status=pending`), never scientific approval; an
+already-delivered notice must not be repeated.
 
-Use `prepare-core-evidence-batch` and resolve readiness blockers before C3.
-If `status` identifies a legacy core-evidence checkpoint without a registered
-batch scope, do not immediately run `resume`, user confirmation, or Agent
-review. Inspect `shadow-core-evidence-batch-migration` first. If it reports
-`associate_complete_legacy_request`, register the complete authoritative task
-scope with `prepare-core-evidence-batch` and inspect its result: the framework
-may append a sealed association to the exact unchanged checkpoint package and
-candidate, preserving that existing pending request without rewriting the
-checkpoint event. A pending request still requires author confirmation. If the
-package already has a valid `approve/user_confirmed` receipt, it may only resume
-consumption of that same checkpoint and candidate. Rejected, refinement,
-Agent, or system decisions are not reusable. If the shadow is ineligible,
-incomplete, or mismatched, reconcile the full task scope and prepare a new
-batch; preserve the old packet as audit-only and never reuse its decision for
-the new candidate.
+Before C3, use `prepare-core-evidence-batch` and resolve readiness blockers.
+For a legacy checkpoint without batch scope, inspect
+`shadow-core-evidence-batch-migration` before any resume, confirmation, or Agent
+review. If it reports `associate_complete_legacy_request`, register the full
+authoritative scope with `prepare-core-evidence-batch`; this may seal the
+unchanged request association without rewriting the checkpoint event. Reuse
+only a complete, unchanged package/candidate; pending still needs author
+confirmation, and only a valid `approve/user_confirmed` receipt may resume that
+same checkpoint. Never reuse rejected, refinement, Agent, or system decisions.
+If scope or identity is incomplete/mismatched, reconcile fully and prepare a
+new batch; retain the old packet as audit-only.
 
 ## Stage Order
 
